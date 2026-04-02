@@ -1,0 +1,22 @@
+import { useEffect, useState } from "react";
+
+interface SearchResult { id: string; type: string; title: string; snippet: string; date?: string | null }
+interface SearchBarProps { onResults: (results: SearchResult[]) => void }
+
+export function SearchBar({ onResults }: SearchBarProps): JSX.Element {
+  const [query, setQuery] = useState("");
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!query.trim()) return void (onResults([]), setCount(null));
+      fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/search?q=${encodeURIComponent(query)}`)
+        .then((response) => response.json())
+        .then((body: { results: SearchResult[]; total: number }) => { onResults(body.results); setCount(body.total); })
+        .catch(() => { onResults([]); setCount(0); });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [onResults, query]);
+  return <div style={{ display: "grid", gap: "0.35rem" }}><input value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Search everything..." style={{ padding: "0.6rem 0.8rem", borderRadius: 12, border: "1px solid var(--border-subtle)", background: "var(--surface-2)", color: "var(--text-primary)" }} />{count !== null ? <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>{`${count} results for '${query}'`}</span> : null}</div>;
+}
+
+export default SearchBar;

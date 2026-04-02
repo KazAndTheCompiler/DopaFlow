@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    due_at TEXT,
+    priority INTEGER NOT NULL DEFAULT 3,
+    status TEXT NOT NULL DEFAULT 'todo',
+    done INTEGER NOT NULL DEFAULT 0,
+    estimated_minutes INTEGER,
+    actual_minutes INTEGER,
+    recurrence_rule TEXT,
+    recurrence_parent_id TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    subtasks_json TEXT NOT NULL DEFAULT '[]',
+    tags_json TEXT NOT NULL DEFAULT '[]',
+    source_type TEXT,
+    source_external_id TEXT,
+    source_instance_id TEXT,
+    deleted_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,0 +1,40 @@
+appId: com.kazandthecompiler.dopaflow
+productName: DopaFlow
+copyright: Copyright (C) 2026 KazAndTheCompiler
+publish:
+  - provider: github
+    owner: KazAndTheCompiler
+    repo: zoesTM
+afterPack: afterPack.js
+directories:
+  output: dist
+files:
+  - main.js
+  - preload.js
+  - backend-runtime.js
+  - assets/**
+  - package.json
+  - node_modules
+asar: true
+
+extraResources:
+  - from: "../frontend/dist"
+    to: "frontend/dist"
+    filter: ["**/*"]
+  - from: "../backend/dist/dopaflow-backend"
+    to: "dopaflow-backend"
+    filter: ["**/*"]
+
+linux:
+  target:
+    - AppImage
+  category: Utility
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.productivity
+
+win:
+  target:
+    - nsis

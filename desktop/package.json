@@ -1,0 +1,81 @@
+{
+  "name": "dopaflow-desktop",
+  "version": "2.0.6",
+  "description": "DopaFlow — unified productivity for ADHD brains",
+  "author": {
+    "name": "KazAndTheCompiler",
+    "url": "https://github.com/KazAndTheCompiler"
+  },
+  "private": true,
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "electron .",
+    "dist": "node scripts/build-desktop.js dev",
+    "dist:mac": "node scripts/build-desktop.js dev --mac",
+    "dist:win": "node scripts/build-desktop.js dev --win",
+    "dist:linux": "node scripts/build-desktop.js dev --linux",
+    "dist:all": "node scripts/build-desktop.js dev -mwl",
+    "dist:stable": "node scripts/build-desktop.js stable",
+    "dist:stable:mac": "node scripts/build-desktop.js stable --mac",
+    "dist:stable:win": "node scripts/build-desktop.js stable --win",
+    "dist:stable:linux": "node scripts/build-desktop.js stable --linux",
+    "dist:stable:all": "node scripts/build-desktop.js stable -mwl"
+  },
+  "build": {
+    "appId": "com.dopaflow.app",
+    "productName": "DopaFlow",
+    "extraMetadata": {
+      "dopaflowReleaseChannel": "${env.DOPAFLOW_RELEASE_CHANNEL}"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/**",
+      "main.js",
+      "backend-runtime.js",
+      "preload.js",
+      "assets/**"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Office"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "${env.DOPAFLOW_GITHUB_OWNER}",
+      "repo": "${env.DOPAFLOW_GITHUB_REPO}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-auto-launch": "^5.0.6",
+    "electron-updater": "^6.3.9"
+  }
+}

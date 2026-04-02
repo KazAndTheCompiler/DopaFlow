@@ -1,0 +1,14 @@
+CREATE INDEX IF NOT EXISTS idx_tasks_due_at ON tasks(due_at) WHERE deleted_at IS NULL OR deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_done ON tasks(done);
+CREATE INDEX IF NOT EXISTS idx_tasks_sort_order ON tasks(sort_order);
+CREATE INDEX IF NOT EXISTS idx_habits_deleted ON habits(deleted_at);
+CREATE INDEX IF NOT EXISTS idx_habit_checkins_date ON habit_checkins(habit_id, checkin_date);
+CREATE INDEX IF NOT EXISTS idx_focus_sessions_started ON focus_sessions(started_at);
+CREATE INDEX IF NOT EXISTS idx_review_cards_next ON review_cards(next_review_at) WHERE next_review_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_review_cards_deck ON review_cards(deck_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date) WHERE deleted_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start_at);
+CREATE INDEX IF NOT EXISTS idx_calendar_events_sync ON calendar_events(sync_status);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read, archived, created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_pending ON outbox_events(status, attempts) WHERE status = 'pending';
