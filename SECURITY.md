@@ -4,9 +4,10 @@
 
 | Version | Supported |
 |---------|-----------|
-| Latest stable (Gumroad) | Yes |
-| Dev builds from `main` | Best effort |
-| Older tagged releases | No |
+| v2.0.6 — current stable (Gumroad) | Yes |
+| `main` branch dev builds | Best effort |
+| v2.0.0 – v2.0.5 | No |
+| v1.2.7 and earlier (ZoesTM legacy) | No |
 
 ## Reporting a vulnerability
 
