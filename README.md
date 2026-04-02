@@ -1,5 +1,13 @@
 # DopaFlow
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Electron](https://img.shields.io/badge/Electron-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![Offline First](https://img.shields.io/badge/Offline--first-no_cloud_required-6B7280?style=flat-square)](#why-offline-first)
+[![Get on Gumroad](https://img.shields.io/badge/Stable_build-$1_on_Gumroad-FF90E8?style=flat-square&logo=gumroad&logoColor=white)](https://kirkhenrik.gumroad.com/l/woosbf)
+
 **A productivity app built by an ADHD brain, for ADHD brains.**
 
 This is not a founder story from a co-working space. I built DopaFlow because I needed it and nothing else actually worked for me.
@@ -141,6 +149,14 @@ Voice commands are the next big push: adding tasks, appointments, and habits by 
 - Mobile swipe-to-complete on task rows is not implemented
 
 See `CHANGELOG.md` for more.
+
+---
+
+## Credits
+
+Built by **Henry (KazAndTheCompiler)** — ex-navigator, AuDHD, Jutland, Denmark.
+
+Co-authored with **[Claude](https://claude.ai)** (Anthropic) — pair-programmed across the full stack: FastAPI backend, React frontend, Electron packaging, design system, and skin engine.
 
 ---
 
