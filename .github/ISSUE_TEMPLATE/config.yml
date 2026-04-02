@@ -1,0 +1,15 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: Bug Report
+    url: https://github.com/KazAndTheCompiler/DopaFlow/discussions/categories/bug-reports
+    about: Something not working? Use the Bug Reports discussion board.
+  - name: FAQ
+    url: https://github.com/KazAndTheCompiler/DopaFlow/discussions/1
+    about: Check the FAQ first — startup, data location, and common issues are covered.
+  - name: Idea or Feature Request
+    url: https://github.com/KazAndTheCompiler/DopaFlow/discussions/categories/ideas
+    about: Have a suggestion? Post it in Ideas.
+  - name: General Question
+    url: https://github.com/KazAndTheCompiler/DopaFlow/discussions/categories/general
+    about: Anything else — use General discussion.
