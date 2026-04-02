@@ -1,0 +1,2 @@
+"""Packy domain."""
+

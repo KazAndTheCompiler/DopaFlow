@@ -1,0 +1,64 @@
+# --- Node / Frontend ---
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# --- Python / Backend ---
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Database ---
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# --- Environment & Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Electron build output ---
+out/
+release/
+desktop/dist/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Logs ---
+*.log
+logs/
+
+# --- DopaFlow runtime data ---
+dopaflow.db
+journal-backup/
+
+# --- Internal dev notes (not for public) ---
+codex.md
+codex_2.md
+codex_3.md
+next_step.md
+lint_errors.md
+lint_errors.mdn
+ADR.md
+raw.md
