@@ -354,6 +354,7 @@
         <a href="#skins">Skins</a>
         <a href="#security">Security</a>
         <a href="#data-formats">Data Formats</a>
+        <a href="#development">Development</a>
         <a href="#troubleshooting">Troubleshooting</a>
     </nav>
 
@@ -370,6 +371,7 @@
                 <li><a href="#skins">Skins & Themes</a> - Visual customization</li>
                 <li><a href="#security">Security</a> - Authentication, authorization, and data protection</li>
                 <li><a href="#data-formats">Data Formats</a> - Import/export specifications</li>
+                <li><a href="#development">Development</a> - Prompt packs and model roles</li>
                 <li><a href="#troubleshooting">Troubleshooting</a> - Common issues</li>
             </ul>
         </section>
@@ -1168,6 +1170,60 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
                     <td>prj_g3h4i5j6</td>
                 </tr>
             </table>
+        </section>
+
+        <!-- Development -->
+        <section id="development">
+            <h2>🛠️ Development</h2>
+            <p>DopaFlow uses an LLM-powered development workflow with model-specific roles for efficient iteration.</p>
+
+            <h3>Model Roles</h3>
+            <table>
+                <tr>
+                    <th>Model</th>
+                    <th>Role</th>
+                    <th>Use Cases</th>
+                </tr>
+                <tr>
+                    <td>Claude Sonnet</td>
+                    <td>Implementation owner</td>
+                    <td>Multi-file frontend/backend work, workflow upgrades, UX closure</td>
+                </tr>
+                <tr>
+                    <td>Claude Haiku</td>
+                    <td>Narrow implementation closer</td>
+                    <td>Single-file fixes, small hook changes, lint cleanup, dead code removal</td>
+                </tr>
+                <tr>
+                    <td>Minimax</td>
+                    <td>Test builder, regression guard</td>
+                    <td>Smoke tests, targeted regression tests, verification gap coverage</td>
+                </tr>
+                <tr>
+                    <td>Qwen</td>
+                    <td>Documentation owner</td>
+                    <td>Documentation sync, repo-state tracking, roadmap maintenance</td>
+                </tr>
+            </table>
+
+            <h3>Prompt Packs</h3>
+            <p>Prompt packs for each model are documented in <code>CHANGELOG.md</code> and define clear task routing patterns.</p>
+
+            <h3>Key Files</h3>
+            <ul>
+                <li><code>codex.md</code> - Current implementation state, verified work, calendar sharing status, daily loop implementation, verification commands</li>
+                <li><code>next_step.md</code> - Current roadmap and priorities</li>
+                <li><code>CHANGELOG.md</code> - Version history and development sessions</li>
+            </ul>
+
+            <h3>Codex Documentation</h3>
+            <p>The <code>codex.md</code> file serves as the running implementation notes:</p>
+            <ul>
+                <li><strong>Calendar Sharing</strong>: Peer feeds, share tokens with expiry, mirrored events, feed health status</li>
+                <li><strong>Daily Loop</strong>: Today, Overview, Focus, Shutdown surfaces with runway guidance</li>
+                <li><strong>Backend Hardening</strong>: Remote API authz with signed bearer tokens</li>
+                <li><strong>Verification Commands</strong>: Tested build and test commands</li>
+            </ul>
         </section>
 
         <!-- Troubleshooting -->

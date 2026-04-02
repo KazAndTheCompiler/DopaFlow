@@ -110,6 +110,35 @@ DopaFlow v2 is a unified productivity app for ADHD brains. It combines the ZoesT
 | **TodayView nav buttons** | Bare buttons → styled with border, Today highlighted in accent when on current day |
 | **TaskEditModal Packy hint** | Auto-fetches Packy tip on task open; renders as tinted accent box above the form |
 
+#### Prompt Pack Documentation Added
+
+Added prompt pack documentation for model-specific task routing (consolidated to CHANGELOG.md, source files removed):
+
+| Model | Role |
+|-------|------|
+| Claude Sonnet | Implementation owner - product-grade frontend/backend work |
+| Claude Haiku | Narrow implementation closer - contained fixes and cleanup |
+| Minimax | Test builder, regression guard, base-health maintainer |
+| Qwen | Documentation owner, repo-state maintainer |
+
+These prompt packs define clear division of labor across helper models used in the development workflow.
+
+#### Codex Documentation
+
+The project maintains running implementation notes in `codex.md` documenting:
+
+- **Calendar Sharing Status**: Full trust pass implementation including peer feeds, share tokens with expiry, mirrored events, feed health status UI
+- **Daily Loop Implementation**: Today, Overview, Focus, and Shutdown surfaces with runway guidance, momentum gauge, 3-step evening ritual
+- **Backend Hardening**: Remote API authz with signed bearer tokens, scope-protected routers
+- **Verification Commands**: Test and build commands verified working
+
+Key files documented:
+- `backend/app/domains/calendar_sharing/` - peer sync, share tokens
+- `frontend/src/surfaces/today/`, `overview/`, `focus/`, `shutdown/` - daily loop surfaces
+- `backend/app/tools/promptpack.py` - CLI for audits, API sync, migrations
+
+See `codex.md` for complete restart points and next sensible work.
+
 #### Features Delegated and Completed
 
 | Feature | Details |

@@ -1,6 +1,6 @@
 """Qwen Prompt Pack — DopaFlow CLI implementation.
 
-This tool implements the prompt templates from docs/qwen/promptpack.md
+This tool implements the prompt templates documented in CHANGELOG.md
 for automated code audits, refactors, API sync, migrations, and test generation.
 
 Usage:
@@ -132,7 +132,9 @@ class DomainAuditor:
             if "async def" in line or "def " in line:
                 # Check next lines for business logic patterns
                 block = "\n".join(lines[i : min(i + 30, len(lines))])
-                if re.search(r"for\s+\w+\s+in\s+", block) and re.search(r"if\s+.+:", block):
+                if re.search(r"for\s+\w+\s+in\s+", block) and re.search(
+                    r"if\s+.+:", block
+                ):
                     # Has loops and conditionals - potential business logic
                     func_name = re.search(r"(?:async\s+)?def\s+(\w+)", line)
                     if func_name:
@@ -351,12 +353,18 @@ class APISync:
                     method = parts[1].strip()
                     path = parts[2].strip()
                     if method in ("GET", "POST", "PATCH", "DELETE", "PUT"):
-                        documented[current_section].append({"method": method, "path": path})
+                        documented[current_section].append(
+                            {"method": method, "path": path}
+                        )
 
         return documented
 
     def _find_in_docs(
-        self, method: str, path: str, documented: dict[str, list[dict[str, str]]], domain: str
+        self,
+        method: str,
+        path: str,
+        documented: dict[str, list[dict[str, str]]],
+        domain: str,
     ) -> bool:
         """Check if an endpoint is documented."""
         # Try exact domain match
@@ -398,7 +406,9 @@ class SecuritySweeper:
             return {"error": f"Target path not found: {self.target_path}"}
 
         if self.concern not in self.CONCERNS:
-            return {"error": f"Unknown concern: {self.concern}. Valid: {list(self.CONCERNS.keys())}"}
+            return {
+                "error": f"Unknown concern: {self.concern}. Valid: {list(self.CONCERNS.keys())}"
+            }
 
         keywords = self.CONCERNS[self.concern]
 
@@ -433,13 +443,17 @@ class SecuritySweeper:
                         self.findings.append(finding)
                     break
 
-    def _analyze_line(self, filepath: Path, line_num: int, line: str, keyword: str) -> dict[str, Any] | None:
+    def _analyze_line(
+        self, filepath: Path, line_num: int, line: str, keyword: str
+    ) -> dict[str, Any] | None:
         """Analyze a line for potential issues."""
         concern = self.concern
 
         # Specific checks based on concern type
         if concern == "raw_sql_interpolation":
-            if re.search(r'f["\'].*(?:SELECT|INSERT|UPDATE|DELETE).*\{', line, re.IGNORECASE):
+            if re.search(
+                r'f["\'].*(?:SELECT|INSERT|UPDATE|DELETE).*\{', line, re.IGNORECASE
+            ):
                 return {
                     "type": "risk",
                     "file": str(filepath),
@@ -595,9 +609,13 @@ class TestGenerator:
             for match in re.finditer(pattern, router):
                 path = match.group(1)
                 # Extract function name
-                func_match = re.search(r"async def (\w+)", router[match.end() : match.end() + 100])
+                func_match = re.search(
+                    r"async def (\w+)", router[match.end() : match.end() + 100]
+                )
                 func_name = func_match.group(1) if func_match else "handler"
-                endpoints.append({"method": method, "path": path, "function": func_name})
+                endpoints.append(
+                    {"method": method, "path": path, "function": func_name}
+                )
 
         return endpoints
 
@@ -703,7 +721,9 @@ def cmd_api_sync(args: argparse.Namespace) -> int:
     if result["mismatches"]:
         print("\nMissing from documentation:")
         for mismatch in result["mismatches"][:20]:  # Limit output
-            print(f"  {mismatch['method']:6} {mismatch['path']:30} ({mismatch['domain']})")
+            print(
+                f"  {mismatch['method']:6} {mismatch['path']:30} ({mismatch['domain']})"
+            )
 
     return 0
 
@@ -787,33 +807,54 @@ Examples:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Audit command
-    audit_parser = subparsers.add_parser("audit", help="Audit a domain for pattern drift")
-    audit_parser.add_argument("domain", help="Domain name to audit (e.g., tasks, review)")
+    audit_parser = subparsers.add_parser(
+        "audit", help="Audit a domain for pattern drift"
+    )
+    audit_parser.add_argument(
+        "domain", help="Domain name to audit (e.g., tasks, review)"
+    )
     audit_parser.set_defaults(func=cmd_audit)
 
     # API sync command
-    api_parser = subparsers.add_parser("api-sync", help="Sync API reference to live routers")
+    api_parser = subparsers.add_parser(
+        "api-sync", help="Sync API reference to live routers"
+    )
     api_parser.set_defaults(func=cmd_api_sync)
 
     # Security sweep command
-    security_parser = subparsers.add_parser("security-sweep", help="Security/quality sweep")
+    security_parser = subparsers.add_parser(
+        "security-sweep", help="Security/quality sweep"
+    )
     security_parser.add_argument("target_path", help="Path to scan (e.g., backend/app)")
     security_parser.add_argument(
         "--concern",
         required=True,
-        choices=["auth_gaps", "scope_coverage", "upload_validation", "exception_logging", "raw_sql_interpolation", "ssrf_handling"],
+        choices=[
+            "auth_gaps",
+            "scope_coverage",
+            "upload_validation",
+            "exception_logging",
+            "raw_sql_interpolation",
+            "ssrf_handling",
+        ],
         help="Security concern to audit",
     )
     security_parser.set_defaults(func=cmd_security_sweep)
 
     # Migration command
-    migration_parser = subparsers.add_parser("migration", help="Generate a new migration")
-    migration_parser.add_argument("description", help="Description of the schema change")
+    migration_parser = subparsers.add_parser(
+        "migration", help="Generate a new migration"
+    )
+    migration_parser.add_argument(
+        "description", help="Description of the schema change"
+    )
     migration_parser.set_defaults(func=cmd_migration)
 
     # Tests command
     tests_parser = subparsers.add_parser("tests", help="Generate tests for a domain")
-    tests_parser.add_argument("domain", help="Domain name to test (e.g., tasks, review)")
+    tests_parser.add_argument(
+        "domain", help="Domain name to test (e.g., tasks, review)"
+    )
     tests_parser.set_defaults(func=cmd_tests)
 
     args = parser.parse_args()
