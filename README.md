@@ -7,6 +7,7 @@
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![Offline First](https://img.shields.io/badge/Offline--first-no_cloud_required-6B7280?style=flat-square)](#why-offline-first)
 [![Get on Gumroad](https://img.shields.io/badge/Stable_build-$1_on_Gumroad-FF90E8?style=flat-square&logo=gumroad&logoColor=white)](https://kirkhenrik.gumroad.com/l/woosbf)
+[![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm_NC_1.0-blue?style=flat-square)](LICENSE)
 
 **A productivity app built by an ADHD brain, for ADHD brains.**
 
