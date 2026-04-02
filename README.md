@@ -2,13 +2,17 @@
 
 **A productivity app built by an ADHD brain, for ADHD brains.**
 
-Most productivity apps hide 90% of their features behind a paywall and assume you already have your life together. DopaFlow doesn't. It's offline-first, has no subscription, and gives you everything upfront.
+This is not a founder story from a co-working space. I built DopaFlow because I needed it and nothing else actually worked for me.
+
+I tried TickTick. Habits are "free" until you need them properly, then you hit a paywall. Sunsama is expensive. Todoist felt like it was designed for someone who already has their life together. Super Productivity came closest, but it still was not quite right. So I built my own.
+
+My background is not tech. I spent years working as a sailor in the North Sea and off the coast of Greenland on anchor handling, tug suppliers, standby rescue vessels, surveys, and offshore construction work. Then I got sick and could not continue. What came after was illness, depression, and eventually finding my way into code. I am 50. I have ADHD. I am currently unmedicated because I cannot afford the medicine. This app exists anyway.
 
 ---
 
 ## What it does
 
-DopaFlow brings tasks, habits, focus, journaling, calendar, alarms, and spaced repetition into one place — without the cognitive overhead of switching between five different apps.
+DopaFlow brings tasks, habits, focus, journaling, calendar, alarms, and spaced repetition into one place without the mental overhead of bouncing between five different apps.
 
 | Surface | What it covers |
 |---|---|
@@ -16,12 +20,28 @@ DopaFlow brings tasks, habits, focus, journaling, calendar, alarms, and spaced r
 | **Habits** | Daily check-ins, streaks, freeze/unfreeze, correlation insights, progress rings, heatmap |
 | **Focus** | Pomodoro sessions, task picker, custom duration, session history and stats |
 | **Journal** | Markdown editor, voice dictation, wikilinks, version history, auto-export to `.md`, templates |
-| **Calendar** | Events, Google Calendar sync with conflict resolution, peer calendar sharing for families |
+| **Calendar** | Events, Google Calendar sync with conflict resolution, peer calendar sharing |
 | **Alarms** | Schedule alarms, TTS or YouTube audio queue, background service worker |
 | **Review** | Spaced repetition (SM-2), Anki import, deck management |
-| **Packy** | Contextual memory system — associates words and context to help you remember better |
+| **Packy** | Contextual memory system to help resurface things you forgot |
 | **Digest** | End of day summary, momentum score, weekly insights |
-| **Gamification** | XP, badges, levels — because dopamine helps |
+| **Gamification** | XP, badges, levels, because dopamine helps |
+
+---
+
+## Why these features exist
+
+ADHD is dopamine hunting. You build systems around that or you drown in the lack of them. Every feature in DopaFlow came from a real gap, not a product roadmap.
+
+**Smart Memory** came out of roleplay with LLMs, oddly enough. A normal lorebook triggers on exact words. Miss the word and the memory never shows up. Smart Memory stores by association instead. Coffee can become hot drink, morning ritual, warm beverage. The more you use the journal and build those associations yourself, the more your own past entries can resurface when you need them. It is built for the ADHD reality: decent long-term memory, terrible short-term memory, and a habit of losing the thread completely.
+
+**Spaced repetition** is there because it was the first thing in my life that made learned knowledge actually stick. Anki-style repetition forces your brain to encode things properly instead of skating over them. For neurodivergent people, it is far more useful than most schools seem willing to admit.
+
+**Alarms with TTS** exist because some things need to be said out loud. A spoken reminder lands differently than a silent badge. I use that for medicine, routine, and getting out the door. Sometimes I use music for the same reason. Pavlov, basically. But it works.
+
+**Tasks that roll over** exist because I do not want guilt baked into the software. If you planned four hours and the work took six, the task moves. That is not failure. That is information. You adjust the system to your real capacity instead of pretending you are a machine.
+
+**Calorie and habit correlation** exists because people often do not see their own patterns until the data is in front of them. Six cups of coffee, bad sleep, bad evening journal, worse mood. It is easier to fix what you can actually see.
 
 ---
 
@@ -29,16 +49,16 @@ DopaFlow brings tasks, habits, focus, journaling, calendar, alarms, and spaced r
 
 Your data lives on your device. No account required. No cloud dependency. No subscription.
 
-Optional Google Calendar sync uses OAuth — your credentials are never stored in the app, only in your own `.env`.
+Optional Google Calendar sync uses OAuth. Your credentials are not baked into the app. You own your data.
 
 ---
 
 ## Tech stack
 
-- **Frontend:** React 18 + TypeScript strict + Vite + PWA
-- **Backend:** FastAPI + SQLite (local) or Turso (optional cloud)
-- **Desktop:** Electron shell
-- **Skins:** 19 built-in themes including gradient skins
+- **Frontend:** React 18 + TypeScript + Vite + PWA
+- **Backend:** FastAPI + SQLite or Turso
+- **Desktop:** Electron
+- **Themes:** 19 built-in skins
 
 ---
 
@@ -47,15 +67,19 @@ Optional Google Calendar sync uses OAuth — your credentials are never stored i
 | | Dev (this repo) | Stable |
 |---|---|---|
 | **Cost** | Free | $1 |
-| **Updates** | Pull manually | Auto-updates when pushed |
-| **Status** | Active dev branch | Tested, tagged releases |
-| **Support** | None | None (but issues welcome) |
+| **Updates** | Pull manually from GitHub | Auto-updates when pushed |
+| **Status** | Active development | Tested, tagged releases |
+| **Support** | None | None, but issues are welcome |
 
 👉 **[Get the stable build on Gumroad](#)** — $1, pay what you want above that.
 
+The dev version stays free. The $1 is not for extra features. You get the same app either way. It is for the easy path: stable builds and automatic updates.
+
+The first version got around a thousand downloads with a voluntary donation link. Nobody donated. That is not a moral failure, it is just reality. But I work on hardware from 2011 and 2012, I cannot afford to replace it, and I cannot keep this project alive on zero. One dollar is the compromise.
+
 ---
 
-## Getting started (dev)
+## Getting started
 
 ### Requirements
 
@@ -83,9 +107,9 @@ uvicorn app.main:app --reload
 
 Frontend runs on `http://localhost:5173`, backend on `http://localhost:8000`.
 
-### PWA (install on mobile)
+### PWA
 
-Build the frontend and serve it over HTTPS, then use your browser's "Add to Home Screen" option.
+Build the frontend and serve it over HTTPS, then install it from your browser.
 
 ```bash
 cd frontend
@@ -95,22 +119,28 @@ npm run preview
 
 ---
 
-## Skins
+## Who this is for
 
-19 built-in themes: `ink-and-stone`, `midnight-neon`, `warm-analog`, `vampire-romance`, `deep-ocean`, `forest-gradient`, `ocean-gradient`, `amber-night`, and more.
+Primarily people with ADHD. But also anyone with a stressful life, a bad routine, a messy brain, or a history with productivity apps that assume too much about your baseline.
 
-A **Skin Maker** tool is included for building your own.
+This is not about masking better. It is about ownership. Accountability without guilt. A system you adjust to fit your real life instead of punishing yourself for not fitting the system.
+
+---
+
+## What is coming
+
+Voice commands are the next big push: adding tasks, appointments, and habits by voice. It is not fully there yet because this is still a one-person project on old hardware. But it is coming.
 
 ---
 
 ## Known gaps (v2 beta)
 
-- No skeleton loaders yet (surfaces show blank briefly while loading)
-- Digest email delivery not wired (endpoints exist, scheduled send does not)
-- Drag-to-reschedule in calendar time blocks not implemented
-- Mobile swipe-to-complete on task rows not implemented
+- No skeleton loaders yet
+- Digest email delivery is not wired
+- Drag-to-reschedule in calendar time blocks is not implemented
+- Mobile swipe-to-complete on task rows is not implemented
 
-See `CHANGELOG.md` for full history and roadmap.
+See `CHANGELOG.md` for more.
 
 ---
 
@@ -119,11 +149,3 @@ See `CHANGELOG.md` for full history and roadmap.
 **Personal use only.** You may run, modify, and learn from this code for personal non-commercial use. Redistribution, resale, or commercial use without permission is not allowed.
 
 For anything else, open an issue and ask.
-
----
-
-## A note
-
-This was built on legacy 2011–2012 hardware, unmedicated, over several hundred hours of fixating. If it helps you, consider grabbing the stable build for $1. It keeps the project alive and might eventually fund a laptop that doesn't sound like a jet engine.
-
-No pressure. The dev version is here either way.
