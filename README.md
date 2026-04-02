@@ -71,7 +71,7 @@ Optional Google Calendar sync uses OAuth. Your credentials are not baked into th
 | **Status** | Active development | Tested, tagged releases |
 | **Support** | None | None, but issues are welcome |
 
-👉 **[Get the stable build on Gumroad](#)** — $1, pay what you want above that.
+👉 **[Get the stable build on Gumroad](https://kirkhenrik.gumroad.com/l/woosbf)** — $1, pay what you want above that.
 
 The dev version stays free. The $1 is not for extra features. You get the same app either way. It is for the easy path: stable builds and automatic updates.
 
