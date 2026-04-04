@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DopaFlow v2.0 - User Guide</title>
+    <title>DopaFlow v2.0.7 - User Guide</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -407,7 +407,7 @@
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">✎</span> Journal</h4>
-                    <p>Daily entries with templates and voice dictation</p>
+                    <p>Daily entries with templates, voice dictation, and spoken command capture</p>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">⏰</span> Alarms</h4>
@@ -416,21 +416,32 @@
             </div>
 
             <h3>Installation</h3>
-            <p>DopaFlow consists of three components that can be run separately:</p>
+            <p>DopaFlow can be used from the installed local release or run from source during development.</p>
+
+            <h4>Installed Local Release (recommended on this machine)</h4>
+            <pre><code>/home/henry/release/run-dopaflow-2.0.7.sh</code></pre>
+
+            <div class="note">
+                <strong>Current working install path:</strong> the verified local release is the web-mode bundle in
+                <code>/home/henry/release/DopaFlow-2.0.7-web</code>, served on <code>http://127.0.0.1:8000</code>.
+            </div>
+
+            <h4>Run from source</h4>
+            <p>Source development uses the repo root paths below:</p>
 
             <h4>Backend (FastAPI)</h4>
-            <pre><code>cd v2/backend
-python3 -m app.main</code></pre>
+            <pre><code>cd /home/henry/vscode/build/dopaflow/backend
+../.venv/bin/python -m app.main</code></pre>
 
             <h4>Frontend (React + Vite)</h4>
-            <pre><code>cd v2/frontend
-npm install
-npm run dev</code></pre>
+            <pre><code>cd /home/henry/vscode/build/dopaflow/frontend
+PATH=/home/henry/vscode/.codex-bin:$PATH npm install
+PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
 
             <h4>Desktop (Electron)</h4>
-            <pre><code>cd v2/desktop
-npm install
-npm run dev</code></pre>
+            <pre><code>cd /home/henry/vscode/build/dopaflow/desktop
+PATH=/home/henry/vscode/.codex-bin:$PATH npm install
+PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
 
             <h3>Environment Variables</h3>
             <p>Configure the backend with these environment variables:</p>
@@ -613,7 +624,7 @@ npm run dev</code></pre>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">✎</span> Journal</h4>
-                    <p>Entry editor with markdown, templates, and voice dictation.</p>
+                    <p>Entry editor with markdown, templates, voice dictation, and command-word voice entry support.</p>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">▦</span> Calendar</h4>
@@ -692,6 +703,19 @@ npm run dev</code></pre>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/journal/transcribe</span></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/journal/templates</span></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/journal/graph</span></div>
+
+            <h3>Commands</h3>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/commands/preview</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/commands/voice-preview</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/commands/execute</span></div>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/commands/list</span></div>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/commands/history</span></div>
+
+            <div class="tip">
+                <strong>Voice command words:</strong> spoken command routing is intentionally explicit in v2.0.7.
+                Use prefixes like <code>task ...</code>, <code>journal ...</code>, and <code>calendar ...</code>.
+                The app previews the action first, then asks for confirmation before execution.
+            </div>
 
             <h3>Calendar</h3>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/calendar/events</span></div>
@@ -1247,9 +1271,10 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
 
             <h3>Desktop app crashes on startup</h3>
             <ul>
-                <li>Delete <code>node_modules</code> and run <code>npm install</code></li>
-                <li>Check that backend starts successfully</li>
-                <li>Review Electron logs in console</li>
+                <li>On this machine, prefer the verified release launcher: <code>/home/henry/release/run-dopaflow-2.0.7.sh</code></li>
+                <li>If running from source, confirm the backend starts successfully first</li>
+                <li>Use the persistent Node path in <code>/home/henry/vscode/.codex-bin</code> instead of old temporary installs</li>
+                <li>Review Electron logs only if you are specifically debugging the native shell</li>
             </ul>
 
             <h3>Database migration errors</h3>
@@ -1264,17 +1289,18 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
                 <li>Set <code>DISABLE_LOCAL_AUDIO=false</code></li>
                 <li>Check system audio permissions</li>
                 <li>Verify browser/site has audio permission</li>
+                <li>For voice commands, check microphone permission and browser speech synthesis support</li>
             </ul>
 
             <div class="note">
                 <strong>Need more help?</strong> Check the <code>STRUCTURE.md</code> file for detailed architecture documentation, 
-                or review the OpenAPI spec at <code>/api/v2/docs</code> when the backend is running.
+                or review the command and API routes from the running local release at <code>http://127.0.0.1:8000</code>.
             </div>
         </section>
     </main>
 
     <footer>
-        <p>DopaFlow v2.0.0 - A Unified Productivity App for ADHD Brains</p>
+        <p>DopaFlow v2.0.7 - A Unified Productivity App for ADHD Brains</p>
         <p>Built with FastAPI, React 18, Vite, TypeScript, and Electron</p>
     </footer>
 </body>

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class OpsStatsResponse(BaseModel):
@@ -27,14 +29,24 @@ class OpsConfigResponse(BaseModel):
 
 
 class OpsImportIn(BaseModel):
-    package: str
-    checksum: str
+    package: str = Field(min_length=2)
+    checksum: str = Field(min_length=16, max_length=128)
     dry_run: bool = False
 
 
 class TursoTestIn(BaseModel):
-    url: str
-    token: str
+    url: str = Field(min_length=1, max_length=2048)
+    token: str = Field(min_length=1, max_length=4096)
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        parsed = urlparse(value)
+        if parsed.scheme not in {"libsql", "https"}:
+            raise ValueError("url must use libsql:// or https://")
+        if not parsed.netloc:
+            raise ValueError("url must include a host")
+        return value
 
 
 class TursoTestResult(BaseModel):
@@ -43,9 +55,9 @@ class TursoTestResult(BaseModel):
 
 
 class ScopeTokenCreateIn(BaseModel):
-    scopes: list[str]
-    subject: str = "ops-issued"
-    ttl_seconds: int = 3600
+    scopes: list[str] = Field(min_length=1, max_length=64)
+    subject: str = Field(default="ops-issued", min_length=1, max_length=120)
+    ttl_seconds: int = Field(default=3600, ge=60, le=60 * 60 * 24 * 30)
 
 
 class ScopeTokenIssued(BaseModel):

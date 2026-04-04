@@ -152,6 +152,7 @@ async def import_apkg(
         file,
         kind="zip",
         allowed_suffixes={".apkg"},
+        allowed_content_types={"application/octet-stream", "application/zip", "application/x-zip-compressed"},
         default_max_bytes=25 * 1024 * 1024,
     )
     deck_name = target_deck_name or f"imported_deck_{uuid.uuid4().hex[:8]}"

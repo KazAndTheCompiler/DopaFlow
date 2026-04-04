@@ -17,7 +17,7 @@ To protect an endpoint with a scope requirement, use Depends():
 Available scopes are defined in SCOPES dict in auth_scopes.py.
 
 Dev mode: Set ZOESTM_DEV_AUTH=1 to bypass all scope checks (testing only).
-Local trust: Set ZOESTM_TRUST_LOCAL_CLIENTS=1 to auto-trust localhost origins.
+Local trust: Set ZOESTM_TRUST_LOCAL_CLIENTS=1 to trust localhost browser origins from a loopback client.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from fastapi import Header, HTTPException, Request
 
 from app.core.config import Settings, get_settings
 from app.core.database import get_db, tx
-from app.middleware.auth import TRUSTED_HOSTS, TRUSTED_ORIGINS
+from app.middleware.auth import TRUSTED_HOSTS
 
 SCOPES = {
     "read:tasks": "Read tasks",
@@ -229,7 +229,7 @@ def require_scope(scope: str):
 
     Scopes are validated from a signed bearer token.
     Dev bypass: ZOESTM_DEV_AUTH=1
-    Local trust: ZOESTM_TRUST_LOCAL_CLIENTS=1 (localhost origin gets all scopes)
+    Local trust: ZOESTM_TRUST_LOCAL_CLIENTS=1 (only loopback clients with localhost origins are auto-trusted)
     """
 
     async def dep(request: Request, authorization: str | None = Header(default=None)) -> bool:
@@ -237,13 +237,10 @@ def require_scope(scope: str):
             return True
         origin = request.headers.get("origin", "")
         client_host = request.client.host if request.client else ""
-        host = request.headers.get("host", "").lower()
-        if any(origin.startswith(prefix) for prefix in TRUSTED_ORIGINS):
+        if client_host in TRUSTED_HOSTS:
             return True
-        if client_host in TRUSTED_HOSTS or host.startswith("127.0.0.1:") or host.startswith("localhost:"):
-            return True
-        if os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", os.getenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "0")) == "1":
-            if origin.startswith("http://127.0.0.1:") or origin.startswith("http://localhost:"):
+        if os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", os.getenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "0")).lower() in {"1", "true", "yes"}:
+            if client_host in TRUSTED_HOSTS and (origin.startswith("http://127.0.0.1:") or origin.startswith("http://localhost:")):
                 return True
         if not authorization:
             raise HTTPException(status_code=401, detail={"code": "missing_token", "message": "Missing Authorization header"})

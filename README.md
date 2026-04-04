@@ -136,9 +136,15 @@ This is not about masking better. It is about ownership. Accountability without 
 
 ---
 
-## What is coming
+## Voice commands
 
-Voice commands are the next big push: adding tasks, appointments, and habits by voice. It is not fully there yet because this is still a one-person project on old hardware. But it is coming.
+Voice commands are live in the current build with explicit command words:
+
+- `task buy milk tomorrow`
+- `journal today felt clearer after walking`
+- `calendar dentist tomorrow at 14:00 for 45 minutes`
+
+The current version is deliberately strict. It previews first, asks for confirmation, and speaks back status through browser TTS instead of trying to guess intent from vague speech.
 
 ---
 

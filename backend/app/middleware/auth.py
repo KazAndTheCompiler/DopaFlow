@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from secrets import compare_digest
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-TRUSTED_ORIGINS = {"app://", "file://"}
 TRUSTED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
@@ -23,15 +24,18 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.url.path == "/health":
             return await call_next(request)
 
-        origin = request.headers.get("origin", "")
         host = request.client.host if request.client else ""
 
-        if any(origin.startswith(prefix) for prefix in TRUSTED_ORIGINS) or host in TRUSTED_HOSTS or self.settings.dev_auth:
+        if self.settings.dev_auth:
+            return await call_next(request)
+
+        if host in TRUSTED_HOSTS:
             return await call_next(request)
 
         if self.settings.enforce_auth:
             api_key = request.headers.get("x-api-key", "")
-            if not api_key or api_key != self.settings.api_key:
+            expected_api_key = getattr(self.settings, "api_key", "") or ""
+            if not api_key or not expected_api_key or not compare_digest(api_key, expected_api_key):
                 return Response("Unauthorized", status_code=401)
 
         return await call_next(request)

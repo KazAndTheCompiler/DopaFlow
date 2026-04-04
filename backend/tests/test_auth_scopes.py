@@ -248,3 +248,79 @@ async def test_remote_alarm_and_player_routes_accept_matching_tokens(tmp_path: P
 
     assert alarm_response.status_code == 200
     assert player_response.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_remote_ops_backup_and_seed_require_admin_scope(tmp_path: Path) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    run_migrations(str(db_path))
+    app = _create_remote_app(db_path)
+
+    backup_denied = await _request(app, "GET", "/api/v2/ops/backup/db", headers=_bearer("write:ops"))
+    seed_denied = await _request(app, "POST", "/api/v2/ops/seed", headers=_bearer("write:ops"))
+    backup_allowed = await _request(app, "GET", "/api/v2/ops/backup/db", headers=_bearer("admin:ops"))
+
+    assert backup_denied.status_code == 403
+    assert backup_denied.json()["detail"]["required"] == "admin:ops"
+    assert seed_denied.status_code == 403
+    assert seed_denied.json()["detail"]["required"] == "admin:ops"
+    assert backup_allowed.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_remote_docs_and_openapi_are_disabled_when_dev_auth_is_off(tmp_path: Path) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    run_migrations(str(db_path))
+    app = _create_remote_app(db_path)
+
+    docs_response = await _request(app, "GET", "/api/v2/docs")
+    openapi_response = await _request(app, "GET", "/api/v2/openapi.json")
+
+    assert docs_response.status_code == 404
+    assert openapi_response.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_remote_request_cannot_bypass_scope_check_with_localhost_host_header(tmp_path: Path) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    run_migrations(str(db_path))
+    app = _create_remote_app(db_path)
+
+    response = await _request(app, "GET", "/api/v2/tasks/", headers={"Host": "localhost:8000"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "missing_token"
+
+
+@pytest.mark.anyio
+async def test_loopback_browser_origin_can_be_trusted_when_flag_enabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    monkeypatch.setenv("DOPAFLOW_DB_PATH", str(db_path))
+    monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "false")
+    monkeypatch.setenv("DOPAFLOW_AUTH_TOKEN_SECRET", "test-scope-secret")
+    monkeypatch.setenv("DOPAFLOW_DISABLE_LOCAL_AUDIO", "1")
+    monkeypatch.setenv("DOPAFLOW_DISABLE_BACKGROUND_JOBS", "1")
+    monkeypatch.setenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "true")
+    get_settings.cache_clear()
+    run_migrations(str(db_path))
+    app_main = importlib.import_module("app.main")
+    app_main = importlib.reload(app_main)
+    app = app_main.create_app()
+
+    transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 12345))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v2/tasks/", headers={"Origin": "http://localhost:5173"})
+
+    assert response.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_remote_request_cannot_bypass_scope_check_with_spoofed_app_origin(tmp_path: Path) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    run_migrations(str(db_path))
+    app = _create_remote_app(db_path)
+
+    response = await _request(app, "GET", "/api/v2/tasks/", headers={"Origin": "app://dopaflow"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "missing_token"

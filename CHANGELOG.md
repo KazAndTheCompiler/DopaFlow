@@ -4,6 +4,53 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ---
 
+## Version 2.0.7
+
+**Release Date:** 2026-04-04
+**Status:** Installed local release verified in `/home/henry/release/DopaFlow-2.0.7-web`
+
+### Highlights
+
+- Fixed the local release path so `/home/henry/release/run-dopaflow-2.0.7.sh` serves the working app bundle.
+- Rebuilt and restaged the frontend bundle into the installed release.
+- Cleared the remaining route-level frontend regressions and verified the app with the full Playwright suite.
+
+### Fixes
+
+- Release wrapper/API serving
+  - fixed frontend catch-all behavior in `serve_release.py` so API requests stop receiving `index.html`
+- Onboarding
+  - fixed final-step lockup and modal trap
+- Shutdown flow
+  - fixed app-level shutdown open event handling
+  - fixed plan/shutdown modal conflicts
+  - fixed defer-step deadlock
+  - removed duplicate copy that caused ambiguous route-level checks
+- Surface crash hardening
+  - `useGamification.ts` now tolerates partial/empty gamification payloads
+  - `useFocus.ts` now tolerates non-array session payloads
+  - `useInsights.ts` now tolerates partial digest/correlation payloads
+  - `overview/index.tsx` now validates `/digest/today` payload shape before rendering `DigestCard`
+- Tasks/goals/runtime
+  - quick-add task creation now actually creates a task
+  - added the missing goals backend domain and migration
+  - fixed Packy lorebook ID collisions
+- Tooling
+  - `frontend/playwright.config.ts` now uses the persistent Node path and bundled runtime libs instead of stale `/tmp` assumptions
+
+### Verification
+
+- Frontend build passed
+- Full Playwright suite passed: `17 passed`
+- Installed release smoke after restart passed for:
+  - `today`
+  - `tasks`
+  - `focus`
+  - `goals`
+  - `overview`
+  - `commands`
+  - `settings`
+
 ## Version 2.0.0-beta (Current Development)
 
 **Release Date:** In Development

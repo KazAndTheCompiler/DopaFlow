@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import tempfile
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import PlainTextResponse, Response
@@ -28,7 +27,7 @@ from app.domains.journal.schemas import (
 )
 from app.domains.journal.service import JournalService
 from app.middleware.auth_scopes import require_scope
-from app.services.upload_security import validate_upload
+from app.services.speech_to_text import transcribe_upload
 
 router = APIRouter(prefix="/journal", tags=["journal"])
 
@@ -195,31 +194,8 @@ async def journal_to_card(payload: JournalToCardIn, db_path: str = Depends(_db_p
 
 @router.post("/transcribe", dependencies=[Depends(require_scope("write:journal"))])
 async def transcribe_audio(file: UploadFile = File(...), lang: str = Query(default="en-US")) -> dict:
-    try:
-        import speech_recognition as sr
-        import subprocess as _sp
-    except ImportError:
-        raise HTTPException(status_code=501, detail="Speech recognition not installed")
-
-    data, _ = validate_upload(file, kind="audio", allowed_suffixes={".wav", ".mp3", ".m4a", ".webm", ".ogg", ".mp4"}, default_max_bytes=10 * 1024 * 1024)
-    r = sr.Recognizer()
-    try:
-        with tempfile.TemporaryDirectory() as tmp:
-            suffix = os.path.splitext(file.filename or "audio")[1] or ".webm"
-            in_path = os.path.join(tmp, f"input{suffix}")
-            wav_path = os.path.join(tmp, "audio.wav")
-            with open(in_path, "wb") as fh:
-                fh.write(data)
-            _sp.run(["ffmpeg", "-y", "-i", in_path, "-ar", "16000", "-ac", "1", "-f", "wav", wav_path], capture_output=True, check=True, timeout=30)
-            with sr.AudioFile(wav_path) as source:
-                audio = r.record(source)
-        return {"transcript": r.recognize_google(audio, language=lang)}
-    except sr.UnknownValueError:
-        return {"transcript": ""}
-    except _sp.CalledProcessError:
-        raise HTTPException(status_code=422, detail="Audio conversion failed")
-    except sr.RequestError:
-        raise HTTPException(status_code=502, detail="Speech service error")
+    result = transcribe_upload(file, lang=lang)
+    return {"transcript": result.transcript}
 
 
 # ── graph / backlinks ─────────────────────────────────────────────────────────

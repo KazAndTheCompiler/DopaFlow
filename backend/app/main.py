@@ -21,6 +21,7 @@ from app.domains.commands.router import router as commands_router
 from app.domains.digest.router import router as digest_router
 from app.domains.focus.router import router as focus_router
 from app.domains.gamification.router import router as gamification_router
+from app.domains.goals.router import router as goals_router
 from app.domains.habits.router import router as habits_router
 from app.domains.health.router import router as health_router
 from app.domains.insights.router import router as insights_router
@@ -56,6 +57,7 @@ _DOMAIN_ROUTERS = [
     (habits_router, "/habits"),
     (focus_router, "/focus"),
     (gamification_router, "/gamification"),
+    (goals_router, "/goals"),
     (review_router, "/review"),
     (journal_router, "/journal"),
     (calendar_router, "/calendar"),
@@ -103,9 +105,9 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="DopaFlow API",
-        version="2.0.0",
-        docs_url=f"{API_PREFIX}/docs",
-        openapi_url=f"{API_PREFIX}/openapi.json",
+        version="2.0.7",
+        docs_url=f"{API_PREFIX}/docs" if settings.dev_auth else None,
+        openapi_url=f"{API_PREFIX}/openapi.json" if settings.dev_auth else None,
         lifespan=lifespan,
     )
 
@@ -130,7 +132,7 @@ def create_app() -> FastAPI:
     async def healthcheck() -> dict[str, str]:
         """Return a minimal liveness payload for desktop startup checks."""
 
-        return {"status": "ok", "app": "dopaflow", "version": "2.0.0"}
+        return {"status": "ok", "app": "dopaflow", "version": "2.0.7"}
 
     return app
 

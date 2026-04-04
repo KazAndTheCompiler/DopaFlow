@@ -19,6 +19,15 @@ MAGIC_BYTES = {
 }
 
 
+def _read_limited_content(file: UploadFile, max_bytes: int) -> bytes:
+    """Read at most max_bytes + 1 so oversize uploads are rejected early."""
+
+    file.file.seek(0)
+    content = file.file.read(max_bytes + 1)
+    file.file.seek(0)
+    return content
+
+
 def validate_upload(
     file: UploadFile,
     kind: str = "generic",
@@ -31,7 +40,7 @@ def validate_upload(
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing filename")
 
-    content = file.file.read()
+    content = _read_limited_content(file, default_max_bytes)
     if len(content) > default_max_bytes:
         raise HTTPException(status_code=400, detail=f"File too large (max {default_max_bytes} bytes)")
 

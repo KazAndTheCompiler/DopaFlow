@@ -72,7 +72,7 @@ class OpsService:
     def get_config(self) -> dict[str, object]:
         dev_auth = os.getenv("DOPAFLOW_DEV_AUTH", os.getenv("ZOESTM_DEV_AUTH", "0")).lower() in {"1", "true", "yes"}
         enforce_auth = os.getenv("DOPAFLOW_ENFORCE_AUTH", os.getenv("ZOESTM_ENFORCE_AUTH", "0")).lower() in {"1", "true", "yes"}
-        trust_local = os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", "1").lower() in {"1", "true", "yes"}
+        trust_local = os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", os.getenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "0")).lower() in {"1", "true", "yes"}
         webhook_http_delivery = os.getenv("ENABLE_WEBHOOK_HTTP_DELIVERY", "0").lower() in {"1", "true", "yes"}
         return {
             "dev_auth": dev_auth,
@@ -100,7 +100,7 @@ class OpsService:
             except Exception:  # noqa: BLE001
                 cmd_logs = []
         return {
-            "manifest": {"schema_version": "v2", "app_version": "2.0.0"},
+            "manifest": {"schema_version": "v2", "app_version": "2.0.7"},
             "tasks": tasks,
             "commands": cmd_logs,
             "habits": habits,
