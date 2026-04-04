@@ -181,11 +181,18 @@ function Defer({
 }): JSX.Element {
   const [decisions, setDecisions] = useState<Record<string, "tomorrow" | "this_week" | "drop">>({});
 
-  const allDecided = incompleteToday.length === 0 || incompleteToday.every((t) => decisions[t.id]);
-
   const handleDecide = (id: string, when: "tomorrow" | "this_week" | "drop"): void => {
     setDecisions((prev) => ({ ...prev, [id]: when }));
     onDefer(id, when);
+  };
+
+  const handleContinue = (): void => {
+    incompleteToday.forEach((task) => {
+      if (!decisions[task.id]) {
+        onDefer(task.id, "tomorrow");
+      }
+    });
+    onNext();
   };
 
   return (
@@ -264,16 +271,15 @@ function Defer({
           Back
         </button>
         <button
-          onClick={onNext}
-          disabled={!allDecided}
+          onClick={handleContinue}
           style={{
             flex: 1,
             ...primaryBtn,
-            background: allDecided ? primaryBtn.background : "var(--border-subtle)",
+            background: primaryBtn.background,
             color: "var(--text-inverted)",
-            cursor: allDecided ? "pointer" : "not-allowed",
-            opacity: allDecided ? 1 : 0.5,
-            boxShadow: allDecided ? "var(--shadow-soft)" : "none",
+            cursor: "pointer",
+            opacity: 1,
+            boxShadow: "var(--shadow-soft)",
           }}
         >
           Continue
@@ -320,7 +326,7 @@ function JournalPrompt({
   return (
     <div>
       <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", marginTop: 0, marginBottom: "1rem" }}>
-        Tomorrow's lineup
+        Next lineup
       </p>
       {tomorrowTasks.length === 0 ? (
         <div style={{ padding: "0.5rem 0.75rem", borderRadius: "10px", background: "var(--surface-2)", marginBottom: "1.5rem", fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
@@ -456,7 +462,7 @@ export default function ShutdownModal({
     if (tomorrowTasks.length > 0) {
       return {
         eyebrow: "Runway set",
-        title: "Tomorrow already has a starting line",
+        title: "The next day already has a starting line",
         body: "You can finish the day by checking the emotional note and leaving the plan intact.",
       };
     }
@@ -557,7 +563,7 @@ export default function ShutdownModal({
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
           <div style={{ padding: "0.75rem 0.85rem", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-              Wins
+              Completed
             </span>
             <strong style={{ fontSize: "1.2rem" }}>{completedToday.length}</strong>
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
@@ -575,7 +581,7 @@ export default function ShutdownModal({
           </div>
           <div style={{ padding: "0.75rem 0.85rem", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem" }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
-              Tomorrow
+              Planned
             </span>
             <strong style={{ fontSize: "1.2rem" }}>{tomorrowTasks.length}</strong>
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>

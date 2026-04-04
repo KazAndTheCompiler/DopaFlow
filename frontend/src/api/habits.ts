@@ -2,7 +2,7 @@ import type { Habit } from "../../../shared/types";
 import { apiClient } from "./client";
 
 export function listHabits(): Promise<Habit[]> {
-  return apiClient<Habit[]>("/habits");
+  return apiClient<Habit[]>("/habits/");
 }
 
 export function createHabit(payload: Partial<Habit>): Promise<Habit> {

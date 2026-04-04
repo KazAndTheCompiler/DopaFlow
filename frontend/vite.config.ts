@@ -12,6 +12,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: false,
       includeAssets: ["favicon.svg"],
       manifest: {
         name: "DopaFlow",
@@ -37,4 +38,3 @@ export default defineConfig({
     port: 5173,
   },
 });
-

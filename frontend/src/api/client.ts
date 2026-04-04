@@ -5,11 +5,14 @@ function fireToast(message: string, type: "error" | "warn"): void {
 }
 
 export async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers: isFormData
+      ? { ...(init?.headers ?? {}) }
+      : {
+          "Content-Type": "application/json",
+          ...(init?.headers ?? {}),
+        },
     ...init,
   });
 

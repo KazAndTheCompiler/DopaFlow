@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { executeCommandText } from "@api/index";
+import VoiceCommandModal from "../../components/VoiceCommandModal";
+
 interface CommandDefinition {
   id: string;
   name: string;
@@ -33,6 +36,15 @@ export default function CommandsView(): JSX.Element {
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div style={{ display: "grid", gap: "0.2rem" }}>
+          <strong style={{ fontSize: "var(--text-lg)" }}>Command Center</strong>
+          <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+            Voice commands must start with task, journal, or calendar.
+          </span>
+        </div>
+        <VoiceCommandModal />
+      </div>
       <input
         type="text"
         placeholder="Search commands..."
@@ -72,11 +84,7 @@ export default function CommandsView(): JSX.Element {
                 event.currentTarget.style.background = "var(--surface)";
               }}
               onClick={() => {
-                void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/commands/execute`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ text: command.text }),
-                });
+                void executeCommandText(command.text, true);
               }}
             >
               <strong>{command.name}</strong>

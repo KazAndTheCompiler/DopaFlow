@@ -23,8 +23,15 @@ export function useInsights(): UseInsightsResult {
       getCorrelations(),
     ]);
     setMomentum(nextMomentum);
-    setWeeklyDigest(nextWeeklyDigest);
-    setCorrelations(nextCorrelations);
+    setWeeklyDigest(
+      nextWeeklyDigest && typeof nextWeeklyDigest.title === "string"
+        ? {
+            title: nextWeeklyDigest.title,
+            highlights: Array.isArray(nextWeeklyDigest.highlights) ? nextWeeklyDigest.highlights : [],
+          }
+        : undefined,
+    );
+    setCorrelations(Array.isArray(nextCorrelations) ? nextCorrelations : []);
   };
 
   useEffect(() => {

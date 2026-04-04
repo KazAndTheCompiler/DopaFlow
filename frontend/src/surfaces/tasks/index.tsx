@@ -94,6 +94,9 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <TaskCreateBar
+        onVoiceExecuted={() => {
+          void app.tasks.refresh();
+        }}
         onCreate={async (text) => {
           const task = await app.tasks.createDraftTask(text);
           if (activeProjectId && task && typeof task === "object" && "id" in task) {

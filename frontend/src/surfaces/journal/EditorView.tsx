@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { JournalEntry } from "../../../../shared/types";
 import VoiceDictation from "../../components/VoiceDictation";
+import VoiceCommandModal from "../../components/VoiceCommandModal";
 import WikiRenderer from "./WikiRenderer";
 
 const AUTOSAVE_DELAY_MS = 1200;
@@ -12,6 +13,7 @@ interface EditorViewProps {
   selectedDate: string;
   onSave: (payload: Partial<JournalEntry>) => Promise<JournalEntry>;
   onNavigateDate?: (date: string) => void;
+  onVoiceExecuted?: () => void;
 }
 
 function tagPills(tags: string[]): JSX.Element {
@@ -35,7 +37,7 @@ function tagPills(tags: string[]): JSX.Element {
   );
 }
 
-export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDate }: EditorViewProps): JSX.Element {
+export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDate, onVoiceExecuted }: EditorViewProps): JSX.Element {
   const [body, setBody] = useState<string>(entry?.markdown_body ?? "");
   const [emoji, setEmoji] = useState<string>(entry?.emoji ?? "");
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -161,6 +163,12 @@ export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDat
           scheduleAutosave(nextBody, emoji);
         }}
       />
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <VoiceCommandModal
+          initialCommandWord="journal"
+          {...(onVoiceExecuted ? { onExecuted: onVoiceExecuted } : {})}
+        />
+      </div>
 
       {preview ? (
         <div

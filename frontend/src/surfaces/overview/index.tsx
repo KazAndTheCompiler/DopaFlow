@@ -14,6 +14,46 @@ const LEVEL_COLOR: Record<string, string> = {
   peak: "var(--state-ok)",
 };
 
+interface OverviewDigestData {
+  score: number;
+  momentum_score: number;
+  momentum_label: string;
+  tasks: { completed: number; completion_rate: number };
+  habits: { overall_rate: number };
+  focus: { total_minutes: number };
+}
+
+function normalizeDigestData(value: unknown): OverviewDigestData | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const digest = value as Record<string, unknown>;
+  const tasks = digest.tasks;
+  const habits = digest.habits;
+  const focus = digest.focus;
+
+  if (!tasks || typeof tasks !== "object" || !habits || typeof habits !== "object" || !focus || typeof focus !== "object") {
+    return null;
+  }
+
+  return {
+    score: typeof digest.score === "number" ? digest.score : 0,
+    momentum_score: typeof digest.momentum_score === "number" ? digest.momentum_score : 0,
+    momentum_label: typeof digest.momentum_label === "string" ? digest.momentum_label : "Unknown",
+    tasks: {
+      completed: typeof (tasks as Record<string, unknown>).completed === "number" ? (tasks as Record<string, unknown>).completed as number : 0,
+      completion_rate: typeof (tasks as Record<string, unknown>).completion_rate === "number" ? (tasks as Record<string, unknown>).completion_rate as number : 0,
+    },
+    habits: {
+      overall_rate: typeof (habits as Record<string, unknown>).overall_rate === "number" ? (habits as Record<string, unknown>).overall_rate as number : 0,
+    },
+    focus: {
+      total_minutes: typeof (focus as Record<string, unknown>).total_minutes === "number" ? (focus as Record<string, unknown>).total_minutes as number : 0,
+    },
+  };
+}
+
 function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }): JSX.Element {
   return (
     <div
@@ -39,12 +79,12 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string 
 
 export default function OverviewView(): JSX.Element {
   const app = useContext(AppDataContext);
-  const [digestData, setDigestData] = useState<Record<string, unknown> | null>(null);
+  const [digestData, setDigestData] = useState<OverviewDigestData | null>(null);
 
   useEffect(() => {
     void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/digest/today`)
       .then((r) => r.json())
-      .then((body) => setDigestData(body))
+      .then((body) => setDigestData(normalizeDigestData(body)))
       .catch(() => setDigestData(null));
   }, []);
 
@@ -430,7 +470,7 @@ export default function OverviewView(): JSX.Element {
         )}
       </div>
 
-      {digestData && <DigestCard digest={digestData as never} />}
+      {digestData && <DigestCard digest={digestData} />}
     </div>
   );
 }
