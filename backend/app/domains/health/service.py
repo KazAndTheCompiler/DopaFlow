@@ -11,7 +11,11 @@ from app.core.config import get_settings
 
 _START_TIME = time.time()
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.7"
+
+
+def _trust_local_clients_enabled() -> bool:
+    return os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", os.getenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "0")).lower() in {"1", "true", "yes"}
 
 
 def _startup_security_warnings() -> list[str]:
@@ -19,14 +23,14 @@ def _startup_security_warnings() -> list[str]:
     environment = os.getenv("ENVIRONMENT", "development")
     if os.getenv("ZOESTM_DEV_AUTH", os.getenv("DOPAFLOW_DEV_AUTH", "0")) == "1":
         warnings.append("ZOESTM_DEV_AUTH=1 enables dev auth bypass")
-    if os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", "1") == "1":
+    if _trust_local_clients_enabled():
         warnings.append("ZOESTM_TRUST_LOCAL_CLIENTS=1 trusts localhost clients without real tokens")
     if os.getenv("WEBHOOK_SIGNING_KEY", "dev-key-change-in-prod") == "dev-key-change-in-prod":
         warnings.append("WEBHOOK_SIGNING_KEY is using the default development value")
     if environment == "production":
         if os.getenv("ZOESTM_DEV_AUTH", "0") == "1":
             warnings.append("Production mode with ZOESTM_DEV_AUTH=1 is unsafe")
-        if os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", "1") == "1":
+        if _trust_local_clients_enabled():
             warnings.append("Production mode with ZOESTM_TRUST_LOCAL_CLIENTS=1 is unsafe")
     return warnings
 
@@ -69,7 +73,7 @@ class HealthService:
                 "dev_auth": os.getenv("ZOESTM_DEV_AUTH", os.getenv("DOPAFLOW_DEV_AUTH", "0")) == "1",
                 "ai_commands": bool(os.getenv("ANTHROPIC_API_KEY")),
                 "local_audio": os.getenv("ZOESTM_DISABLE_LOCAL_AUDIO", "0") != "1",
-                "trust_local_clients": os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", "1") == "1",
+                "trust_local_clients": _trust_local_clients_enabled(),
                 "enforce_auth": os.getenv("ZOESTM_ENFORCE_AUTH", "0") == "1",
                 "local_webhooks": os.getenv("ZOESTM_ALLOW_LOCAL_WEBHOOK_TARGETS", "0") == "1",
             },

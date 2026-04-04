@@ -8,7 +8,7 @@ from app.domains.meta.schemas import MetaResponse, VersionResponse
 
 router = APIRouter(prefix="/meta", tags=["meta"])
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.0.7"
 SCHEMA_VERSION = "v2"
 
 

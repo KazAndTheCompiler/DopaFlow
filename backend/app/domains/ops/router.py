@@ -7,7 +7,7 @@ from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from app.core.config import Settings, get_settings_dependency
@@ -143,7 +143,7 @@ async def export_all_zip(svc: OpsService = Depends(_svc)) -> Response:
 
 # ── backup / restore ──────────────────────────────────────────────────────────
 
-@router.get("/backup/db", dependencies=[Depends(require_scope("write:ops"))])
+@router.get("/backup/db", dependencies=[Depends(require_scope("admin:ops"))])
 async def backup_db(svc: OpsService = Depends(_svc)) -> Response:
     """Download a live SQLite backup of the database."""
     try:
@@ -162,26 +162,28 @@ async def backup_db(svc: OpsService = Depends(_svc)) -> Response:
     )
 
 
-@router.post("/backup/verify", dependencies=[Depends(require_scope("write:ops"))])
+@router.post("/backup/verify", dependencies=[Depends(require_scope("admin:ops"))])
 async def verify_backup(file: UploadFile = File(...)) -> dict[str, object]:
     """Verify a SQLite backup file without restoring it."""
     content, _ = validate_upload(
         file,
         kind="sqlite",
         allowed_suffixes={".db", ".sqlite", ".sqlite3"},
+        allowed_content_types={"application/octet-stream", "application/x-sqlite3", "application/vnd.sqlite3"},
         default_max_bytes=50 * 1024 * 1024,
     )
     svc = OpsService("")  # db_path not needed for verify
     return svc.verify_backup(content)
 
 
-@router.post("/restore/db", dependencies=[Depends(require_scope("write:ops"))])
+@router.post("/restore/db", dependencies=[Depends(require_scope("admin:ops"))])
 async def restore_db(file: UploadFile = File(...), settings: Settings = Depends(get_settings_dependency)) -> dict[str, object]:
     """Restore the database from a previously downloaded backup file."""
     content, _ = validate_upload(
         file,
         kind="sqlite",
         allowed_suffixes={".db", ".sqlite", ".sqlite3"},
+        allowed_content_types={"application/octet-stream", "application/x-sqlite3", "application/vnd.sqlite3"},
         default_max_bytes=50 * 1024 * 1024,
     )
     svc = OpsService(str(settings.db_path))
@@ -193,7 +195,7 @@ async def restore_db(file: UploadFile = File(...), settings: Settings = Depends(
 
 # ── seed / import / reconcile ─────────────────────────────────────────────────
 
-@router.post("/seed", dependencies=[Depends(require_scope("write:ops"))])
+@router.post("/seed", dependencies=[Depends(require_scope("admin:ops"))])
 async def seed_first_run(svc: OpsService = Depends(_svc)) -> dict[str, object]:
     """Seed sample data on first run (no-op if data already exists)."""
     return svc.seed_first_run()
@@ -209,7 +211,7 @@ async def import_data(payload: OpsImportIn, svc: OpsService = Depends(_svc)) -> 
 
 
 @router.post("/integrations/reconcile", dependencies=[Depends(require_scope("admin:ops"))])
-async def reconcile(limit: int = 100) -> dict[str, object]:
+async def reconcile(limit: int = Query(default=100, ge=1, le=1000)) -> dict[str, object]:
     """Trigger webhook outbox reconciliation."""
     try:
         from app.domains.integrations.service import IntegrationsService

@@ -7,7 +7,19 @@ import re
 from datetime import UTC, datetime, timedelta
 
 from app.domains.commands.repository import CommandRepository
+from app.services import quick_add
 
+COMMAND_WORD_ALIASES: tuple[tuple[str, str], ...] = (
+    ("add task", "task"),
+    ("todo", "task"),
+    ("task", "task"),
+    ("journal entry", "journal"),
+    ("log journal", "journal"),
+    ("journal", "journal"),
+    ("schedule", "calendar"),
+    ("event", "calendar"),
+    ("calendar", "calendar"),
+)
 TASK_PREFIX_RE = re.compile(
     r"^\s*(?:add task|create task|new task|todo|to do|i need to|add to list|remind me)\s+",
     re.IGNORECASE,
@@ -89,9 +101,110 @@ def _extract_priority(text: str) -> tuple[int, str]:
     return 2, text
 
 
+def _strip_command_word(text: str, prefixes: tuple[str, ...]) -> str:
+    for prefix in prefixes:
+        if text.lower().strip() == prefix:
+            return ""
+        if text.lower().strip().startswith(f"{prefix} "):
+            return text.strip()[len(prefix) :].strip()
+    return text.strip()
+
+
+def _extract_calendar_datetimes(text: str) -> tuple[str | None, str | None, str]:
+    now = datetime.now(UTC)
+    lowered = text.lower()
+    start_dt: datetime | None = None
+    end_dt: datetime | None = None
+
+    date_match = re.search(r"\b(today|tomorrow)\b", lowered)
+    time_match = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", lowered)
+    duration_match = re.search(r"\bfor\s+(\d+)\s*(minutes?|hours?|mins?|hrs?)\b", lowered)
+
+    if date_match:
+        base = now.date() if date_match.group(1) == "today" else (now + timedelta(days=1)).date()
+    else:
+        base = None
+
+    if base and time_match:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2) or 0)
+        meridiem = (time_match.group(3) or "").lower()
+        if meridiem == "pm" and hour != 12:
+            hour += 12
+        elif meridiem == "am" and hour == 12:
+            hour = 0
+        start_dt = datetime(base.year, base.month, base.day, hour, minute, tzinfo=UTC)
+        if duration_match:
+            amount = int(duration_match.group(1))
+            unit = duration_match.group(2).lower()
+            delta = timedelta(hours=amount) if unit.startswith("hour") or unit.startswith("hr") else timedelta(minutes=amount)
+            end_dt = start_dt + delta
+        else:
+            end_dt = start_dt + timedelta(hours=1)
+
+    cleaned = text
+    cleaned = re.sub(r"\b(today|tomorrow)\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bfor\s+\d+\s*(?:minutes?|hours?|mins?|hrs?)\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bat\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.;:-")
+
+    return start_dt.isoformat().replace("+00:00", "Z") if start_dt else None, end_dt.isoformat().replace("+00:00", "Z") if end_dt else None, cleaned
+
+
+def _parse_journal_command(text: str) -> dict[str, object]:
+    body = _strip_command_word(text, ("journal entry", "log journal", "journal"))
+    body = body or "Untitled journal entry"
+    today = datetime.now(UTC).date().isoformat()
+    return {
+        "intent": "journal.create",
+        "confidence": 0.95,
+        "extracted": {"date": today, "markdown_body": body, "emoji": None, "tags": []},
+    }
+
+
+def _parse_calendar_command(text: str) -> dict[str, object]:
+    source = _strip_command_word(text, ("schedule", "calendar", "event"))
+    start_at, end_at, title = _extract_calendar_datetimes(source)
+    return {
+        "intent": "calendar.create",
+        "confidence": 0.9 if start_at and end_at and title else 0.55,
+        "extracted": {
+            "title": title or source or "Untitled event",
+            "start_at": start_at,
+            "end_at": end_at,
+            "all_day": False,
+            "description": None,
+        },
+    }
+
+
+def _parse_task_command(text: str) -> dict[str, object]:
+    source = _strip_command_word(text, ("add task", "todo", "task"))
+    parsed = quick_add.parse(source)
+    return {
+        "intent": "task.create",
+        "confidence": 0.95,
+        "extracted": {
+            "title": parsed.get("title") or source or "Untitled task",
+            "due_at": parsed.get("due_at"),
+            "priority": int(parsed.get("priority") or 2),
+            "tags": parsed.get("tags") or [],
+        },
+    }
+
+
 def parse_intent(text: str) -> dict[str, object]:
     """Parse command text into intent + extracted fields."""
     text_lower = text.lower().strip()
+
+    command_word = detect_command_word(text)
+    if command_word == "task":
+        return _parse_task_command(text)
+    if command_word == "journal":
+        return _parse_journal_command(text)
+    if command_word == "calendar":
+        return _parse_calendar_command(text)
 
     if any(
         phrase in text_lower
@@ -129,7 +242,19 @@ def parse_intent(text: str) -> dict[str, object]:
     return {"intent": "unknown", "confidence": 0.0, "extracted": {}}
 
 
+def detect_command_word(text: str) -> str | None:
+    lowered = text.lower().strip()
+    for prefix, canonical in COMMAND_WORD_ALIASES:
+        if lowered == prefix or lowered.startswith(f"{prefix} "):
+            return canonical
+    return None
+
+
 class CommandService:
+    @staticmethod
+    def detect_command_word(text: str) -> str | None:
+        return detect_command_word(text)
+
     @staticmethod
     def parse(text: str) -> dict[str, object]:
         return parse_intent(text)
@@ -137,10 +262,27 @@ class CommandService:
     @staticmethod
     def preview(text: str) -> dict[str, object]:
         parsed = parse_intent(text)
-        return {"mode": "dry-run", "parsed": parsed, "would_execute": parsed["intent"] != "unknown"}
+        intent = str(parsed["intent"])
+        preview: dict[str, object] = {
+            "mode": "dry-run",
+            "parsed": parsed,
+            "would_execute": intent != "unknown",
+            "status": "ok" if intent != "unknown" else "unknown",
+        }
+        if intent == "unknown":
+            preview["message"] = "No supported command detected."
+            return preview
+        if intent == "calendar.create":
+            extracted = dict(parsed.get("extracted") or {})
+            if not extracted.get("start_at") or not extracted.get("end_at"):
+                preview["would_execute"] = False
+                preview["status"] = "incomplete"
+                preview["message"] = "Add a date and time to create the calendar event."
+                return preview
+        return preview
 
     @staticmethod
-    def execute(db_path: str, text: str, confirm: bool = False) -> dict[str, object]:
+    def execute(db_path: str, text: str, confirm: bool = False, *, source: str = "text") -> dict[str, object]:
         """Execute parsed command and log result."""
         from app.core.database import run_migrations
 
@@ -150,7 +292,7 @@ class CommandService:
         extracted = dict(parsed.get("extracted") or {})
 
         if intent == "unknown":
-            CommandRepository.add_log(db_path, text, intent, "error")
+            CommandRepository.add_log(db_path, text, intent, "error", source=source)
             return {"text": text, "intent": intent, "status": "error", "parsed": parsed}
 
         try:
@@ -161,10 +303,52 @@ class CommandService:
                     "title": extracted.get("title") or text,
                     "due_at": extracted.get("due_at"),
                     "priority": int(extracted.get("priority") or 2),
+                    "tags": extracted.get("tags") or [],
                 }
                 result = task_repo.create_task(db_path, task_payload)
-                CommandRepository.add_log(db_path, text, intent, "executed")
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
                 return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
+
+            if intent == "journal.create":
+                from app.domains.journal.repository import JournalRepository
+                from app.domains.journal.schemas import JournalEntryCreate
+                from app.domains.journal.service import JournalService
+
+                payload = JournalEntryCreate(
+                    markdown_body=str(extracted.get("markdown_body") or text),
+                    date=str(extracted.get("date") or datetime.now(UTC).date().isoformat()),
+                    emoji=extracted.get("emoji"),
+                    tags=list(extracted.get("tags") or []),
+                )
+                result = JournalService(JournalRepository(db_path)).save_entry(payload)
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                return {"text": text, "intent": intent, "status": "executed", "result": result.model_dump(), "confidence": parsed["confidence"], "parsed": parsed}
+
+            if intent == "calendar.create":
+                from app.domains.calendar.repository import CalendarRepository
+                from app.domains.calendar.schemas import CalendarEventCreate
+                from app.domains.calendar.service import CalendarService
+
+                if not extracted.get("start_at") or not extracted.get("end_at"):
+                    CommandRepository.add_log(db_path, text, intent, "incomplete", "missing_datetime", source=source)
+                    return {
+                        "text": text,
+                        "intent": intent,
+                        "status": "incomplete",
+                        "error": "Missing event date or time",
+                        "confidence": parsed["confidence"],
+                        "parsed": parsed,
+                    }
+                payload = CalendarEventCreate(
+                    title=str(extracted.get("title") or "Untitled event"),
+                    description=extracted.get("description"),
+                    start_at=datetime.fromisoformat(str(extracted["start_at"]).replace("Z", "+00:00")),
+                    end_at=datetime.fromisoformat(str(extracted["end_at"]).replace("Z", "+00:00")),
+                    all_day=bool(extracted.get("all_day") or False),
+                )
+                result = CalendarService(CalendarRepository(db_path)).create_event(payload)
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                return {"text": text, "intent": intent, "status": "executed", "result": result.model_dump(), "confidence": parsed["confidence"], "parsed": parsed}
 
             if intent == "task.complete":
                 from app.domains.tasks import repository as task_repo
@@ -178,16 +362,16 @@ class CommandService:
                     return {"text": text, "intent": intent, "status": "ambiguous", "options": open_tasks[:5], "confidence": parsed["confidence"]}
                 if len(open_tasks) == 1:
                     result = task_repo.complete_task(db_path, open_tasks[0]["id"])
-                    CommandRepository.add_log(db_path, text, intent, "executed")
+                    CommandRepository.add_log(db_path, text, intent, "executed", source=source)
                     return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
-                CommandRepository.add_log(db_path, text, intent, "error")
+                CommandRepository.add_log(db_path, text, intent, "error", source=source)
                 return {"text": text, "intent": intent, "status": "not_found", "confidence": parsed["confidence"]}
 
             if intent == "focus.start":
                 from app.domains.focus import service as focus_svc
 
                 result = focus_svc.start(int(extracted.get("duration_minutes") or 25), db_path)
-                CommandRepository.add_log(db_path, text, intent, "executed")
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
                 return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
 
             if intent == "alarm.create":
@@ -196,21 +380,21 @@ class CommandService:
                 alarm_time = extracted.get("alarm_time")
                 if alarm_time:
                     result = alarm_repo.create_alarm(db_path, {"time": alarm_time, "title": extracted.get("title") or text, "kind": "alarm"})
-                    CommandRepository.add_log(db_path, text, intent, "executed")
+                    CommandRepository.add_log(db_path, text, intent, "executed", source=source)
                     return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
-                CommandRepository.add_log(db_path, text, intent, "error")
+                CommandRepository.add_log(db_path, text, intent, "error", source=source)
                 return {"text": text, "intent": intent, "status": "error", "error": "No alarm time found"}
 
             if intent == "habit.list":
                 from app.domains.habits import repository as habit_repo
 
                 habits = habit_repo.list_habits(db_path)
-                CommandRepository.add_log(db_path, text, intent, "executed")
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
                 return {"text": text, "intent": intent, "status": "executed", "result": {"habits": habits}, "confidence": parsed["confidence"], "parsed": parsed}
 
         except Exception as exc:  # noqa: BLE001
-            CommandRepository.add_log(db_path, text, intent, "failed", str(exc))
+            CommandRepository.add_log(db_path, text, intent, "failed", str(exc), source=source)
             return {"text": text, "intent": intent, "status": "error", "error": str(exc)}
 
-        CommandRepository.add_log(db_path, text, intent, "ok")
+        CommandRepository.add_log(db_path, text, intent, "ok", source=source)
         return {"text": text, "intent": intent, "status": "executed", "confidence": parsed["confidence"], "parsed": parsed}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import json
-import time
+from uuid import uuid4
 
 from app.core.database import get_db, tx
 from app.domains.packy.schemas import MomentumScore, PackyAnswer, PackyAskRequest, PackyLorebookRequest, PackyWhisper
@@ -219,7 +219,7 @@ class PackyRepository:
                     0,
                 ),
             )
-            snippet_id = f"lorebook_{session_id}_{int(time.time())}"
+            snippet_id = f"lorebook_{session_id}_{uuid4().hex}"
             conn.execute(
                 """
                 INSERT INTO packy_lorebook_entries (id, session_id, headline, body)

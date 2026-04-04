@@ -18,7 +18,7 @@ def test_app_creates_without_error(db_path) -> None:
     app = _create_app()
 
     assert app.title == "DopaFlow API"
-    assert app.version == "2.0.0"
+    assert app.version == "2.0.7"
 
 
 def test_all_routers_mounted(db_path) -> None:
@@ -49,7 +49,7 @@ def test_health_returns_ok(client) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["version"] == "2.0.0"
+    assert response.json()["version"] == "2.0.7"
 
 
 def test_openapi_schema_valid(db_path) -> None:

@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 COMMAND_PATHS = {"/api/v2/packy/ask", "/api/v2/tasks/quick-add", "/api/v2/commands/execute"}
+TRUSTED_PROXY_HOSTS = {"127.0.0.1", "localhost", "::1"}
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -69,12 +70,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     @staticmethod
     def _get_client_identity(request: Request) -> str:
         """Extract client IP from headers or connection."""
-        forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-        if forwarded:
-            return forwarded
-        real_ip = request.headers.get("x-real-ip", "").strip()
-        if real_ip:
-            return real_ip
+        client = getattr(request, "client", None)
+        client_host = client.host if client and client.host else ""
+
+        if client_host in TRUSTED_PROXY_HOSTS:
+            forwarded = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+            if forwarded:
+                return forwarded
+            real_ip = request.headers.get("x-real-ip", "").strip()
+            if real_ip:
+                return real_ip
+
         origin = request.headers.get("origin", "").strip()
         if origin:
             try:
@@ -83,7 +89,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     return parsed.hostname
             except Exception:
                 pass
-        client = getattr(request, "client", None)
-        if client and client.host:
-            return client.host
+        if client_host:
+            return client_host
         return request.headers.get("host", "unknown")

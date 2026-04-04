@@ -346,7 +346,13 @@ async def import_apkg(
     deck = svc.get_deck(deck_id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    data, _ = validate_upload(file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=25 * 1024 * 1024)
+    data, _ = validate_upload(
+        file,
+        kind="apkg",
+        allowed_suffixes={".apkg"},
+        allowed_content_types={"application/octet-stream", "application/zip", "application/x-zip-compressed"},
+        default_max_bytes=25 * 1024 * 1024,
+    )
     try:
         return svc.import_apkg(deck_id, data, file.filename or "deck.apkg")
     except ValueError as exc:
