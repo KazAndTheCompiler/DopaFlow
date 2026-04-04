@@ -107,6 +107,10 @@ export default function JournalView(): JSX.Element {
             selectedDate={selectedDate}
             onSave={app.journal.save}
             onNavigateDate={setSelectedDate}
+            onVoiceExecuted={() => {
+              void app.journal.refresh();
+              void app.journal.refreshGraph();
+            }}
           />
         )}
         {activeTab === "graph" && <GraphView graph={app.journal.graph} />}

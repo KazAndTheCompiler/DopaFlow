@@ -1,12 +1,14 @@
 import { useState } from "react";
 
 import type { CalendarEvent } from "../../../../shared/types";
+import VoiceCommandModal from "../../components/VoiceCommandModal";
 
 interface CalendarPanelProps {
   onCreate: (event: Partial<CalendarEvent>) => Promise<CalendarEvent>;
+  onVoiceExecuted?: () => void;
 }
 
-export function CalendarPanel({ onCreate }: CalendarPanelProps): JSX.Element {
+export function CalendarPanel({ onCreate, onVoiceExecuted }: CalendarPanelProps): JSX.Element {
   const [title, setTitle] = useState<string>("");
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState<string>("09:00");
@@ -128,6 +130,10 @@ export function CalendarPanel({ onCreate }: CalendarPanelProps): JSX.Element {
       >
         Add block
       </button>
+      <VoiceCommandModal
+        initialCommandWord="calendar"
+        {...(onVoiceExecuted ? { onExecuted: onVoiceExecuted } : {})}
+      />
     </section>
   );
 }

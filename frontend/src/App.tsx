@@ -1,4 +1,4 @@
-import { Component, createContext, lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Component, createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
 import { ToastContainer } from "@ds/primitives/Toast";
@@ -23,24 +23,24 @@ import { useProjects } from "./hooks/useProjects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { materializeRecurringTasks } from "./api/tasks";
 
-const TodayView = lazy(() => import("@surfaces/today"));
-const TasksView = lazy(() => import("@surfaces/tasks"));
-const SearchView = lazy(() => import("@surfaces/search"));
-const HabitsView = lazy(() => import("@surfaces/habits"));
-const FocusView = lazy(() => import("@surfaces/focus"));
-const ReviewView = lazy(() => import("@surfaces/review"));
-const JournalView = lazy(() => import("@surfaces/journal"));
-const CalendarView = lazy(() => import("@surfaces/calendar"));
-const AlarmsView = lazy(() => import("@surfaces/alarms"));
-const SettingsView = lazy(() => import("@surfaces/settings"));
-const DigestView = lazy(() => import("@surfaces/digest"));
-const CommandsView = lazy(() => import("@surfaces/commands"));
-const NutritionView = lazy(() => import("@surfaces/nutrition"));
-const OverviewView = lazy(() => import("@surfaces/overview"));
-const InsightsView = lazy(() => import("@surfaces/insights"));
-const GamificationView = lazy(() => import("@surfaces/gamification"));
-const PlayerView = lazy(() => import("@surfaces/player"));
-const GoalsView = lazy(() => import("@surfaces/goals"));
+import TodayView from "@surfaces/today";
+import TasksView from "@surfaces/tasks";
+import SearchView from "@surfaces/search";
+import HabitsView from "@surfaces/habits";
+import FocusView from "@surfaces/focus";
+import ReviewView from "@surfaces/review";
+import JournalView from "@surfaces/journal";
+import CalendarView from "@surfaces/calendar";
+import AlarmsView from "@surfaces/alarms";
+import SettingsView from "@surfaces/settings";
+import DigestView from "@surfaces/digest";
+import CommandsView from "@surfaces/commands";
+import NutritionView from "@surfaces/nutrition";
+import OverviewView from "@surfaces/overview";
+import InsightsView from "@surfaces/insights";
+import GamificationView from "@surfaces/gamification";
+import PlayerView from "@surfaces/player";
+import GoalsView from "@surfaces/goals";
 import PlanMyDayModal from "./surfaces/plan/PlanMyDayModal";
 import ShutdownModal from "./surfaces/shutdown/ShutdownModal";
 import OnboardingModal from "./surfaces/onboarding/OnboardingModal";
@@ -154,13 +154,16 @@ export default function App(): JSX.Element {
   const [planOpen, setPlanOpen] = useState<boolean>(false);
   const [shutdownOpen, setShutdownOpen] = useState<boolean>(false);
   const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => !localStorage.getItem("dopaflow_onboarded"));
+  const lastPackySyncRef = useRef<string>("");
 
   const navigate = useCallback((nextRoute: string): void => {
     if (nextRoute === "plan") {
+      setShutdownOpen(false);
       setPlanOpen(true);
       return;
     }
     if (nextRoute === "shutdown") {
+      setPlanOpen(false);
       setShutdownOpen(true);
       return;
     }
@@ -172,11 +175,13 @@ export default function App(): JSX.Element {
     const onHashChange = (): void => {
       const nextRoute = getRouteFromHash();
       if (nextRoute === "plan") {
+        setShutdownOpen(false);
         setPlanOpen(true);
         window.location.hash = `#/${route}`;
         return;
       }
       if (nextRoute === "shutdown") {
+        setPlanOpen(false);
         setShutdownOpen(true);
         window.location.hash = `#/${route}`;
         return;
@@ -188,6 +193,15 @@ export default function App(): JSX.Element {
   }, [route]);
 
   useEffect(() => {
+    const openShutdown = (): void => {
+      setPlanOpen(false);
+      setShutdownOpen(true);
+    };
+    window.addEventListener("dopaflow:open-shutdown", openShutdown as EventListener);
+    return () => window.removeEventListener("dopaflow:open-shutdown", openShutdown as EventListener);
+  }, []);
+
+  useEffect(() => {
     void materializeRecurringTasks(168).catch(() => {}); // silent, fire-and-forget
   }, []);
 
@@ -197,6 +211,12 @@ export default function App(): JSX.Element {
   });
 
   useEffect(() => {
+    if (route !== "today") {
+      return;
+    }
+    if (shutdownOpen) {
+      return;
+    }
     const TODAY_KEY = "zoestm_planned_date";
     const todayISO = new Date().toISOString().slice(0, 10);
     const lastPlanned = localStorage.getItem(TODAY_KEY);
@@ -206,7 +226,7 @@ export default function App(): JSX.Element {
       return () => clearTimeout(t);
     }
     return;
-  }, []);
+  }, [route, shutdownOpen]);
 
   useEffect(() => {
     const snapshot = {
@@ -217,6 +237,11 @@ export default function App(): JSX.Element {
       journalScore: journal.entries.reduce((sum, entry) => sum + entry.version, 0),
     };
     if (snapshot.tasksDone + snapshot.habitScore + snapshot.focusDone + snapshot.reviewScore + snapshot.journalScore > 0) {
+      const syncKey = JSON.stringify(snapshot);
+      if (lastPackySyncRef.current === syncKey) {
+        return;
+      }
+      lastPackySyncRef.current = syncKey;
       void gamification.refresh();
       const focusMinutes = focus.sessions
         .filter((s) => s.status === "completed")
@@ -227,7 +252,7 @@ export default function App(): JSX.Element {
         { completed_today: snapshot.tasksDone, habit_streak: snapshot.habitScore, focus_minutes_today: focusMinutes },
       );
     }
-  }, [focus.sessions, gamification.refresh, habits.habits, journal.entries, packy, review.cards, tasks.tasks]);
+  }, [focus.sessions, gamification.refresh, habits.habits, journal.entries, packy.updateLorebook, review.cards, tasks.tasks]);
 
   const contextValue = useMemo<AppContextValue>(
     () => ({
@@ -334,9 +359,7 @@ export default function App(): JSX.Element {
         activeProjectId={projects.activeProjectId}
         onProjectSelect={projects.setActiveProjectId}
       >
-        <Suspense fallback={<div>Loading surface…</div>}>
-          <SurfaceErrorBoundary>{surface}</SurfaceErrorBoundary>
-        </Suspense>
+        <SurfaceErrorBoundary>{surface}</SurfaceErrorBoundary>
       </Shell>
       <NotificationInbox
         open={inboxOpen}
@@ -423,9 +446,11 @@ export default function App(): JSX.Element {
             for (const name of names) {
               await habits.create({ name, target_freq: 1, target_period: "day" });
             }
+            await habits.refresh();
           }}
           onCreateTask={async (text) => {
             await tasks.createStructuredTask({ title: text, priority: 2 });
+            await tasks.refresh();
           }}
           onFinish={() => {
             localStorage.setItem("dopaflow_onboarded", "1");

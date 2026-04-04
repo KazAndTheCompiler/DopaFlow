@@ -26,7 +26,7 @@ export type CreateGoalPayload = {
 };
 
 export function listGoals(): Promise<Goal[]> {
-  return apiClient<Goal[]>("/goals");
+  return apiClient<Goal[]>("/goals/");
 }
 
 export function createGoal(payload: CreateGoalPayload): Promise<Goal> {

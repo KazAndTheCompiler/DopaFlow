@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import Input from "../../design-system/primitives/Input";
 import Button from "../../design-system/primitives/Button";
+import { showToast } from "../../design-system/primitives/Toast";
 
 function StepDots({ step, total }: { step: number; total: number }): JSX.Element {
   return (
@@ -108,15 +109,48 @@ export default function OnboardingModal({ onCreateHabits, onCreateTask, onFinish
     if (step === 2) {
       return (
         <div>
-          <h3 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: 700, marginBottom: "1.5rem", textAlign: "center" }}>What's the one thing you need to do today?</h3>
+            <h3 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: 700, marginBottom: "1.5rem", textAlign: "center" }}>What's the one thing you need to do today?</h3>
           <Input
             type="text" value={text} onChange={e => setText(e.target.value)} placeholder="e.g. Review meeting notes"
-            autoFocus onKeyDown={async e => { if (e.key === "Enter") { e.preventDefault(); setLoading(true); try { await onCreateTask(text); setStep(3); } finally { setLoading(false); } } }}
+            autoFocus onKeyDown={async e => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const trimmed = text.trim();
+                if (!trimmed) {
+                  setStep(3);
+                  return;
+                }
+                setLoading(true);
+                try {
+                  await onCreateTask(trimmed);
+                  setStep(3);
+                } catch {
+                  showToast("Could not create the onboarding task.", "error");
+                } finally {
+                  setLoading(false);
+                }
+              }
+            }}
             style={{ fontSize: "var(--text-sm)", marginBottom: "1rem", boxSizing: "border-box" }}
           />
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
             <Button onClick={() => setStep(1)} variant="ghost" style={{ flex: 1 }}>Back</Button>
-            <Button onClick={async () => { if (text.trim()) { setLoading(true); try { await onCreateTask(text); setStep(3); } finally { setLoading(false); } } else { setStep(3); } }} disabled={loading} variant="primary" style={{ flex: 1 }}>
+            <Button onClick={async () => {
+              const trimmed = text.trim();
+              if (!trimmed) {
+                setStep(3);
+                return;
+              }
+              setLoading(true);
+              try {
+                await onCreateTask(trimmed);
+                setStep(3);
+              } catch {
+                showToast("Could not create the onboarding task.", "error");
+              } finally {
+                setLoading(false);
+              }
+            }} disabled={loading} variant="primary" style={{ flex: 1 }}>
               {loading ? "Adding..." : "Add it"}
             </Button>
           </div>
@@ -131,8 +165,20 @@ export default function OnboardingModal({ onCreateHabits, onCreateTask, onFinish
         <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", margin: "0 0 1.75rem 0" }}>
           Open the app each morning with the Plan day ritual to set your intentions.
         </p>
-        <Button onClick={async () => { const names = Array.from(selected).map(id => habitNames[id]); if (names.length) await onCreateHabits(names); onFinish(); }} variant="primary" style={{ width: "100%", fontSize: "var(--text-sm)" }}>
-          Open today
+        <Button onClick={async () => {
+          const names = Array.from(selected).map(id => habitNames[id]);
+          setLoading(true);
+          onFinish();
+          if (!names.length) {
+            return;
+          }
+          try {
+            await onCreateHabits(names);
+          } catch {
+            showToast("Could not create the starter habits.", "error");
+          }
+        }} disabled={loading} variant="primary" style={{ width: "100%", fontSize: "var(--text-sm)" }}>
+          {loading ? "Opening..." : "Open today"}
         </Button>
       </div>
     );

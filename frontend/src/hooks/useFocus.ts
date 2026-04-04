@@ -15,7 +15,8 @@ export function useFocus(): UseFocusResult {
   const [sessions, setSessions] = useState<FocusSession[]>([]);
 
   const refresh = async (): Promise<void> => {
-    setSessions(await listFocusSessions());
+    const nextSessions = await listFocusSessions();
+    setSessions(Array.isArray(nextSessions) ? nextSessions : []);
   };
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function useFocus(): UseFocusResult {
 
   return {
     sessions,
-    activeSession: sessions.find((session) => session.status === "running"),
+    activeSession: sessions.find((session) => session.status === "running" || session.status === "paused"),
     refresh,
     start: async (taskId?: string, minutes = 25) => {
       await startFocusSession({

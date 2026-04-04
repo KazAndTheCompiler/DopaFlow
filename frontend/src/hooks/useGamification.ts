@@ -12,6 +12,14 @@ export interface UseGamificationResult {
   refresh: () => Promise<void>;
 }
 
+const EMPTY_LEVEL: PlayerLevel = {
+  total_xp: 0,
+  level: 1,
+  xp_to_next: 100,
+  progress: 0,
+  updated_at: new Date(0).toISOString(),
+};
+
 export function useGamification(onBadgeEarned?: (badge: Badge) => void): UseGamificationResult {
   const [level, setLevel] = useState<PlayerLevel>();
   const [badges, setBadges] = useState<Badge[]>([]);
@@ -27,19 +35,22 @@ export function useGamification(onBadgeEarned?: (badge: Badge) => void): UseGami
 
   const refresh = useCallback(async (): Promise<void> => {
     const status = await getGamificationStatus();
-    const nextEarnedIds = new Set(status.badges.filter((badge) => badge.earned_at).map((badge) => badge.id));
-    if (status.earned_count > earnedRef.current) {
-      const earnedBadge = status.badges.find((badge) => badge.earned_at && !earnedIdsRef.current.has(badge.id)) ?? null;
+    const badges = Array.isArray(status.badges) ? status.badges : [];
+    const earnedCount = typeof status.earned_count === "number" ? status.earned_count : 0;
+    const nextEarnedIds = new Set(badges.filter((badge) => badge.earned_at).map((badge) => badge.id));
+
+    if (earnedCount > earnedRef.current) {
+      const earnedBadge = badges.find((badge) => badge.earned_at && !earnedIdsRef.current.has(badge.id)) ?? null;
       if (earnedBadge) {
         setNewBadge(earnedBadge);
         onBadgeEarnedRef.current?.(earnedBadge);
       }
     }
-    earnedRef.current = status.earned_count;
+    earnedRef.current = earnedCount;
     earnedIdsRef.current = nextEarnedIds;
-    setLevel(status.level);
-    setBadges(status.badges);
-    setEarnedCount(status.earned_count);
+    setLevel(status.level ?? EMPTY_LEVEL);
+    setBadges(badges);
+    setEarnedCount(earnedCount);
   }, []);
 
   useEffect(() => {

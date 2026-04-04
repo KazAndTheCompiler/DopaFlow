@@ -2,11 +2,11 @@ import type { Notification } from "../../../shared/types";
 import { apiClient } from "./client";
 
 export function listNotifications(): Promise<Notification[]> {
-  return apiClient<Notification[]>("/notifications");
+  return apiClient<Notification[]>("/notifications/");
 }
 
 export function createNotification(payload: Partial<Notification>): Promise<Notification> {
-  return apiClient<Notification>("/notifications", { method: "POST", body: JSON.stringify(payload) });
+  return apiClient<Notification>("/notifications/", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function getUnreadCount(): Promise<{ count: number }> {

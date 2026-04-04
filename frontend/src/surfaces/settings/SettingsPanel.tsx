@@ -23,7 +23,7 @@ export function SettingsPanel(): JSX.Element {
                 fontFamily: "monospace",
               }}
             >
-              v2.0.0
+              v2.0.7
             </span>
           </div>
           <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", maxWidth: "62ch", lineHeight: 1.5 }}>

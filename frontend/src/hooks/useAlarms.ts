@@ -57,6 +57,10 @@ export function useAlarms(): UseAlarmsResult {
 
   // Register service worker and request notification permission
   useEffect(() => {
+    if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+      return;
+    }
+
     const registerSW = async () => {
       if ("serviceWorker" in navigator) {
         try {
@@ -76,6 +80,10 @@ export function useAlarms(): UseAlarmsResult {
 
   // Listen for messages from service worker
   useEffect(() => {
+    if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+      return;
+    }
+
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (event.data.type === "ALARM_FIRED") {

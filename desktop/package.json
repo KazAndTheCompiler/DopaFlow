@@ -1,6 +1,6 @@
 {
   "name": "dopaflow-desktop",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "DopaFlow — unified productivity for ADHD brains",
   "author": {
     "name": "KazAndTheCompiler",
@@ -25,6 +25,7 @@
   "build": {
     "appId": "com.dopaflow.app",
     "productName": "DopaFlow",
+    "artifactName": "${productName}-${version}.${ext}",
     "extraMetadata": {
       "dopaflowReleaseChannel": "${env.DOPAFLOW_RELEASE_CHANNEL}"
     },
@@ -56,6 +57,7 @@
       ]
     },
     "linux": {
+      "executableName": "dopaflow-desktop",
       "target": [
         {
           "target": "AppImage",

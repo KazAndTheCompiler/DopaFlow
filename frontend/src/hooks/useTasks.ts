@@ -105,7 +105,14 @@ export function useTasks(): UseTasksResult {
     selectedIds,
     toggleSelect,
     clearSelection,
-    createDraftTask: async (text: string) => quickAddTask({ text }),
+    createDraftTask: async (text: string) => {
+      const parsed = await quickAddTask({ text });
+      const title = parsed.title?.trim() || text.trim();
+      if (!title) {
+        throw new Error("task_title_required");
+      }
+      return createTask({ ...parsed, title });
+    },
     createStructuredTask: async (task: Partial<Task>) => createTask(task),
     complete: async (id: string) => {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: true, status: "done" as const } : t));

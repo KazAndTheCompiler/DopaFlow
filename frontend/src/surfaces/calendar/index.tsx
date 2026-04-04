@@ -529,7 +529,12 @@ export default function CalendarView(): JSX.Element {
             sourceColors={sourceColors}
             sourceLabels={sourceLabels}
           />
-          <CalendarPanel onCreate={(event) => app.calendar.create(event)} />
+          <CalendarPanel
+            onCreate={(event) => app.calendar.create(event)}
+            onVoiceExecuted={() => {
+              void app.calendar.refresh();
+            }}
+          />
         </>
       )}
 

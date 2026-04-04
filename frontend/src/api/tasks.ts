@@ -11,11 +11,11 @@ export function listTasks(sortBy?: string): Promise<Task[]> {
     url.searchParams.set("sort_by", sortBy);
   }
   const queryString = url.search ? url.search.substring(1) : "";
-  return apiClient<Task[]>("/tasks" + (queryString ? `?${queryString}` : ""));
+  return apiClient<Task[]>("/tasks/" + (queryString ? `?${queryString}` : ""));
 }
 
 export function createTask(payload: Partial<Task>): Promise<Task> {
-  return apiClient<Task>("/tasks", { method: "POST", body: JSON.stringify(payload) });
+  return apiClient<Task>("/tasks/", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function quickAddTask(payload: TaskQuickAddInput): Promise<Partial<Task>> {
