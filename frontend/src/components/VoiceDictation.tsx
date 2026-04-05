@@ -7,12 +7,24 @@ interface VoiceDictationProps {
   disabled?: boolean;
 }
 
+/** Pick the best available MIME type for MediaRecorder. */
+function pickMimeType(): string {
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  for (const ct of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(ct)) return ct;
+    } catch { /* ignore */ }
+  }
+  return ""; // fall back to browser default
+}
+
 export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictationProps): JSX.Element {
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const startTimeRef = useRef<number>(0);
   const unavailable = disabled || typeof navigator === "undefined" || !navigator.mediaDevices;
 
   const stopTracks = (): void => streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -40,26 +52,41 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
     if (recording && recorderRef.current) return recorderRef.current.stop();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mimeType = pickMimeType();
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       streamRef.current = stream;
       recorderRef.current = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = (event) => chunksRef.current.push(event.data);
       recorder.onstop = async () => {
+        const elapsed = Date.now() - startTimeRef.current;
         setRecording(false);
         stopTracks();
         try {
+          const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
+          if (blob.size < 100) {
+            setError("Recording too short — please hold the button while speaking.");
+            return;
+          }
+          const ext = (recorder.mimeType || "audio/webm").includes("mp4") ? ".mp4" : ".webm";
           const form = new FormData();
-          form.append("file", new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" }), "dictation.webm");
-          const response = await fetch(`${API_BASE_URL}/journal/transcribe`, { method: "POST", body: form });
+          form.append("file", blob, `dictation${ext}`);
+          const lang = navigator.language || "en-US";
+          const response = await fetch(`${API_BASE_URL}/journal/transcribe?lang=${encodeURIComponent(lang)}`, { method: "POST", body: form });
           const result = (await response.json()) as { transcript?: string; error?: string };
           if (!response.ok) throw new Error(result.error ?? "transcription_failed");
-          onTranscript(result.transcript ?? "");
+          const text = result.transcript?.trim();
+          if (!text) {
+            setError("No speech detected — try speaking louder or closer to the mic.");
+            return;
+          }
+          onTranscript(text);
         } catch (exc) {
           setError(exc instanceof Error ? exc.message : "Dictation failed");
         }
       };
-      recorder.start();
+      startTimeRef.current = Date.now();
+      recorder.start(250); // collect data every 250ms for reliability
       setRecording(true);
     } catch (exc) {
       setError(mapMicError(exc));

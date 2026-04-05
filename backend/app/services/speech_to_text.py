@@ -19,8 +19,10 @@ ALLOWED_AUDIO_CONTENT_TYPES = {
     "audio/mp4",
     "audio/ogg",
     "audio/webm",
+    "audio/webm;codecs=opus",
     "video/mp4",
     "video/webm",
+    "video/webm;codecs=vp8,opus",
     "application/octet-stream",
 }
 DEFAULT_AUDIO_MAX_BYTES = 10 * 1024 * 1024

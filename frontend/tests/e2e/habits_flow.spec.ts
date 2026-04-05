@@ -154,8 +154,8 @@ test.describe("Habits flow regression", () => {
     // Card appears with name, streak badge, frequency badge, check-in button
     const habitCard = page.getByRole("article").filter({ hasText: "Morning meditation" }).first();
     await expect(habitCard).toBeVisible({ timeout: 15_000 });
-    await expect(habitCard.getByText("ST 0d", { exact: true })).toBeVisible({ timeout: 5_000 });
-    await expect(habitCard.getByText("1/ day", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(habitCard.getByText("0d streak", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(habitCard.getByText("1x / day", { exact: true })).toBeVisible({ timeout: 5_000 });
     await expect(
       habitCard.getByRole("button", { name: "Check in Morning meditation" }),
     ).toBeVisible({ timeout: 5_000 });
@@ -163,7 +163,7 @@ test.describe("Habits flow regression", () => {
     // Check in
     await habitCard.getByRole("button", { name: "Check in Morning meditation" }).click();
     // After check-in the app refreshes — streak should now be 1
-    await expect(page.getByRole("article").filter({ hasText: "Morning meditation" }).first().getByText("ST 1d", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("article").filter({ hasText: "Morning meditation" }).first().getByText("1d streak", { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 
   // ── Empty state ────────────────────────────────────────────────────────────
