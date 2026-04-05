@@ -5,4 +5,5 @@ uvicorn[standard]==0.32.0
 httpx==0.28.0
 apscheduler==3.10.4
 libsql-experimental==0.0.34
+python-multipart>=0.0.6
 SpeechRecognition==3.10.4
