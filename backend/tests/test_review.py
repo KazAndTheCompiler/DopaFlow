@@ -1,135 +1,84 @@
-"""Generated placeholder tests for the review domain.
-
-These stubs are intentionally skipped until real review-flow assertions are
-implemented. They exist to keep endpoint inventory visible without breaking
-Python test collection.
-"""
-
 from __future__ import annotations
 
-import pytest
+import sqlite3
+import tempfile
+import zipfile
+from datetime import date, timedelta
+from pathlib import Path
+
+from app.domains.review.repository import ReviewRepository
+from app.domains.review.schemas import DeckCreate
+from app.domains.review.service import ReviewService
 
 
-@pytest.mark.skip(reason="Generated placeholder tests require implementation")
-class TestReview:
-    """Placeholder suite for review domain endpoints."""
+def _build_test_apkg(notes: list[tuple[list[str], str]]) -> bytes:
+    """Create a tiny Anki-style package with just the notes table the importer needs."""
 
-    def test_setup(self, client, db_path):
-        """Verify test infrastructure is available."""
-        pass
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp = Path(tmpdir)
+        db_path = tmp / "collection.anki21"
+        conn = sqlite3.connect(db_path)
+        try:
+            conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, flds TEXT NOT NULL, tags TEXT)")
+            for idx, (fields, tags) in enumerate(notes, start=1):
+                conn.execute(
+                    "INSERT INTO notes (id, flds, tags) VALUES (?, ?, ?)",
+                    (idx, "\x1f".join(fields), tags),
+                )
+            conn.commit()
+        finally:
+            conn.close()
 
-    def test_get_cards(self, client, db_path):
-        """Placeholder for GET /cards."""
-        pass
+        apkg_path = tmp / "fixture.apkg"
+        with zipfile.ZipFile(apkg_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.write(db_path, arcname="collection.anki21")
 
-    def test_get_decks(self, client, db_path):
-        """Placeholder for GET /decks."""
-        pass
+        return apkg_path.read_bytes()
 
-    def test_get_decks_deck_id_cards_search(self, client, db_path):
-        """Placeholder for GET /decks/{deck_id}/cards/search."""
-        pass
 
-    def test_get_decks_deck_id_next_due(self, client, db_path):
-        """Placeholder for GET /decks/{deck_id}/next-due."""
-        pass
+def test_import_apkg_creates_cards_from_generated_package(db_path) -> None:
+    repo = ReviewRepository(str(db_path))
+    svc = ReviewService(repo)
+    deck = repo.create_deck(DeckCreate(name="Imported SM2"))
+    apkg_bytes = _build_test_apkg(
+        [
+            (["What is dopamine?", "A neurotransmitter tied to motivation"], "brain chem"),
+            (["{{c1::Pomodoro}} helps protect focus blocks", ""], "focus habits"),
+            (["", "missing front should skip"], "broken"),
+        ],
+    )
 
-    def test_get_decks_deck_id_stats(self, client, db_path):
-        """Placeholder for GET /decks/{deck_id}/stats."""
-        pass
+    result = svc.import_apkg(deck["id"], apkg_bytes, "fixture.apkg")
+    cards = repo.search_cards(deck["id"], limit=10)
 
-    def test_get_due(self, client, db_path):
-        """Placeholder for GET /due."""
-        pass
+    assert result == {"imported": 2, "skipped": 1, "source": "fixture.apkg"}
+    assert sorted(card["front"] for card in cards) == [
+        "What is dopamine?",
+        "[...] helps protect focus blocks",
+    ]
 
-    def test_get_session(self, client, db_path):
-        """Placeholder for GET /session."""
-        pass
 
-    def test_get_history(self, client, db_path):
-        """Placeholder for GET /history."""
-        pass
+def test_imported_apkg_cards_enter_sm2_schedule(db_path) -> None:
+    repo = ReviewRepository(str(db_path))
+    svc = ReviewService(repo)
+    deck = repo.create_deck(DeckCreate(name="Import Scheduling"))
+    apkg_bytes = _build_test_apkg(
+        [
+            (["Coffee after lunch hurts sleep", "Avoid caffeine late"], "health energy"),
+        ],
+    )
 
-    def test_get_export_preview(self, client, db_path):
-        """Placeholder for GET /export-preview."""
-        pass
+    svc.import_apkg(deck["id"], apkg_bytes, "sm2-fixture.apkg")
+    due_cards = repo.get_due_cards(deck["id"], limit=5)
 
-    def test_get_export_apkg_deck_id(self, client, db_path):
-        """Placeholder for GET /export/apkg/{deck_id}."""
-        pass
+    assert len(due_cards) == 1
+    assert due_cards[0].front == "Coffee after lunch hurts sleep"
+    assert due_cards[0].reviews_done == 0
 
-    def test_post_cards(self, client, db_path):
-        """Placeholder for POST /cards."""
-        pass
+    svc.answer_card(due_cards[0].id, "good", deck_id=deck["id"])
+    updated = repo.get_card(due_cards[0].id)
 
-    def test_post_cards_card_id_suspend(self, client, db_path):
-        """Placeholder for POST /cards/{card_id}/suspend."""
-        pass
-
-    def test_post_cards_card_id_unsuspend(self, client, db_path):
-        """Placeholder for POST /cards/{card_id}/unsuspend."""
-        pass
-
-    def test_post_cards_card_id_bury_today(self, client, db_path):
-        """Placeholder for POST /cards/{card_id}/bury-today."""
-        pass
-
-    def test_post_cards_card_id_reset(self, client, db_path):
-        """Placeholder for POST /cards/{card_id}/reset."""
-        pass
-
-    def test_post_decks(self, client, db_path):
-        """Placeholder for POST /decks."""
-        pass
-
-    def test_post_decks_deck_id_cards(self, client, db_path):
-        """Placeholder for POST /decks/{deck_id}/cards."""
-        pass
-
-    def test_post_decks_deck_id_cards_bulk(self, client, db_path):
-        """Placeholder for POST /decks/{deck_id}/cards/bulk."""
-        pass
-
-    def test_post_decks_deck_id_import_preview(self, client, db_path):
-        """Placeholder for POST /decks/{deck_id}/import/preview."""
-        pass
-
-    def test_post_rate(self, client, db_path):
-        """Placeholder for POST /rate."""
-        pass
-
-    def test_post_session_start(self, client, db_path):
-        """Placeholder for POST /session/start."""
-        pass
-
-    def test_post_session_deck_id_start(self, client, db_path):
-        """Placeholder for POST /session/{deck_id}/start."""
-        pass
-
-    def test_post_answer(self, client, db_path):
-        """Placeholder for POST /answer."""
-        pass
-
-    def test_post_session_deck_id_answer(self, client, db_path):
-        """Placeholder for POST /session/{deck_id}/answer."""
-        pass
-
-    def test_post_session_deck_id_end(self, client, db_path):
-        """Placeholder for POST /session/{deck_id}/end."""
-        pass
-
-    def test_post_import(self, client, db_path):
-        """Placeholder for POST /import."""
-        pass
-
-    def test_post_import_apkg(self, client, db_path):
-        """Placeholder for POST /import-apkg."""
-        pass
-
-    def test_patch_decks_deck_id(self, client, db_path):
-        """Placeholder for PATCH /decks/{deck_id}."""
-        pass
-
-    def test_delete_decks_deck_id(self, client, db_path):
-        """Placeholder for DELETE /decks/{deck_id}."""
-        pass
+    assert updated.reviews_done == 1
+    assert updated.interval == 1
+    assert updated.last_rating == 3
+    assert updated.next_review_at == date.today() + timedelta(days=1)

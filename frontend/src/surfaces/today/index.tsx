@@ -25,6 +25,7 @@ export default function TodayView(): JSX.Element {
   const [dayOffset, setDayOffset] = useState<number>(0);
   const [focusQueueIds, setFocusQueueIds] = useState<string[]>([]);
   const [quote, setQuote] = useState<string>("");
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => window.matchMedia("(max-width: 1180px)").matches);
 
   // selectedDate must be computed before memos that depend on it
   const selectedDate = useMemo(() => {
@@ -104,6 +105,13 @@ export default function TodayView(): JSX.Element {
       .catch(() => setQuote(""));
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1180px)");
+    const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   if (!app) {
     return <div>App context unavailable.</div>;
   }
@@ -126,6 +134,11 @@ export default function TodayView(): JSX.Element {
 
   const nextFocusTask = focusQueue.find((task) => !task.done) ?? null;
   const nextUpcomingEvent = upcomingEvents[0] ?? null;
+  const dayState = dayOffset === 0
+    ? plannedToday
+      ? { label: "Planned", tone: "var(--state-completed)", bg: "color-mix(in srgb, var(--state-completed) 12%, var(--surface))" }
+      : { label: "Needs plan", tone: "var(--state-warn)", bg: "color-mix(in srgb, var(--state-warn) 14%, var(--surface))" }
+    : { label: dayOffset > 0 ? "Future" : "Review", tone: "var(--text-secondary)", bg: "var(--surface-2)" };
 
   const nextAction = (() => {
     if (app.focus.activeSession) {
@@ -225,7 +238,14 @@ export default function TodayView(): JSX.Element {
   })();
 
   return (
-    <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "minmax(0, 3fr) minmax(280px, 2fr)" }}>
+    <div
+      style={{
+        display: "grid",
+        gap: "1rem",
+        gridTemplateColumns: isCompactLayout ? "minmax(0, 1fr)" : "minmax(0, 1.9fr) minmax(300px, 0.95fr)",
+        alignItems: "start",
+      }}
+    >
       <section style={{ display: "grid", gap: "1rem" }}>
         <header
           style={{
@@ -239,7 +259,23 @@ export default function TodayView(): JSX.Element {
           }}
         >
           <div>
-            <strong style={{ display: "block", fontSize: "var(--text-lg)" }}>Today</strong>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+              <strong style={{ display: "block", fontSize: "var(--text-lg)" }}>Today</strong>
+              <span
+                style={{
+                  padding: "0.2rem 0.55rem",
+                  borderRadius: "999px",
+                  background: dayState.bg,
+                  color: dayState.tone,
+                  fontSize: "var(--text-xs)",
+                  fontWeight: 800,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {dayState.label}
+              </span>
+            </div>
             <span style={{ color: "var(--text-secondary)" }}>{dateLabel}</span>
           </div>
           <div style={{ display: "flex", gap: "0.35rem" }}>
@@ -441,7 +477,14 @@ export default function TodayView(): JSX.Element {
         {quote ? <DailyQuote quote={quote} /> : null}
       </section>
 
-      <aside style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+      <aside
+        style={{
+          display: "grid",
+          gap: "1rem",
+          alignContent: "start",
+          gridTemplateColumns: isCompactLayout ? "repeat(auto-fit, minmax(260px, 1fr))" : "minmax(0, 1fr)",
+        }}
+      >
         {!isLoading || backlog.length > 0 ? (
           <BacklogColumn tasks={backlog} onComplete={(id) => void app.tasks.complete(id)} draggable />
         ) : (

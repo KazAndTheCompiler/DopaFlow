@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 
 import type { Task } from "../../../../shared/types";
 import { AppDataContext } from "../../App";
@@ -43,6 +43,18 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
   const activeProject = activeProjectId
     ? (app.projects?.projects ?? []).find((p) => p.id === activeProjectId)
     : null;
+  const doneCount = visibleTasks.filter((task) => task.done || task.status === "done").length;
+  const activeCount = visibleTasks.filter((task) => !task.done && task.status !== "done" && task.status !== "cancelled").length;
+  const overdueCount = visibleTasks.filter((task) => !task.done && Boolean(task.due_at) && new Date(task.due_at as string).getTime() < Date.now()).length;
+
+  const compactStats = useMemo(
+    () => [
+      { label: "Active", value: activeCount, tone: "var(--accent)", detail: "ready to move" },
+      { label: "Done", value: doneCount, tone: "var(--state-ok)", detail: "already closed" },
+      { label: "Overdue", value: overdueCount, tone: overdueCount > 0 ? "var(--state-overdue)" : "var(--text-secondary)", detail: overdueCount > 0 ? "needs triage" : "under control" },
+    ],
+    [activeCount, doneCount, overdueCount],
+  );
 
   useEffect(() => {
     if (!isBoard || boardMode !== "eisenhower") return;
@@ -55,9 +67,53 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
   if (isBoard) {
     return (
       <div style={{ display: "grid", gap: "1rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-          <strong style={{ fontSize: "1.1rem" }}>Board</strong>
-          <div style={{ display: "flex", gap: "0.4rem", marginLeft: "auto" }}>
+        <section
+          style={{
+            padding: "1.05rem 1.15rem",
+            borderRadius: "22px",
+            background: "linear-gradient(150deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), color-mix(in srgb, var(--surface) 96%, black 4%))",
+            border: "1px solid color-mix(in srgb, var(--accent) 18%, var(--border-subtle))",
+            display: "grid",
+            gap: "0.95rem",
+            boxShadow: "var(--shadow-soft)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "start", gap: "0.85rem", justifyContent: "space-between", flexWrap: "wrap" }}>
+            <div style={{ display: "grid", gap: "0.28rem", maxWidth: "72ch" }}>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800 }}>
+                Board workflow
+              </span>
+              <strong style={{ fontSize: "var(--text-xl)" }}>Move work visually instead of auditing a long list</strong>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                Use Kanban to keep execution flowing, or switch to Eisenhower when the real problem is prioritization rather than volume.
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+              {compactStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  style={{
+                    minWidth: "112px",
+                    padding: "0.7rem 0.8rem",
+                    borderRadius: "16px",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-subtle)",
+                    display: "grid",
+                    gap: "0.08rem",
+                  }}
+                >
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                    {stat.label}
+                  </span>
+                  <strong style={{ fontSize: "1.2rem", color: stat.tone }}>{stat.value}</strong>
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>{stat.detail}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+            <strong style={{ fontSize: "1.02rem" }}>Board mode</strong>
+            <div style={{ display: "flex", gap: "0.4rem", marginLeft: "auto" }}>
             <button style={viewToggleStyle(boardMode === "kanban")} onClick={() => setBoardMode("kanban")}>
               Kanban
             </button>
@@ -65,7 +121,8 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
               Eisenhower
             </button>
           </div>
-        </div>
+          </div>
+        </section>
         <TaskCreateBar
           onCreate={async (text) => {
             await app.tasks.createDraftTask(text);
@@ -93,6 +150,51 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
+      <section
+        style={{
+          padding: "1.05rem 1.15rem",
+          borderRadius: "22px",
+          background: "linear-gradient(150deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), color-mix(in srgb, var(--surface) 96%, black 4%))",
+          border: "1px solid color-mix(in srgb, var(--accent) 18%, var(--border-subtle))",
+          display: "grid",
+          gap: "0.95rem",
+          boxShadow: "var(--shadow-soft)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "0.85rem", alignItems: "start", flexWrap: "wrap" }}>
+          <div style={{ display: "grid", gap: "0.28rem", maxWidth: "72ch" }}>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800 }}>
+              Task runway
+            </span>
+            <strong style={{ fontSize: "var(--text-xl)" }}>Capture quickly, then cut the list down to what should actually move</strong>
+            <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              This surface should help you offload ideas fast, filter the noise, and leave only the tasks that deserve attention right now.
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+            {compactStats.map((stat) => (
+              <div
+                key={stat.label}
+                style={{
+                  minWidth: "112px",
+                  padding: "0.7rem 0.8rem",
+                  borderRadius: "16px",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-subtle)",
+                  display: "grid",
+                  gap: "0.08rem",
+                }}
+              >
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
+                  {stat.label}
+                </span>
+                <strong style={{ fontSize: "1.2rem", color: stat.tone }}>{stat.value}</strong>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>{stat.detail}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
       <TaskCreateBar
         onVoiceExecuted={() => {
           void app.tasks.refresh();
@@ -107,9 +209,10 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         }}
       />
       {activeProject && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.4rem 0.75rem", borderRadius: "10px", background: "var(--surface-2)", fontSize: "var(--text-sm)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.8rem", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border-subtle)", fontSize: "var(--text-sm)", boxShadow: "var(--shadow-soft)" }}>
           <span>{activeProject.icon || "PR"}</span>
           <span style={{ fontWeight: 600 }}>{activeProject.name}</span>
+          <span style={{ color: "var(--text-secondary)" }}>project filter active</span>
           <button
             onClick={() => app.projects?.setActiveProjectId(null)}
             style={{ marginLeft: "auto", border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "var(--text-xs)" }}

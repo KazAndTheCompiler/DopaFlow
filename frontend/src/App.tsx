@@ -18,6 +18,7 @@ import { useNotifications } from "./hooks/useNotifications";
 import { usePacky } from "./hooks/usePacky";
 import { useReview } from "./hooks/useReview";
 import { useSkin } from "./hooks/useSkin";
+import { useLayout } from "./hooks/useLayout";
 import { useTasks } from "./hooks/useTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -58,6 +59,7 @@ export interface AppContextValue {
   insights: ReturnType<typeof useInsights>;
   notifications: ReturnType<typeof useNotifications>;
   skin: ReturnType<typeof useSkin>;
+  layout: ReturnType<typeof useLayout>;
   gamification: ReturnType<typeof useGamification>;
 }
 
@@ -146,6 +148,7 @@ export default function App(): JSX.Element {
   const insights = useInsights();
   const notifications = useNotifications();
   const skin = useSkin();
+  const layout = useLayout();
   const commandBar = useCommandBar();
 
   const [route, setRoute] = useState<string>(getRouteFromHash());
@@ -268,9 +271,10 @@ export default function App(): JSX.Element {
       insights,
       notifications,
       skin,
+      layout,
       gamification,
     }),
-    [alarms, calendar, focus, gamification, habits, insights, journal, notifications, packy, projects, review, skin, tasks],
+    [alarms, calendar, focus, gamification, habits, insights, journal, layout, notifications, packy, projects, review, skin, tasks],
   );
 
   const surface = (() => {

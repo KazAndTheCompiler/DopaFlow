@@ -47,6 +47,12 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
   const swipeEnabled = useRef(false);
   const SWIPE_THRESHOLD = 72;
   const SWIPE_LOCK_THRESHOLD = 12;
+  const dueDate = task.due_at ? new Date(task.due_at) : null;
+  const dueTone = dueDate && !isDone
+    ? dueDate.getTime() < Date.now()
+      ? { label: "Overdue", color: "var(--state-overdue)", bg: "color-mix(in srgb, var(--state-overdue) 10%, transparent)" }
+      : { label: dueDate.toLocaleDateString(undefined, { month: "short", day: "numeric" }), color: "var(--text-secondary)", bg: "var(--surface-2)" }
+    : null;
 
   const handleComplete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -153,7 +159,7 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
         onTouchCancel={resetSwipe}
         style={{
           display: "grid",
-          gridTemplateColumns: "24px auto minmax(0, 1fr) auto auto",
+          gridTemplateColumns: "24px auto minmax(0, 1fr) auto",
           gap: "0.75rem",
           padding: "0.8rem 0.85rem",
           border: "1px solid var(--border-subtle)",
@@ -230,7 +236,7 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
           >
             {task.title}
           </span>
-          {(task.tags.length > 0 || task.due_at || task.description || project) && (
+          {(task.tags.length > 0 || dueTone || task.description || project) && (
             <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
               {project && (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "var(--text-xs)", color: "var(--text-muted)", padding: "0.18rem 0.48rem", borderRadius: "999px", background: "var(--surface-2)", border: `1px solid ${project.color || "var(--border)"}40` }}>
@@ -238,9 +244,9 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
                   {project.name}
                 </span>
               )}
-              {task.due_at && (
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", padding: "0.18rem 0.48rem", borderRadius: "999px", background: "var(--surface-2)" }}>
-                  {new Date(task.due_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+              {dueTone && (
+                <span style={{ fontSize: "var(--text-xs)", color: dueTone.color, padding: "0.18rem 0.48rem", borderRadius: "999px", background: dueTone.bg }}>
+                  {dueTone.label}
                 </span>
               )}
               {task.description && (
@@ -255,65 +261,69 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
           )}
         </div>
 
-        <span
-          style={{
-            fontSize: "var(--text-xs)",
-            color: "var(--text-secondary)",
-            whiteSpace: "nowrap",
-            padding: "0.2rem 0.5rem",
-            borderRadius: "999px",
-            background: "var(--surface-2)",
-            textTransform: "capitalize",
-          }}
-        >
-          {task.status.replace("_", " ")}
-        </span>
-
-        <button
-          onClick={handleToggleTimer}
-          aria-label={tracking ? `Stop timer for ${task.title}` : `Start timer for ${task.title}`}
-          style={{
-            width: "30px",
-            height: "30px",
-            borderRadius: "10px",
-            border: "1px solid var(--border-subtle)",
-            background: tracking ? "linear-gradient(155deg, color-mix(in srgb, var(--accent) 82%, white 18%), var(--accent))" : "var(--surface-2)",
-            cursor: "pointer",
-            color: tracking ? "white" : "var(--text-secondary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.63rem",
-            fontWeight: 800,
-            transition: "background 180ms ease, color 180ms ease",
-          }}
-        >
-          TM
-        </button>
-
-        {!isDone && onComplete && (
-          <button
-            onClick={handleComplete}
-            aria-label={`Complete ${task.title}`}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", justifySelf: "end", flexWrap: "wrap" }}>
+          <span
             style={{
-              width: "30px",
+              fontSize: "var(--text-xs)",
+              color: "var(--text-secondary)",
+              whiteSpace: "nowrap",
+              padding: "0.2rem 0.5rem",
+              borderRadius: "999px",
+              background: "var(--surface-2)",
+              textTransform: "capitalize",
+            }}
+          >
+            {task.status.replace("_", " ")}
+          </span>
+
+          <button
+            onClick={handleToggleTimer}
+            aria-label={tracking ? `Stop timer for ${task.title}` : `Start timer for ${task.title}`}
+            style={{
+              minWidth: "42px",
               height: "30px",
               borderRadius: "10px",
-              border: "1.5px solid var(--border-subtle)",
-              background: "var(--surface-2)",
+              border: "1px solid var(--border-subtle)",
+              background: tracking ? "linear-gradient(155deg, color-mix(in srgb, var(--accent) 82%, white 18%), var(--accent))" : "var(--surface-2)",
               cursor: "pointer",
-              color: "var(--text-secondary)",
+              color: tracking ? "white" : "var(--text-secondary)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "0.68rem",
+              fontSize: "0.63rem",
               fontWeight: 800,
-              transition: "background 180ms ease, transform 180ms ease",
+              transition: "background 180ms ease, color 180ms ease",
+              padding: "0 0.55rem",
             }}
           >
-            OK
+            {tracking ? "Stop" : "TM"}
           </button>
-        )}
+
+          {!isDone && onComplete && (
+            <button
+              onClick={handleComplete}
+              aria-label={`Complete ${task.title}`}
+              style={{
+                minWidth: "42px",
+                height: "30px",
+                borderRadius: "10px",
+                border: "1.5px solid var(--border-subtle)",
+                background: "var(--surface-2)",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.68rem",
+                fontWeight: 800,
+                transition: "background 180ms ease, transform 180ms ease",
+                padding: "0 0.55rem",
+              }}
+            >
+              Done
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

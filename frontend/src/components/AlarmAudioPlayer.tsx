@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { API_BASE_URL } from "../api/client";
+
 interface AlarmAudioPlayerProps {
   youtubeUrl: string;
   autoPlay?: boolean;
@@ -15,7 +17,7 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
     setLoading(true);
     setError(null);
     setStreamUrl(null);
-    fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/alarms/resolve-url?youtube_url=${encodeURIComponent(youtubeUrl)}`, { method: "POST" })
+    fetch(`${API_BASE_URL}/alarms/resolve-url?youtube_url=${encodeURIComponent(youtubeUrl)}`, { method: "POST" })
       .then(async (response) => ({ ok: response.ok, body: (await response.json()) as { stream_url?: string | null; error?: string | null } }))
       .then(({ ok, body }) => {
         if (!ok || !body.stream_url) throw new Error(body.error ?? "resolve_failed");

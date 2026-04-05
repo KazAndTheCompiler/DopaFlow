@@ -9,6 +9,7 @@ import GitHubIntegration from "./GitHubIntegration";
 import GmailConnect from "./GmailConnect";
 import SettingsPanel from "./SettingsPanel";
 import SkinPicker from "./SkinPicker";
+import LayoutPicker from "./LayoutPicker";
 import TursoConfig from "./TursoConfig";
 import WebhookPanel from "./WebhookPanel";
 
@@ -26,26 +27,69 @@ export default function SettingsView(): JSX.Element {
     letterSpacing: "0.08em",
   };
 
+  const groupStyle = {
+    display: "grid",
+    gap: "0.9rem",
+    padding: "1rem 1.05rem 1.1rem",
+    borderRadius: "22px",
+    background: "linear-gradient(160deg, color-mix(in srgb, var(--surface) 92%, white 8%), color-mix(in srgb, var(--surface) 98%, black 2%))",
+    border: "1px solid var(--border-subtle)",
+    boxShadow: "var(--shadow-soft)",
+  };
+
+  const groupHeaderStyle = {
+    display: "grid",
+    gap: "0.3rem",
+  };
+
+  const groupDescriptionStyle = {
+    fontSize: "var(--text-sm)",
+    color: "var(--text-secondary)",
+    lineHeight: 1.5,
+    maxWidth: "70ch",
+  };
+
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <SettingsPanel />
-      <section style={{ display: "grid", gap: "0.75rem" }}>
-        <span style={sectionTitleStyle}>Look & Feel</span>
+      <section style={groupStyle}>
+        <div style={groupHeaderStyle}>
+          <span style={sectionTitleStyle}>Look & Feel</span>
+          <span style={groupDescriptionStyle}>
+            Tune the shell, color system, and density. These are the settings that change how DopaFlow feels every time you open it.
+          </span>
+        </div>
         <SkinPicker current={app.skin.skin} skins={app.skin.skins} onPick={app.skin.setSkin} />
+        <LayoutPicker current={app.layout.layout} onPick={app.layout.setLayout} />
       </section>
-      <section style={{ display: "grid", gap: "0.75rem" }}>
-        <span style={sectionTitleStyle}>Sync & Sharing</span>
+      <section style={groupStyle}>
+        <div style={groupHeaderStyle}>
+          <span style={sectionTitleStyle}>Sync & Sharing</span>
+          <span style={groupDescriptionStyle}>
+            Connect remote storage and calendar feeds carefully. Keep the local-first default, then layer sharing on top only where it actually helps.
+          </span>
+        </div>
         <TursoConfig />
         <CalendarSharingSettings />
       </section>
-      <section style={{ display: "grid", gap: "0.75rem" }}>
-        <span style={sectionTitleStyle}>Integrations</span>
+      <section style={groupStyle}>
+        <div style={groupHeaderStyle}>
+          <span style={sectionTitleStyle}>Integrations</span>
+          <span style={groupDescriptionStyle}>
+            Wire in outside systems without turning the app into a dashboard graveyard. Each integration should earn its place in the daily loop.
+          </span>
+        </div>
         <GmailConnect onConnect={() => connectGmail({ redirect_uri: window.location.href }).then(() => undefined)} />
         <GitHubIntegration />
         <WebhookPanel />
       </section>
-      <section style={{ display: "grid", gap: "0.75rem" }}>
-        <span style={sectionTitleStyle}>Safety & Export</span>
+      <section style={groupStyle}>
+        <div style={groupHeaderStyle}>
+          <span style={sectionTitleStyle}>Safety & Export</span>
+          <span style={groupDescriptionStyle}>
+            Protect the data first. Backup, export, and recovery controls should stay obvious so the app remains trustworthy even when everything else changes.
+          </span>
+        </div>
         <BackupStatus
           backupPath={app.journal.backupPath}
           lastBackupAt={app.journal.lastBackupAt}

@@ -41,7 +41,7 @@ def weekly_overview(logs: list[dict[str, Any]], habit_names: dict[str, str], met
     window = [date.today() - timedelta(days=offset) for offset in range(6, -1, -1)]
     by_habit: dict[str, set[str]] = defaultdict(set)
     for log in logs:
-        by_habit[log["habit_id"]].add(log["checkin_date"])
+        by_habit[log["habit_id"]].add(str(log["checkin_date"])[:10])
     items = []
     for habit_id, name in habit_names.items():
         days = {day.strftime("%a").lower(): day.isoformat() in by_habit.get(habit_id, set()) for day in window}
@@ -61,10 +61,10 @@ def weekly_overview(logs: list[dict[str, Any]], habit_names: dict[str, str], met
 def pearson_correlation(logs: list[dict[str, Any]], habit_names: dict[str, str]) -> list[dict[str, Any]]:
     """Compute pairwise Pearson correlations between habit check-in vectors."""
 
-    dates = sorted({log["checkin_date"] for log in logs})
+    dates = sorted({str(log["checkin_date"])[:10] for log in logs})
     by_habit: dict[str, set[str]] = defaultdict(set)
     for log in logs:
-        by_habit[log["habit_id"]].add(log["checkin_date"])
+        by_habit[log["habit_id"]].add(str(log["checkin_date"])[:10])
     results = []
     habit_ids = sorted(habit_names)
     for index, left in enumerate(habit_ids):

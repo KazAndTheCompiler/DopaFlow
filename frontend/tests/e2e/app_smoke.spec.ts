@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const apiBase = "http://127.0.0.1:8000/api/v2";
+const apiBase = "**/api/v2";
 
 function json(body: unknown) {
   return {
@@ -119,4 +119,84 @@ test("calendar and settings surfaces render updated UI", async ({ page }) => {
   await page.locator('nav button:has-text("Settings")').first().click();
   await expect(page.getByText("Calendar Sharing", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Cross-install sharing")).toBeVisible({ timeout: 15_000 });
+});
+
+test("tasks surface tolerates a task with missing title field", async ({ page }) => {
+  // Return a task with `title` set to empty string — simulates a backend
+  // payload shape mismatch that could happen if a migration or sync bug
+  // produces records without a proper title.
+  await page.route(`${apiBase}/tasks**`, async (route) => {
+    const url = route.request().url();
+    if (url.includes("/boards/")) {
+      await route.fulfill(json([]));
+      return;
+    }
+    await route.fulfill(json([
+      {
+        id: "tsk_broken",
+        title: "",
+        description: null,
+        due_at: null,
+        priority: 3,
+        status: "todo",
+        done: false,
+        estimated_minutes: null,
+        actual_minutes: null,
+        recurrence_rule: null,
+        recurrence_parent_id: null,
+        sort_order: 0,
+        subtasks: [],
+        tags: [],
+        source_type: null,
+        source_external_id: null,
+        project_id: null,
+        created_at: "2026-04-01T07:00:00Z",
+        updated_at: "2026-04-01T07:00:00Z",
+      },
+    ]));
+  });
+
+  const pageErrors: string[] = [];
+  page.on("pageerror", (err) => {
+    pageErrors.push(err.message);
+  });
+
+  await page.goto("/#/tasks");
+  await expect(page.getByText("Task runway")).toBeVisible({ timeout: 15_000 });
+
+  // The surface should still render even with a blank-title task.
+  // No unhandled JS exceptions.
+  expect(pageErrors).toHaveLength(0);
+});
+
+test("today surface tolerates a malformed notification payload", async ({ page }) => {
+  // Return a notification with missing required fields
+  await page.route(`${apiBase}/notifications**`, async (route) => {
+    const url = route.request().url();
+    if (url.includes("/unread-count")) {
+      await route.fulfill(json({ count: 1 }));
+      return;
+    }
+    await route.fulfill(json([
+      {
+        id: "ntf_broken",
+        // missing: level, title, body
+        read: false,
+        archived: false,
+        created_at: "2026-04-01T08:00:00Z",
+        action_url: null,
+      },
+    ]));
+  });
+
+  const pageErrors: string[] = [];
+  page.on("pageerror", (err) => {
+    pageErrors.push(err.message);
+  });
+
+  await page.goto("/");
+  await expect(page.getByTitle("Notifications")).toBeVisible({ timeout: 15_000 });
+
+  // Surface renders without crashing despite malformed notification
+  expect(pageErrors).toHaveLength(0);
 });

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DopaFlow v2.0.7 - User Guide</title>
+    <title>DopaFlow User Guide</title>
     <style>
         :root {
             --primary: #4f46e5;
@@ -341,8 +341,8 @@
 </head>
 <body>
     <header>
-        <h1>🧠 DopaFlow v2.0</h1>
-        <p>A Unified Productivity App for ADHD Brains</p>
+        <h1>🧠 DopaFlow</h1>
+        <p>Repo-grounded user guide audited against the current development branch on 2026-04-04</p>
     </header>
 
     <nav>
@@ -365,7 +365,7 @@
             <ul>
                 <li><a href="#getting-started">Getting Started</a> - Installation and setup</li>
                 <li><a href="#features">Core Features</a> - Tasks, Habits, Focus, Review, Journal</li>
-                <li><a href="#surfaces">App Surfaces</a> - All 15 screens explained</li>
+                <li><a href="#surfaces">App Surfaces</a> - All 21 screens explained</li>
                 <li><a href="#api">API Reference</a> - Backend endpoints</li>
                 <li><a href="#shortcuts">Keyboard Shortcuts</a> - Quick navigation</li>
                 <li><a href="#skins">Skins & Themes</a> - Visual customization</li>
@@ -418,30 +418,30 @@
             <h3>Installation</h3>
             <p>DopaFlow can be used from the installed local release or run from source during development.</p>
 
-            <h4>Installed Local Release (recommended on this machine)</h4>
-            <pre><code>/home/henry/release/run-dopaflow-2.0.7.sh</code></pre>
+            <h4>Installed local release</h4>
+            <pre><code>./run-dopaflow.sh</code></pre>
 
             <div class="note">
-                <strong>Current working install path:</strong> the verified local release is the web-mode bundle in
-                <code>/home/henry/release/DopaFlow-2.0.7-web</code>, served on <code>http://127.0.0.1:8000</code>.
+                <strong>Release note:</strong> actual launcher names and install paths vary by machine and packaging target.
+                Keep machine-specific wrapper paths in local ops notes, not in the shipped guide.
             </div>
 
             <h4>Run from source</h4>
-            <p>Source development uses the repo root paths below:</p>
+            <p>Run from the repository root using the relevant app folder:</p>
 
             <h4>Backend (FastAPI)</h4>
-            <pre><code>cd /home/henry/vscode/build/dopaflow/backend
+            <pre><code>cd backend
 ../.venv/bin/python -m app.main</code></pre>
 
             <h4>Frontend (React + Vite)</h4>
-            <pre><code>cd /home/henry/vscode/build/dopaflow/frontend
-PATH=/home/henry/vscode/.codex-bin:$PATH npm install
-PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
+            <pre><code>cd frontend
+npm install
+npm run dev</code></pre>
 
             <h4>Desktop (Electron)</h4>
-            <pre><code>cd /home/henry/vscode/build/dopaflow/desktop
-PATH=/home/henry/vscode/.codex-bin:$PATH npm install
-PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
+            <pre><code>cd desktop
+npm install
+npm run dev</code></pre>
 
             <h3>Environment Variables</h3>
             <p>Configure the backend with these environment variables:</p>
@@ -520,7 +520,7 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
                 <li><strong>Task Linking:</strong> Associate sessions with specific tasks</li>
                 <li><strong>Session History:</strong> Track completed focus blocks</li>
                 <li><strong>Statistics:</strong> View productivity trends</li>
-                <li><strong>Recommendations:</strong> Get AI-powered session suggestions</li>
+                <li><strong>Recommendations:</strong> Get history-based session suggestions from recent focus patterns</li>
             </ul>
 
             <h3>4. Spaced Repetition Review</h3>
@@ -542,7 +542,7 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
                 <li><strong>Wikilinks:</strong> Connect related entries</li>
                 <li><strong>Graph View:</strong> Visualize entry connections</li>
                 <li><strong>Backlinks:</strong> See what links to each entry</li>
-                <li><strong>Backup Sync:</strong> Automatic cloud backup</li>
+                <li><strong>Backups:</strong> Local markdown backup and export controls</li>
             </ul>
 
             <h3>6. Calendar Integration</h3>
@@ -587,7 +587,7 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
         <!-- App Surfaces -->
         <section id="surfaces">
             <h2>🖥️ App Surfaces</h2>
-            <p>DopaFlow features 15 distinct screens (surfaces) for different workflows:</p>
+            <p>DopaFlow currently exposes 21 distinct screens (surfaces) in the main navigation:</p>
 
             <div class="feature-grid">
                 <div class="feature-card">
@@ -643,8 +643,24 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
                     <p>Daily summary of productivity metrics and insights.</p>
                 </div>
                 <div class="feature-card">
+                    <h4><span class="feature-icon">♪</span> Player</h4>
+                    <p>Audio and focus playback controls for work sessions and alarms.</p>
+                </div>
+                <div class="feature-card">
                     <h4><span class="feature-icon">◈</span> Overview</h4>
                     <p>High-level view of all domains and momentum score.</p>
+                </div>
+                <div class="feature-card">
+                    <h4><span class="feature-icon">🏅</span> Gamify</h4>
+                    <p>Levels, badges, XP progress, and reinforcement loops.</p>
+                </div>
+                <div class="feature-card">
+                    <h4><span class="feature-icon">∿</span> Insights</h4>
+                    <p>Momentum summaries, digest signals, and cross-domain patterns.</p>
+                </div>
+                <div class="feature-card">
+                    <h4><span class="feature-icon">◎</span> Goals</h4>
+                    <p>Long-horizon goals with milestone tracking and progress visibility.</p>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">⚡</span> Commands</h4>
@@ -684,12 +700,10 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/habits/insights</span></div>
 
             <h3>Focus</h3>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/focus/sessions</span></div>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/focus/sessions</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/focus/sessions/control</span></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/focus/status</span></div>
-            <div class="endpoint"><span class="method post">POST</span><span class="path">/focus/start</span></div>
-            <div class="endpoint"><span class="method post">POST</span><span class="path">/focus/pause</span></div>
-            <div class="endpoint"><span class="method post">POST</span><span class="path">/focus/stop</span></div>
-            <div class="endpoint"><span class="method get">GET</span><span class="path">/focus/history</span></div>
 
             <h3>Review</h3>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/review/cards</span></div>
@@ -712,7 +726,7 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/commands/history</span></div>
 
             <div class="tip">
-                <strong>Voice command words:</strong> spoken command routing is intentionally explicit in v2.0.7.
+                <strong>Voice command words:</strong> spoken command routing is intentionally explicit in the current v2 branch.
                 Use prefixes like <code>task ...</code>, <code>journal ...</code>, and <code>calendar ...</code>.
                 The app previews the action first, then asks for confirmation before execution.
             </div>
@@ -766,31 +780,43 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
                 </tr>
                 <tr>
                     <td>Open Focus</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">F</span></span></td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">F</span></span></td>
                 </tr>
                 <tr>
                     <td>Open Review</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">R</span></span></td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">R</span></span></td>
                 </tr>
                 <tr>
                     <td>Open Journal</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">J</span></span></td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">J</span></span></td>
                 </tr>
                 <tr>
                     <td>Open Today</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">D</span></span></td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">1</span></span></td>
                 </tr>
                 <tr>
-                    <td>Open Search</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">K</span></span></td>
+                    <td>Open Calendar</td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">C</span></span></td>
                 </tr>
                 <tr>
                     <td>Open Command Bar</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">Space</span></span></td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">K</span></span></td>
                 </tr>
                 <tr>
                     <td>Open Plan Modal</td>
-                    <td><span class="shortcut"><span class="key">Ctrl</span>+<span class="key">P</span></span></td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">P</span></span></td>
+                </tr>
+                <tr>
+                    <td>Open Insights</td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">I</span></span></td>
+                </tr>
+                <tr>
+                    <td>Open Gamify</td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">G</span></span></td>
+                </tr>
+                <tr>
+                    <td>Open Player</td>
+                    <td><span class="shortcut"><span class="key">Ctrl/Cmd</span>+<span class="key">Shift</span>+<span class="key">M</span></span></td>
                 </tr>
             </table>
 
@@ -818,7 +844,7 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
         <!-- Skins -->
         <section id="skins">
             <h2>🎨 Skins & Themes</h2>
-            <p>DopaFlow ships with 9 built-in visual themes. Change skins in Settings or via the <code>useSkin</code> hook.</p>
+            <p>DopaFlow ships with 19 built-in visual skins. Change skins in Settings or via the <code>useSkin</code> hook.</p>
             
             <table>
                 <tr>
@@ -857,6 +883,11 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
                     <td>Accessibility-focused contrast</td>
                 </tr>
                 <tr>
+                    <td>Cotton Candy</td>
+                    <td><code>cotton-candy</code></td>
+                    <td>Soft bright pastel variant</td>
+                </tr>
+                <tr>
                     <td>Midnight Neon</td>
                     <td><code>midnight-neon</code></td>
                     <td>Dark mode with neon accents</td>
@@ -872,6 +903,14 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
                     <td>Glassmorphism effects</td>
                 </tr>
             </table>
+
+            <div class="note">
+                <strong>Source of truth:</strong> the complete skin catalog currently lives in
+                <code>frontend/src/design-system/manifest.json</code> and contains 19 entries, including
+                <code>lush-forest</code>, <code>vampire-romance</code>, <code>deep-ocean</code>,
+                <code>sunset-blues</code>, <code>classic-noir</code>, <code>neon-punk</code>,
+                <code>forest-gradient</code>, <code>ocean-gradient</code>, and <code>amber-night</code>.
+            </div>
         </section>
 
         <!-- Security -->
@@ -1007,7 +1046,7 @@ PATH=/home/henry/vscode/.codex-bin:$PATH npm run dev</code></pre>
             </ul>
 
             <div class="note">
-                <strong>For Production:</strong> See <a href="security.md">security.md</a> for comprehensive security recommendations including database encryption, JWT authentication, and CSRF protection.
+                <strong>For Production:</strong> Keep operational guidance in <code>CHANGELOG.md</code> and <code>next_steps.md</code> aligned with the live backend configuration before widening network exposure.
             </div>
         </section>
 
@@ -1050,7 +1089,7 @@ tsk_abc123,Complete report,done,2,2024-03-30,"work,urgent","Q4 financial report"
                 <tr>
                     <td>priority</td>
                     <td>Integer</td>
-                    <td>1-4 (1=highest)</td>
+                    <td>1-5 (1=highest)</td>
                     <td>Yes</td>
                 </tr>
                 <tr>
@@ -1235,18 +1274,17 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
 
             <h3>Key Files</h3>
             <ul>
-                <li><code>codex.md</code> - Current implementation state, verified work, calendar sharing status, daily loop implementation, verification commands</li>
-                <li><code>next_step.md</code> - Current roadmap and priorities</li>
-                <li><code>CHANGELOG.md</code> - Version history and development sessions</li>
+                <li><code>frontend/src/App.tsx</code> - nav surfaces, shared app state, and route wiring</li>
+                <li><code>frontend/tests/e2e/</code> - current Playwright regression coverage</li>
+                <li><code>CHANGELOG.md</code> - version history and active hardening notes</li>
             </ul>
 
-            <h3>Codex Documentation</h3>
-            <p>The <code>codex.md</code> file serves as the running implementation notes:</p>
+            <h3>Implementation Notes</h3>
+            <p>Keep working notes in repo-local markdown files that can be refreshed alongside the code:</p>
             <ul>
-                <li><strong>Calendar Sharing</strong>: Peer feeds, share tokens with expiry, mirrored events, feed health status</li>
-                <li><strong>Daily Loop</strong>: Today, Overview, Focus, Shutdown surfaces with runway guidance</li>
-                <li><strong>Backend Hardening</strong>: Remote API authz with signed bearer tokens</li>
-                <li><strong>Verification Commands</strong>: Tested build and test commands</li>
+                <li><code>CHANGELOG.md</code> for shipped changes and active hardening work</li>
+                <li><code>LLM_work_folder/promptpack_agents.md</code> for model-specific verification prompts</li>
+                <li><code>LLM_work_folder/run_frontend_verification.sh</code> for the current frontend verification entrypoint</li>
             </ul>
         </section>
 
@@ -1271,9 +1309,8 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
 
             <h3>Desktop app crashes on startup</h3>
             <ul>
-                <li>On this machine, prefer the verified release launcher: <code>/home/henry/release/run-dopaflow-2.0.7.sh</code></li>
                 <li>If running from source, confirm the backend starts successfully first</li>
-                <li>Use the persistent Node path in <code>/home/henry/vscode/.codex-bin</code> instead of old temporary installs</li>
+                <li>Use the project’s working Node/npm installation rather than relying on temporary local wrappers</li>
                 <li>Review Electron logs only if you are specifically debugging the native shell</li>
             </ul>
 
@@ -1293,14 +1330,14 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
             </ul>
 
             <div class="note">
-                <strong>Need more help?</strong> Check the <code>STRUCTURE.md</code> file for detailed architecture documentation, 
-                or review the command and API routes from the running local release at <code>http://127.0.0.1:8000</code>.
+                <strong>Need more help?</strong> Check the source tree directly, starting with
+                <code>frontend/src/App.tsx</code>, <code>frontend/tests/e2e/</code>, and <code>CHANGELOG.md</code>.
             </div>
         </section>
     </main>
 
     <footer>
-        <p>DopaFlow v2.0.7 - A Unified Productivity App for ADHD Brains</p>
+        <p>DopaFlow - A Unified Productivity App for ADHD Brains</p>
         <p>Built with FastAPI, React 18, Vite, TypeScript, and Electron</p>
     </footer>
 </body>

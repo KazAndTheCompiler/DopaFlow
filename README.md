@@ -146,6 +146,12 @@ Voice commands are live in the current build with explicit command words:
 
 The current version is deliberately strict. It previews first, asks for confirmation, and speaks back status through browser TTS instead of trying to guess intent from vague speech.
 
+Current active direction:
+
+- tighten the STT command-line flow so spoken calendar commands create real time blocks reliably
+- keep typed command parsing and spoken command parsing on the same preview -> confirm -> execute path
+- preserve explicit command words until the more freeform layer is actually trustworthy
+
 ---
 
 ## Known gaps (v2 beta)
@@ -154,8 +160,12 @@ The current version is deliberately strict. It previews first, asks for confirma
 - Digest email delivery is not wired
 - Drag-to-reschedule in calendar time blocks is not implemented
 - Mobile swipe-to-complete on task rows is not implemented
+- Voice/STT scheduling is in progress: spoken appointments should become confirmed calendar blocks with start/end times
+- Shell customization is improving, but layout control is still newer than the skin system and needs a broader pass across surfaces
+- Nutrition lost a useful preset starter library during migration; common basics like coffee, tea, sugar-by-teaspoon, and simple sandwich defaults need to come back as protected seed data
+- Review import trust is improving, but APKG coverage should keep moving toward real generated-package tests instead of placeholder-only confidence
 
-See `CHANGELOG.md` for more.
+See `CHANGELOG.md` and `next_steps.md` for the live direction.
 
 ---
 

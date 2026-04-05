@@ -4,6 +4,61 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ---
 
+## Unreleased
+
+**Date:** 2026-04-04
+**Status:** Working-tree verification and docs realignment
+
+### E2E hardening
+
+- Replaced more low-signal route/surface checks with behavior assertions in:
+  - `frontend/tests/e2e/daily_loop.spec.ts`
+  - `frontend/tests/e2e/goals_flow.spec.ts`
+  - `frontend/tests/e2e/route_startup.spec.ts`
+- Added coverage for:
+  - Today -> Focus handoff with prefilled task target
+  - Goals empty state
+  - Command palette navigation (`Ctrl/Cmd+K`)
+  - stronger route startup expectations for Today, Settings, and core routes
+
+### UI polish
+
+- Continued the hierarchy pass on the Habits surface:
+  - added a runway summary header
+  - added compact live stats for tracked/done/best streak
+  - reframed the create form as a clearer capture panel
+- Added shell-density controls alongside skins:
+  - `compact`, `comfortable`, and `expanded` layout modes now live in Settings
+  - layout is persisted separately from skin/theme choice
+- Tightened shell/day-state polish:
+  - Today now shows an explicit day-state pill (`Planned`, `Needs plan`, `Future`, `Review`)
+  - Notification inbox now degrades gracefully when titles, levels, or body fields are partial/missing
+
+### Tooling and docs
+
+- Added `LLM_work_folder/run_frontend_verification.sh` so build + Playwright verification can be run directly without another approval loop.
+- Rewrote `LLM_work_folder/promptpack_agents.md` around the current working-tree workflow instead of the old 18-test / EPERM-era assumptions.
+- Consolidated the Qwen/Minimax helper-model workflow into the live promptpack/changelog truth set instead of leaving separate stale notes in the work folder.
+- Updated `docs/userguide.html` to remove stale surface counts, stale shortcut docs, stale skin count, and machine-specific local paths.
+- Hardened frontend API targeting for local release/runtime use:
+  - default API base now follows `window.location.origin` instead of assuming `127.0.0.1:8000`
+  - network fetch failures now raise a visible toast instead of only surfacing as opaque uncaught promise errors
+- Replaced stale markdown snapshots with a live roadmap in `next_steps.md`.
+- Added a real generated `.apkg` backend regression test so imported review cards are verified to enter the normal SM-2 scheduling path.
+- Updated the live roadmap/README to call out the lost nutrition starter-library regression from the older release as explicit future work.
+
+### Focus runtime
+
+- Fixed the active-focus session mismatch where backend sessions were stored as `"active"` but the frontend only treated `"running"` / `"paused"` as live timer states.
+- Normalized legacy `"active"` focus rows on the frontend so old release data does not strand a session in history without a countdown.
+- Strengthened focus E2E so it asserts the active timer/countdown path after session start.
+
+### Verification
+
+- Current verification entrypoint:
+  - `bash LLM_work_folder/run_frontend_verification.sh`
+- Re-run required after the latest working-tree edits to confirm the exact passing test count for this revision.
+
 ## Version 2.0.7
 
 **Release Date:** 2026-04-04
@@ -170,21 +225,14 @@ Added prompt pack documentation for model-specific task routing (consolidated to
 
 These prompt packs define clear division of labor across helper models used in the development workflow.
 
-#### Codex Documentation
+#### Implementation Notes
 
-The project maintains running implementation notes in `codex.md` documenting:
+The repo-grounded restart points now live in files that are actually present:
 
-- **Calendar Sharing Status**: Full trust pass implementation including peer feeds, share tokens with expiry, mirrored events, feed health status UI
-- **Daily Loop Implementation**: Today, Overview, Focus, and Shutdown surfaces with runway guidance, momentum gauge, 3-step evening ritual
-- **Backend Hardening**: Remote API authz with signed bearer tokens, scope-protected routers
-- **Verification Commands**: Test and build commands verified working
-
-Key files documented:
-- `backend/app/domains/calendar_sharing/` - peer sync, share tokens
-- `frontend/src/surfaces/today/`, `overview/`, `focus/`, `shutdown/` - daily loop surfaces
-- `backend/app/tools/promptpack.py` - CLI for audits, API sync, migrations
-
-See `codex.md` for complete restart points and next sensible work.
+- `CHANGELOG.md` - shipped changes plus active hardening notes
+- `LLM_work_folder/promptpack_agents.md` - current model-routing and verification prompts
+- `LLM_work_folder/run_frontend_verification.sh` - current frontend build + Playwright entrypoint
+- `backend/app/tools/promptpack.py` - CLI prompt templates for audits, API sync, migrations, and test-focused prompts
 
 #### Features Delegated and Completed
 

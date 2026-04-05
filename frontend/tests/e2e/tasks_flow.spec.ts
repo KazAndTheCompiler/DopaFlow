@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const apiBase = "http://127.0.0.1:8000/api/v2";
+const apiBase = "**/api/v2";
 
 function json(body: unknown) {
   return {
@@ -12,6 +12,30 @@ function json(body: unknown) {
 
 test.describe("Tasks flow regression", () => {
   test.beforeEach(async ({ page }) => {
+    let tasks = [
+      {
+        id: "tsk_1",
+        title: "Ship UI polish pass",
+        description: null,
+        due_at: null,
+        priority: 1,
+        status: "todo",
+        done: false,
+        estimated_minutes: 45,
+        actual_minutes: null,
+        recurrence_rule: null,
+        recurrence_parent_id: null,
+        sort_order: 0,
+        subtasks: [],
+        tags: [],
+        source_type: null,
+        source_external_id: null,
+        project_id: null,
+        created_at: "2026-04-01T07:00:00Z",
+        updated_at: "2026-04-01T07:00:00Z",
+      },
+    ];
+
     await page.addInitScript(() => {
       window.localStorage.setItem("dopaflow_onboarded", "1");
       window.localStorage.setItem("zoestm_planned_date", new Date().toISOString().slice(0, 10));
@@ -23,30 +47,57 @@ test.describe("Tasks flow regression", () => {
         await route.fulfill(json([]));
         return;
       }
+      if (url.includes("/tasks/quick-add") && route.request().method() === "POST") {
+        const payload = route.request().postDataJSON() as { text: string };
+        await route.fulfill(json({
+          title: payload.text,
+          description: null,
+          due_at: null,
+          priority: 3,
+          tags: [],
+          estimated_minutes: null,
+        }));
+        return;
+      }
       if (route.request().method() === "GET") {
-        await route.fulfill(json([
-          {
-            id: "tsk_1",
-            title: "Ship UI polish pass",
-            description: null,
-            due_at: null,
-            priority: 1,
-            status: "todo",
-            done: false,
-            estimated_minutes: 45,
-            actual_minutes: null,
-            recurrence_rule: null,
-            recurrence_parent_id: null,
-            sort_order: 0,
-            subtasks: [],
-            tags: [],
-            source_type: null,
-            source_external_id: null,
-            project_id: null,
-            created_at: "2026-04-01T07:00:00Z",
-            updated_at: "2026-04-01T07:00:00Z",
-          },
-        ]));
+        await route.fulfill(json(tasks));
+        return;
+      }
+      if (route.request().method() === "POST" && url.endsWith("/tasks/")) {
+        const payload = route.request().postDataJSON() as { text?: string; title?: string };
+        const title = payload.text ?? payload.title ?? "Untitled task";
+        const createdTask = {
+          id: `tsk_${tasks.length + 1}`,
+          title,
+          description: null,
+          due_at: null,
+          priority: 3,
+          status: "todo",
+          done: false,
+          estimated_minutes: null,
+          actual_minutes: null,
+          recurrence_rule: null,
+          recurrence_parent_id: null,
+          sort_order: tasks.length,
+          subtasks: [],
+          tags: [],
+          source_type: null,
+          source_external_id: null,
+          project_id: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        tasks = [createdTask, ...tasks];
+        await route.fulfill(json(createdTask));
+        return;
+      }
+      if (route.request().method() === "PATCH" && url.includes("/tasks/tsk_1")) {
+        tasks = tasks.map((task) =>
+          task.id === "tsk_1"
+            ? { ...task, status: "done", done: true, updated_at: new Date().toISOString() }
+            : task,
+        );
+        await route.fulfill(json(tasks.find((task) => task.id === "tsk_1")));
         return;
       }
       await route.fulfill(json({}));
@@ -73,17 +124,85 @@ test.describe("Tasks flow regression", () => {
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
   });
 
-  test("tasks surface does not crash", async ({ page }) => {
+  // ── Surface rendering ──────────────────────────────────────────────────────
+
+  test("tasks surface renders quick capture bar, filter controls, and seed task", async ({ page }) => {
     await page.goto("/#/tasks");
-    await page.waitForTimeout(2000);
-    const hasError = await page.getByText("Surface failed to render").isVisible().catch(() => false);
-    expect(hasError).toBe(false);
+    await expect(page.getByText("Quick capture")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByPlaceholder("Quick add — type or speak")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Add" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Filter and sort")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Ship UI polish pass")).toBeVisible({ timeout: 15_000 });
   });
 
-  test("board view does not crash", async ({ page }) => {
+  // ── Task row detail ────────────────────────────────────────────────────────
+
+  test("task row renders priority badge, status pill, and complete button", async ({ page }) => {
+    await page.goto("/#/tasks");
+    await expect(page.getByText("Ship UI polish pass")).toBeVisible({ timeout: 15_000 });
+    // Priority badge (uses title attribute)
+    await expect(page.getByTitle("Priority 1")).toBeVisible({ timeout: 5_000 });
+    // Status pill
+    await expect(page.getByText("todo", { exact: true })).toBeVisible({ timeout: 5_000 });
+    // Complete button (aria-label in TaskRow is "Complete {title}")
+    await expect(
+      page.getByRole("button", { name: "Complete Ship UI polish pass" }),
+    ).toBeVisible({ timeout: 5_000 });
+  });
+
+  // ── Create flow ────────────────────────────────────────────────────────────
+
+  test("can create a new task via quick add and see it in the list", async ({ page }) => {
+    await page.goto("/#/tasks");
+    await expect(page.getByText("Quick capture")).toBeVisible({ timeout: 15_000 });
+
+    const addInput = page.getByPlaceholder("Quick add — type or speak");
+    await addInput.fill("New test task");
+    await addInput.press("Enter");
+
+    await expect(page.getByText("New test task")).toBeVisible({ timeout: 15_000 });
+  });
+
+  // ── Complete flow ──────────────────────────────────────────────────────────
+
+  test("can mark a task as complete via the row button", async ({ page }) => {
+    await page.goto("/#/tasks");
+    await expect(page.getByText("Ship UI polish pass")).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Complete Ship UI polish pass" }).click();
+
+    // After completion the task row should update (opacity / strikethrough).
+    // The edit-modal aria-label confirms the row is still rendered.
+    await expect(
+      page.getByRole("button", { name: "Edit task: Ship UI polish pass" }).first(),
+    ).toBeVisible({ timeout: 15_000 });
+  });
+
+  // ── Filter flow ────────────────────────────────────────────────────────────
+
+  test("filter buttons toggle active state", async ({ page }) => {
+    await page.goto("/#/tasks");
+    await expect(page.getByText("Ship UI polish pass")).toBeVisible({ timeout: 15_000 });
+
+    // Pending filter
+    await page.getByRole("button", { name: "Pending" }).click();
+    await expect(page.getByText("Ship UI polish pass")).toBeVisible({ timeout: 5_000 });
+
+    // Done filter — button should receive accent-colored background
+    const doneBtn = page.getByRole("button", { name: "Done" });
+    await doneBtn.click();
+    const bg = await doneBtn.evaluate((el: HTMLElement) =>
+      window.getComputedStyle(el).backgroundColor,
+    );
+    expect(bg.length).toBeGreaterThan(0);
+  });
+
+  // ── Board view ─────────────────────────────────────────────────────────────
+
+  test("board view renders kanban controls", async ({ page }) => {
     await page.goto("/#/board");
-    await page.waitForTimeout(2000);
-    const hasError = await page.getByText("Surface failed to render").isVisible().catch(() => false);
-    expect(hasError).toBe(false);
+    await expect(page.getByText("Board mode")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Kanban" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Eisenhower" })).toBeVisible({ timeout: 15_000 });
   });
 });

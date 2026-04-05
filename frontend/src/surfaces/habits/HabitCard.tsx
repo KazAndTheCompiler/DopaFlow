@@ -17,7 +17,8 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
   const ringRadius = 16;
   const ringCircumference = 2 * Math.PI * ringRadius;
   const completionPct = habit.completion_pct ?? 0;
-  const ringDashOffset = ringCircumference - (completionPct / 100) * ringCircumference;
+  const ringVisualPct = Math.min(completionPct, 100);
+  const ringDashOffset = ringCircumference - (ringVisualPct / 100) * ringCircumference;
 
   // Determine ring color based on completion percentage
   let ringColor = "var(--state-warn)"; // < 50%
@@ -124,6 +125,17 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
           }}
         >
           {habit.target_freq}/ {habit.target_period}
+        </span>
+        <span
+          style={{
+            padding: "0.15rem 0.5rem",
+            borderRadius: "999px",
+            background: completionPct > 100 ? "color-mix(in srgb, var(--state-warn) 16%, var(--surface-2))" : "var(--surface-2)",
+            fontSize: "var(--text-sm)",
+            color: completionPct > 100 ? "var(--state-warn)" : "var(--text-secondary)",
+          }}
+        >
+          {habit.completion_count ?? 0} hit{(habit.completion_count ?? 0) === 1 ? "" : "s"}
         </span>
         {isFrozen ? (
           <button

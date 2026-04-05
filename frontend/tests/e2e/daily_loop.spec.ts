@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const apiBase = "http://127.0.0.1:8000/api/v2";
+const apiBase = "**/api/v2";
 
 function json(body: unknown) {
   return {
@@ -16,7 +16,9 @@ test.describe("Daily loop regression", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("dopaflow_onboarded", "1");
-      window.localStorage.setItem("zoestm_planned_date", todayISO);
+      const localNow = new Date();
+      const localIso = new Date(localNow.getTime() - localNow.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+      window.localStorage.setItem("zoestm_planned_date", localIso);
     });
 
     await page.route(`${apiBase}/tasks**`, async (route) => {
@@ -105,6 +107,7 @@ test.describe("Daily loop regression", () => {
     await page.route(`${apiBase}/focus/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/review/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/journal/**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/calendar/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/calendar/events**`, (route) => route.fulfill(json([
       {
         id: "evt_1",
@@ -116,7 +119,6 @@ test.describe("Daily loop regression", () => {
         created_at: `${todayISO}T07:00:00Z`,
       },
     ])));
-    await page.route(`${apiBase}/calendar/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/alarms**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/notifications**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/notifications/unread-count**`, (route) => route.fulfill(json({ count: 0 })));
@@ -135,20 +137,24 @@ test.describe("Daily loop regression", () => {
 
   // ── Today runway card ──────────────────────────────────────────────────────
 
-  test("today surface does not crash", async ({ page }) => {
+  test("today surface shows the next focus task and schedule context", async ({ page }) => {
     await page.goto("/#/today");
-    await page.waitForTimeout(2000);
-    const hasError = await page.getByText("Surface failed to render").isVisible().catch(() => false);
-    expect(hasError).toBe(false);
+    await expect(page.getByText("Start with Ship UI polish pass")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTitle("Team sync")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Refactor hooks")).toBeVisible({ timeout: 15_000 });
   });
 
   // ── Focus prefill / selected-task flow ─────────────────────────────────────
 
-  test("focus surface does not crash", async ({ page }) => {
-    await page.goto("/#/focus");
-    await page.waitForTimeout(2000);
-    const hasError = await page.getByText("Surface failed to render").isVisible().catch(() => false);
-    expect(hasError).toBe(false);
+  test("today runway can launch focus with the suggested task prefilled", async ({ page }) => {
+    await page.goto("/#/today");
+    await expect(page.getByText("Start with Ship UI polish pass")).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Set up focus" }).click();
+
+    await expect(page.getByRole("main").getByText("Focus Block", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Link session to a task" })).toContainText("Ship UI polish pass", { timeout: 10_000 });
+    await expect(page.getByText("ready for the next block")).toBeVisible({ timeout: 10_000 });
   });
 
   // ── Focus completion -> break / next-block ─────────────────────────────────
@@ -216,9 +222,11 @@ test.describe("Daily loop regression", () => {
       window.dispatchEvent(new CustomEvent("dopaflow:open-shutdown"));
     });
     await page.waitForTimeout(500);
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Close" }).click();
-    await page.waitForTimeout(500);
-    const hasError = await page.getByText("Surface failed to render").isVisible().catch(() => false);
-    expect(hasError).toBe(false);
+    await expect(dialog).toBeHidden({ timeout: 15_000 });
+    await expect(page.getByRole("main")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Set up focus" })).toBeVisible({ timeout: 15_000 });
   });
 });

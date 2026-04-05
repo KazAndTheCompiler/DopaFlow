@@ -63,13 +63,14 @@ export function Shell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => isMobile());
   const [isMobileLayout, setIsMobileLayout] = useState<boolean>(() => isMobile());
   const [pressedMobileNav, setPressedMobileNav] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const MOBILE_NAV = [
     { id: "today", label: "Today", icon: "TD" },
     { id: "tasks", label: "Tasks", icon: "TS" },
     { id: "focus", label: "Focus", icon: "FC" },
     { id: "habits", label: "Habits", icon: "HB" },
-    { id: "journal", label: "Journal", icon: "JR" },
+    { id: "more", label: "More", icon: "••" },
   ] as const;
 
   useEffect(() => {
@@ -81,6 +82,9 @@ export function Shell({
     const onChange = (e: MediaQueryListEvent): void => {
       setSidebarCollapsed(e.matches);
       setIsMobileLayout(e.matches);
+      if (!e.matches) {
+        setMobileMenuOpen(false);
+      }
     };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
@@ -125,8 +129,22 @@ export function Shell({
         onToggleFocusMode={onToggleFocusMode}
         activeTimerLabel={activeTimerLabel}
       />
-      <main style={{ padding: sidebarCollapsed ? "1rem" : "1.5rem", overflow: "auto" }}>
-        <div key={route} className="surface-fade">{children}</div>
+      <main
+        style={{
+          padding: isMobileLayout ? "0.9rem 0.85rem 0.75rem" : sidebarCollapsed ? "1rem 1.15rem 1.1rem" : "1.4rem 1.6rem 1.35rem",
+          overflow: "auto",
+        }}
+      >
+        <div
+          key={route}
+          className="surface-fade"
+          style={{
+            width: "min(100%, 1480px)",
+            margin: "0 auto",
+          }}
+        >
+          {children}
+        </div>
       </main>
       {isMobileLayout ? (
         <nav
@@ -145,7 +163,14 @@ export function Shell({
             return (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => {
+                  if (item.id === "more") {
+                    setMobileMenuOpen((value) => !value);
+                    return;
+                  }
+                  setMobileMenuOpen(false);
+                  onNavigate(item.id);
+                }}
                 onTouchStart={() => setPressedMobileNav(item.id)}
                 onTouchEnd={() => setPressedMobileNav((current) => current === item.id ? null : current)}
                 onTouchCancel={() => setPressedMobileNav((current) => current === item.id ? null : current)}
@@ -158,7 +183,9 @@ export function Shell({
                   gap: "0.18rem",
                   border: "none",
                   background: "transparent",
-                  color: isActive ? "var(--accent)" : "var(--text-muted)",
+                  color: item.id === "more"
+                    ? mobileMenuOpen ? "var(--accent)" : "var(--text-muted)"
+                    : isActive ? "var(--accent)" : "var(--text-muted)",
                   cursor: "pointer",
                   padding: "0.55rem 0.2rem 0.4rem",
                   fontSize: "0.7rem",
@@ -174,7 +201,13 @@ export function Shell({
                     borderRadius: "10px",
                     display: "grid",
                     placeItems: "center",
-                    background: isActive ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "color-mix(in srgb, var(--surface) 74%, white 26%)",
+                    background: item.id === "more"
+                      ? mobileMenuOpen
+                        ? "color-mix(in srgb, var(--accent) 14%, var(--surface))"
+                        : "color-mix(in srgb, var(--surface) 74%, white 26%)"
+                      : isActive
+                        ? "color-mix(in srgb, var(--accent) 14%, var(--surface))"
+                        : "color-mix(in srgb, var(--surface) 74%, white 26%)",
                     fontWeight: 800,
                     letterSpacing: "0.02em",
                   }}
@@ -185,10 +218,14 @@ export function Shell({
                 <span
                   aria-hidden="true"
                   style={{
-                    width: isActive ? "14px" : "4px",
+                    width: item.id === "more"
+                      ? mobileMenuOpen ? "14px" : "4px"
+                      : isActive ? "14px" : "4px",
                     height: "4px",
                     borderRadius: "999px",
-                    background: isActive ? "var(--accent)" : "transparent",
+                    background: item.id === "more"
+                      ? mobileMenuOpen ? "var(--accent)" : "transparent"
+                      : isActive ? "var(--accent)" : "transparent",
                     transition: "width 160ms ease, background 160ms ease",
                   }}
                 />
@@ -198,6 +235,170 @@ export function Shell({
         </nav>
       ) : (
         <StatusBar whisper={packyWhisper} activeAlarm={alarmActive} syncStatus={syncStatus} gamificationLevel={gamificationLevel} />
+      )}
+      {isMobileLayout && mobileMenuOpen && (
+        <>
+          <button
+            aria-label="Close navigation menu"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: "fixed",
+              inset: 0,
+              border: "none",
+              background: "rgba(15, 18, 24, 0.34)",
+              padding: 0,
+              zIndex: 30,
+            }}
+          />
+          <section
+            aria-label="Mobile navigation drawer"
+            style={{
+              position: "fixed",
+              left: "0.75rem",
+              right: "0.75rem",
+              bottom: "4.6rem",
+              maxHeight: "min(70vh, 680px)",
+              overflowY: "auto",
+              padding: "0.9rem",
+              borderRadius: "22px",
+              background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, white 4%), var(--surface))",
+              border: "1px solid var(--border-subtle)",
+              boxShadow: "var(--shadow-floating)",
+              display: "grid",
+              gap: "0.85rem",
+              zIndex: 31,
+            }}
+          >
+            <div style={{ display: "grid", gap: "0.18rem" }}>
+              <strong style={{ fontSize: "var(--text-base)" }}>Navigate</strong>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+                Mobile should fold the shell into a drawer, not hide half the product.
+              </span>
+            </div>
+
+            <div style={{ display: "grid", gap: "0.45rem" }}>
+              {navItems.map((item) => {
+                const isActive = item.id === route;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      onNavigate(item.id);
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      width: "100%",
+                      border: isActive ? "1px solid color-mix(in srgb, var(--accent) 30%, transparent)" : "1px solid var(--border-subtle)",
+                      background: isActive
+                        ? "color-mix(in srgb, var(--accent) 12%, var(--surface))"
+                        : "var(--surface-2)",
+                      color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
+                      cursor: "pointer",
+                      padding: "0.8rem 0.9rem",
+                      borderRadius: "14px",
+                      textAlign: "left",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "10px",
+                        display: "grid",
+                        placeItems: "center",
+                        background: isActive ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "var(--surface)",
+                        color: isActive ? "var(--accent)" : "var(--text-secondary)",
+                        fontWeight: 800,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {item.icon}
+                    </span>
+                    <span style={{ flex: 1, fontWeight: isActive ? 700 : 600 }}>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {projects && projects.filter((project) => !project.archived).length > 0 && (
+              <div style={{ display: "grid", gap: "0.45rem" }}>
+                <span
+                  style={{
+                    fontSize: "var(--text-xs)",
+                    fontWeight: 700,
+                    color: "var(--text-secondary)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Projects
+                </span>
+                {projects.filter((project) => !project.archived).map((project) => {
+                  const isActive = activeProjectId === project.id;
+                  const count = projectTaskCounts?.[project.id] ?? 0;
+                  return (
+                    <button
+                      key={project.id}
+                      onClick={() => onProjectSelect?.(isActive ? null : project.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.7rem",
+                        width: "100%",
+                        border: isActive ? `1px solid ${project.color || "var(--accent)"}` : "1px solid var(--border-subtle)",
+                        background: isActive ? "color-mix(in srgb, var(--surface) 78%, white 22%)" : "var(--surface-2)",
+                        color: "var(--text-primary)",
+                        cursor: "pointer",
+                        padding: "0.75rem 0.85rem",
+                        borderRadius: "14px",
+                        textAlign: "left",
+                      }}
+                    >
+                      <span style={{ fontSize: "1rem" }}>{project.icon || "PR"}</span>
+                      <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {project.name}
+                      </span>
+                      {count > 0 && (
+                        <span
+                          style={{
+                            fontSize: "var(--text-xs)",
+                            color: "var(--text-secondary)",
+                            background: "var(--surface)",
+                            borderRadius: "999px",
+                            padding: "0.15rem 0.45rem",
+                          }}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "grid",
+                gap: "0.3rem",
+                padding: "0.8rem 0.9rem",
+                borderRadius: "16px",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Status
+              </span>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
+                {packyWhisper?.text ?? "Packy is quiet for now."}
+              </span>
+            </div>
+          </section>
+        </>
       )}
     </div>
   );

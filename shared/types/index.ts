@@ -85,6 +85,8 @@ export interface Habit {
   best_streak: number;
   last_checkin_date?: string | null;
   completion_pct?: number;
+  completion_count?: number;
+  today_count?: number;
   /** @deprecated use current_streak */
   streak_days?: number;
 }

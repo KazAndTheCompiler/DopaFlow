@@ -43,16 +43,17 @@ export function useHabits(): UseHabitsResult {
     refresh,
     create: async (habit: Partial<Habit>) => {
       const result = await createHabit(habit);
+      setHabits((prev) => {
+        const existing = prev.find((entry) => entry.id === result.id);
+        if (existing) {
+          return prev.map((entry) => (entry.id === result.id ? result : entry));
+        }
+        return [...prev, result];
+      });
       showToast("Habit created.", "success");
       return result;
     },
     checkIn: async (habitId: string, moodScore?: number) => {
-      // Optimistic: bump streak count locally
-      setHabits((prev) =>
-        prev.map((h) =>
-          h.id === habitId ? { ...h, current_streak: h.current_streak + 1 } : h,
-        ),
-      );
       try {
         await checkInHabit({ habitId, checkedAt: new Date().toISOString(), ...(moodScore !== undefined ? { moodScore } : {}) });
         await refresh();

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import Button from "@ds/primitives/Button";
+import { API_BASE_URL } from "../api/client";
 
 interface VoiceDictationProps {
   onTranscript: (text: string) => void;
@@ -31,7 +32,7 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
         try {
           const form = new FormData();
           form.append("file", new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" }), "dictation.webm");
-          const response = await fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/journal/transcribe`, { method: "POST", body: form });
+          const response = await fetch(`${API_BASE_URL}/journal/transcribe`, { method: "POST", body: form });
           const result = (await response.json()) as { transcript?: string; error?: string };
           if (!response.ok) throw new Error(result.error ?? "transcription_failed");
           onTranscript(result.transcript ?? "");
@@ -42,7 +43,8 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
       recorder.start();
       setRecording(true);
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Microphone unavailable");
+      const message = exc instanceof Error ? exc.message : "Microphone unavailable";
+      setError(/denied|notallowed|permission/i.test(message) ? "Microphone permission denied by the browser." : message);
     }
   };
 

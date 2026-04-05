@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from app.core.database import get_db, tx
 from app.core.id_gen import habit_id
+
+
+def _date_key(value: str) -> str:
+    return value[:10]
 
 
 def compute_streak(checkin_dates: list[str]) -> tuple[int, int]:
@@ -14,7 +18,7 @@ def compute_streak(checkin_dates: list[str]) -> tuple[int, int]:
 
     if not checkin_dates:
         return 0, 0
-    days = sorted(date.fromisoformat(value[:10]) for value in checkin_dates)
+    days = sorted({date.fromisoformat(_date_key(value)) for value in checkin_dates})
     best = 1
     current = 1
     for prev, curr in zip(days, days[1:]):
@@ -41,19 +45,22 @@ def _habit_with_stats(conn, row) -> dict[str, Any]:
 
     logs = [log["checkin_date"] for log in conn.execute("SELECT checkin_date FROM habit_checkins WHERE habit_id = ? ORDER BY checkin_date", (row["id"],)).fetchall()]
     current_streak, best_streak = compute_streak(logs)
-    last_checkin_date = logs[-1] if logs else None
+    last_checkin_date = _date_key(logs[-1]) if logs else None
     period_days = 7 if row["target_period"] == "week" else 1
     window_start = (date.today() - timedelta(days=period_days - 1)).isoformat()
-    completed = sum(1 for value in logs if value >= window_start)
+    completed = sum(1 for value in logs if _date_key(value) >= window_start)
     target = max(1, row["target_freq"])
-    completion_pct = round(min(completed / target, 1.0) * 100, 2)
+    completion_pct = round((completed / target) * 100, 2)
+    today_count = sum(1 for value in logs if _date_key(value) == date.today().isoformat())
     return {
         **dict(row),
         "current_streak": current_streak,
         "best_streak": best_streak,
         "last_checkin_date": last_checkin_date,
         "completion_pct": completion_pct,
-        "progress": min(completed / target, 1.0),
+        "completion_count": completed,
+        "today_count": today_count,
+        "progress": completed / target,
     }
 
 
@@ -124,16 +131,15 @@ def delete_habit(db_path: str, habit_identifier: str) -> bool:
 
 
 def log_checkin(db_path: str, habit_identifier: str, checkin_date: str | None = None) -> dict[str, Any]:
-    """Insert a deduplicated check-in."""
+    """Insert a check-in event."""
 
-    target_date = checkin_date or date.today().isoformat()
+    target_date = checkin_date or datetime.now(UTC).isoformat()
     checkin_identifier = habit_id()
     with tx(db_path) as conn:
         conn.execute(
             """
             INSERT INTO habit_checkins (id, habit_id, checkin_date)
             VALUES (?, ?, ?)
-            ON CONFLICT(habit_id, checkin_date) DO NOTHING
             """,
             (checkin_identifier, habit_identifier, target_date),
         )
@@ -147,7 +153,10 @@ def delete_checkin(db_path: str, habit_identifier: str, checkin_date: str) -> bo
     """Delete one habit check-in."""
 
     with tx(db_path) as conn:
-        result = conn.execute("DELETE FROM habit_checkins WHERE habit_id = ? AND checkin_date = ?", (habit_identifier, checkin_date))
+        result = conn.execute(
+            "DELETE FROM habit_checkins WHERE habit_id = ? AND substr(checkin_date, 1, 10) = ?",
+            (habit_identifier, checkin_date[:10]),
+        )
         return result.rowcount > 0
 
 
