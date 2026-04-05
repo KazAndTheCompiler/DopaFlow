@@ -123,9 +123,6 @@ jobs:
           cd desktop
           npm run dist:stable:linux
 
-      - name: List dist
-        run: ls -la desktop/dist/
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -184,9 +181,6 @@ jobs:
           cd desktop
           npm run dist:stable:win
 
-      - name: List dist
-        run: dir desktop\dist\
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -212,8 +206,8 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            release-artifacts/**/*.AppImage
-            release-artifacts/**/*.AppImage.zsync
-            release-artifacts/**/*.exe
-            release-artifacts/**/*.exe.blockmap
+            release-artifacts/**/DopaFlow-*.AppImage
+            release-artifacts/**/DopaFlow-*.AppImage.zsync
+            release-artifacts/**/DopaFlow-*.exe
+            release-artifacts/**/DopaFlow-*.exe.blockmap
             release-artifacts/**/latest*.yml
