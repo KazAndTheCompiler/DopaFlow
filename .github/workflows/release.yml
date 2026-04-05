@@ -123,13 +123,16 @@ jobs:
           cd desktop
           npm run dist:stable:linux
 
+      - name: List dist
+        run: ls -la desktop/dist/
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dopaflow-linux
           path: |
-            desktop/dist/*.AppImage
-            desktop/dist/*.AppImage.zsync
+            desktop/dist/DopaFlow-*.AppImage
+            desktop/dist/DopaFlow-*.AppImage.zsync
             desktop/dist/latest-linux.yml
           retention-days: 5
 
@@ -181,12 +184,16 @@ jobs:
           cd desktop
           npm run dist:stable:win
 
+      - name: List dist
+        run: dir desktop\dist\
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dopaflow-windows
           path: |
-            desktop\dist\*.exe
+            desktop\dist\DopaFlow-*.exe
+            desktop\dist\DopaFlow-*.exe.blockmap
             desktop\dist\latest.yml
           retention-days: 5
 
@@ -208,4 +215,5 @@ jobs:
             release-artifacts/**/*.AppImage
             release-artifacts/**/*.AppImage.zsync
             release-artifacts/**/*.exe
+            release-artifacts/**/*.exe.blockmap
             release-artifacts/**/latest*.yml
