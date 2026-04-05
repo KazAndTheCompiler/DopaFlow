@@ -1,4 +1,5 @@
 import type { CorrelationInsight, WeeklyDigest } from "@api/insights";
+import { Skeleton } from "@ds/primitives/Skeleton";
 
 export interface ContextCardProps {
   weeklyDigest?: WeeklyDigest | undefined;
@@ -44,9 +45,11 @@ export function ContextCard({ weeklyDigest, correlations }: ContextCardProps): J
             ))}
           </div>
         ) : (
-          <span style={{ color: "var(--text-muted)", fontSize: "var(--text-sm)" }}>
-            Digest loading…
-          </span>
+          <div style={{ display: "grid", gap: "0.35rem" }}>
+            <Skeleton width="88%" height="13px" />
+            <Skeleton width="92%" height="13px" />
+            <Skeleton width="76%" height="13px" />
+          </div>
         )}
       </div>
 

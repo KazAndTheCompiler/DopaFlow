@@ -75,13 +75,17 @@ async function loadManifest(): Promise<SkinMeta[]> {
 export function useSkin(): {
   skin: string;
   skins: SkinMeta[];
+  loading: boolean;
   setSkin: (id: string) => void;
 } {
   const [skin, setSkinState] = useState<string>(() => resolveStoredSkin());
   const [skins, setSkins] = useState<SkinMeta[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    void loadManifest().then(setSkins);
+    void loadManifest()
+      .then(setSkins)
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -93,5 +97,5 @@ export function useSkin(): {
     setSkinState(id);
   }, []);
 
-  return { skin, skins, setSkin };
+  return { skin, skins, loading, setSkin };
 }

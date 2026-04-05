@@ -7,6 +7,7 @@ import AnalyticsView from "./AnalyticsView";
 import EditorView from "./EditorView";
 import GraphView from "./GraphView";
 import JournalPanel from "./JournalPanel";
+import { JournalSurfaceSkeleton } from "@ds/primitives/Skeleton";
 
 type Tab = "editor" | "graph" | "analytics";
 
@@ -19,6 +20,10 @@ export default function JournalView(): JSX.Element {
 
   if (!app) {
     return <div>App context unavailable.</div>;
+  }
+
+  if (app.journal.loading) {
+    return <JournalSurfaceSkeleton />;
   }
 
   const activeEntry = app.journal.entries.find((e) => e.date === selectedDate);
@@ -60,7 +65,7 @@ export default function JournalView(): JSX.Element {
     <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "minmax(200px, 240px) minmax(0, 1fr)" }}>
       <JournalPanel
         entries={app.journal.entries}
-        loading={false}
+        loading={app.journal.loading}
         selectedDate={selectedDate}
         backupPath={app.journal.backupPath}
         lastBackupAt={app.journal.lastBackupAt}

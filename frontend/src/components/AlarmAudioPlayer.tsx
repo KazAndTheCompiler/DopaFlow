@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { API_BASE_URL } from "../api/client";
+import { Skeleton } from "@ds/primitives/Skeleton";
 
 interface AlarmAudioPlayerProps {
   youtubeUrl: string;
@@ -28,7 +29,24 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
   }, [youtubeUrl]);
 
   if (!youtubeUrl) return null;
-  if (loading) return <div style={{ marginTop: "0.5rem", fontSize: "var(--text-sm)" }}>Resolving stream…</div>;
+  if (loading) {
+    return (
+      <div
+        style={{
+          marginTop: "0.5rem",
+          padding: "0.65rem 0.75rem",
+          borderRadius: "12px",
+          background: "var(--surface)",
+          border: "1px solid var(--border-subtle)",
+          display: "grid",
+          gap: "0.4rem",
+        }}
+      >
+        <Skeleton width="132px" height="12px" />
+        <Skeleton width="100%" height="36px" borderRadius="10px" />
+      </div>
+    );
+  }
   if (error) return <div style={{ marginTop: "0.5rem", color: "var(--state-error)", fontSize: "var(--text-sm)" }}>{`Could not load audio: ${error}`}</div>;
   return streamUrl ? <audio src={streamUrl} controls autoPlay={autoPlay} style={{ width: "100%", marginTop: "0.5rem" }} /> : null;
 }

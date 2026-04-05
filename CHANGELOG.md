@@ -270,7 +270,11 @@ The repo-grounded restart points now live in files that are actually present:
 
 #### Remaining Gaps (Carried Forward)
 
-- No skeleton loaders (surfaces still show blank while loading)
+- Skeleton loaders now cover the core surfaces instead of blank loading gaps:
+  - `today` uses a layout-matched page skeleton
+  - `overview` uses runway + stats + card skeletons
+  - `goals` uses form + goal-card skeletons
+  - task, habit, review, and journal list panels keep skeleton list states
 - No onboarding / first-run flow
 - No focus session end ceremony (completion modal / break timer prompt)
 - CORS dev origins should be stripped at prod build time

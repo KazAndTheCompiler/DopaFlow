@@ -1,12 +1,15 @@
 import type { SkinMeta } from "../../hooks/useSkin";
+import { Skeleton } from "@ds/primitives/Skeleton";
 
 export function SkinPicker({
   current,
   skins,
+  loading = false,
   onPick,
 }: {
   current: string;
   skins: SkinMeta[];
+  loading?: boolean;
   onPick: (id: string) => void;
 }): JSX.Element {
   const light = skins.filter((s) => s.category === "light");
@@ -64,8 +67,52 @@ export function SkinPicker({
     </div>
   );
 
-  if (!skins.length) {
-    return <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>Loading skins…</div>;
+  if (loading) {
+    return (
+      <section
+        style={{
+          display: "grid",
+          gap: "1.25rem",
+          padding: "1.1rem 1.25rem",
+          borderRadius: "20px",
+          background: "var(--surface)",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "var(--shadow-soft)",
+        }}
+      >
+        <div style={{ display: "grid", gap: "0.25rem" }}>
+          <Skeleton width="72px" height="20px" borderRadius="8px" />
+          <Skeleton width="90%" height="14px" />
+          <Skeleton width="76%" height="14px" />
+        </div>
+        <div style={{ display: "grid", gap: "0.5rem" }}>
+          <Skeleton width="64px" height="12px" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "0.5rem" }}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: "0.75rem",
+                  borderRadius: "12px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--surface-2)",
+                  display: "grid",
+                  gap: "0.4rem",
+                }}
+              >
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <Skeleton width="14px" height="14px" borderRadius="50%" />
+                  <Skeleton width="14px" height="14px" borderRadius="50%" />
+                  <Skeleton width="14px" height="14px" borderRadius="50%" />
+                </div>
+                <Skeleton width="78%" height="14px" />
+                <Skeleton width="34%" height="10px" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (

@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useState } from "react";
 
 import { AppDataContext } from "../../App";
 import DigestCard from "../../components/DigestCard";
-import { SkeletonStatRow } from "@ds/primitives/Skeleton";
+import { OverviewSurfaceSkeleton } from "@ds/primitives/Skeleton";
 
 const FOCUS_PREFILL_KEY = "zoestm_focus_prefill";
 const TODAY_KEY = "zoestm_planned_date";
@@ -221,11 +221,7 @@ export default function OverviewView(): JSX.Element {
   })();
 
   if (app?.tasks.loading || app?.habits.loading) {
-    return (
-      <div style={{ display: "grid", gap: "1.5rem" }}>
-        <SkeletonStatRow />
-      </div>
-    );
+    return <OverviewSurfaceSkeleton />;
   }
 
   return (

@@ -19,6 +19,7 @@ export interface JournalGraphData {
 
 export interface UseJournalResult {
   entries: JournalEntry[];
+  loading: boolean;
   backupPath?: string | null | undefined;
   lastBackupAt?: string | null | undefined;
   graph: JournalGraphData;
@@ -33,15 +34,21 @@ export interface UseJournalResult {
 
 export function useJournal(): UseJournalResult {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [backupPath, setBackupPath] = useState<string | null>();
   const [lastBackupAt, setLastBackupAt] = useState<string | null>();
   const [graph, setGraph] = useState<JournalGraphData>({ nodes: [], edges: [] });
 
   const refresh = useCallback(async (): Promise<void> => {
-    const [nextEntries, status] = await Promise.all([listJournalEntries(), getJournalBackupStatus()]);
-    setEntries(nextEntries);
-    setBackupPath(status.backup_path);
-    setLastBackupAt(status.last_backup_at);
+    setLoading(true);
+    try {
+      const [nextEntries, status] = await Promise.all([listJournalEntries(), getJournalBackupStatus()]);
+      setEntries(nextEntries);
+      setBackupPath(status.backup_path);
+      setLastBackupAt(status.last_backup_at);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const refreshGraph = useCallback(async (): Promise<void> => {
@@ -56,6 +63,7 @@ export function useJournal(): UseJournalResult {
 
   return {
     entries,
+    loading,
     backupPath,
     lastBackupAt,
     graph,
