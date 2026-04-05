@@ -24,7 +24,6 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
-  const startTimeRef = useRef<number>(0);
   const unavailable = disabled || typeof navigator === "undefined" || !navigator.mediaDevices;
 
   const stopTracks = (): void => streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -59,7 +58,6 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
       chunksRef.current = [];
       recorder.ondataavailable = (event) => chunksRef.current.push(event.data);
       recorder.onstop = async () => {
-        const elapsed = Date.now() - startTimeRef.current;
         setRecording(false);
         stopTracks();
         try {
@@ -85,7 +83,6 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
           setError(exc instanceof Error ? exc.message : "Dictation failed");
         }
       };
-      startTimeRef.current = Date.now();
       recorder.start(250); // collect data every 250ms for reliability
       setRecording(true);
     } catch (exc) {
