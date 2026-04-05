@@ -16,12 +16,20 @@ if (!isStable) {
   env.GH_TOKEN = "";
 }
 
-const electronBuilderBin = path.join(__dirname, "..", "node_modules", ".bin", process.platform === "win32" ? "electron-builder.cmd" : "electron-builder");
-const result = spawnSync(electronBuilderBin, builderArgs, {
-  cwd: path.join(__dirname, ".."),
-  env,
-  stdio: "inherit",
-});
+const isWindows = process.platform === "win32";
+const electronBuilderBin = path.join(__dirname, "..", "node_modules", ".bin", isWindows ? "electron-builder.cmd" : "electron-builder");
+const result = isWindows
+  ? spawnSync("npx", ["electron-builder", ...builderArgs], {
+      cwd: path.join(__dirname, ".."),
+      env,
+      stdio: "inherit",
+      shell: true,
+    })
+  : spawnSync(electronBuilderBin, builderArgs, {
+      cwd: path.join(__dirname, ".."),
+      env,
+      stdio: "inherit",
+    });
 
 if (result.error) {
   throw result.error;
