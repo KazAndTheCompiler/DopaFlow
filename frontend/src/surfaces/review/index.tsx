@@ -4,6 +4,7 @@ import { AppDataContext } from "../../App";
 import CardReviewer from "./CardReviewer";
 import DeckList from "./DeckList";
 import ReviewStats from "./ReviewStats";
+import { ReviewSurfaceSkeleton } from "@ds/primitives/Skeleton";
 
 export default function ReviewView(): JSX.Element {
   const app = useContext(AppDataContext);
@@ -22,6 +23,10 @@ export default function ReviewView(): JSX.Element {
     [visibleCards],
   );
   const currentCard = dueCards[0];
+
+  if (app.review.loading) {
+    return <ReviewSurfaceSkeleton />;
+  }
 
   return (
     <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>

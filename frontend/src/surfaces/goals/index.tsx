@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@ds/primitives/EmptyState";
-import { SkeletonCard } from "@ds/primitives/Skeleton";
+import { GoalsSurfaceSkeleton } from "@ds/primitives/Skeleton";
 import type { Goal, GoalMilestone } from "@api/goals";
 import { addMilestone, completeMilestone, createGoal, deleteGoal, listGoals } from "@api/goals";
 
@@ -153,13 +153,7 @@ export default function GoalsView(): JSX.Element {
   const horizonColor: Record<string, string> = { week: "var(--state-ok)", month: "var(--accent)", quarter: "var(--state-warn)", year: "var(--state-conflict)" };
 
   if (loading) {
-    return (
-      <div style={{ display: "grid", gap: "1rem" }}>
-        <SkeletonCard height="60px" />
-        <SkeletonCard height="60px" />
-        <SkeletonCard height="60px" />
-      </div>
-    );
+    return <GoalsSurfaceSkeleton />;
   }
 
   return (

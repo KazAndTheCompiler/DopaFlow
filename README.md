@@ -156,7 +156,7 @@ Current active direction:
 
 ## Known gaps (v2 beta)
 
-- No skeleton loaders yet
+- Skeleton loaders are now in place on the core loading-heavy surfaces (`today`, `overview`, `goals`, task/habit/review/journal lists), but the rest of the app still needs a consistency pass
 - Digest email delivery is not wired
 - Drag-to-reschedule in calendar time blocks is not implemented
 - Mobile swipe-to-complete on task rows is not implemented

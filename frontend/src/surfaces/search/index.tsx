@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 
 import Input from "@ds/primitives/Input";
 import Button from "@ds/primitives/Button";
+import { Skeleton } from "@ds/primitives/Skeleton";
 import type { Habit, Task } from "@shared/types";
 import { AppDataContext } from "../../App";
 
@@ -185,7 +186,18 @@ export default function SearchView(): JSX.Element {
             </div>
           )}
           {journalLoading && sections.length === 0 && (
-            <div style={{ padding: "1rem", textAlign: "center", color: "var(--text-muted)", fontSize: "var(--text-sm)" }}>Searching…</div>
+            <div style={{ padding: "0.85rem 0.9rem", display: "grid", gap: "0.75rem" }}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} style={{ display: "flex", alignItems: "flex-start", gap: "0.65rem", padding: "0.4rem 0" }}>
+                  <Skeleton width="20px" height="20px" borderRadius="6px" />
+                  <div style={{ flex: 1, display: "grid", gap: "0.25rem" }}>
+                    <Skeleton width={index % 2 === 0 ? "46%" : "58%"} height="14px" />
+                    <Skeleton width="72%" height="11px" />
+                  </div>
+                  <Skeleton width="52px" height="18px" borderRadius="6px" />
+                </div>
+              ))}
+            </div>
           )}
           {sections.map(({ type, label, items }, si) => (
             <div key={type} style={{ borderTop: si > 0 ? "1px solid var(--border-subtle)" : "none" }}>

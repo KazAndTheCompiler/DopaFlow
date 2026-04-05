@@ -9,6 +9,7 @@ import FocusQueue from "./FocusQueue";
 import HabitsToday from "./HabitsToday";
 import MomentumCard from "./MomentumCard";
 import TimeBlocks from "./TimeBlocks";
+import { TodaySurfaceSkeleton } from "@ds/primitives/Skeleton";
 
 const FOCUS_PREFILL_KEY = "zoestm_focus_prefill";
 const TODAY_KEY = "zoestm_planned_date";
@@ -117,6 +118,10 @@ export default function TodayView(): JSX.Element {
   }
 
   const isLoading = app.tasks.loading || app.habits.loading;
+
+  if (isLoading) {
+    return <TodaySurfaceSkeleton />;
+  }
 
   const dateLabel = selectedDate.toLocaleDateString(undefined, {
     weekday: "long",
@@ -447,28 +452,12 @@ export default function TodayView(): JSX.Element {
         </section>
 
         <div onDragOver={(event) => event.preventDefault()} onDrop={onDropToQueue}>
-          {/* Don't show empty state during initial load — let FocusQueue render once tasks arrive */}
-          {!isLoading || focusQueue.length > 0 ? (
-            <FocusQueue
-              tasks={focusQueue}
-              activeSession={app.focus.activeSession}
-              onStartFocus={(taskId, mins) => void app.focus.start(taskId, mins ?? 25)}
-              onComplete={(taskId) => void app.tasks.complete(taskId)}
-            />
-          ) : (
-            <div
-              style={{
-                padding: "1rem",
-                borderRadius: "18px",
-                background: "var(--surface)",
-                border: "1px solid var(--border-subtle)",
-                color: "var(--text-muted)",
-                fontSize: "var(--text-sm)",
-              }}
-            >
-              Loading tasks…
-            </div>
-          )}
+          <FocusQueue
+            tasks={focusQueue}
+            activeSession={app.focus.activeSession}
+            onStartFocus={(taskId, mins) => void app.focus.start(taskId, mins ?? 25)}
+            onComplete={(taskId) => void app.tasks.complete(taskId)}
+          />
         </div>
 
         <TimeBlocks sessions={app.focus.sessions} events={app.calendar.events} />
@@ -485,22 +474,7 @@ export default function TodayView(): JSX.Element {
           gridTemplateColumns: isCompactLayout ? "repeat(auto-fit, minmax(260px, 1fr))" : "minmax(0, 1fr)",
         }}
       >
-        {!isLoading || backlog.length > 0 ? (
-          <BacklogColumn tasks={backlog} onComplete={(id) => void app.tasks.complete(id)} draggable />
-        ) : (
-          <div
-            style={{
-              padding: "1rem",
-              borderRadius: "18px",
-              background: "var(--surface)",
-              border: "1px solid var(--border-subtle)",
-              color: "var(--text-muted)",
-              fontSize: "var(--text-sm)",
-            }}
-          >
-            Loading backlog…
-          </div>
-        )}
+        <BacklogColumn tasks={backlog} onComplete={(id) => void app.tasks.complete(id)} draggable />
 
         <HabitsToday habits={app.habits.habits} onCheckIn={app.habits.checkIn} />
 

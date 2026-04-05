@@ -59,7 +59,7 @@ export default function SettingsView(): JSX.Element {
             Tune the shell, color system, and density. These are the settings that change how DopaFlow feels every time you open it.
           </span>
         </div>
-        <SkinPicker current={app.skin.skin} skins={app.skin.skins} onPick={app.skin.setSkin} />
+        <SkinPicker current={app.skin.skin} skins={app.skin.skins} loading={app.skin.loading} onPick={app.skin.setSkin} />
         <LayoutPicker current={app.layout.layout} onPick={app.layout.setLayout} />
       </section>
       <section style={groupStyle}>
