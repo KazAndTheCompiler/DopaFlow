@@ -111,6 +111,9 @@ jobs:
           name: backend-linux
           path: release/dopaflow-backend-v2
 
+      - name: Fix backend permissions
+        run: chmod +x release/dopaflow-backend-v2/dopaflow-backend
+
       - name: Install desktop
         run: |
           cd desktop
