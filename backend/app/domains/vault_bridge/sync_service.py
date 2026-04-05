@@ -20,7 +20,7 @@ from app.domains.vault_bridge.schemas import (
     VaultStatus,
 )
 from app.domains.vault_bridge.section_manager import inject_section
-from app.domains.vault_bridge.task_reader import scan_task_collections
+from app.domains.vault_bridge.task_reader import scan_task_collections, scan_task_files
 from app.domains.vault_bridge.task_writer import (
     render_task_collection,
     render_tasks_section,
@@ -436,7 +436,7 @@ class VaultSyncService:
             return TaskImportPreview(importable=[], known=[], skipped=0, total_scanned=0)
 
         vault_root = Path(config.vault_path)
-        all_candidates = scan_task_collections(vault_root, config.tasks_folder)
+        all_candidates = scan_task_files(vault_root, config.tasks_folder)
         tasks_repo = self._tasks_repo()
 
         importable: list[TaskImportCandidate] = []

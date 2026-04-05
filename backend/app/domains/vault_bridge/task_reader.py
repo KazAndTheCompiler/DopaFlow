@@ -90,20 +90,21 @@ def parse_task_line(
     )
 
 
-def parse_task_collection(abs_path: Path, vault_root: Path) -> list[TaskCandidate]:
-    """Parse all task lines from a task collection file.
+def parse_task_file(abs_path: Path, vault_root: Path, *, require_dopaflow: bool = True) -> list[TaskCandidate]:
+    """Parse all task lines from a markdown task file.
 
-    Reads frontmatter for project identity, then extracts all checkbox lines.
+    When ``require_dopaflow`` is True, only DopaFlow-owned task collection files
+    are accepted. When False, plain markdown task files are also scanned.
     """
     content = abs_path.read_text(encoding="utf-8")
     fields, body = deserialize_frontmatter(content)
 
-    # Only process files DopaFlow created
-    if fields.get("dopaflow_type") != "task_collection":
+    dopaflow_owned = fields.get("dopaflow_type") == "task_collection"
+    if require_dopaflow and not dopaflow_owned:
         return []
 
-    project_id = fields.get("dopaflow_project_id")
-    project_name = fields.get("project")
+    project_id = fields.get("dopaflow_project_id") if dopaflow_owned else None
+    project_name = fields.get("project") or abs_path.stem
     file_path = str(abs_path.relative_to(vault_root))
     body_start_line = 1
     full_lines = content.splitlines()
@@ -129,6 +130,11 @@ def parse_task_collection(abs_path: Path, vault_root: Path) -> list[TaskCandidat
     return candidates
 
 
+def parse_task_collection(abs_path: Path, vault_root: Path) -> list[TaskCandidate]:
+    """Parse all task lines from a DopaFlow-managed task collection file."""
+    return parse_task_file(abs_path, vault_root, require_dopaflow=True)
+
+
 def scan_task_collections(vault_root: Path, tasks_folder: str) -> list[TaskCandidate]:
     """Scan the tasks folder and return all parsed task candidates."""
     tasks_dir = vault_root / tasks_folder
@@ -142,5 +148,22 @@ def scan_task_collections(vault_root: Path, tasks_folder: str) -> list[TaskCandi
             all_candidates.extend(candidates)
         except Exception:
             pass  # skip unreadable files
+
+    return all_candidates
+
+
+def scan_task_files(vault_root: Path, tasks_folder: str) -> list[TaskCandidate]:
+    """Scan the tasks folder and include both DopaFlow and plain markdown task files."""
+    tasks_dir = vault_root / tasks_folder
+    if not tasks_dir.exists():
+        return []
+
+    all_candidates: list[TaskCandidate] = []
+    for md_file in sorted(tasks_dir.glob("*.md")):
+        try:
+            candidates = parse_task_file(md_file, vault_root, require_dopaflow=False)
+            all_candidates.extend(candidates)
+        except Exception:
+            pass
 
     return all_candidates
