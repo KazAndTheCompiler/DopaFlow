@@ -42,6 +42,22 @@ def test_checkin_records_today_and_updates_streak(client) -> None:
     assert response.json()["last_checkin_date"] == date.today().isoformat()
 
 
+def test_multiple_same_day_checkins_can_exceed_100_percent(client) -> None:
+    habit = create_habit(client, name="Tea", target_freq=5, target_period="day")
+
+    for _ in range(10):
+        response = client.post(f"/api/v2/habits/{habit['id']}/checkin", json={})
+        assert response.status_code == 200
+
+    refreshed = client.get("/api/v2/habits/").json()[0]
+
+    assert refreshed["current_streak"] == 1
+    assert refreshed["last_checkin_date"] == date.today().isoformat()
+    assert refreshed["completion_count"] == 10
+    assert refreshed["today_count"] == 10
+    assert refreshed["completion_pct"] == 200.0
+
+
 def test_logs_returns_habit_checkins(client) -> None:
     habit = create_habit(client)
     target_date = (date.today() - timedelta(days=1)).isoformat()

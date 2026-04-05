@@ -1,6 +1,7 @@
 import { useContext, useMemo, useState } from "react";
 
 import { AppDataContext } from "../../App";
+import { showToast } from "@ds/primitives/Toast";
 import CalendarPanel from "./CalendarPanel";
 import DayView from "./DayView";
 import GoogleSyncBadge from "./GoogleSyncBadge";
@@ -56,6 +57,9 @@ export default function CalendarView(): JSX.Element {
   const [hiddenSources, setHiddenSources] = useState<string[]>([]);
   const [prefillHour, setPrefillHour] = useState<number | null>(null);
   const [prefillTitle, setPrefillTitle] = useState<string>("");
+  const [blockStartTime, setBlockStartTime] = useState<string>("09:00");
+  const [blockDurationHours, setBlockDurationHours] = useState<number>(1);
+  const [blockDurationMinutes, setBlockDurationMinutes] = useState<number>(0);
   const [blockReminder, setBlockReminder] = useState<boolean>(false);
   const [blockReminderOffset, setBlockReminderOffset] = useState<number>(15);
   const [showConflicts, setShowConflicts] = useState<boolean>(false);
@@ -171,11 +175,50 @@ export default function CalendarView(): JSX.Element {
 
   const handleSlotClick = (hour: number): void => {
     setPrefillHour(hour);
+    setBlockStartTime(`${String(hour).padStart(2, "0")}:00`);
   };
 
   const handleScheduleTask = (taskTitle: string, hour: number): void => {
     setPrefillTitle(taskTitle);
     setPrefillHour(hour);
+    setBlockStartTime(`${String(hour).padStart(2, "0")}:00`);
+  };
+
+  const clearBlockDraft = (): void => {
+    setPrefillHour(null);
+    setPrefillTitle("");
+    setBlockReminder(false);
+  };
+
+  const submitDayBlock = async (): Promise<void> => {
+    if (!prefillTitle.trim()) return;
+    const [hours, minutes] = blockStartTime.split(":").map((value) => Number(value) || 0);
+    const start = new Date(dayAnchor);
+    start.setHours(hours, minutes, 0, 0);
+    const durationTotalMinutes = Math.max(1, blockDurationHours * 60 + blockDurationMinutes);
+    const end = new Date(start.getTime() + durationTotalMinutes * 60_000);
+
+    try {
+      await app.calendar.create({
+        title: prefillTitle.trim(),
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+        all_day: false,
+      });
+      if (blockReminder) {
+        const fireAt = new Date(start.getTime() - blockReminderOffset * 60_000);
+        await app.alarms.create({
+          title: prefillTitle.trim(),
+          at: fireAt.toISOString(),
+          kind: "tts",
+          tts_text: `Starting soon: ${prefillTitle.trim()}`,
+        });
+      }
+      clearBlockDraft();
+      showToast("Calendar block added.", "success");
+    } catch {
+      showToast("Could not add the calendar block.", "error");
+    }
   };
 
   const tabBtn = (id: CalendarTab, label: string): JSX.Element => (
@@ -216,6 +259,8 @@ export default function CalendarView(): JSX.Element {
       {label}
     </button>
   );
+
+  const isNarrowCalendarLayout = typeof window !== "undefined" && window.innerWidth < 960;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -573,7 +618,7 @@ export default function CalendarView(): JSX.Element {
       )}
 
       {tab === "day" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem", alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: isNarrowCalendarLayout ? "1fr" : "minmax(0, 1.5fr) minmax(300px, 0.9fr)", gap: "1rem", alignItems: "start" }}>
           <div style={{ display: "grid", gap: "0.75rem" }}>
             <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
               {navBtn("Previous", () => setDayOffset((v) => v - 1))}
@@ -639,29 +684,8 @@ export default function CalendarView(): JSX.Element {
                   boxSizing: "border-box",
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && prefillTitle.trim() && prefillHour !== null) {
-                    const d = new Date(dayAnchor);
-                    d.setHours(prefillHour, 0, 0, 0);
-                    const end = new Date(d.getTime() + 60 * 60_000);
-                    void app.calendar.create({
-                      title: prefillTitle.trim(),
-                      start_at: d.toISOString(),
-                      end_at: end.toISOString(),
-                      all_day: false,
-                    }).then(async () => {
-                      if (blockReminder) {
-                        const fireAt = new Date(d.getTime() - blockReminderOffset * 60_000);
-                        await app.alarms.create({
-                          title: prefillTitle.trim(),
-                          at: fireAt.toISOString(),
-                          kind: "tts",
-                          tts_text: `Starting soon: ${prefillTitle.trim()}`,
-                        });
-                      }
-                      setPrefillTitle("");
-                      setPrefillHour(null);
-                      setBlockReminder(false);
-                    });
+                  if (e.key === "Enter" && prefillTitle.trim()) {
+                    void submitDayBlock();
                   }
                 }}
               />
@@ -672,6 +696,67 @@ export default function CalendarView(): JSX.Element {
               )}
               {prefillHour !== null && (
                 <>
+                  <div style={{ display: "grid", gridTemplateColumns: isNarrowCalendarLayout ? "1fr" : "minmax(120px, 0.9fr) minmax(0, 1.1fr)", gap: "0.55rem", alignItems: "end" }}>
+                    <div style={{ display: "grid", gap: "0.25rem" }}>
+                      <label style={{ fontSize: "11px", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Start</label>
+                      <input
+                        type="time"
+                        value={blockStartTime}
+                        onChange={(e) => setBlockStartTime(e.target.value)}
+                        style={{
+                          padding: "0.5rem 0.65rem",
+                          borderRadius: "8px",
+                          border: "1px solid var(--border-subtle)",
+                          background: "var(--surface-2, var(--surface))",
+                          color: "var(--text)",
+                          fontSize: "var(--text-sm)",
+                          fontFamily: "inherit",
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "grid", gap: "0.25rem" }}>
+                      <label style={{ fontSize: "11px", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Duration</label>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.45rem" }}>
+                        <input
+                          type="number"
+                          min={0}
+                          value={blockDurationHours}
+                          onChange={(e) => setBlockDurationHours(Math.max(0, Number(e.target.value) || 0))}
+                          placeholder="Hours"
+                          aria-label="Block duration hours"
+                          style={{
+                            padding: "0.5rem 0.65rem",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            background: "var(--surface-2, var(--surface))",
+                            color: "var(--text)",
+                            fontSize: "var(--text-sm)",
+                            fontFamily: "inherit",
+                          }}
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          value={blockDurationMinutes}
+                          onChange={(e) => setBlockDurationMinutes(Math.max(0, Number(e.target.value) || 0))}
+                          placeholder="Minutes"
+                          aria-label="Block duration minutes"
+                          style={{
+                            padding: "0.5rem 0.65rem",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border-subtle)",
+                            background: "var(--surface-2, var(--surface))",
+                            color: "var(--text)",
+                            fontSize: "var(--text-sm)",
+                            fontFamily: "inherit",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: "11px", color: "var(--text-secondary)" }}>
+                    Total duration: {Math.max(1, blockDurationHours * 60 + blockDurationMinutes)} minute{Math.max(1, blockDurationHours * 60 + blockDurationMinutes) === 1 ? "" : "s"}
+                  </p>
                   <div style={{ display: "flex", gap: "0.65rem", alignItems: "center", flexWrap: "wrap", marginBottom: "0.25rem" }}>
                     <label style={{ display: "flex", gap: "0.4rem", alignItems: "center", cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
                       <input
@@ -706,31 +791,7 @@ export default function CalendarView(): JSX.Element {
                   <div style={{ display: "flex", gap: "0.4rem" }}>
                     <button
                     disabled={!prefillTitle.trim()}
-                    onClick={() => {
-                      if (!prefillTitle.trim() || prefillHour === null) return;
-                      const d = new Date(dayAnchor);
-                      d.setHours(prefillHour, 0, 0, 0);
-                      const end = new Date(d.getTime() + 60 * 60_000);
-                      void app.calendar.create({
-                        title: prefillTitle.trim(),
-                        start_at: d.toISOString(),
-                        end_at: end.toISOString(),
-                        all_day: false,
-                      }).then(async () => {
-                        if (blockReminder) {
-                          const fireAt = new Date(d.getTime() - blockReminderOffset * 60_000);
-                          await app.alarms.create({
-                            title: prefillTitle.trim(),
-                            at: fireAt.toISOString(),
-                            kind: "tts",
-                            tts_text: `Starting soon: ${prefillTitle.trim()}`,
-                          });
-                        }
-                        setPrefillTitle("");
-                        setPrefillHour(null);
-                        setBlockReminder(false);
-                      });
-                    }}
+                    onClick={() => { void submitDayBlock(); }}
                     style={{
                       flex: 1,
                       padding: "0.45rem",
@@ -746,7 +807,7 @@ export default function CalendarView(): JSX.Element {
                     Block it
                   </button>
                   <button
-                    onClick={() => { setPrefillHour(null); setPrefillTitle(""); }}
+                    onClick={clearBlockDraft}
                     style={{
                       padding: "0.45rem 0.75rem",
                       borderRadius: "8px",

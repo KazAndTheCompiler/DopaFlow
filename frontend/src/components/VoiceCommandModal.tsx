@@ -117,7 +117,8 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted }: VoiceComma
       }
       await startRecording();
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Microphone unavailable");
+      const message = exc instanceof Error ? exc.message : "Microphone unavailable";
+      setError(/denied|notallowed|permission/i.test(message) ? "Microphone permission denied by the browser." : message);
     }
   };
 

@@ -14,9 +14,14 @@ export interface UseFocusResult {
 export function useFocus(): UseFocusResult {
   const [sessions, setSessions] = useState<FocusSession[]>([]);
 
+  const normalizeSession = (session: FocusSession): FocusSession => ({
+    ...session,
+    status: session.status === "active" ? "running" : session.status,
+  });
+
   const refresh = async (): Promise<void> => {
     const nextSessions = await listFocusSessions();
-    setSessions(Array.isArray(nextSessions) ? nextSessions : []);
+    setSessions(Array.isArray(nextSessions) ? nextSessions.map(normalizeSession) : []);
   };
 
   useEffect(() => {
@@ -25,7 +30,9 @@ export function useFocus(): UseFocusResult {
 
   return {
     sessions,
-    activeSession: sessions.find((session) => session.status === "running" || session.status === "paused"),
+    activeSession: sessions.find(
+      (session) => session.status === "running" || session.status === "paused" || session.status === "active",
+    ),
     refresh,
     start: async (taskId?: string, minutes = 25) => {
       await startFocusSession({

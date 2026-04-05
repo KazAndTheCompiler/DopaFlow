@@ -1,6 +1,6 @@
 import { useState } from "react";
-
-const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2";
+import { showToast } from "@ds/primitives/Toast";
+import { API_BASE_URL } from "@api/client";
 
 interface ExportItem {
   id: string;
@@ -17,7 +17,7 @@ const EXPORTS: ExportItem[] = [
     label: "Everything (ZIP)",
     description: "Tasks, habits, journal, alarms, nutrition in one archive",
     filename: "zoestm-export.zip",
-    url: `${API}/ops/export/all`,
+    url: `${API_BASE_URL}/ops/export/all`,
     headers: { "X-Token-Scopes": "admin:ops" },
   },
   {
@@ -25,21 +25,21 @@ const EXPORTS: ExportItem[] = [
     label: "Tasks (CSV)",
     description: "All tasks with status, priority, tags, subtasks",
     filename: "tasks.csv",
-    url: `${API}/tasks/export/csv`,
+    url: `${API_BASE_URL}/tasks/export/csv`,
   },
   {
     id: "journal",
     label: "Journal (ZIP)",
     description: "All journal entries as Markdown files",
     filename: "journal.zip",
-    url: `${API}/journal/export/zip`,
+    url: `${API_BASE_URL}/journal/export/zip`,
   },
   {
     id: "nutrition",
     label: "Nutrition (CSV)",
     description: "Full food log with macros",
     filename: "nutrition.csv",
-    url: `${API}/nutrition/export/csv`,
+    url: `${API_BASE_URL}/nutrition/export/csv`,
   },
 ];
 
@@ -48,17 +48,28 @@ function downloadBlob(blob: Blob, filename: string): void {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function inferFilename(item: ExportItem, response: Response): string {
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const match = disposition.match(/filename="?([^"]+)"?/i);
+  return match?.[1]?.trim() || item.filename;
 }
 
 export default function ExportPanel(): JSX.Element {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lastDownload, setLastDownload] = useState<string | null>(null);
 
   const handleExport = async (item: ExportItem): Promise<void> => {
     setLoading(item.id);
     setError(null);
+    setLastDownload(null);
     try {
       const res = await fetch(item.url, item.headers ? { headers: item.headers } : undefined);
       if (!res.ok) {
@@ -66,9 +77,14 @@ export default function ExportPanel(): JSX.Element {
         throw new Error(`${res.status} ${text.slice(0, 120)}`);
       }
       const blob = await res.blob();
-      downloadBlob(blob, item.filename);
+      const filename = inferFilename(item, res);
+      downloadBlob(blob, filename);
+      setLastDownload(filename);
+      showToast(`Download started: ${filename}`, "success");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
+      const message = err instanceof Error ? err.message : "Export failed";
+      setError(message);
+      showToast("Export failed.", "error");
     } finally {
       setLoading(null);
     }
@@ -133,6 +149,11 @@ export default function ExportPanel(): JSX.Element {
       {error && (
         <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--state-overdue)" }}>
           {error}
+        </p>
+      )}
+      {lastDownload && (
+        <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+          Download started for <strong>{lastDownload}</strong>. Check your browser's downloads bar or your default Downloads folder.
         </p>
       )}
     </section>

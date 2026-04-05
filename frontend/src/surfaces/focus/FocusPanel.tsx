@@ -59,17 +59,22 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
     <section
       style={{
         padding: "1.1rem 1.15rem",
-        background: "var(--surface)",
+        background: "linear-gradient(155deg, color-mix(in srgb, var(--surface) 88%, white 12%), var(--surface))",
         borderRadius: "20px",
         border: "1px solid var(--border-subtle)",
         display: "grid",
         gap: "1rem",
+        boxShadow: "var(--shadow-soft)",
       }}
     >
+      <div style={{ display: "grid", gap: "0.22rem" }}>
+        <strong style={{ fontSize: "var(--text-base)" }}>Focus Block</strong>
+        <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+          Pick one target, choose a duration that matches your energy, and start without negotiating with the list again.
+        </span>
+      </div>
       {/* Title + task link row */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-        <strong style={{ fontSize: "var(--text-base)" }}>Focus Block</strong>
-
         {/* Task picker */}
         {pendingTasks.length > 0 && (
           <div ref={pickerRef} style={{ position: "relative", flex: 1, minWidth: "160px" }}>
@@ -283,6 +288,20 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
         >
           {isActive ? "Session active" : "Start Focus"}
         </button>
+      </div>
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {selectedTask ? (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)", padding: "0.22rem 0.55rem", borderRadius: "999px", background: "color-mix(in srgb, var(--accent) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--accent) 18%, transparent)" }}>
+            linked to {selectedTask.title}
+          </span>
+        ) : (
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", padding: "0.22rem 0.55rem", borderRadius: "999px", background: "var(--surface-2)" }}>
+            no task linked yet
+          </span>
+        )}
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", padding: "0.22rem 0.55rem", borderRadius: "999px", background: "var(--surface-2)" }}>
+          {selected} minute block
+        </span>
       </div>
     </section>
   );

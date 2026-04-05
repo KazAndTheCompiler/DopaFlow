@@ -83,17 +83,19 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
           flexDirection: "column",
           alignItems: "center",
           padding: "2.5rem 1rem",
-          background: "var(--surface)",
+          background: "linear-gradient(155deg, color-mix(in srgb, var(--surface) 88%, white 12%), var(--surface))",
           borderRadius: "20px",
           border: "1px solid var(--border-subtle)",
           gap: "0.75rem",
           color: "var(--text-secondary)",
+          boxShadow: "var(--shadow-soft)",
         }}
       >
         <svg width={200} height={200} viewBox="0 0 200 200" aria-hidden="true">
           <circle cx={100} cy={100} r={RING_R} fill="none" stroke="var(--border-subtle)" strokeWidth={10} />
         </svg>
-        <span>No active session</span>
+        <strong style={{ fontSize: "var(--text-base)", color: "var(--text-primary)" }}>No active session</strong>
+        <span style={{ fontSize: "var(--text-sm)" }}>Start a block from the panel above to turn intent into a protected timer.</span>
       </section>
     );
   }
@@ -105,12 +107,19 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
         flexDirection: "column",
         alignItems: "center",
         padding: "2rem 1rem",
-        background: "var(--surface)",
+        background: "linear-gradient(155deg, color-mix(in srgb, var(--surface) 88%, white 12%), var(--surface))",
         borderRadius: "20px",
         border: "1px solid var(--border-subtle)",
         gap: "1rem",
+        boxShadow: "var(--shadow-soft)",
       }}
     >
+      <div style={{ display: "grid", gap: "0.18rem", textAlign: "center" }}>
+        <strong style={{ fontSize: "var(--text-base)" }}>Active timer</strong>
+        <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+          Stay inside this block until you pause, finish, or deliberately stop.
+        </span>
+      </div>
       {/* Timer ring with time overlay using a relative container */}
       <div style={{ position: "relative", width: 200, height: 200 }}>
         <svg

@@ -90,6 +90,10 @@ select:focus {
   animation: fadeIn 180ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+.surface-fade > *:first-child {
+  margin-top: 0;
+}
+
 /* Card hover lift — used on interactive card surfaces */
 @keyframes cardIn {
   from {

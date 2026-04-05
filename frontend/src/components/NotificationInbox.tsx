@@ -36,6 +36,13 @@ function relativeTime(value: string): string {
   return formatter.format(diffDays, "day");
 }
 
+function getLevelColor(level: Notification["level"] | undefined): string {
+  if (!level) {
+    return "var(--text-secondary)";
+  }
+  return LEVEL_COLORS[level] ?? "var(--text-secondary)";
+}
+
 export function NotificationInbox({
   open,
   onClose,
@@ -43,6 +50,8 @@ export function NotificationInbox({
   onRead,
   onReadAll,
 }: NotificationInboxProps): JSX.Element {
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+
   return (
     <>
     <div
@@ -89,7 +98,9 @@ export function NotificationInbox({
         <div style={{ display: "grid", gap: "0.15rem", marginRight: "auto" }}>
           <strong>Notifications</strong>
           <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-            Alerts, reminders, and system updates in one inbox.
+            {notifications.length === 0
+              ? "Alerts, reminders, and system updates in one inbox."
+              : `${unreadCount} unread of ${notifications.length} total.`}
           </span>
         </div>
         <button
@@ -157,8 +168,8 @@ export function NotificationInbox({
                     minWidth: "44px",
                     height: "24px",
                     borderRadius: "999px",
-                    background: `${LEVEL_COLORS[notification.level]}16`,
-                    color: LEVEL_COLORS[notification.level],
+                    background: `${getLevelColor(notification.level)}16`,
+                    color: getLevelColor(notification.level),
                     display: "grid",
                     placeItems: "center",
                     fontSize: "0.65rem",
@@ -166,9 +177,11 @@ export function NotificationInbox({
                     flexShrink: 0,
                   }}
                 >
-                  {notification.level.toUpperCase().slice(0, 4)}
+                  {(notification.level ?? "info").toUpperCase().slice(0, 4)}
                 </span>
-                <strong style={{ fontWeight: notification.read ? 500 : 600 }}>{notification.title}</strong>
+                <strong style={{ fontWeight: notification.read ? 500 : 600 }}>
+                  {notification.title?.trim() || "Untitled notification"}
+                </strong>
                 <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
                   {relativeTime(notification.created_at)}
                 </span>
@@ -176,6 +189,10 @@ export function NotificationInbox({
               {notification.body ? (
                 <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
                   {notification.body}
+                </span>
+              ) : notification.action_url ? (
+                <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
+                  Action available for this alert.
                 </span>
               ) : null}
             </button>

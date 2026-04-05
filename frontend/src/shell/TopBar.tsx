@@ -28,6 +28,7 @@ export function TopBar({
   activeTimerLabel,
 }: TopBarProps): JSX.Element {
   const [showHint, setShowHint] = useState<boolean>(false);
+  const [isCompact, setIsCompact] = useState<boolean>(() => window.matchMedia("(max-width: 1080px)").matches);
 
   const { listening, transcript, interim, start, stop, supported, reset } = useSpeechRecognition();
   const updateState = useUpdateBanner();
@@ -40,6 +41,13 @@ export function TopBar({
       reset();
     }
   }, [transcript]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1080px)");
+    const onChange = (event: MediaQueryListEvent): void => setIsCompact(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const showUpdateBanner = Boolean(buildInfo?.autoUpdateEnabled) && (updateState.available || updateState.downloaded);
   const showChannelBanner = Boolean(buildInfo) && buildInfo?.autoUpdateEnabled !== true;
@@ -108,18 +116,18 @@ export function TopBar({
       )}
       <header
       style={{
-        height: "var(--topbar-height)",
+        minHeight: "var(--topbar-height)",
         display: "grid",
-        gridTemplateColumns: "auto minmax(280px, 1fr) auto auto",
-        gap: "1rem",
+        gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : "auto minmax(280px, 1fr) auto",
+        gap: isCompact ? "0.75rem" : "1rem",
         alignItems: "center",
-        padding: "0 1.5rem",
+        padding: isCompact ? "0.65rem 1rem" : "0 1.5rem",
         borderBottom: "1px solid var(--border)",
         background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, white 8%), color-mix(in srgb, var(--surface) 98%, black 2%))",
         boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
         <div
           style={{
             width: "38px",
@@ -135,12 +143,14 @@ export function TopBar({
         >
           D
         </div>
-        <div style={{ display: "grid", gap: "0.1rem" }}>
-          <strong style={{ fontSize: "1.05rem", letterSpacing: "0.03em" }}>DopaFlow</strong>
-          <span style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Local-first command center
-          </span>
-        </div>
+        {!isCompact && (
+          <div style={{ display: "grid", gap: "0.1rem" }}>
+            <strong style={{ fontSize: "1.05rem", letterSpacing: "0.03em" }}>DopaFlow</strong>
+            <span style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Local-first command center
+            </span>
+          </div>
+        )}
       </div>
       <label
         aria-label="Command bar"
@@ -152,23 +162,26 @@ export function TopBar({
           border: "1px solid var(--border-subtle)",
           background: "color-mix(in srgb, var(--surface) 76%, white 24%)",
           boxShadow: "var(--shadow-soft)",
+          minWidth: 0,
         }}
       >
         <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
-          <span
-            style={{
-              padding: "0.32rem 0.58rem",
-              borderRadius: "999px",
-              background: "var(--surface)",
-              border: "1px solid var(--border-subtle)",
-              fontSize: "0.68rem",
-              color: "var(--text-secondary)",
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Command
-          </span>
+          {!isCompact && (
+            <span
+              style={{
+                padding: "0.32rem 0.58rem",
+                borderRadius: "999px",
+                background: "var(--surface)",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "0.68rem",
+                color: "var(--text-secondary)",
+                fontWeight: 700,
+                whiteSpace: "nowrap",
+              }}
+            >
+              Command
+            </span>
+          )}
           <Input
             value={listening ? interim || commandValue : commandValue}
             onChange={(event) => onCommandChange(event.currentTarget.value)}
@@ -185,10 +198,10 @@ export function TopBar({
             title="Speak a command"
           />
         </div>
-        {showHint ? <small style={{ color: "var(--text-muted)" }}>Natural language quick actions, quick-add parsing, and voice capture in one place.</small> : null}
+        {showHint && !isCompact ? <small style={{ color: "var(--text-muted)" }}>Natural language quick actions, quick-add parsing, and voice capture in one place.</small> : null}
       </label>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <Button onClick={onCommandSubmit}>Run</Button>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", justifyContent: isCompact ? "space-between" : "flex-end" }}>
+        <Button onClick={onCommandSubmit} style={{ minWidth: isCompact ? "84px" : undefined }}>{isCompact ? "Run" : "Run"}</Button>
         <Button
           variant="ghost"
           onClick={onToggleFocusMode}
@@ -209,7 +222,7 @@ export function TopBar({
               border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
             }}
           >
-            Timer {activeTimerLabel}
+            {isCompact ? activeTimerLabel : `Timer ${activeTimerLabel}`}
           </span>
         )}
         <button

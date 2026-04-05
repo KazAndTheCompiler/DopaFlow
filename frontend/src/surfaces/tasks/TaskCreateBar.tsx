@@ -82,8 +82,24 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
   });
 
   return (
-    <div style={{ display: "grid", gap: "0.35rem" }}>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+    <section
+      style={{
+        display: "grid",
+        gap: "0.6rem",
+        padding: "0.95rem 1rem",
+        borderRadius: "20px",
+        background: "linear-gradient(155deg, color-mix(in srgb, var(--surface) 86%, white 14%), var(--surface))",
+        border: "1px solid var(--border-subtle)",
+        boxShadow: "var(--shadow-soft)",
+      }}
+    >
+      <div style={{ display: "grid", gap: "0.22rem" }}>
+        <strong style={{ fontSize: "var(--text-base)" }}>Quick capture</strong>
+        <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+          Type a plain sentence or speak it. Natural-language parsing should reduce cleanup work, not create another form to fill out.
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
       <input
         ref={inputRef}
         value={listening ? interim || value : value}
@@ -119,7 +135,7 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
       </div>
 
       {preview && (preview.due_at || (preview.priority && preview.priority !== 3) || (preview.tags && preview.tags.length > 0)) && (
-        <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", paddingLeft: "0.25rem" }}>
+        <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", paddingLeft: "0.1rem" }}>
           {preview.due_at && (
             <span style={chipStyle("var(--accent)")}>DT {formatDue(preview.due_at)}</span>
           )}
@@ -133,7 +149,7 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 

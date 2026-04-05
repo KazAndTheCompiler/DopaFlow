@@ -125,7 +125,7 @@ function KanbanCard({
 
 export default function KanbanView({ tasks, onEdit, onStatusChange }: KanbanViewProps): JSX.Element {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.75rem", alignItems: "start" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.9rem", alignItems: "start" }}>
       {COLUMNS.map((col) => {
         const colTasks = tasks.filter((t) => t.status === col.id);
         return (
@@ -161,10 +161,10 @@ export default function KanbanView({ tasks, onEdit, onStatusChange }: KanbanView
                 {colTasks.length}
               </span>
             </div>
-            <div style={{ padding: "0.65rem", display: "grid", gap: "0.5rem" }}>
+            <div style={{ padding: "0.75rem", display: "grid", gap: "0.6rem", minHeight: "180px" }}>
               {colTasks.length === 0 && (
-                <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", textAlign: "center", padding: "1rem 0" }}>
-                  Empty
+                <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", textAlign: "center", padding: "1rem 0", border: "1px dashed var(--border-subtle)", borderRadius: "12px", background: "color-mix(in srgb, var(--surface) 82%, white 18%)" }}>
+                  Nothing parked here yet
                 </div>
               )}
               {colTasks.map((task) => (

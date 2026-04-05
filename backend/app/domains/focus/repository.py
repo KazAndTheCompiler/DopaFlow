@@ -16,7 +16,7 @@ def create_session(db_path: str, task_id: str | None, duration_minutes: int) -> 
     with tx(db_path) as conn:
         conn.execute(
             "INSERT INTO focus_sessions (id, task_id, started_at, duration_minutes, status) VALUES (?, ?, ?, ?, ?)",
-            (identifier, task_id, datetime.now(timezone.utc).isoformat(), duration_minutes, "active"),
+            (identifier, task_id, datetime.now(timezone.utc).isoformat(), duration_minutes, "running"),
         )
     return identifier
 

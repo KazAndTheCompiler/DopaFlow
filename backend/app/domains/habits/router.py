@@ -49,13 +49,14 @@ async def add_habit(payload: dict[str, Any], db_path: str = Depends(_db_path)) -
     name = (payload.get("name") or "").strip()
     if not name:
         raise HTTPException(status_code=422, detail="name is required")
-    return repository.add_habit(
+    created = repository.add_habit(
         db_path,
         name,
         int(payload.get("target_freq", 1)),
         payload.get("target_period", "day"),
         payload.get("color", "#5B6AF0"),
     )
+    return created
 
 
 @router.get("/today", response_model=dict, dependencies=[Depends(require_scope("read:habits"))])

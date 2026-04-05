@@ -50,6 +50,26 @@ export function FocusCompleteModal({
           </p>
         </div>
 
+        <div
+          style={{
+            width: "100%",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: "0.75rem",
+          }}
+        >
+          <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "var(--surface-2)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.18rem", textAlign: "left" }}>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Block</span>
+            <strong style={{ fontSize: "var(--text-lg)" }}>{durationMinutes}m</strong>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>finished cleanly</span>
+          </div>
+          <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "var(--surface-2)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.18rem", textAlign: "left" }}>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Next move</span>
+            <strong style={{ fontSize: "var(--text-base)" }}>{taskTitle ? "close task or recover" : "recover or restart"}</strong>
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>don’t leave the transition fuzzy</span>
+          </div>
+        </div>
+
         <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem" }}>
             <button

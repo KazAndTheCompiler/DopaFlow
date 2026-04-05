@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { CalendarEvent } from "../../../../shared/types";
+import { showToast } from "@ds/primitives/Toast";
 import VoiceCommandModal from "../../components/VoiceCommandModal";
 
 interface CalendarPanelProps {
@@ -12,19 +13,31 @@ export function CalendarPanel({ onCreate, onVoiceExecuted }: CalendarPanelProps)
   const [title, setTitle] = useState<string>("");
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [time, setTime] = useState<string>("09:00");
-  const [duration, setDuration] = useState<number>(60);
+  const [durationHours, setDurationHours] = useState<number>(1);
+  const [durationMinutes, setDurationMinutes] = useState<number>(0);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const durationTotalMinutes = Math.max(1, durationHours * 60 + durationMinutes);
 
   const handleAdd = async (): Promise<void> => {
-    if (!title.trim()) return;
+    if (!title.trim() || submitting) return;
     const start = new Date(`${date}T${time}`);
-    const end = new Date(start.getTime() + duration * 60_000);
-    await onCreate({
-      title: title.trim(),
-      start_at: start.toISOString(),
-      end_at: end.toISOString(),
-      all_day: false,
-    });
-    setTitle("");
+    const end = new Date(start.getTime() + durationTotalMinutes * 60_000);
+    setSubmitting(true);
+    try {
+      await onCreate({
+        title: title.trim(),
+        start_at: start.toISOString(),
+        end_at: end.toISOString(),
+        all_day: false,
+      });
+      setTitle("");
+      showToast("Calendar block added.", "success");
+    } catch {
+      showToast("Could not add the calendar block.", "error");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -51,7 +64,7 @@ export function CalendarPanel({ onCreate, onVoiceExecuted }: CalendarPanelProps)
         <label style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Title</label>
         <input
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+        onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void handleAdd()}
           placeholder="Event name"
           style={{
@@ -97,38 +110,64 @@ export function CalendarPanel({ onCreate, onVoiceExecuted }: CalendarPanelProps)
       </div>
       <div style={{ display: "grid", gap: "0.25rem" }}>
         <label style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Duration</label>
-        <select
-          value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
+        <div
           style={{
-            padding: "0.6rem 0.8rem",
-            borderRadius: "12px",
-            border: "1px solid var(--border-subtle)",
-            background: "var(--surface-2)",
-            color: "var(--text-primary)",
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(88px, 1fr))",
+            gap: "0.45rem",
           }}
         >
-          {[15, 30, 45, 60, 90, 120].map((m) => (
-            <option key={m} value={m}>{m}m</option>
-          ))}
-        </select>
+          <input
+            type="number"
+            min={0}
+            value={durationHours}
+            onChange={(e) => setDurationHours(Math.max(0, Number(e.target.value) || 0))}
+            aria-label="Duration hours"
+            placeholder="Hours"
+            style={{
+              padding: "0.6rem 0.8rem",
+              borderRadius: "12px",
+              border: "1px solid var(--border-subtle)",
+              background: "var(--surface-2)",
+              color: "var(--text-primary)",
+            }}
+          />
+          <input
+            type="number"
+            min={0}
+            value={durationMinutes}
+            onChange={(e) => setDurationMinutes(Math.max(0, Number(e.target.value) || 0))}
+            aria-label="Duration minutes"
+            placeholder="Minutes"
+            style={{
+              padding: "0.6rem 0.8rem",
+              borderRadius: "12px",
+              border: "1px solid var(--border-subtle)",
+              background: "var(--surface-2)",
+              color: "var(--text-primary)",
+            }}
+          />
+        </div>
+        <span style={{ fontSize: "11px", color: "var(--text-secondary)" }}>
+          {durationTotalMinutes} minute{durationTotalMinutes === 1 ? "" : "s"}
+        </span>
       </div>
       <button
         onClick={() => void handleAdd()}
-        disabled={!title.trim()}
+        disabled={!title.trim() || submitting}
         style={{
           padding: "0.7rem 1.15rem",
           borderRadius: "12px",
           border: "none",
-          background: title.trim() ? "linear-gradient(160deg, color-mix(in srgb, var(--accent) 82%, white 18%), var(--accent))" : "var(--border-subtle)",
+          background: title.trim() && !submitting ? "linear-gradient(160deg, color-mix(in srgb, var(--accent) 82%, white 18%), var(--accent))" : "var(--border-subtle)",
           color: "var(--text-inverted)",
-          cursor: title.trim() ? "pointer" : "not-allowed",
+          cursor: title.trim() && !submitting ? "pointer" : "not-allowed",
           fontWeight: 700,
           alignSelf: "flex-end",
-          boxShadow: title.trim() ? "var(--shadow-soft)" : "none",
+          boxShadow: title.trim() && !submitting ? "var(--shadow-soft)" : "none",
         }}
       >
-        Add block
+        {submitting ? "Adding…" : "Add block"}
       </button>
       <VoiceCommandModal
         initialCommandWord="calendar"

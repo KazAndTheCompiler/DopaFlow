@@ -570,9 +570,8 @@ To share your custom skin with the community:
 
 ### DopaFlow Documentation
 
-- [File List](./filelist.md) - Complete file reference
 - [API Reference](./api-reference.md) - Backend API docs
-- [Structure](../STRUCTURE.md) - Architecture overview
+- [Next Steps](../next_steps.md) - Live product roadmap
 
 ---
 
