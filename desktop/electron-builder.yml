@@ -4,7 +4,7 @@ copyright: Copyright (C) 2026 KazAndTheCompiler
 publish:
   - provider: github
     owner: KazAndTheCompiler
-    repo: zoesTM
+    repo: DopaFlow
 afterPack: afterPack.js
 directories:
   output: dist
@@ -21,7 +21,7 @@ extraResources:
   - from: "../frontend/dist"
     to: "frontend/dist"
     filter: ["**/*"]
-  - from: "../backend/dist/dopaflow-backend"
+  - from: "../release/dopaflow-backend-v2"
     to: "dopaflow-backend"
     filter: ["**/*"]
 

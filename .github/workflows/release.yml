@@ -1,0 +1,211 @@
+name: Build & Release DopaFlow
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v2.0.9)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-backend-linux:
+    name: Backend (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend deps
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend
+        run: |
+          cd backend
+          pyinstaller dopaflow-backend.spec --distpath dist --noconfirm
+
+      - name: Upload backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-linux
+          path: backend/dist/dopaflow-backend/
+          retention-days: 3
+
+  build-backend-windows:
+    name: Backend (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend deps
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build backend
+        run: |
+          cd backend
+          pyinstaller dopaflow-backend.spec --distpath dist --noconfirm
+
+      - name: Upload backend
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-windows
+          path: backend\dist\dopaflow-backend\
+          retention-days: 3
+
+  build-linux:
+    name: AppImage (Linux x64)
+    needs: build-backend-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache Electron
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: electron-linux-${{ hashFiles('desktop/package-lock.json') }}
+          restore-keys: electron-linux-
+
+      - name: Install frontend
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Download backend
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-linux
+          path: release/dopaflow-backend-v2
+
+      - name: Install desktop
+        run: |
+          cd desktop
+          npm ci
+
+      - name: Build AppImage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop
+          npm run dist:stable:linux
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dopaflow-linux
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.AppImage.zsync
+            desktop/dist/latest-linux.yml
+          retention-days: 5
+
+  build-windows:
+    name: NSIS Installer (Windows x64)
+    needs: build-backend-windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache Electron
+        uses: actions/cache@v4
+        with:
+          path: ~/AppData/Local/electron/Cache
+          key: electron-win-${{ hashFiles('desktop/package-lock.json') }}
+          restore-keys: electron-win-
+
+      - name: Install frontend
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Download backend
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-windows
+          path: release\dopaflow-backend-v2
+
+      - name: Install desktop
+        run: |
+          cd desktop
+          npm ci
+
+      - name: Build NSIS installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop
+          npm run dist:stable:win
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dopaflow-windows
+          path: |
+            desktop\dist\*.exe
+            desktop\dist\latest.yml
+          retention-days: 5
+
+  release:
+    name: Publish Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release-artifacts/**/*.AppImage
+            release-artifacts/**/*.AppImage.zsync
+            release-artifacts/**/*.exe
+            release-artifacts/**/latest*.yml
