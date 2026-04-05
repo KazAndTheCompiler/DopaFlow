@@ -35,6 +35,10 @@ out/
 release/
 desktop/dist/
 
+# --- Backend build output ---
+backend/build/
+backend/dist/
+
 # --- OS junk ---
 .DS_Store
 Thumbs.db
