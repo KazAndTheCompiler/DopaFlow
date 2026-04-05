@@ -26,7 +26,8 @@ def test_voice_preview_route_exists_on_commands_router() -> None:
 
 
 @pytest.mark.anyio
-async def test_voice_preview_returns_needs_command_word_when_prefix_missing(monkeypatch) -> None:
+async def test_voice_preview_works_without_prefix(monkeypatch) -> None:
+    """NLP engine handles intent classification — no prefix required."""
     from app.domains.commands import router as commands_router_module
     from app.domains.commands.router import router
     from fastapi import FastAPI
@@ -47,9 +48,10 @@ async def test_voice_preview_returns_needs_command_word_when_prefix_missing(monk
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "needs_command_word"
-    assert body["command_word"] is None
-    assert body["preview"]["allowed_prefixes"] == ["task", "journal", "calendar"]
+    # No prefix required — NLP engine classifies intent
+    assert body["status"] == "ok"
+    assert body["parsed"]["intent"] == "task.create"
+    assert body["preview"]["would_execute"] is True
 
 
 def test_parse_task_command_uses_explicit_task_prefix() -> None:
@@ -75,16 +77,15 @@ def test_parse_calendar_command_extracts_basic_time_window() -> None:
     assert parsed["extracted"]["end_at"] is not None
 
 
-def test_preview_marks_calendar_command_incomplete_without_time() -> None:
+def test_preview_marks_calendar_command_needs_datetime_without_time() -> None:
     preview = CommandService.preview("calendar dentist tomorrow")
 
-    assert preview["status"] == "incomplete"
+    assert preview["status"] == "needs_datetime"
     assert preview["would_execute"] is False
-    assert preview["message"] == "Add a date and time to create the calendar event."
 
 
 @pytest.mark.anyio
-async def test_voice_preview_returns_incomplete_for_calendar_without_time(monkeypatch) -> None:
+async def test_voice_preview_returns_needs_datetime_for_calendar_without_time(monkeypatch) -> None:
     from app.domains.commands import router as commands_router_module
     from app.domains.commands.router import router
     from fastapi import FastAPI
@@ -105,6 +106,5 @@ async def test_voice_preview_returns_incomplete_for_calendar_without_time(monkey
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "incomplete"
-    assert body["preview"]["status"] == "incomplete"
+    assert body["status"] == "needs_datetime"
     assert body["preview"]["would_execute"] is False

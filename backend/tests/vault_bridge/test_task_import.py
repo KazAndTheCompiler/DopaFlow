@@ -9,7 +9,7 @@ import pytest
 from app.domains.tasks import repository as tasks_repo
 from app.domains.vault_bridge.sync_service import VaultSyncService
 from app.domains.vault_bridge.task_writer import render_task_collection, rewrite_task_id_in_file
-from app.domains.vault_bridge.task_reader import parse_task_line, parse_task_collection
+from app.domains.vault_bridge.task_reader import parse_task_line, parse_task_collection, parse_task_file
 from app.domains.vault_bridge.schemas import (
     TaskImportCandidate,
     TaskImportConfirmRequest,
@@ -189,6 +189,22 @@ class TestImportRoundTrip:
             assert c.dopaflow_id is None
             assert c.line_text  # line_text preserved for rewrite
             assert c.line_number is not None
+
+    def test_plain_non_dopaflow_markdown_file_can_be_parsed_for_import(self, tmp_path):
+        content = (
+            "# Project Scratchpad\n\n"
+            "- [ ] Plain vault task\n"
+            "- [x] Another plain vault task\n"
+        )
+        f = tmp_path / "Scratchpad.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 2
+        assert candidates[0].project_name == "Scratchpad"
+        assert candidates[0].dopaflow_id is None
+        assert candidates[0].line_number == 3
 
 
 def _configure_vault(service: VaultSyncService, vault_root: Path) -> None:

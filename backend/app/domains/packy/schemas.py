@@ -22,6 +22,33 @@ class PackyAnswer(BaseModel):
     suggested_action: str | None = None
 
 
+class PackyVoiceCommand(BaseModel):
+    """Payload for the unified voice / natural-language command endpoint.
+
+    Accepts either a transcript (pre-transcribed) or raw audio will be
+    handled by the router before reaching here.
+    """
+
+    text: str
+    context: dict[str, object] = Field(default_factory=dict)
+    auto_execute: bool = False
+    db_path: str | None = None
+
+
+class PackyVoiceResponse(BaseModel):
+    """Full voice command response with preview, reply, and TTS."""
+
+    intent: str
+    confidence: float = 0.0
+    entities: dict[str, object] = Field(default_factory=dict)
+    preview: dict[str, object] = Field(default_factory=dict)
+    execution_result: dict[str, object] | None = None
+    reply_text: str = ""
+    tts_text: str = ""
+    follow_ups: list[str] = Field(default_factory=list)
+    status: str = "ok"
+
+
 class PackyLorebookRequest(BaseModel):
     """Payload for updating Packy's contextual lorebook."""
 

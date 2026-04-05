@@ -7,6 +7,7 @@ interface MonthViewProps {
   month?: Date;
   sourceColors?: Record<string, string>;
   sourceLabels?: Record<string, string>;
+  onEventClick?: (event: CalendarEvent) => void;
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -41,7 +42,7 @@ function monthGrid(anchor: Date): Date[] {
   });
 }
 
-export function MonthView({ events, month, sourceColors = {}, sourceLabels = {} }: MonthViewProps): JSX.Element {
+export function MonthView({ events, month, sourceColors = {}, sourceLabels = {}, onEventClick }: MonthViewProps): JSX.Element {
   const anchor = month ?? new Date();
   const days = monthGrid(anchor);
   const today = new Date();
@@ -119,8 +120,10 @@ export function MonthView({ events, month, sourceColors = {}, sourceLabels = {} 
                 const sourceColor = sourceColors[sourceKey] ?? eventColor(event);
                 const sourceLabel = sourceLabels[sourceKey] ?? "Local";
                 return (
-                <div
+                <button
                   key={event.id}
+                  type="button"
+                  onClick={() => onEventClick?.(event)}
                   title={`${event.title} · ${sourceLabel}${event.provider_readonly ? " · read-only" : ""}`}
                   style={{
                     padding: "0.2rem 0.35rem",
@@ -133,6 +136,9 @@ export function MonthView({ events, month, sourceColors = {}, sourceLabels = {} 
                     display: "grid",
                     gap: "0.15rem",
                     opacity: event.provider_readonly ? 0.86 : 1,
+                    width: "100%",
+                    textAlign: "left",
+                    cursor: "pointer",
                   }}
                 >
                   <span style={{ fontSize: "9px", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -141,14 +147,29 @@ export function MonthView({ events, month, sourceColors = {}, sourceLabels = {} 
                   <span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {event.title}
                   </span>
-                </div>
+                </button>
                 );
               })}
 
               {dayEvents.length > 3 ? (
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+                <button
+                  type="button"
+                  onClick={() => onEventClick?.(dayEvents[3])}
+                  style={{
+                    padding: "0.15rem 0.3rem",
+                    borderRadius: "5px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--surface-2)",
+                    color: "var(--text-secondary)",
+                    fontSize: "9px",
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                    fontWeight: 600,
+                  }}
+                >
                   + {dayEvents.length - 3} more
-                </span>
+                </button>
               ) : null}
             </div>
           );

@@ -11,6 +11,7 @@ from app.domains.vault_bridge.schemas import (
     TaskImportPreview,
     VaultConfig,
     VaultConfigUpdate,
+    VaultConflictPreview,
     VaultFileRecord,
     VaultPullResult,
     VaultPushResult,
@@ -83,6 +84,18 @@ def list_conflicts(svc: VaultSyncService = Depends(_svc)) -> list[VaultFileRecor
     return svc.index_repo.list_conflicts()
 
 
+@router.get("/vault/conflicts/{record_id}/preview", response_model=VaultConflictPreview, dependencies=[Depends(require_scope("read:journal"))])
+def get_conflict_preview(
+    record_id: int,
+    svc: VaultSyncService = Depends(_svc),
+) -> VaultConflictPreview:
+    """Return the last indexed snapshot and current vault file content."""
+    try:
+        return svc.get_conflict_preview(record_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.post("/vault/rollback/{record_id}", response_model=VaultRollbackResult, dependencies=[Depends(require_scope("write:journal"))])
 def rollback_file(
     record_id: int,
@@ -105,7 +118,7 @@ def resolve_conflict(
     return {"resolved": True, "file_path": file_path}
 
 
-@router.post("/vault/push/tasks", response_model=VaultPushResult, dependencies=[Depends(require_scope("read:tasks"))])
+@router.post("/vault/push/tasks", response_model=VaultPushResult, dependencies=[Depends(require_scope("write:tasks"))])
 def push_tasks(svc: VaultSyncService = Depends(_svc)) -> VaultPushResult:
     """Push DopaFlow tasks to vault as Obsidian-compatible Markdown task files."""
     return svc.push_tasks()
@@ -117,7 +130,7 @@ def pull_tasks(svc: VaultSyncService = Depends(_svc)) -> VaultPullResult:
     return svc.pull_tasks()
 
 
-@router.post("/vault/push/daily-tasks/{date}", response_model=VaultPushResult, dependencies=[Depends(require_scope("read:tasks"))])
+@router.post("/vault/push/daily-tasks/{date}", response_model=VaultPushResult, dependencies=[Depends(require_scope("write:tasks"))])
 def push_daily_tasks_section(date: str, svc: VaultSyncService = Depends(_svc)) -> VaultPushResult:
     """Append or update the managed tasks section inside an existing daily note.
 

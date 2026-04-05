@@ -29,12 +29,20 @@ DopaFlow brings tasks, habits, focus, journaling, calendar, alarms, and spaced r
 | **Habits** | Daily check-ins, streaks, freeze/unfreeze, correlation insights, progress rings, heatmap |
 | **Focus** | Pomodoro sessions, task picker, custom duration, session history and stats |
 | **Journal** | Markdown editor, voice dictation, wikilinks, version history, auto-export to `.md`, templates |
-| **Calendar** | Events, Google Calendar sync with conflict resolution, peer calendar sharing |
+| **Calendar** | Events with drag-to-reschedule and resize in Day view, click-to-edit modal with source/recurrence/category metadata, recurring blocks, Google sync with conflict resolution, peer calendar sharing |
 | **Alarms** | Schedule alarms, TTS or YouTube audio queue, background service worker |
-| **Review** | Spaced repetition (SM-2), Anki import, deck management |
+| **Review** | Spaced repetition (SM-2), Anki import, deck management, keyboard shortcuts (Space/1–4), inline card editor, session completion screen |
 | **Packy** | Contextual memory system to help resurface things you forgot |
-| **Digest** | End of day summary, momentum score, weekly insights |
+| **Digest** | End of day summary, momentum score, weekly insights, and plain-language interpretation of what the period actually means |
 | **Gamification** | XP, badges, levels, because dopamine helps |
+
+Recent premium closure work:
+
+- integrations overview now summarizes Gmail, GitHub, webhooks, calendar sharing, Turso, and Obsidian health from one settings card
+- nutrition ships again with a protected starter food library and one-tap logging for basics like coffee, tea, water, milk, sugar, bread, and a basic sandwich
+- XP progress is now visible in the shell and completion rewards surface through the global toast path instead of staying trapped on the gamification page
+- calendar now has a real editing path instead of being display-only: click events in week/day/month, inspect source details, edit title/time/category/recurrence, and delete local blocks without leaving the surface
+- the shell inbox now groups urgent vs. cleared notifications, and digest now interprets momentum in plain language instead of reading like a raw stats panel
 
 ---
 
@@ -72,8 +80,8 @@ What it supports today:
 - journal push/pull using Markdown daily notes
 - task collection push/pull using Obsidian-compatible checkbox syntax
 - daily task section push into an existing daily note using bounded markers
-- task import preview/import from DopaFlow-owned vault task files
-- rollback and conflict tracking for indexed vault files
+- task import preview/import from vault task files in the configured task folder
+- rollback, conflict tracking, and conflict preview for indexed vault files
 
 Current shape of the bridge:
 
@@ -87,7 +95,7 @@ What it does not do yet:
 - no live filesystem watch
 - no cloud sync
 - no merge UI
-- no import from arbitrary non-DopaFlow Obsidian task files yet
+- no vault-wide import outside the configured task folder yet
 
 The intended product direction is still the same: DopaFlow as the action layer, Obsidian as the durable plain-text knowledge layer.
 
@@ -171,32 +179,28 @@ This is not about masking better. It is about ownership. Accountability without 
 
 ## Voice commands
 
-Voice commands are live in the current build with explicit command words:
+Voice commands now run through the same preview -> confirm -> execute path as typed commands, but they no longer require rigid prefixes.
 
-- `task buy milk tomorrow`
+Examples:
+
+- `buy milk tomorrow`
 - `journal today felt clearer after walking`
-- `calendar dentist tomorrow at 14:00 for 45 minutes`
+- `schedule dentist tomorrow at 2pm for 45 minutes`
+- `start focus for 25 minutes`
 
-The current version is deliberately strict. It previews first, asks for confirmation, and speaks back status through browser TTS instead of trying to guess intent from vague speech.
-
-Current active direction:
-
-- tighten the STT command-line flow so spoken calendar commands create real time blocks reliably
-- keep typed command parsing and spoken command parsing on the same preview -> confirm -> execute path
-- preserve explicit command words until the more freeform layer is actually trustworthy
+The frontend still previews the action first, then asks for confirmation before execution, and Packy/voice replies come back through browser TTS.
 
 ---
 
 ## Known gaps (v2 beta)
 
 - Skeleton loaders are now in place on the core loading-heavy surfaces (`today`, `overview`, `goals`, task/habit/review/journal lists), but the rest of the app still needs a consistency pass
-- Obsidian bridge is now real but still manual-first: no live watch, no merge UI, and no import from arbitrary non-DopaFlow task files yet
-- Digest email delivery is not wired
-- Drag-to-reschedule in calendar time blocks is not implemented
+- Obsidian bridge is now real but still manual-first: no live watch, no merge UI, and no vault-wide import outside the configured task folder yet
+- Digest is now much more readable in-product, but delivery, scheduling, and richer coaching-style guidance are still missing
 - Mobile swipe-to-complete on task rows is not implemented
-- Voice/STT scheduling is in progress: spoken appointments should become confirmed calendar blocks with start/end times
+- Calendar now supports drag-to-reschedule and resize-by-drag in the Day view for local events; Week and Month views remain click-to-open only — full drag support across all views is the next maturity step
 - Shell customization is improving, but layout control is still newer than the skin system and needs a broader pass across surfaces
-- Nutrition lost a useful preset starter library during migration; common basics like coffee, tea, sugar-by-teaspoon, and simple sandwich defaults need to come back as protected seed data
+- Nutrition starter presets are back, but the next pass should add better editing/search around the food library instead of stopping at seed recovery
 - Review import trust is improving, but APKG coverage should keep moving toward real generated-package tests instead of placeholder-only confidence
 
 See `CHANGELOG.md` and `next_steps.md` for the live direction.

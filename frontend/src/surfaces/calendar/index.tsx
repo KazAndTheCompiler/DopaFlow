@@ -3,6 +3,7 @@ import { useContext, useMemo, useState } from "react";
 import { AppDataContext } from "../../App";
 import { showToast } from "@ds/primitives/Toast";
 import CalendarPanel from "./CalendarPanel";
+import CalendarEventModal from "./CalendarEventModal";
 import DayView from "./DayView";
 import GoogleSyncBadge from "./GoogleSyncBadge";
 import MonthView from "./MonthView";
@@ -63,6 +64,7 @@ export default function CalendarView(): JSX.Element {
   const [blockReminder, setBlockReminder] = useState<boolean>(false);
   const [blockReminderOffset, setBlockReminderOffset] = useState<number>(15);
   const [showConflicts, setShowConflicts] = useState<boolean>(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   if (!app) {
     return <div>App context unavailable.</div>;
@@ -98,6 +100,8 @@ export default function CalendarView(): JSX.Element {
   });
   const sharedEvents = app.calendar.events.filter((event) => event.source_type?.startsWith("peer:")).length;
   const visibleSharedEvents = filteredEvents.filter((event) => event.source_type?.startsWith("peer:")).length;
+  const selectedEvent = selectedEventId ? app.calendar.events.find((event) => event.id === selectedEventId) ?? null : null;
+  const selectedSourceKey = selectedEvent?.source_type?.startsWith("peer:") ? selectedEvent.source_type.slice("peer:".length) : "local";
   const allSharedSourcesHidden = app.calendar.peerFeeds.length > 0 && app.calendar.peerFeeds.every((feed) => hiddenSources.includes(feed.id));
   const staleThresholdMs = 36 * 60 * 60 * 1000;
   const staleFeeds = app.calendar.peerFeeds.filter((feed) => {
@@ -188,6 +192,33 @@ export default function CalendarView(): JSX.Element {
     setPrefillHour(null);
     setPrefillTitle("");
     setBlockReminder(false);
+  };
+
+  const handleEventClick = (eventId: string): void => {
+    setSelectedEventId(eventId);
+  };
+
+  const handleRescheduleEvent = async (id: string, newStartAt: string): Promise<void> => {
+    const event = app.calendar.events.find((e) => e.id === id);
+    if (!event) return;
+    const durationMs = new Date(event.end_at).getTime() - new Date(event.start_at).getTime();
+    const newStart = new Date(newStartAt);
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    try {
+      await app.calendar.update(id, { start_at: newStart.toISOString(), end_at: newEnd.toISOString() });
+      showToast("Event rescheduled.", "success");
+    } catch {
+      showToast("Could not reschedule event.", "error");
+    }
+  };
+
+  const handleResizeEvent = async (id: string, newEndAt: string): Promise<void> => {
+    try {
+      await app.calendar.update(id, { end_at: newEndAt });
+      showToast("Duration updated.", "success");
+    } catch {
+      showToast("Could not update event.", "error");
+    }
   };
 
   const submitDayBlock = async (): Promise<void> => {
@@ -573,6 +604,7 @@ export default function CalendarView(): JSX.Element {
             anchorDate={anchor}
             sourceColors={sourceColors}
             sourceLabels={sourceLabels}
+            onEventClick={(event) => handleEventClick(event.id)}
           />
           <CalendarPanel
             onCreate={(event) => app.calendar.create(event)}
@@ -613,6 +645,7 @@ export default function CalendarView(): JSX.Element {
             month={monthAnchor}
             sourceColors={sourceColors}
             sourceLabels={sourceLabels}
+            onEventClick={(event) => handleEventClick(event.id)}
           />
         </div>
       )}
@@ -649,6 +682,9 @@ export default function CalendarView(): JSX.Element {
               onSlotClick={handleSlotClick}
               sourceColors={sourceColors}
               sourceLabels={sourceLabels}
+              onEventClick={(event) => handleEventClick(event.id)}
+              onRescheduleEvent={handleRescheduleEvent}
+              onResizeEvent={handleResizeEvent}
             />
           </div>
 
@@ -891,6 +927,29 @@ export default function CalendarView(): JSX.Element {
           </div>
         </div>
       )}
+
+      <CalendarEventModal
+        event={selectedEvent}
+        sourceColor={sourceColors[selectedSourceKey] ?? "var(--accent)"}
+        sourceLabel={sourceLabels[selectedSourceKey] ?? "My calendar"}
+        onClose={() => setSelectedEventId(null)}
+        onSave={async (id, patch) => {
+          try {
+            await app.calendar.update(id, patch);
+            showToast("Calendar event updated.", "success");
+          } catch {
+            showToast("Could not update the event.", "error");
+          }
+        }}
+        onDelete={async (id) => {
+          try {
+            await app.calendar.remove(id);
+            showToast("Calendar event deleted.", "success");
+          } catch {
+            showToast("Could not delete the event.", "error");
+          }
+        }}
+      />
     </div>
   );
 }

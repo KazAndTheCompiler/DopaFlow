@@ -24,6 +24,84 @@ PRIORITY_PATTERNS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r"\b(?:backlog|maybe|if time|one day|someday)\b", re.IGNORECASE), 4),
 ]
 
+# ---------------------------------------------------------------------------
+# Recurrence parsing
+# ---------------------------------------------------------------------------
+RECURRENCE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    # Specific weekdays: "every monday", "every tuesday and thursday"
+    (re.compile(r"\bevery\s+((?:(?:and\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*)+)", re.I), "weekly"),
+    # "every weekday"
+    (re.compile(r"\bevery\s+weekday\b", re.I), "weekday"),
+    # "every day" / "daily"
+    (re.compile(r"\b(?:every\s+day|daily)\b", re.I), "daily"),
+    # "every week" / "weekly"
+    (re.compile(r"\b(?:every\s+week|weekly)\b", re.I), "weekly"),
+    # "every month" / "monthly"
+    (re.compile(r"\b(?:every\s+month|monthly)\b", re.I), "monthly"),
+    # "every year" / "yearly" / "annually"
+    (re.compile(r"\b(?:every\s+year|yearly|annually)\b", re.I), "yearly"),
+    # "every morning"
+    (re.compile(r"\bevery\s+morning\b", re.I), "daily_morning"),
+    # "every evening" / "every night"
+    (re.compile(r"\bevery\s+(?:evening|night)\b", re.I), "daily_evening"),
+    # "every hour" / "hourly"
+    (re.compile(r"\b(?:every\s+hour|hourly)\b", re.I), "hourly"),
+]
+
+
+def _build_rrule(recurrence_type: str, text: str) -> str | None:
+    """Build an RRULE string from the detected recurrence type."""
+    if recurrence_type == "daily":
+        return "FREQ=DAILY"
+    if recurrence_type == "daily_morning":
+        return "FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
+    if recurrence_type == "daily_evening":
+        return "FREQ=DAILY;BYHOUR=20;BYMINUTE=0"
+    if recurrence_type == "weekly":
+        # Extract specific weekdays
+        day_map = {"monday": "MO", "tuesday": "TU", "wednesday": "WE",
+                    "thursday": "TH", "friday": "FR", "saturday": "SA", "sunday": "SU"}
+        days = re.findall(r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text, re.I)
+        if days:
+            byday = ",".join(day_map[d.lower()] for d in days)
+            return f"FREQ=WEEKLY;BYDAY={byday}"
+        return "FREQ=WEEKLY"
+    if recurrence_type == "weekday":
+        return "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+    if recurrence_type == "monthly":
+        return "FREQ=MONTHLY"
+    if recurrence_type == "yearly":
+        return "FREQ=YEARLY"
+    if recurrence_type == "hourly":
+        return "FREQ=HOURLY"
+    return None
+
+
+# Simple literal patterns for stripping recurrence words from the title
+_RECURRENCE_STRIP_PATTERNS = [
+    r"\bevery\s+(?:(?:and\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*)+",
+    r"\bevery\s+weekday\b",
+    r"\b(?:every\s+day|daily)\b",
+    r"\b(?:every\s+week|weekly)\b",
+    r"\b(?:every\s+month|monthly)\b",
+    r"\b(?:every\s+year|yearly|annually)\b",
+    r"\bevery\s+morning\b",
+    r"\bevery\s+(?:evening|night)\b",
+    r"\b(?:every\s+hour|hourly)\b",
+]
+
+
+def _parse_recurrence(text: str) -> tuple[str | None, list[str]]:
+    """Detect recurrence patterns. Returns (rrule, strip_patterns)."""
+    for pattern, recurrence_type in RECURRENCE_PATTERNS:
+        if pattern.search(text):
+            rrule = _build_rrule(recurrence_type, text)
+            if rrule:
+                # Use simple literal strip patterns (not the raw regex)
+                matched_text = pattern.search(text).group(0)  # type: ignore[union-attr]
+                return rrule, [re.escape(matched_text)]
+    return None, []
+
 
 def _parse_time_expr(text: str) -> tuple[int, int] | None:
     if match := re.search(r"\b(\d{1,2}):(\d{2})\b", text, flags=re.IGNORECASE):
@@ -137,7 +215,19 @@ def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str]]:
         add_candidate(now + timedelta(hours=int(match.group(1))), r"\bin\s+\d+\s*h(?:ours?)?\b")
     if match := re.search(r"\bin\s+(\d+)\s*min(?:utes?)?\b", low):
         add_candidate(now + timedelta(minutes=int(match.group(1))), r"\bin\s+\d+\s*min(?:utes?)?\b")
+    # "every monday" with a due date = first occurrence of that weekday
+    if re.search(r"\bevery\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low):
+        first_day = re.search(r"\bevery\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low)
+        if first_day:
+            resolved = _resolve_next_weekday(now, first_day.group(1))
+            add_candidate(_apply_time(resolved, explicit_time), r"")  # Don't strip — handled by recurrence
     for match in re.finditer(r"\b(?:(this|next|due|by)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low):
+        # Skip if it's part of "every <weekday> [and <weekday>]*" — handled by recurrence
+        prefix_text = low[:match.start()]
+        if prefix_text.rstrip().endswith("every"):
+            continue
+        if prefix_text.rstrip().endswith("and"):
+            continue
         qualifier = (match.group(1) or "").strip()
         weekday_name = match.group(2)
         resolved = _resolve_this_weekday(now, weekday_name) if qualifier == "this" else _resolve_next_weekday(now, weekday_name)
@@ -160,6 +250,8 @@ def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str]]:
 def _clean_title(text: str, strip_patterns: list[str]) -> str:
     title = text
     for pattern in strip_patterns:
+        if not pattern:
+            continue
         title = re.sub(pattern, " ", title, flags=re.IGNORECASE)
     title = re.sub(r"#\w+", " ", title, flags=re.IGNORECASE)
     title = re.sub(TIME_RE, " ", title)
@@ -178,14 +270,16 @@ def parse(text: str) -> dict[str, object]:
     text = (text or "").strip()[:MAX_LEN]
     tags = re.findall(r"#(\w+)", text)
     priority, priority_strip_patterns = _parse_priority(text)
+    rrule, recurrence_strip_patterns = _parse_recurrence(text)
     now = datetime.now(UTC)
     due_candidates, due_strip_patterns = _parse_due(text, now)
     due = due_candidates[0].isoformat().replace("+00:00", "Z") if due_candidates else None
-    title = _clean_title(text, priority_strip_patterns + due_strip_patterns)
+    title = _clean_title(text, priority_strip_patterns + due_strip_patterns + recurrence_strip_patterns)
     return {
         "title": title or text,
         "priority": int(priority),
         "tags": tags,
         "due_at": due,
+        "rrule": rrule,
         "estimated_minutes": None,
     }

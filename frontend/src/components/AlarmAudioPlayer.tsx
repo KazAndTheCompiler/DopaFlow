@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import { API_BASE_URL } from "../api/client";
 import { Skeleton } from "@ds/primitives/Skeleton";
 
 interface AlarmAudioPlayerProps {
@@ -9,24 +8,31 @@ interface AlarmAudioPlayerProps {
 }
 
 export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPlayerProps): JSX.Element | null {
-  const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!youtubeUrl) return;
     setLoading(true);
-    setError(null);
-    setStreamUrl(null);
-    fetch(`${API_BASE_URL}/alarms/resolve-url?youtube_url=${encodeURIComponent(youtubeUrl)}`, { method: "POST" })
-      .then(async (response) => ({ ok: response.ok, body: (await response.json()) as { stream_url?: string | null; error?: string | null } }))
-      .then(({ ok, body }) => {
-        if (!ok || !body.stream_url) throw new Error(body.error ?? "resolve_failed");
-        setStreamUrl(body.stream_url);
-      })
-      .catch((exc: unknown) => setError(exc instanceof Error ? exc.message : "resolve_failed"))
-      .finally(() => setLoading(false));
-  }, [youtubeUrl]);
+    setEmbedUrl(null);
+    try {
+      const parsed = new URL(youtubeUrl);
+      const videoId = parsed.hostname.includes("youtu.be")
+        ? parsed.pathname.slice(1)
+        : (parsed.searchParams.get("v") ?? "");
+      if (!videoId) {
+        setEmbedUrl(null);
+        setLoading(false);
+        return;
+      }
+      const autoplayParam = autoPlay ? "1" : "0";
+      setEmbedUrl(`https://www.youtube.com/embed/${videoId}?autoplay=${autoplayParam}&rel=0`);
+    } catch {
+      setEmbedUrl(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [youtubeUrl, autoPlay]);
 
   if (!youtubeUrl) return null;
   if (loading) {
@@ -47,8 +53,44 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
       </div>
     );
   }
-  if (error) return <div style={{ marginTop: "0.5rem", color: "var(--state-error)", fontSize: "var(--text-sm)" }}>{`Could not load audio: ${error}`}</div>;
-  return streamUrl ? <audio src={streamUrl} controls autoPlay={autoPlay} style={{ width: "100%", marginTop: "0.5rem" }} /> : null;
+  if (!embedUrl) {
+    return (
+      <div style={{ marginTop: "0.5rem", display: "grid", gap: "0.35rem" }}>
+        <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>
+          Could not embed this YouTube link directly.
+        </div>
+        <a
+          href={youtubeUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 600 }}
+        >
+          Open YouTube link
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginTop: "0.5rem", display: "grid", gap: "0.35rem" }}>
+      <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
+        <iframe
+          src={embedUrl}
+          title="Alarm audio"
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+        />
+      </div>
+      <a
+        href={youtubeUrl}
+        target="_blank"
+        rel="noreferrer"
+        style={{ color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 600 }}
+      >
+        Open in YouTube
+      </a>
+    </div>
+  );
 }
 
 export default AlarmAudioPlayer;

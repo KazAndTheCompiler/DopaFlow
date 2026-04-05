@@ -405,3 +405,66 @@ def test_calendar_sharing_routes_mount_under_calendar_prefix(client) -> None:
     response = client.get("/api/v2/calendar/sharing/tokens")
 
     assert response.status_code == 200
+
+
+def test_move_event_shifts_start_and_end(client) -> None:
+    event = create_event(client)
+    original_start = _iso(event["start_at"])
+    original_end = _iso(event["end_at"])
+
+    response = client.post(
+        f"/api/v2/calendar/events/{event['id']}/move",
+        json={"delta_minutes": 30, "auto_adjust": False},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["moved"] is True
+    moved = result["event"]
+    assert _iso(moved["start_at"]) == original_start.replace(minute=original_start.minute + 30)
+    assert _iso(moved["end_at"]) == original_end.replace(minute=original_end.minute + 30)
+
+
+def test_move_event_preserves_duration(client) -> None:
+    event = create_event(client)
+    original_duration_s = (
+        _iso(event["end_at"]) - _iso(event["start_at"])
+    ).total_seconds()
+
+    response = client.post(
+        f"/api/v2/calendar/events/{event['id']}/move",
+        json={"delta_minutes": -15, "auto_adjust": False},
+    )
+
+    assert response.status_code == 200
+    moved = response.json()["event"]
+    moved_duration_s = (_iso(moved["end_at"]) - _iso(moved["start_at"])).total_seconds()
+    assert moved_duration_s == original_duration_s
+
+
+def test_move_nonexistent_event_returns_not_moved(client) -> None:
+    response = client.post(
+        "/api/v2/calendar/events/evt_does_not_exist/move",
+        json={"delta_minutes": 60, "auto_adjust": False},
+    )
+
+    assert response.status_code in (200, 404)
+    if response.status_code == 200:
+        assert response.json()["moved"] is False
+
+
+def test_patch_event_updates_start_and_end(client) -> None:
+    event = create_event(client)
+
+    response = client.patch(
+        f"/api/v2/calendar/events/{event['id']}",
+        json={
+            "start_at": "2026-03-25T11:00:00+00:00",
+            "end_at": "2026-03-25T12:00:00+00:00",
+        },
+    )
+
+    assert response.status_code == 200
+    updated = response.json()
+    assert _iso(updated["start_at"]).hour == 11
+    assert _iso(updated["end_at"]).hour == 12

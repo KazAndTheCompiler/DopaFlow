@@ -71,6 +71,18 @@ async def create_card(payload: ReviewCardCreate, svc: ReviewService = Depends(_s
     return svc.create_card(payload)
 
 
+@router.patch("/cards/{card_id}", response_model=ReviewCardRead, dependencies=[Depends(require_scope("write:review"))])
+async def update_card(card_id: str, payload: dict[str, str], svc: ReviewService = Depends(_svc)) -> ReviewCardRead:
+    front = payload.get("front", "").strip()
+    back = payload.get("back", "").strip()
+    if not front:
+        raise HTTPException(status_code=422, detail="front is required")
+    try:
+        return svc.update_card(card_id, front, back)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+
 @router.post("/cards/{card_id}/suspend", response_model=CardSuspendResponse, dependencies=[Depends(require_scope("write:review"))])
 async def suspend_card(card_id: str, svc: ReviewService = Depends(_svc)) -> CardSuspendResponse:
     try:

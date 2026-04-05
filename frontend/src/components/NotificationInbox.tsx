@@ -51,6 +51,8 @@ export function NotificationInbox({
   onReadAll,
 }: NotificationInboxProps): JSX.Element {
   const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const unread = notifications.filter((notification) => !notification.read);
+  const recentRead = notifications.filter((notification) => notification.read).slice(0, 5);
 
   return (
     <>
@@ -96,11 +98,13 @@ export function NotificationInbox({
         }}
       >
         <div style={{ display: "grid", gap: "0.15rem", marginRight: "auto" }}>
-          <strong>Notifications</strong>
+          <strong>Inbox</strong>
           <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
             {notifications.length === 0
-              ? "Alerts, reminders, and system updates in one inbox."
-              : `${unreadCount} unread of ${notifications.length} total.`}
+              ? "Reminders, sync updates, and system alerts in one place."
+              : unreadCount > 0
+                ? `${unreadCount} item${unreadCount === 1 ? "" : "s"} still need attention.`
+                : `All caught up. ${notifications.length} item${notifications.length === 1 ? "" : "s"} reviewed.`}
           </span>
         </div>
         <button
@@ -140,63 +144,103 @@ export function NotificationInbox({
 
       <div style={{ overflowY: "auto", padding: "0.9rem", display: "grid", gap: "0.75rem" }}>
         {notifications.length === 0 ? (
-          <EmptyState icon="IN" title="Inbox clear" subtitle="Nothing needs your attention right now." />
+          <EmptyState icon="IN" title="Inbox clear" subtitle="Nothing needs action right now. New reminders and sync updates will land here." />
         ) : (
-          notifications.map((notification) => (
-            <button
-              key={notification.id}
-              onClick={() => onRead(notification.id)}
-              style={{
-                display: "grid",
-                gap: "0.45rem",
-                textAlign: "left",
-                padding: "0.95rem",
-                borderRadius: "16px",
-                border: "1px solid var(--border-subtle)",
-                background: notification.read
-                  ? "color-mix(in srgb, var(--surface) 94%, white 6%)"
-                  : "linear-gradient(150deg, color-mix(in srgb, var(--surface-2) 84%, white 16%), var(--surface-2))",
-                opacity: notification.read ? 0.76 : 1,
-                cursor: "pointer",
-                boxShadow: notification.read ? "none" : "var(--shadow-soft)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span
-                  aria-hidden="true"
-                  style={{
-                    minWidth: "44px",
-                    height: "24px",
-                    borderRadius: "999px",
-                    background: `${getLevelColor(notification.level)}16`,
-                    color: getLevelColor(notification.level),
-                    display: "grid",
-                    placeItems: "center",
-                    fontSize: "0.65rem",
-                    fontWeight: 800,
-                    flexShrink: 0,
-                  }}
-                >
-                  {(notification.level ?? "info").toUpperCase().slice(0, 4)}
+          <>
+            {unread.length > 0 && (
+              <section style={{ display: "grid", gap: "0.5rem" }}>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Needs attention
                 </span>
-                <strong style={{ fontWeight: notification.read ? 500 : 600 }}>
-                  {notification.title?.trim() || "Untitled notification"}
-                </strong>
-                <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-                  {relativeTime(notification.created_at)}
+                {unread.map((notification) => (
+                  <button
+                    key={notification.id}
+                    onClick={() => onRead(notification.id)}
+                    style={{
+                      display: "grid",
+                      gap: "0.45rem",
+                      textAlign: "left",
+                      padding: "0.95rem",
+                      borderRadius: "16px",
+                      border: "1px solid var(--border-subtle)",
+                      background: "linear-gradient(150deg, color-mix(in srgb, var(--surface-2) 84%, white 16%), var(--surface-2))",
+                      cursor: "pointer",
+                      boxShadow: "var(--shadow-soft)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          minWidth: "44px",
+                          height: "24px",
+                          borderRadius: "999px",
+                          background: `${getLevelColor(notification.level)}16`,
+                          color: getLevelColor(notification.level),
+                          display: "grid",
+                          placeItems: "center",
+                          fontSize: "0.65rem",
+                          fontWeight: 800,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {(notification.level ?? "info").toUpperCase().slice(0, 4)}
+                      </span>
+                      <strong>{notification.title?.trim() || "Untitled notification"}</strong>
+                      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+                        {relativeTime(notification.created_at)}
+                      </span>
+                    </div>
+                    {notification.body ? (
+                      <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
+                        {notification.body}
+                      </span>
+                    ) : notification.action_url ? (
+                      <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
+                        Action available for this alert.
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </section>
+            )}
+            {recentRead.length > 0 && (
+              <section style={{ display: "grid", gap: "0.5rem" }}>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Recently cleared
                 </span>
-              </div>
-              {notification.body ? (
-                <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
-                  {notification.body}
-                </span>
-              ) : notification.action_url ? (
-                <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
-                  Action available for this alert.
-                </span>
-              ) : null}
-            </button>
-          ))
+                {recentRead.map((notification) => (
+                  <button
+                    key={notification.id}
+                    onClick={() => onRead(notification.id)}
+                    style={{
+                      display: "grid",
+                      gap: "0.35rem",
+                      textAlign: "left",
+                      padding: "0.85rem",
+                      borderRadius: "14px",
+                      border: "1px solid var(--border-subtle)",
+                      background: "color-mix(in srgb, var(--surface) 94%, white 6%)",
+                      opacity: 0.78,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <strong style={{ fontWeight: 500 }}>{notification.title?.trim() || "Untitled notification"}</strong>
+                      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+                        {relativeTime(notification.created_at)}
+                      </span>
+                    </div>
+                    {notification.body ? (
+                      <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
+                        {notification.body}
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </section>
+            )}
+          </>
         )}
       </div>
     </aside>

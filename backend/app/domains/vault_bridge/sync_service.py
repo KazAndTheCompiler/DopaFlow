@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import hashlib
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from app.domains.vault_bridge.schemas import (
     TaskImportConfirmRequest,
     TaskImportPreview,
     VaultConfig,
+    VaultConflictPreview,
     VaultPullResult,
     VaultPushResult,
     VaultRollbackResult,
@@ -33,6 +35,21 @@ from app.domains.vault_bridge.writer import render_journal_note, write_journal_e
 
 def _hash(content: str) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
+
+
+def _diff_lines(snapshot_body: str | None, current_body: str | None) -> list[str]:
+    before = (snapshot_body or "").splitlines()
+    after = (current_body or "").splitlines()
+    return list(
+        difflib.unified_diff(
+            before,
+            after,
+            fromfile="dopaflow_snapshot",
+            tofile="vault_current",
+            lineterm="",
+            n=2,
+        )
+    )
 
 
 class VaultSyncService:
@@ -101,6 +118,7 @@ class VaultSyncService:
 
         for entry in entries:
             try:
+                rendered_content = render_journal_note(entry)
                 # Check for conflict before writing if the target file is unknown
                 # or has drifted since the last indexed sync.
                 rel_path = f"{config.daily_note_folder}/{entry.date}.md"
@@ -114,7 +132,7 @@ class VaultSyncService:
 
                 if abs_path.exists() and existing_record:
                     disk_hash = _hash(abs_path.read_text(encoding="utf-8"))
-                    current_app_hash = _hash(render_journal_note(entry))
+                    current_app_hash = _hash(rendered_content)
                     if disk_hash != existing_record.file_hash and current_app_hash != existing_record.file_hash:
                         self.index_repo.mark_conflict(rel_path)
                         conflicts += 1
@@ -128,7 +146,7 @@ class VaultSyncService:
                     file_path=file_path,
                     file_hash=content_hash,
                     direction="push",
-                    snapshot_body=previous,
+                    snapshot_body=previous if previous is not None else rendered_content,
                 )
                 pushed += 1
             except Exception as exc:
@@ -235,6 +253,30 @@ class VaultSyncService:
                 message=str(exc),
             )
 
+    def get_conflict_preview(self, record_id: int) -> VaultConflictPreview:
+        """Return the indexed snapshot and current vault file body for review."""
+        record = self.index_repo.get_record(record_id)
+        if record is None:
+            raise FileNotFoundError("vault record not found")
+        snapshot_body = self.index_repo.get_snapshot(record_id)
+
+        config = self.index_repo.get_config()
+        current_body: str | None = None
+        current_exists = False
+        if config.vault_path:
+            abs_path = Path(config.vault_path) / record.file_path
+            if abs_path.exists():
+                current_body = abs_path.read_text(encoding="utf-8")
+                current_exists = True
+
+        return VaultConflictPreview(
+            record=record,
+            snapshot_body=snapshot_body,
+            current_body=current_body,
+            current_exists=current_exists,
+            diff_lines=_diff_lines(snapshot_body, current_body),
+        )
+
     # ── task bridge ───────────────────────────────────────────────────────────
 
     def push_tasks(self) -> VaultPushResult:
@@ -307,7 +349,7 @@ class VaultSyncService:
                     file_path=file_path,
                     file_hash=content_hash,
                     direction="push",
-                    snapshot_body=previous,
+                    snapshot_body=previous if previous is not None else rendered_content,
                 )
                 pushed += 1
             except Exception as exc:

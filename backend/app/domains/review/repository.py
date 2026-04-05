@@ -100,6 +100,18 @@ class ReviewRepository:
             raise ValueError(f"Card not found: {card_id}")
         return _row_to_card(row)
 
+    def update_card(self, card_id: str, front: str, back: str) -> ReviewCardRead:
+        """Update the front and back text of an existing card."""
+
+        with tx(self.db_path) as conn:
+            result = conn.execute(
+                "UPDATE review_cards SET front = ?, back = ? WHERE id = ?",
+                (front.strip(), back.strip(), card_id),
+            )
+            if result.rowcount == 0:
+                raise ValueError(f"Card not found: {card_id}")
+        return self.get_card(card_id)
+
     def card_exists_by_front(self, deck_id: str, front: str) -> bool:
         """Return True if a card with this front text already exists in the deck."""
 

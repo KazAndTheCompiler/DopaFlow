@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.integrations.repository import IntegrationsRepository
-from app.domains.integrations.schemas import GmailConnectRequest, GmailImportResult, WebhookDispatch
+from app.domains.integrations.schemas import GmailConnectRequest, GmailImportResult, IntegrationsStatus, WebhookDispatch
 from app.domains.integrations.service import dispatch_once, snapshot_metrics
 from app.middleware.auth_scopes import require_scope
 
@@ -120,6 +120,11 @@ async def import_github_issues(
         created += 1
 
     return {"created": created, "skipped": skipped, "repo": repo}
+
+
+@router.get("/status", response_model=IntegrationsStatus, dependencies=[Depends(require_scope("read:integrations"))])
+async def integrations_status(repo: IntegrationsRepository = Depends(_repo)) -> IntegrationsStatus:
+    return repo.get_status()
 
 
 @router.post("/webhooks/outbox", response_model=dict, dependencies=[Depends(require_scope("write:integrations"))])

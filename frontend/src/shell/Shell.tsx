@@ -19,6 +19,7 @@ export interface ShellProps extends PropsWithChildren {
   focusModeEnabled: boolean;
   onToggleFocusMode: () => void;
   activeTimerLabel?: string | undefined;
+  gamificationLevel?: PlayerLevel | undefined;
   habitPips: number;
   streakCount: number;
   momentumScore?: number | undefined;
@@ -26,7 +27,6 @@ export interface ShellProps extends PropsWithChildren {
   alarmActive: boolean;
   syncStatus: "idle" | "syncing" | "error";
   skin: string;
-  gamificationLevel?: PlayerLevel | undefined;
   projects?: Project[];
   projectTaskCounts?: Record<string, number>;
   activeProjectId?: string | null;
@@ -46,6 +46,7 @@ export function Shell({
   focusModeEnabled,
   onToggleFocusMode,
   activeTimerLabel,
+  gamificationLevel,
   habitPips,
   streakCount,
   momentumScore,
@@ -53,7 +54,6 @@ export function Shell({
   alarmActive,
   syncStatus,
   skin,
-  gamificationLevel,
   projects,
   projectTaskCounts,
   activeProjectId,
@@ -128,6 +128,7 @@ export function Shell({
         focusModeEnabled={focusModeEnabled}
         onToggleFocusMode={onToggleFocusMode}
         activeTimerLabel={activeTimerLabel}
+        gamificationLevel={gamificationLevel}
       />
       <main
         style={{

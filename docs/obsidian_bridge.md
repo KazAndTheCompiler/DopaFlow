@@ -10,8 +10,8 @@ This bridge is designed to keep your notes readable in Obsidian while giving Dop
 - Push and pull journal daily notes
 - Push and pull DopaFlow-owned task collection files
 - Push a bounded daily task section into an existing daily note
-- Preview and import DopaFlow-owned vault task lines that are not yet in DopaFlow
-- Review vault conflicts and choose rollback or keep-vault resolution
+- Preview and import vault task lines from DopaFlow-owned collections and plain markdown task files in the configured task folder
+- Review vault conflicts, preview both sides, and choose rollback or keep-vault resolution
 
 ## Current folder layout
 
@@ -45,7 +45,7 @@ What that means:
 
 The current import flow is intentionally narrow:
 
-- it scans DopaFlow-owned task collection files only
+- it scans DopaFlow-owned task collection files and plain markdown task files in the configured task folder
 - it previews importable lines before creating anything
 - it writes new DopaFlow IDs back into the source file after import
 - repeated imports of the same source line are guarded by a stable source locator
@@ -62,6 +62,8 @@ When both the DopaFlow-side content and the indexed vault file have changed sinc
 
 Current user actions:
 
+- inspect a compact line-level diff summary
+- preview the current vault file against the last indexed DopaFlow snapshot
 - rollback to DopaFlow snapshot
 - keep vault version
 
@@ -78,6 +80,6 @@ Current user actions:
 
 - no live watch
 - no merge UI
-- no arbitrary vault task import
+- no arbitrary vault-wide task import outside the configured task folder
 - no attachment/media sync yet
 - no Obsidian plugin companion yet

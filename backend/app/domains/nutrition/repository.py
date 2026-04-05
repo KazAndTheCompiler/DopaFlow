@@ -22,6 +22,18 @@ logger = logging.getLogger(__name__)
 
 _VALID_MEALS = {"breakfast", "lunch", "dinner", "snack"}
 _GOAL_DEFAULTS = {"daily_kj": 9000, "protein_g": 120, "carbs_g": 250, "fat_g": 70}
+_PRESET_FOODS = [
+    {"id": "preset_water_glass", "name": "Water", "kj": 0, "unit": "glass", "protein_g": 0, "carbs_g": 0, "fat_g": 0, "meal_label": "snack"},
+    {"id": "preset_coffee_cup", "name": "Coffee", "kj": 8, "unit": "cup", "protein_g": 0.3, "carbs_g": 0, "fat_g": 0, "meal_label": "breakfast"},
+    {"id": "preset_tea_cup", "name": "Tea", "kj": 4, "unit": "cup", "protein_g": 0, "carbs_g": 0, "fat_g": 0, "meal_label": "breakfast"},
+    {"id": "preset_milk_100ml", "name": "Milk", "kj": 250, "unit": "100 ml", "protein_g": 3.4, "carbs_g": 4.8, "fat_g": 3.5, "meal_label": "breakfast"},
+    {"id": "preset_sugar_tsp", "name": "Sugar", "kj": 80, "unit": "tsp", "protein_g": 0, "carbs_g": 5, "fat_g": 0, "meal_label": "breakfast"},
+    {"id": "preset_bread_slice", "name": "Bread slice", "kj": 330, "unit": "slice", "protein_g": 3.2, "carbs_g": 14.2, "fat_g": 1.1, "meal_label": "lunch"},
+    {"id": "preset_butter_pat", "name": "Butter", "kj": 150, "unit": "pat", "protein_g": 0.1, "carbs_g": 0, "fat_g": 4.1, "meal_label": "lunch"},
+    {"id": "preset_cheese_slice", "name": "Cheese slice", "kj": 290, "unit": "slice", "protein_g": 5.2, "carbs_g": 0.2, "fat_g": 5.6, "meal_label": "lunch"},
+    {"id": "preset_ham_slice", "name": "Ham slice", "kj": 120, "unit": "slice", "protein_g": 3.7, "carbs_g": 0.3, "fat_g": 1.8, "meal_label": "lunch"},
+    {"id": "preset_basic_sandwich", "name": "Basic sandwich", "kj": 1150, "unit": "sandwich", "protein_g": 15.5, "carbs_g": 28, "fat_g": 12.6, "meal_label": "lunch"},
+]
 
 
 def _normalize_meal(label: str | None) -> str:
@@ -47,6 +59,36 @@ def _row_to_food(row: object) -> FoodItemRead:
 class NutritionRepository:
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
+
+    def _ensure_presets(self) -> None:
+        with tx(self.db_path) as conn:
+            for preset in _PRESET_FOODS:
+                conn.execute(
+                    """
+                    INSERT INTO nutrition_foods (
+                        id, name, kj, unit, protein_g, carbs_g, fat_g, meal_label, is_preset
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+                    ON CONFLICT(id) DO UPDATE SET
+                        name = excluded.name,
+                        kj = excluded.kj,
+                        unit = excluded.unit,
+                        protein_g = excluded.protein_g,
+                        carbs_g = excluded.carbs_g,
+                        fat_g = excluded.fat_g,
+                        meal_label = excluded.meal_label,
+                        is_preset = 1
+                    """,
+                    (
+                        preset["id"],
+                        preset["name"],
+                        preset["kj"],
+                        preset["unit"],
+                        preset["protein_g"],
+                        preset["carbs_g"],
+                        preset["fat_g"],
+                        _normalize_meal(str(preset["meal_label"])),
+                    ),
+                )
 
     # ── inline log entries ────────────────────────────────────────────────────
 
@@ -211,6 +253,7 @@ class NutritionRepository:
     # ── food library ──────────────────────────────────────────────────────────
 
     def list_foods(self) -> list[FoodLibraryItem]:
+        self._ensure_presets()
         with get_db(self.db_path) as conn:
             rows = conn.execute(
                 "SELECT * FROM nutrition_foods ORDER BY is_preset DESC, name ASC"
@@ -231,6 +274,7 @@ class NutritionRepository:
         ]
 
     def get_food(self, food_id: str) -> FoodLibraryItem | None:
+        self._ensure_presets()
         with get_db(self.db_path) as conn:
             row = conn.execute("SELECT * FROM nutrition_foods WHERE id = ?", (food_id,)).fetchone()
         if not row:

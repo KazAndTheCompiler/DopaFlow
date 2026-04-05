@@ -8,6 +8,7 @@ interface WeekViewProps {
   anchorDate?: Date;
   sourceColors?: Record<string, string>;
   sourceLabels?: Record<string, string>;
+  onEventClick?: (event: CalendarEvent) => void;
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -16,6 +17,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   personal: "var(--state-completed)",
   health: "var(--state-warn)",
   focus: "var(--accent)",
+  task: "var(--accent-tertiary, #f59e0b)",
 };
 
 function weekDates(anchor: Date): Date[] {
@@ -43,7 +45,7 @@ function eventSourceKey(event: CalendarEvent): string {
   return "local";
 }
 
-export function WeekView({ events, anchorDate, sourceColors = {}, sourceLabels = {} }: WeekViewProps): JSX.Element {
+export function WeekView({ events, anchorDate, sourceColors = {}, sourceLabels = {}, onEventClick }: WeekViewProps): JSX.Element {
   const anchor = anchorDate ?? new Date();
   const days = useMemo(() => weekDates(anchor), [anchor]);
 
@@ -132,48 +134,73 @@ export function WeekView({ events, anchorDate, sourceColors = {}, sourceLabels =
               }}
             >
               {dayEvents.length === 0 && <div style={{ height: "4px" }} />}
-              {dayEvents.map((event) => (
-                (() => {
-                  const sourceKey = eventSourceKey(event);
-                  const sourceColor = sourceColors[sourceKey] ?? eventColor(event);
-                  const sourceLabel = sourceLabels[sourceKey] ?? "Local";
+              {dayEvents.slice(0, 4).map((event) => {
+                const sourceKey = eventSourceKey(event);
+                const sourceColor = sourceColors[sourceKey] ?? eventColor(event);
+                const sourceLabel = sourceLabels[sourceKey] ?? "Local";
 
-                  return (
-                    <div
-                      key={event.id}
-                      title={`${event.title} · ${sourceLabel} · ${new Date(event.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-                      style={{
-                        marginBottom: "6px",
-                        padding: "0.38rem 0.42rem 0.4rem",
-                        borderRadius: "10px",
-                        background: `linear-gradient(160deg, color-mix(in srgb, ${sourceColor} 18%, var(--surface)), color-mix(in srgb, ${sourceColor} 11%, var(--surface)))`,
-                        border: `1px solid color-mix(in srgb, ${sourceColor} 34%, var(--border-subtle))`,
-                        color: "var(--text-primary)",
-                        fontSize: "11px",
-                        overflow: "hidden",
-                        cursor: "default",
-                        opacity: event.provider_readonly ? 0.88 : 1,
-                        boxShadow: "var(--shadow-soft)",
-                        display: "grid",
-                        gap: "0.15rem",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", minWidth: 0 }}>
-                        <span style={{ width: "7px", height: "7px", borderRadius: "999px", background: sourceColor, flexShrink: 0 }} />
-                        <span style={{ fontSize: "10px", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {sourceLabel}
-                        </span>
-                      </div>
-                      <span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {event.title}
+                return (
+                  <button
+                    key={event.id}
+                    type="button"
+                    onClick={() => onEventClick?.(event)}
+                    title={`${event.title} · ${sourceLabel} · ${new Date(event.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${event.provider_readonly ? " · read-only" : ""}`}
+                    style={{
+                      marginBottom: "6px",
+                      padding: "0.38rem 0.42rem 0.4rem",
+                      borderRadius: "10px",
+                      background: `linear-gradient(160deg, color-mix(in srgb, ${sourceColor} 18%, var(--surface)), color-mix(in srgb, ${sourceColor} 11%, var(--surface)))`,
+                      border: `1px solid color-mix(in srgb, ${sourceColor} 34%, var(--border-subtle))`,
+                      color: "var(--text-primary)",
+                      fontSize: "11px",
+                      overflow: "hidden",
+                      cursor: "pointer",
+                      opacity: event.provider_readonly ? 0.88 : 1,
+                      boxShadow: "var(--shadow-soft)",
+                      display: "grid",
+                      gap: "0.15rem",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.3rem", minWidth: 0 }}>
+                      <span style={{ width: "7px", height: "7px", borderRadius: "999px", background: sourceColor, flexShrink: 0 }} />
+                      <span style={{ fontSize: "10px", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                        {sourceLabel}
                       </span>
-                      <span style={{ color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {event.all_day ? "All day" : `${new Date(event.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${new Date(event.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-                      </span>
+                      {event.provider_readonly && (
+                        <span style={{ fontSize: "9px", opacity: 0.6, flexShrink: 0 }}>🔒</span>
+                      )}
                     </div>
-                  );
-                })()
-              ))}
+                    <span style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {event.title}
+                    </span>
+                    <span style={{ color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {event.all_day ? "All day" : `${new Date(event.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${new Date(event.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                    </span>
+                  </button>
+                );
+              })}
+              {dayEvents.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => onEventClick?.(dayEvents[4])}
+                  style={{
+                    padding: "0.25rem 0.4rem",
+                    borderRadius: "8px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--surface-2)",
+                    color: "var(--text-secondary)",
+                    fontSize: "10px",
+                    cursor: "pointer",
+                    width: "100%",
+                    textAlign: "left",
+                    fontWeight: 600,
+                  }}
+                >
+                  + {dayEvents.length - 4} more
+                </button>
+              )}
             </div>
           );
         })}

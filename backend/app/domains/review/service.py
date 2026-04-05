@@ -95,6 +95,10 @@ class ReviewService:
     def create_card_for_deck(self, deck_id: str, front: str, back: str, tags: list[str], source: str = "manual") -> ReviewCardRead:
         return self.repository.create_card_full(deck_id, front, back, tags, source)
 
+    def update_card(self, card_id: str, front: str, back: str) -> ReviewCardRead:
+        """Edit the front and back text of an existing card."""
+        return self.repository.update_card(card_id, front, back)
+
     def get_due_cards(self, deck_id: str, limit: int = 20) -> list[ReviewCardRead]:
         return self.repository.get_due_cards(deck_id, limit)
 

@@ -25,3 +25,13 @@ class WebhookDispatch(BaseModel):
     event_type: str
     payload: dict[str, object]
 
+
+class IntegrationsStatus(BaseModel):
+    """Overview-friendly integration status snapshot."""
+
+    gmail_status: str
+    gmail_connected: bool = False
+    webhooks_enabled: bool = False
+    webhook_pending: int = 0
+    webhook_retry_wait: int = 0
+    webhook_sent: int = 0
