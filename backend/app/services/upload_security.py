@@ -48,8 +48,12 @@ def validate_upload(
     if allowed_suffixes and suffix not in allowed_suffixes:
         raise HTTPException(status_code=400, detail=f"Invalid file type: {suffix}")
 
-    if allowed_content_types and file.content_type not in allowed_content_types:
-        raise HTTPException(status_code=400, detail=f"Invalid content-type: {file.content_type}")
+    if allowed_content_types:
+        # Strip codec parameters (e.g. "audio/webm;codecs=opus" → "audio/webm")
+        ct_base = (file.content_type or "").split(";")[0].strip().lower()
+        ct_full = (file.content_type or "").strip().lower()
+        if ct_full not in allowed_content_types and ct_base not in allowed_content_types:
+            raise HTTPException(status_code=400, detail=f"Invalid content-type: {file.content_type}")
 
     if kind in MAGIC_BYTES and not content.startswith(MAGIC_BYTES[kind]):
         raise HTTPException(status_code=400, detail=f"File does not match {kind} format")
