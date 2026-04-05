@@ -41,6 +41,7 @@ from app.domains.review.router import router as review_router
 from app.domains.search.router import router as search_router
 from app.domains.tasks.router import router as tasks_router
 from app.domains.projects.router import router as projects_router
+from app.domains.vault_bridge.router import router as vault_router
 from app.middleware.auth import AuthMiddleware
 from app.middleware.cors import build_cors_options
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -127,6 +128,7 @@ def create_app() -> FastAPI:
     app.include_router(alarm_audio_router, prefix=API_PREFIX)
     app.include_router(meta_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
+    app.include_router(vault_router, prefix=API_PREFIX)
 
     @app.get("/health", tags=["system"])
     async def healthcheck() -> dict[str, str]:

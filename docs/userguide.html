@@ -474,7 +474,7 @@ npm run dev</code></pre>
                 <tr>
                     <td><code>VITE_API_URL</code></td>
                     <td>Frontend API base URL</td>
-                    <td>http://127.0.0.1:8000/api/v2</td>
+                    <td>Current origin (<code>window.location.origin</code>)</td>
                 </tr>
             </table>
         </section>
@@ -545,7 +545,22 @@ npm run dev</code></pre>
                 <li><strong>Backups:</strong> Local markdown backup and export controls</li>
             </ul>
 
-            <h3>6. Calendar Integration</h3>
+            <h3>6. Obsidian Vault Bridge</h3>
+            <p>Local-first Markdown vault interoperability:</p>
+            <ul>
+                <li><strong>Vault Settings:</strong> Configure a local Obsidian vault path in Settings</li>
+                <li><strong>Journal Push/Pull:</strong> Sync Markdown daily notes in <code>Daily/YYYY-MM-DD.md</code></li>
+                <li><strong>Task Collections:</strong> Sync checkbox task files in <code>Tasks/Inbox.md</code> and per-project task files</li>
+                <li><strong>Task Import:</strong> Preview and import DopaFlow-owned vault task lines that are not yet in DopaFlow</li>
+                <li><strong>Daily Task Section:</strong> Push a bounded task section into an existing daily note without overwriting the rest of the note</li>
+                <li><strong>Conflict Tracking:</strong> Review indexed conflicts, rollback to DopaFlow, or keep the vault version</li>
+            </ul>
+
+            <div class="note">
+                <strong>Compatibility rules:</strong> The bridge preserves plain Markdown, Obsidian checkbox syntax, wikilinks, and user-authored content outside DopaFlow-managed sections. Sync is manual-first; there is no live watch or merge UI yet.
+            </div>
+
+            <h3>7. Calendar Integration</h3>
             <p>Google Calendar synchronization:</p>
             <ul>
                 <li><strong>OAuth Flow:</strong> Secure Google authentication</li>
@@ -555,7 +570,7 @@ npm run dev</code></pre>
                 <li><strong>Category Tags:</strong> Organize events by type</li>
             </ul>
 
-            <h3>7. Alarms & Reminders</h3>
+            <h3>8. Alarms & Reminders</h3>
             <p>Never miss important moments:</p>
             <ul>
                 <li><strong>Flexible Scheduling:</strong> One-time or recurring alarms</li>
@@ -565,7 +580,7 @@ npm run dev</code></pre>
                 <li><strong>Desktop Notifications:</strong> System-level alerts</li>
             </ul>
 
-            <h3>8. Gamification</h3>
+            <h3>9. Gamification</h3>
             <p>Motivation through game mechanics:</p>
             <ul>
                 <li><strong>XP System:</strong> Earn experience for completions</li>
@@ -574,7 +589,7 @@ npm run dev</code></pre>
                 <li><strong>Momentum Score:</strong> Track daily productivity flow</li>
             </ul>
 
-            <h3>9. Packy Memory Support</h3>
+            <h3>10. Packy Memory Support</h3>
             <p>Contextual memory and guidance system:</p>
             <ul>
                 <li><strong>Ask Mode:</strong> Get contextual suggestions from your memory</li>

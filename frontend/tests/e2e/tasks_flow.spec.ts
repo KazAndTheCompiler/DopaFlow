@@ -122,6 +122,23 @@ test.describe("Tasks flow regression", () => {
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
+    await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+      config: {
+        vault_enabled: false,
+        vault_path: "",
+        daily_note_folder: "Daily",
+        tasks_folder: "Tasks",
+        review_folder: "Review",
+        projects_folder: "Projects",
+        attachments_folder: "Attachments",
+      },
+      vault_reachable: false,
+      total_indexed: 0,
+      conflicts: 0,
+      last_push_at: null,
+      last_pull_at: null,
+    })));
+    await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([])));
   });
 
   // ── Surface rendering ──────────────────────────────────────────────────────

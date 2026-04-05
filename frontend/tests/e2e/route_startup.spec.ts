@@ -37,6 +37,24 @@ test.describe("Route startup regression", () => {
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
+    await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+      config: {
+        vault_enabled: false,
+        vault_path: "",
+        daily_note_folder: "Daily",
+        tasks_folder: "Tasks",
+        review_folder: "Review",
+        projects_folder: "Projects",
+        attachments_folder: "Attachments",
+      },
+      vault_reachable: false,
+      total_indexed: 0,
+      conflicts: 0,
+      last_push_at: null,
+      last_pull_at: null,
+    })));
+    await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/motivation/**`, (route) => route.fulfill(json({ quote: "Stay sharp." })));
   });
 
   test("default route lands on the today surface with runway guidance", async ({ page }) => {
@@ -144,6 +162,24 @@ test.describe("Command palette navigation", () => {
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
+    await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+      config: {
+        vault_enabled: false,
+        vault_path: "",
+        daily_note_folder: "Daily",
+        tasks_folder: "Tasks",
+        review_folder: "Review",
+        projects_folder: "Projects",
+        attachments_folder: "Attachments",
+      },
+      vault_reachable: false,
+      total_indexed: 0,
+      conflicts: 0,
+      last_push_at: null,
+      last_pull_at: null,
+    })));
+    await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/motivation/**`, (route) => route.fulfill(json({ quote: "Stay sharp." })));
   });
 
   test("ctrl/cmd+k opens the command palette and can navigate to focus", async ({ page, browserName }) => {
@@ -204,6 +240,24 @@ test.describe("Console error detection", () => {
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
+    await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+      config: {
+        vault_enabled: false,
+        vault_path: "",
+        daily_note_folder: "Daily",
+        tasks_folder: "Tasks",
+        review_folder: "Review",
+        projects_folder: "Projects",
+        attachments_folder: "Attachments",
+      },
+      vault_reachable: false,
+      total_indexed: 0,
+      conflicts: 0,
+      last_push_at: null,
+      last_pull_at: null,
+    })));
+    await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/motivation/**`, (route) => route.fulfill(json({ quote: "Stay sharp." })));
 
     await page.goto("/");
     // Wait for initial data fetches to settle
@@ -256,6 +310,24 @@ test.describe("Console error detection", () => {
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
+    await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+      config: {
+        vault_enabled: false,
+        vault_path: "",
+        daily_note_folder: "Daily",
+        tasks_folder: "Tasks",
+        review_folder: "Review",
+        projects_folder: "Projects",
+        attachments_folder: "Attachments",
+      },
+      vault_reachable: false,
+      total_indexed: 0,
+      conflicts: 0,
+      last_push_at: null,
+      last_pull_at: null,
+    })));
+    await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/motivation/**`, (route) => route.fulfill(json({ quote: "Stay sharp." })));
 
     const routes = ["today", "tasks", "habits", "focus", "review", "journal", "calendar", "alarms", "nutrition", "digest", "player", "overview", "insights", "goals", "settings"];
     for (const route of routes) {

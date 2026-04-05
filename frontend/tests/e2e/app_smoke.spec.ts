@@ -98,6 +98,57 @@ test.beforeEach(async ({ page }) => {
   await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
   await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
   await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
+  await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+    config: {
+      vault_enabled: false,
+      vault_path: "",
+      daily_note_folder: "Daily",
+      tasks_folder: "Tasks",
+      review_folder: "Review",
+      projects_folder: "Projects",
+      attachments_folder: "Attachments",
+    },
+    vault_reachable: false,
+    total_indexed: 0,
+    conflicts: 0,
+    last_push_at: null,
+    last_pull_at: null,
+  })));
+  await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([])));
+  await page.route(`${apiBase}/vault/tasks/import-preview**`, (route) => route.fulfill(json({
+    importable: [
+      {
+        title: "Import from vault",
+        done: false,
+        due_str: "2026-04-05",
+        priority: 2,
+        tags: ["vault"],
+        file_path: "Tasks/Inbox.md",
+        line_text: "- [ ] Import from vault",
+        line_number: 3,
+        project_id: null,
+        project_name: null,
+        status: "importable",
+        known_task_id: null,
+      },
+    ],
+    known: [],
+    skipped: 0,
+    total_scanned: 1,
+  })));
+  await page.route(`${apiBase}/vault/tasks/import-confirm**`, (route) => route.fulfill(json({
+    imported: 1,
+    updated: 0,
+    conflicts: 0,
+    errors: [],
+  })));
+  await page.route(`${apiBase}/vault/push/daily-tasks/**`, (route) => route.fulfill(json({
+    pushed: 1,
+    skipped: 0,
+    conflicts: 0,
+    errors: [],
+  })));
+  await page.route(`${apiBase}/motivation/**`, (route) => route.fulfill(json({ quote: "Stay sharp." })));
 });
 
 test("shell renders and inbox opens", async ({ page }) => {
@@ -119,6 +170,49 @@ test("calendar and settings surfaces render updated UI", async ({ page }) => {
   await page.locator('nav button:has-text("Settings")').first().click();
   await expect(page.getByText("Calendar Sharing", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Cross-install sharing")).toBeVisible({ timeout: 15_000 });
+});
+
+test("vault settings surface exposes daily section and import actions when bridge is enabled", async ({ page }) => {
+  await page.route(`${apiBase}/vault/status**`, (route) => route.fulfill(json({
+    config: {
+      vault_enabled: true,
+      vault_path: "/Users/test/ObsidianVault",
+      daily_note_folder: "Daily",
+      tasks_folder: "Tasks",
+      review_folder: "Review",
+      projects_folder: "Projects",
+      attachments_folder: "Attachments",
+    },
+    vault_reachable: true,
+    total_indexed: 4,
+    conflicts: 1,
+    last_push_at: "2026-04-05T10:00:00",
+    last_pull_at: "2026-04-05T09:00:00",
+  })));
+  await page.route(`${apiBase}/vault/conflicts**`, (route) => route.fulfill(json([
+    {
+      id: 1,
+      entity_type: "task",
+      entity_id: "inbox",
+      file_path: "Tasks/Inbox.md",
+      file_hash: "abc",
+      last_synced_at: "2026-04-05T10:00:00",
+      last_direction: "push",
+      sync_status: "conflict",
+      created_at: "2026-04-05T08:00:00",
+    },
+  ])));
+
+  await page.goto("/#/settings");
+  await expect(page.getByText("Daily task section", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Import tasks from vault", { exact: true })).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Scan" }).click();
+  await expect(page.getByText("Import from vault")).toBeVisible({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Push section" }).click();
+  await expect(page.getByText("Task section pushed to")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("task · inbox")).toBeVisible({ timeout: 15_000 });
 });
 
 test("tasks surface tolerates a task with missing title field", async ({ page }) => {
