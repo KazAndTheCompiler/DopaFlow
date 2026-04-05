@@ -6,8 +6,47 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ## Unreleased
 
-**Date:** 2026-04-04
-**Status:** Working-tree verification and docs realignment
+**Date:** 2026-04-05
+**Status:** Obsidian bridge v1-v3 integration, hardening, and docs realignment
+
+### Obsidian bridge
+
+- Added a real local-first Obsidian vault bridge:
+  - vault config/status/index/conflicts/rollback
+  - journal push/pull against Markdown daily notes
+  - task collection push/pull against Obsidian-compatible checkbox files
+  - daily task section push into existing daily notes using bounded markers
+  - task import preview/import from DopaFlow-owned vault task files
+- Added the backend domain and migration:
+  - `backend/app/domains/vault_bridge/`
+  - `backend/migrations/028_vault_bridge.sql`
+- Added the frontend settings UI and API wiring:
+  - `frontend/src/api/vault.ts`
+  - `frontend/src/surfaces/settings/VaultSettings.tsx`
+  - `frontend/src/surfaces/settings/index.tsx`
+  - `shared/types/index.ts`
+- Hardened the task bridge after integration review:
+  - task push now exports completed tasks instead of dropping them
+  - task push now marks conflicts instead of blindly overwriting drifted indexed task files
+  - task routes now use task scopes instead of journal scopes
+  - import idempotency now uses a stable source locator instead of naive repeated create calls
+  - vault task ID write-back now surfaces failure instead of claiming false success
+  - duplicate task-line targeting now uses absolute file line numbers
+
+### Obsidian verification
+
+- Backend vault bridge suite now covers:
+  - frontmatter
+  - file naming
+  - section manager behavior
+  - task writer/reader round-trip
+  - task import flow
+  - sync-service task/journal/daily-note paths
+- Current verified counts:
+  - backend vault bridge tests: `115 passed`
+  - frontend Playwright suite: `35 passed`
+- Installed local release refreshed and verified at:
+  - `http://127.0.0.1:8000`
 
 ### E2E hardening
 
@@ -57,7 +96,8 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 - Current verification entrypoint:
   - `bash LLM_work_folder/run_frontend_verification.sh`
-- Re-run required after the latest working-tree edits to confirm the exact passing test count for this revision.
+- Current frontend verification result:
+  - `35 passed`
 
 ## Version 2.0.7
 

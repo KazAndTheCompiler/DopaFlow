@@ -230,3 +230,82 @@ export interface PeerFeedSyncResult {
   status: string;
   detail?: string | null;
 }
+
+export interface VaultConfig {
+  vault_enabled: boolean;
+  vault_path: string;
+  daily_note_folder: string;
+  tasks_folder: string;
+  review_folder: string;
+  projects_folder: string;
+  attachments_folder: string;
+}
+
+export type VaultConfigUpdate = Partial<VaultConfig>;
+
+export interface VaultFileRecord {
+  id: number;
+  entity_type: string;
+  entity_id: string;
+  file_path: string;
+  file_hash: string | null;
+  last_synced_at: string | null;
+  last_direction: string | null;
+  sync_status: "idle" | "conflict" | "error";
+  created_at: string;
+}
+
+export interface VaultPushResult {
+  pushed: number;
+  skipped: number;
+  conflicts: number;
+  errors: string[];
+}
+
+export interface VaultPullResult {
+  imported: number;
+  updated: number;
+  conflicts: number;
+  errors: string[];
+}
+
+export interface VaultRollbackResult {
+  rolled_back: boolean;
+  file_path: string;
+  message: string;
+}
+
+export interface VaultStatus {
+  config: VaultConfig;
+  vault_reachable: boolean;
+  total_indexed: number;
+  conflicts: number;
+  last_push_at: string | null;
+  last_pull_at: string | null;
+}
+
+export interface TaskImportCandidate {
+  title: string;
+  done: boolean;
+  due_str: string | null;
+  priority: number;
+  tags: string[];
+  file_path: string;
+  line_text: string;
+  line_number: number | null;
+  project_id: string | null;
+  project_name: string | null;
+  status: "importable" | "known" | "skipped";
+  known_task_id: string | null;
+}
+
+export interface TaskImportPreview {
+  importable: TaskImportCandidate[];
+  known: TaskImportCandidate[];
+  skipped: number;
+  total_scanned: number;
+}
+
+export interface TaskImportConfirmRequest {
+  candidates: TaskImportCandidate[];
+}

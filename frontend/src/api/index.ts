@@ -13,3 +13,4 @@ export * from "./notifications";
 export * from "./gamification";
 export * from "./sharing";
 export * from "./commands";
+export * from "./vault";

@@ -12,6 +12,7 @@ import SkinPicker from "./SkinPicker";
 import LayoutPicker from "./LayoutPicker";
 import TursoConfig from "./TursoConfig";
 import WebhookPanel from "./WebhookPanel";
+import VaultSettings from "./VaultSettings";
 
 export default function SettingsView(): JSX.Element {
   const app = useContext(AppDataContext);
@@ -61,6 +62,15 @@ export default function SettingsView(): JSX.Element {
         </div>
         <SkinPicker current={app.skin.skin} skins={app.skin.skins} loading={app.skin.loading} onPick={app.skin.setSkin} />
         <LayoutPicker current={app.layout.layout} onPick={app.layout.setLayout} />
+      </section>
+      <section style={groupStyle}>
+        <div style={groupHeaderStyle}>
+          <span style={sectionTitleStyle}>Obsidian Vault</span>
+          <span style={groupDescriptionStyle}>
+            Connect a local Obsidian vault. DopaFlow writes daily journal notes as plain Markdown so your notes stay yours and work inside Obsidian.
+          </span>
+        </div>
+        <VaultSettings />
       </section>
       <section style={groupStyle}>
         <div style={groupHeaderStyle}>

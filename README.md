@@ -62,6 +62,39 @@ Optional Google Calendar sync uses OAuth. Your credentials are not baked into th
 
 ---
 
+## Obsidian bridge
+
+DopaFlow now has a local-first Obsidian vault bridge in the working tree and installed web release.
+
+What it supports today:
+
+- vault path/configuration in Settings
+- journal push/pull using Markdown daily notes
+- task collection push/pull using Obsidian-compatible checkbox syntax
+- daily task section push into an existing daily note using bounded markers
+- task import preview/import from DopaFlow-owned vault task files
+- rollback and conflict tracking for indexed vault files
+
+Current shape of the bridge:
+
+- journal notes live in `Daily/YYYY-MM-DD.md`
+- tasks live in `Tasks/Inbox.md` plus one `Tasks/<project>.md` file per project
+- DopaFlow-managed task identity is stored in hidden HTML comments like `<!--df:tsk_123-->`
+- daily-note task injection only touches the managed `dopaflow:tasks` section, not the rest of your note
+
+What it does not do yet:
+
+- no live filesystem watch
+- no cloud sync
+- no merge UI
+- no import from arbitrary non-DopaFlow Obsidian task files yet
+
+The intended product direction is still the same: DopaFlow as the action layer, Obsidian as the durable plain-text knowledge layer.
+
+See `docs/obsidian_bridge.md` for the current workflow and compatibility rules.
+
+---
+
 ## Tech stack
 
 - **Frontend:** React 18 + TypeScript + Vite + PWA
@@ -157,6 +190,7 @@ Current active direction:
 ## Known gaps (v2 beta)
 
 - Skeleton loaders are now in place on the core loading-heavy surfaces (`today`, `overview`, `goals`, task/habit/review/journal lists), but the rest of the app still needs a consistency pass
+- Obsidian bridge is now real but still manual-first: no live watch, no merge UI, and no import from arbitrary non-DopaFlow task files yet
 - Digest email delivery is not wired
 - Drag-to-reschedule in calendar time blocks is not implemented
 - Mobile swipe-to-complete on task rows is not implemented
