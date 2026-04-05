@@ -1,4 +1,9 @@
-"""Parse and execute command text with full date/priority extraction."""
+"""
+Parse and execute command text with full date/priority extraction.
+
+Uses the unified NLP engine for intent classification.  No prefix required.
+Supports fuzzy task matching, undo, and follow-up suggestions.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +12,11 @@ import re
 from datetime import UTC, datetime, timedelta
 
 from app.domains.commands.repository import CommandRepository
-from app.services import quick_add
+from app.services import quick_add, nlp
+
+# ---------------------------------------------------------------------------
+# Legacy alias detection (backward compat)
+# ---------------------------------------------------------------------------
 
 COMMAND_WORD_ALIASES: tuple[tuple[str, str], ...] = (
     ("add task", "task"),
@@ -20,15 +29,18 @@ COMMAND_WORD_ALIASES: tuple[tuple[str, str], ...] = (
     ("event", "calendar"),
     ("calendar", "calendar"),
 )
-TASK_PREFIX_RE = re.compile(
-    r"^\s*(?:add task|create task|new task|todo|to do|i need to|add to list|remind me)\s+",
-    re.IGNORECASE,
-)
+
 WEEKDAY_TO_INDEX = {name: index for index, name in enumerate(calendar.day_name)}
+
 TASK_PRIORITY_PATTERNS: list[tuple[re.Pattern[str], int]] = [
     (re.compile(r"\b(?:high priority|urgent|critical|high)\b", re.IGNORECASE), 1),
     (re.compile(r"\b(?:low priority|low)\b", re.IGNORECASE), 3),
 ]
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def _clean_task_title(text: str) -> str:
@@ -152,6 +164,11 @@ def _extract_calendar_datetimes(text: str) -> tuple[str | None, str | None, str]
     return start_dt.isoformat().replace("+00:00", "Z") if start_dt else None, end_dt.isoformat().replace("+00:00", "Z") if end_dt else None, cleaned
 
 
+# ---------------------------------------------------------------------------
+# Legacy parsers (kept for backward compat with detect_command_word path)
+# ---------------------------------------------------------------------------
+
+
 def _parse_journal_command(text: str) -> dict[str, object]:
     body = _strip_command_word(text, ("journal entry", "log journal", "journal"))
     body = body or "Untitled journal entry"
@@ -194,60 +211,112 @@ def _parse_task_command(text: str) -> dict[str, object]:
     }
 
 
-def parse_intent(text: str) -> dict[str, object]:
-    """Parse command text into intent + extracted fields."""
-    text_lower = text.lower().strip()
-
-    command_word = detect_command_word(text)
-    if command_word == "task":
-        return _parse_task_command(text)
-    if command_word == "journal":
-        return _parse_journal_command(text)
-    if command_word == "calendar":
-        return _parse_calendar_command(text)
-
-    if any(
-        phrase in text_lower
-        for phrase in ["add task", "create task", "new task", "todo", "to do", "remind me", "i need to", "add to list"]
-    ):
-        source = TASK_PREFIX_RE.sub("", text).strip() or text.strip()
-        due_at, source = _extract_due_date(source)
-        priority, source = _extract_priority(source)
-        title = _clean_task_title(source)
-        return {
-            "intent": "task.create",
-            "confidence": 0.95,
-            "extracted": {"title": title, "due_at": due_at, "priority": priority},
-        }
-
-    if any(phrase in text_lower for phrase in ["complete task", "done task", "mark done", "finish task"]):
-        query = re.sub(
-            r"\b(?:complete task|done task|mark done|finish task)\b", "", text, flags=re.IGNORECASE
-        ).strip()
-        return {"intent": "task.complete", "confidence": 0.9, "extracted": {"title": query}}
-
-    if any(phrase in text_lower for phrase in ["focus", "pomodoro", "timer", "start focus"]):
-        match = re.search(r"\b(\d+)\s*(?:min(?:utes?)?|m)\b", text_lower)
-        duration = int(match.group(1)) if match else 25
-        return {"intent": "focus.start", "confidence": 0.9, "extracted": {"duration_minutes": duration}}
-
-    if any(phrase in text_lower for phrase in ["set alarm", "create alarm", "new alarm", "alarm at"]):
-        match = re.search(r"\b(\d{1,2}:\d{2}(?:\s*[ap]m)?)\b", text_lower)
-        alarm_time = match.group(1) if match else None
-        return {"intent": "alarm.create", "confidence": 0.88, "extracted": {"alarm_time": alarm_time, "title": text}}
-
-    if any(phrase in text_lower for phrase in ["list habits", "show habits", "my habits", "habits"]):
-        return {"intent": "habit.list", "confidence": 0.95, "extracted": {}}
-
-    return {"intent": "unknown", "confidence": 0.0, "extracted": {}}
+# ---------------------------------------------------------------------------
+# Main public API — uses NLP engine
+# ---------------------------------------------------------------------------
 
 
 def detect_command_word(text: str) -> str | None:
+    """Legacy: detect explicit command word prefix."""
     lowered = text.lower().strip()
     for prefix, canonical in COMMAND_WORD_ALIASES:
         if lowered == prefix or lowered.startswith(f"{prefix} "):
             return canonical
     return None
+
+
+def parse_intent(text: str) -> dict[str, object]:
+    """
+    Parse command text into intent + extracted fields.
+
+    Uses the NLP engine first.  Falls back to legacy prefix detection.
+    """
+    result = nlp.classify(text)
+    extracted = dict(result.entities)
+
+    # Map NLP intents to legacy extracted field names
+    if result.intent == "journal.create":
+        extracted["markdown_body"] = extracted.get("body", text)
+        extracted.setdefault("emoji", None)
+        extracted.setdefault("tags", [])
+
+    return {
+        "intent": result.intent,
+        "confidence": result.confidence,
+        "extracted": extracted,
+        "follow_ups": result.follow_ups,
+        "tts_response": result.tts_response,
+    }
+
+
+# ---------------------------------------------------------------------------
+# CommandService class
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Command chaining: "X and Y" → execute both
+# ---------------------------------------------------------------------------
+
+ACTIONABLE_INTENTS = frozenset({
+    "task.create", "task.complete", "task.list",
+    "journal.create", "calendar.create",
+    "focus.start", "alarm.create",
+    "habit.checkin", "habit.list",
+    "review.start", "search", "nutrition.log",
+})
+
+
+def _try_chain_execute(db_path: str, text: str, confirm: bool, source: str) -> dict[str, object] | None:
+    """
+    Try splitting text on " and " and executing each part separately.
+    Returns compound result if 2+ actionable parts found, None otherwise.
+    """
+    # Don't chain if text is short (avoid false positives like "milk and bread")
+    if len(text.split()) < 4:
+        return None
+
+    # Split on " and " — keep it case-insensitive
+    parts = re.split(r"\s+and\s+", text, flags=re.IGNORECASE)
+    if len(parts) < 2:
+        return None
+
+    # Classify each part to see if they're separate commands
+    classified = []
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        result = nlp.classify(part)
+        if result.intent in ACTIONABLE_INTENTS:
+            classified.append((part, result.intent, result))
+
+    # Only chain if 2+ parts have actionable intents
+    if len(classified) < 2:
+        return None
+
+    # Execute each part sequentially
+    results = []
+    replies = []
+    for part_text, _part_intent, _part_result in classified:
+        # Recursively execute each part (without chaining to avoid infinite loop)
+        inner = CommandService._execute_single(db_path, part_text, confirm, source)
+        results.append(inner)
+        if inner.get("reply"):
+            replies.append(str(inner["reply"]))
+
+    # Combine replies
+    combined_reply = " ".join(replies) if replies else "All done."
+    successful = sum(1 for r in results if r.get("status") == "executed")
+
+    return {
+        "text": text,
+        "intent": "compound",
+        "status": "executed" if successful == len(results) else "partial",
+        "results": results,
+        "reply": combined_reply,
+        "follow_ups": ["Anything else?", "Check your tasks?"],
+    }
 
 
 class CommandService:
@@ -266,64 +335,178 @@ class CommandService:
         preview: dict[str, object] = {
             "mode": "dry-run",
             "parsed": parsed,
-            "would_execute": intent != "unknown",
-            "status": "ok" if intent != "unknown" else "unknown",
+            "would_execute": intent not in ("unknown", "greeting", "help"),
+            "status": "ok" if intent not in ("unknown", "greeting", "help") else intent,
+            "follow_ups": parsed.get("follow_ups", []),
+            "tts_response": parsed.get("tts_response", ""),
         }
         if intent == "unknown":
-            preview["message"] = "No supported command detected."
+            preview["message"] = "I didn't catch that. Try something like 'add task buy milk' or 'start focus'."
+            return preview
+        if intent == "greeting":
+            preview["message"] = parsed.get("tts_response", "")
+            return preview
+        if intent == "help":
+            preview["message"] = parsed.get("tts_response", "")
             return preview
         if intent == "calendar.create":
             extracted = dict(parsed.get("extracted") or {})
             if not extracted.get("start_at") or not extracted.get("end_at"):
                 preview["would_execute"] = False
-                preview["status"] = "incomplete"
-                preview["message"] = "Add a date and time to create the calendar event."
+                preview["status"] = "needs_datetime"
+                preview["message"] = f'I got the event name: "{extracted.get("title", "")}". What date and time?'
                 return preview
         return preview
 
     @staticmethod
     def execute(db_path: str, text: str, confirm: bool = False, *, source: str = "text") -> dict[str, object]:
-        """Execute parsed command and log result."""
+        """Execute parsed command. Tries chaining first, then single execution."""
         from app.core.database import run_migrations
 
         run_migrations(db_path)
         parsed = parse_intent(text)
         intent = str(parsed["intent"])
+
+        # --- non-actionable intents ---
+        if intent in ("unknown", "greeting", "help"):
+            return {
+                "text": text,
+                "intent": intent,
+                "status": "ok",
+                "reply": parsed.get("tts_response", ""),
+                "follow_ups": parsed.get("follow_ups", []),
+                "confidence": parsed["confidence"],
+            }
+
+        # --- command chaining: split "X and Y" into multiple commands ---
+        chain_result = _try_chain_execute(db_path, text, confirm, source)
+        if chain_result is not None:
+            return chain_result
+
+        # --- single command execution ---
+        return CommandService._execute_single(db_path, text, confirm, source)
+
+    @staticmethod
+    def _execute_single(db_path: str, text: str, confirm: bool, source: str) -> dict[str, object]:
+        """Execute a single parsed command (no chaining)."""
+        parsed = parse_intent(text)
+        intent = str(parsed["intent"])
         extracted = dict(parsed.get("extracted") or {})
 
-        if intent == "unknown":
-            CommandRepository.add_log(db_path, text, intent, "error", source=source)
-            return {"text": text, "intent": intent, "status": "error", "parsed": parsed}
+        # --- undo ---
+        if intent == "undo":
+            return CommandService._handle_undo(db_path, text, source)
 
         try:
+            # --- task.create ---
             if intent == "task.create":
                 from app.domains.tasks import repository as task_repo
 
-                task_payload = {
+                task_payload: dict[str, object] = {
                     "title": extracted.get("title") or text,
                     "due_at": extracted.get("due_at"),
                     "priority": int(extracted.get("priority") or 2),
                     "tags": extracted.get("tags") or [],
                 }
+                if extracted.get("rrule"):
+                    task_payload["rrule"] = extracted["rrule"]
                 result = task_repo.create_task(db_path, task_payload)
-                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
+                undo_result = {"id": result["id"], "title": result.get("title", "")}
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source, result=undo_result)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": result, "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                    "parsed": parsed,
+                }
 
+            # --- task.complete (with fuzzy matching) ---
+            if intent == "task.complete":
+                from app.domains.tasks import repository as task_repo
+
+                query = (extracted.get("query") or "").strip().lower()
+                open_tasks = task_repo.list_tasks(db_path, done=False)
+
+                # Exact substring first
+                exact_matches = [t for t in open_tasks if query and query in (t.get("title") or "").lower()]
+
+                if len(exact_matches) == 1:
+                    result = task_repo.complete_task(db_path, exact_matches[0]["id"])
+                    undo_result = {"id": exact_matches[0]["id"], "title": exact_matches[0].get("title", "")}
+                    CommandRepository.add_log(db_path, text, intent, "executed", source=source, result=undo_result)
+                    title = exact_matches[0].get("title", "")
+                    return {
+                        "text": text, "intent": intent, "status": "executed",
+                        "result": result, "confidence": parsed["confidence"],
+                        "reply": f'Checked off: "{title}".',
+                        "follow_ups": parsed.get("follow_ups", []),
+                    }
+
+                # Fuzzy fallback
+                fuzzy = nlp.fuzzy_task_match(query, open_tasks, min_score=0.35)
+                if len(fuzzy) == 1:
+                    result = task_repo.complete_task(db_path, fuzzy[0]["id"])
+                    undo_result = {"id": fuzzy[0]["id"], "title": fuzzy[0].get("title", "")}
+                    CommandRepository.add_log(db_path, text, intent, "executed", source=source, result=undo_result)
+                    title = fuzzy[0].get("title", "")
+                    return {
+                        "text": text, "intent": intent, "status": "executed",
+                        "result": result, "confidence": parsed["confidence"],
+                        "reply": f'Checked off: "{title}".',
+                        "follow_ups": parsed.get("follow_ups", []),
+                    }
+                if len(fuzzy) > 1:
+                    return {
+                        "text": text, "intent": intent, "status": "ambiguous",
+                        "options": [{"id": t.get("id"), "title": t.get("title")} for t in fuzzy[:5]],
+                        "confidence": parsed["confidence"],
+                        "reply": f"I found {len(fuzzy)} matching tasks. Which one?",
+                    }
+
+                CommandRepository.add_log(db_path, text, intent, "not_found", source=source)
+                return {
+                    "text": text, "intent": intent, "status": "not_found",
+                    "confidence": parsed["confidence"],
+                    "reply": "I couldn't find a matching task. Try the exact title?",
+                }
+
+            # --- task.list ---
+            if intent == "task.list":
+                from app.domains.tasks import repository as task_repo
+
+                tasks = task_repo.list_tasks(db_path, done=False)
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": {"tasks": tasks[:20], "total": len(tasks)},
+                    "confidence": parsed["confidence"],
+                    "reply": f'You have {len(tasks)} open task{"s" if len(tasks) != 1 else ""}.',
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
+
+            # --- journal.create ---
             if intent == "journal.create":
                 from app.domains.journal.repository import JournalRepository
                 from app.domains.journal.schemas import JournalEntryCreate
                 from app.domains.journal.service import JournalService
 
                 payload = JournalEntryCreate(
-                    markdown_body=str(extracted.get("markdown_body") or text),
+                    markdown_body=str(extracted.get("markdown_body") or extracted.get("body") or text),
                     date=str(extracted.get("date") or datetime.now(UTC).date().isoformat()),
                     emoji=extracted.get("emoji"),
                     tags=list(extracted.get("tags") or []),
                 )
                 result = JournalService(JournalRepository(db_path)).save_entry(payload)
-                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                return {"text": text, "intent": intent, "status": "executed", "result": result.model_dump(), "confidence": parsed["confidence"], "parsed": parsed}
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source, result=result.model_dump() if hasattr(result, "model_dump") else None)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": result.model_dump(), "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
 
+            # --- calendar.create ---
             if intent == "calendar.create":
                 from app.domains.calendar.repository import CalendarRepository
                 from app.domains.calendar.schemas import CalendarEventCreate
@@ -332,12 +515,11 @@ class CommandService:
                 if not extracted.get("start_at") or not extracted.get("end_at"):
                     CommandRepository.add_log(db_path, text, intent, "incomplete", "missing_datetime", source=source)
                     return {
-                        "text": text,
-                        "intent": intent,
-                        "status": "incomplete",
+                        "text": text, "intent": intent, "status": "needs_datetime",
                         "error": "Missing event date or time",
                         "confidence": parsed["confidence"],
-                        "parsed": parsed,
+                        "reply": parsed.get("tts_response", ""),
+                        "extracted": extracted,
                     }
                 payload = CalendarEventCreate(
                     title=str(extracted.get("title") or "Untitled event"),
@@ -347,33 +529,30 @@ class CommandService:
                     all_day=bool(extracted.get("all_day") or False),
                 )
                 result = CalendarService(CalendarRepository(db_path)).create_event(payload)
-                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                return {"text": text, "intent": intent, "status": "executed", "result": result.model_dump(), "confidence": parsed["confidence"], "parsed": parsed}
+                event_dict = result.model_dump()
+                undo_result = {"id": event_dict.get("id", ""), "title": event_dict.get("title", "")}
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source, result=undo_result)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": event_dict, "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
 
-            if intent == "task.complete":
-                from app.domains.tasks import repository as task_repo
-
-                query = (extracted.get("title") or "").strip().lower()
-                open_tasks = [
-                    t for t in task_repo.list_tasks(db_path, done=False)
-                    if query and query in (t.get("title") or "").lower()
-                ]
-                if len(open_tasks) > 1:
-                    return {"text": text, "intent": intent, "status": "ambiguous", "options": open_tasks[:5], "confidence": parsed["confidence"]}
-                if len(open_tasks) == 1:
-                    result = task_repo.complete_task(db_path, open_tasks[0]["id"])
-                    CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                    return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
-                CommandRepository.add_log(db_path, text, intent, "error", source=source)
-                return {"text": text, "intent": intent, "status": "not_found", "confidence": parsed["confidence"]}
-
+            # --- focus.start ---
             if intent == "focus.start":
                 from app.domains.focus import service as focus_svc
 
                 result = focus_svc.start(int(extracted.get("duration_minutes") or 25), db_path)
                 CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": result, "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
 
+            # --- alarm.create ---
             if intent == "alarm.create":
                 from app.domains.alarms import repository as alarm_repo
 
@@ -381,20 +560,177 @@ class CommandService:
                 if alarm_time:
                     result = alarm_repo.create_alarm(db_path, {"time": alarm_time, "title": extracted.get("title") or text, "kind": "alarm"})
                     CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                    return {"text": text, "intent": intent, "status": "executed", "result": result, "confidence": parsed["confidence"], "parsed": parsed}
+                    return {
+                        "text": text, "intent": intent, "status": "executed",
+                        "result": result, "confidence": parsed["confidence"],
+                        "reply": parsed.get("tts_response", ""),
+                        "follow_ups": parsed.get("follow_ups", []),
+                    }
                 CommandRepository.add_log(db_path, text, intent, "error", source=source)
-                return {"text": text, "intent": intent, "status": "error", "error": "No alarm time found"}
+                return {
+                    "text": text, "intent": intent, "status": "error",
+                    "error": "No alarm time found",
+                    "reply": "I need a time. What time should I set the alarm?",
+                }
 
+            # --- habit.checkin ---
+            if intent == "habit.checkin":
+                from app.domains.habits import repository as habit_repo
+
+                habits = habit_repo.list_habits(db_path)
+                habit_name = (extracted.get("habit_name") or "").strip().lower()
+                matched = [h for h in habits if habit_name in (h.get("name") or "").lower()]
+                if len(matched) == 1:
+                    result = habit_repo.checkin(db_path, matched[0]["id"])
+                    CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                    return {
+                        "text": text, "intent": intent, "status": "executed",
+                        "result": result, "confidence": parsed["confidence"],
+                        "reply": f'Checked in: "{matched[0].get("name", "")}". Nice streak!',
+                        "follow_ups": parsed.get("follow_ups", []),
+                    }
+                if len(matched) > 1:
+                    return {
+                        "text": text, "intent": intent, "status": "ambiguous",
+                        "options": [{"id": h.get("id"), "name": h.get("name")} for h in matched[:5]],
+                        "confidence": parsed["confidence"],
+                        "reply": f"Found {len(matched)} habits matching that. Which one?",
+                    }
+                if habits:
+                    names = ", ".join(h.get("name", "") for h in habits[:5])
+                    return {
+                        "text": text, "intent": intent, "status": "not_found",
+                        "confidence": parsed["confidence"],
+                        "reply": f"Which habit? You have: {names}.",
+                    }
+                return {
+                    "text": text, "intent": intent, "status": "not_found",
+                    "confidence": parsed["confidence"],
+                    "reply": "No habits yet. Create one first?",
+                }
+
+            # --- habit.list ---
             if intent == "habit.list":
                 from app.domains.habits import repository as habit_repo
 
                 habits = habit_repo.list_habits(db_path)
                 CommandRepository.add_log(db_path, text, intent, "executed", source=source)
-                return {"text": text, "intent": intent, "status": "executed", "result": {"habits": habits}, "confidence": parsed["confidence"], "parsed": parsed}
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": {"habits": habits}, "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
+
+            # --- review.start ---
+            if intent == "review.start":
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": {"action": "open_review"},
+                    "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
+
+            # --- search ---
+            if intent == "search":
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": {"query": extracted.get("query", text)},
+                    "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
+
+            # --- nutrition.log ---
+            if intent == "nutrition.log":
+                CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+                return {
+                    "text": text, "intent": intent, "status": "executed",
+                    "result": {"action": "log_nutrition", "text": extracted.get("text", text)},
+                    "confidence": parsed["confidence"],
+                    "reply": parsed.get("tts_response", ""),
+                    "follow_ups": parsed.get("follow_ups", []),
+                }
 
         except Exception as exc:  # noqa: BLE001
             CommandRepository.add_log(db_path, text, intent, "failed", str(exc), source=source)
-            return {"text": text, "intent": intent, "status": "error", "error": str(exc)}
+            return {
+                "text": text, "intent": intent, "status": "error",
+                "error": str(exc), "reply": "Something went wrong. Try again?",
+            }
 
         CommandRepository.add_log(db_path, text, intent, "ok", source=source)
-        return {"text": text, "intent": intent, "status": "executed", "confidence": parsed["confidence"], "parsed": parsed}
+        return {
+            "text": text, "intent": intent, "status": "executed",
+            "confidence": parsed["confidence"],
+            "reply": parsed.get("tts_response", ""),
+            "follow_ups": parsed.get("follow_ups", []),
+        }
+
+    # -----------------------------------------------------------------------
+    # Undo
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def _handle_undo(db_path: str, text: str, source: str) -> dict[str, object]:
+        """Undo the last executed command."""
+        history = CommandRepository.history(db_path, limit=10)
+        # Find last executed (non-undo) command
+        for entry in history:
+            if entry.get("status") == "executed" and entry.get("intent") != "undo":
+                return _undo_entry(db_path, entry, text, source)
+        return {
+            "text": text, "intent": "undo", "status": "nothing_to_undo",
+            "reply": "Nothing to undo.",
+        }
+
+
+def _undo_entry(db_path: str, entry: dict[str, object], text: str, source: str) -> dict[str, object]:
+    """Reverse a single command log entry."""
+    intent = str(entry.get("intent", ""))
+    try:
+        if intent == "task.create":
+            from app.domains.tasks import repository as task_repo
+            result = entry.get("result")
+            if isinstance(result, dict) and result.get("id"):
+                task_repo.delete_task(db_path, result["id"])
+                CommandRepository.add_log(db_path, text, "undo", "executed", source=source)
+                return {
+                    "text": text, "intent": "undo", "status": "executed",
+                    "reply": f'Undone. Removed task: "{result.get("title", "")}".',
+                    "undone": entry,
+                }
+        elif intent == "calendar.create":
+            from app.domains.calendar.repository import CalendarRepository
+            result = entry.get("result")
+            if isinstance(result, dict) and result.get("id"):
+                CalendarRepository(db_path).delete_event(result["id"])
+                CommandRepository.add_log(db_path, text, "undo", "executed", source=source)
+                return {
+                    "text": text, "intent": "undo", "status": "executed",
+                    "reply": f'Undone. Removed event: "{result.get("title", "")}".',
+                    "undone": entry,
+                }
+        elif intent == "task.complete":
+            from app.domains.tasks import repository as task_repo
+            result = entry.get("result")
+            if isinstance(result, dict) and result.get("id"):
+                task_repo.uncomplete_task(db_path, result["id"])
+                CommandRepository.add_log(db_path, text, "undo", "executed", source=source)
+                return {
+                    "text": text, "intent": "undo", "status": "executed",
+                    "reply": f'Undone. Reopened task: "{result.get("title", "")}".',
+                    "undone": entry,
+                }
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "text": text, "intent": "undo", "status": "error",
+            "error": str(exc), "reply": "Undo failed. The action may have already been modified.",
+        }
+    return {
+        "text": text, "intent": "undo", "status": "unsupported",
+        "reply": f"Can't undo '{intent}' actions yet.",
+    }

@@ -1,5 +1,17 @@
 import { apiClient } from "./client";
-import type { VaultStatus, VaultConfig, VaultConfigUpdate, VaultFileRecord, VaultPushResult, VaultPullResult, VaultRollbackResult, TaskImportPreview, TaskImportCandidate, VaultPullResult as ImportResult } from "../../../shared/types";
+import type {
+  VaultStatus,
+  VaultConfig,
+  VaultConfigUpdate,
+  VaultFileRecord,
+  VaultPushResult,
+  VaultPullResult,
+  VaultRollbackResult,
+  VaultConflictPreview,
+  TaskImportPreview,
+  TaskImportCandidate,
+  VaultPullResult as ImportResult,
+} from "../../../shared/types";
 
 export async function getVaultStatus(): Promise<VaultStatus> {
   return apiClient<VaultStatus>("/vault/status");
@@ -26,6 +38,10 @@ export async function pullJournal(): Promise<VaultPullResult> {
 
 export async function getVaultConflicts(): Promise<VaultFileRecord[]> {
   return apiClient<VaultFileRecord[]>("/vault/conflicts");
+}
+
+export async function getVaultConflictPreview(recordId: number): Promise<VaultConflictPreview> {
+  return apiClient<VaultConflictPreview>(`/vault/conflicts/${recordId}/preview`);
 }
 
 export async function rollbackVaultFile(recordId: number): Promise<VaultRollbackResult> {

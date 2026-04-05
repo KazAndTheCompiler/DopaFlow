@@ -1,9 +1,13 @@
 import { useContext, useMemo, useState } from "react";
 
 import { AppDataContext } from "../../App";
+import { showToast } from "@ds/primitives/Toast";
 import CardReviewer from "./CardReviewer";
+import CardEditModal from "./CardEditModal";
 import DeckList from "./DeckList";
 import ReviewStats from "./ReviewStats";
+import { updateReviewCard } from "@api/index";
+import type { ReviewCard } from "../../../../shared/types";
 import { ReviewSurfaceSkeleton } from "@ds/primitives/Skeleton";
 
 export default function ReviewView(): JSX.Element {
@@ -14,6 +18,7 @@ export default function ReviewView(): JSX.Element {
 
   const [selectedDeckId, setSelectedDeckId] = useState<string>("deck_default");
   const [sessionDone, setSessionDone] = useState(0);
+  const [editingCard, setEditingCard] = useState<ReviewCard | null>(null);
   const visibleCards = useMemo(
     () => app.review.cards.filter((card) => !selectedDeckId || card.deck_id === selectedDeckId),
     [app.review.cards, selectedDeckId],
@@ -39,6 +44,20 @@ export default function ReviewView(): JSX.Element {
           onRate={(rating) => {
             if (!currentCard) return;
             void app.review.rate(currentCard.id, rating).then(() => setSessionDone((n) => n + 1));
+          }}
+          onEditCard={setEditingCard}
+        />
+        <CardEditModal
+          card={editingCard}
+          onClose={() => setEditingCard(null)}
+          onSave={async (id, front, back) => {
+            try {
+              await updateReviewCard(id, { front, back });
+              showToast("Card updated.", "success");
+              await app.review.refresh();
+            } catch {
+              showToast("Could not update card.", "error");
+            }
           }}
         />
       </div>
@@ -67,23 +86,45 @@ export default function ReviewView(): JSX.Element {
               borderRadius: "10px",
               background: i === 0 ? "var(--surface-2)" : "transparent",
               border: i === 0 ? "1px solid var(--accent)" : "none",
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: "0.5rem",
+              alignItems: "center",
             }}
           >
-            <span
+            <div style={{ minWidth: 0 }}>
+              <span
+                style={{
+                  display: "block",
+                  fontSize: "var(--text-sm)",
+                  fontWeight: i === 0 ? 600 : 400,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {card.front}
+              </span>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+                {card.next_review_at ? `Due: ${new Date(card.next_review_at).toLocaleDateString()}` : "New"}
+              </span>
+            </div>
+            <button
+              onClick={() => setEditingCard(card)}
+              title="Edit card"
               style={{
-                display: "block",
-                fontSize: "var(--text-sm)",
-                fontWeight: i === 0 ? 600 : 400,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
+                border: "1px solid var(--border-subtle)",
+                background: "transparent",
+                color: "var(--text-muted)",
+                borderRadius: "6px",
+                padding: "0.2rem 0.45rem",
+                cursor: "pointer",
+                fontSize: "var(--text-xs)",
+                flexShrink: 0,
               }}
             >
-              {card.front}
-            </span>
-            <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
-              {card.next_review_at ? `Due: ${new Date(card.next_review_at).toLocaleDateString()}` : "New"}
-            </span>
+              Edit
+            </button>
           </div>
         ))}
       </section>

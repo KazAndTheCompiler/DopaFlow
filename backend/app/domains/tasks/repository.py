@@ -281,6 +281,12 @@ def _next_due_from_rule(rule: str, current_due_at: str | None) -> str | None:
     return None
 
 
+def uncomplete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
+    """Re-open a completed task."""
+
+    return update_task(db_path, task_identifier, {"done": False, "status": "todo"})
+
+
 def complete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
     """Mark a task complete and spawn the next recurring instance when applicable."""
 

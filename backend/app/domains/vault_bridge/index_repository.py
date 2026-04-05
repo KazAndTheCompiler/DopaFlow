@@ -102,6 +102,13 @@ class VaultIndexRepository:
             ).fetchone()
         return VaultFileRecord(**dict(row)) if row else None
 
+    def get_record(self, record_id: int) -> VaultFileRecord | None:
+        with _conn(self.db_path) as con:
+            row = con.execute(
+                "SELECT * FROM vault_file_index WHERE id=?", (record_id,)
+            ).fetchone()
+        return VaultFileRecord(**dict(row)) if row else None
+
     def get_by_entity(self, entity_type: str, entity_id: str) -> VaultFileRecord | None:
         with _conn(self.db_path) as con:
             row = con.execute(

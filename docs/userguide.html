@@ -527,9 +527,13 @@ npm run dev</code></pre>
             <p>Evidence-based learning with flashcards:</p>
             <ul>
                 <li><strong>Decks:</strong> Organize cards by topic</li>
-                <li><strong>SRS Algorithm:</strong> Optimal review scheduling</li>
+                <li><strong>SRS Algorithm:</strong> SM-2 optimal review scheduling — Again/Hard/Good/Easy ratings update intervals immediately</li>
+                <li><strong>Keyboard Shortcuts:</strong> Space or F flips the card; 1/2/3/4 rate the card when flipped — no mouse required for a full review session</li>
+                <li><strong>Session Completion Screen:</strong> After clearing the due queue, a summary screen shows how many cards were reviewed and whether more are due in other decks</li>
+                <li><strong>Inline Card Editor:</strong> Click Edit on any card (active card face or queue list row) to update the front and back text without leaving the review surface</li>
                 <li><strong>Ease Factors:</strong> Adaptive difficulty adjustment</li>
                 <li><strong>Lapse Tracking:</strong> Monitor forgotten cards</li>
+                <li><strong>Anki Import:</strong> Import .apkg files directly into any deck</li>
                 <li><strong>Deck Export:</strong> Share and backup decks</li>
             </ul>
 
@@ -551,9 +555,9 @@ npm run dev</code></pre>
                 <li><strong>Vault Settings:</strong> Configure a local Obsidian vault path in Settings</li>
                 <li><strong>Journal Push/Pull:</strong> Sync Markdown daily notes in <code>Daily/YYYY-MM-DD.md</code></li>
                 <li><strong>Task Collections:</strong> Sync checkbox task files in <code>Tasks/Inbox.md</code> and per-project task files</li>
-                <li><strong>Task Import:</strong> Preview and import DopaFlow-owned vault task lines that are not yet in DopaFlow</li>
+                <li><strong>Task Import:</strong> Preview and import task lines from DopaFlow-owned collections and plain markdown task files in the configured task folder</li>
                 <li><strong>Daily Task Section:</strong> Push a bounded task section into an existing daily note without overwriting the rest of the note</li>
-                <li><strong>Conflict Tracking:</strong> Review indexed conflicts, rollback to DopaFlow, or keep the vault version</li>
+                <li><strong>Conflict Tracking:</strong> Review indexed conflicts, preview the current vault file against the last DopaFlow snapshot, then rollback or keep the vault version</li>
             </ul>
 
             <div class="note">
@@ -561,13 +565,18 @@ npm run dev</code></pre>
             </div>
 
             <h3>7. Calendar Integration</h3>
-            <p>Google Calendar synchronization:</p>
+            <p>Local planning and shared calendar visibility in one surface:</p>
             <ul>
+                <li><strong>Drag to Reschedule:</strong> In the Day view, drag local events vertically to reschedule them — duration is preserved, changes commit on release with 15-minute snapping</li>
+                <li><strong>Resize Events:</strong> Drag the handle at the bottom of a local event in Day view to extend or shorten its duration — minimum 15 minutes, commits on release</li>
+                <li><strong>Editable Event Details:</strong> Click events from week, day, or month view to inspect and edit local blocks — modal shows source, category, recurrence, and time range at a glance</li>
+                <li><strong>Read-Only Guard:</strong> Mirrored events from shared feeds show a lock indicator and cannot be dragged, resized, or edited</li>
+                <li><strong>Quick Block UI:</strong> Create local time blocks with category and recurrence directly from the calendar surface — validates date, time, and duration before creating</li>
                 <li><strong>OAuth Flow:</strong> Secure Google authentication</li>
-                <li><strong>Two-Way Sync:</strong> Changes propagate both directions</li>
-                <li><strong>Conflict Resolution:</strong> Handle sync conflicts gracefully</li>
-                <li><strong>Recurring Events:</strong> Support for repeating events</li>
-                <li><strong>Category Tags:</strong> Organize events by type</li>
+                <li><strong>Mirror Feeds:</strong> Shared calendars show source colors and stay read-only in the planning view</li>
+                <li><strong>Conflict Resolution:</strong> Sync conflicts can be reviewed and resolved without leaving the calendar</li>
+                <li><strong>Recurring Events:</strong> Repeat rules can be created and edited from the UI</li>
+                <li><strong>Category Tags:</strong> Organize events by work, personal, health, and focus contexts</li>
             </ul>
 
             <h3>8. Alarms & Reminders</h3>
@@ -585,6 +594,7 @@ npm run dev</code></pre>
             <ul>
                 <li><strong>XP System:</strong> Earn experience for completions</li>
                 <li><strong>Level Progression:</strong> Advance through ranks</li>
+                <li><strong>Shell Progress:</strong> See level progress in the top bar during normal use</li>
                 <li><strong>Badges:</strong> Unlock achievements for milestones</li>
                 <li><strong>Momentum Score:</strong> Track daily productivity flow</li>
             </ul>
@@ -643,7 +653,7 @@ npm run dev</code></pre>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">▦</span> Calendar</h4>
-                    <p>Event display with Google Calendar sync status.</p>
+                    <p>Week/day/month planning with clickable event details, local editing, recurring blocks, and sync health visibility.</p>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">⏰</span> Alarms</h4>
@@ -651,7 +661,7 @@ npm run dev</code></pre>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">🥗</span> Nutrition</h4>
-                    <p>Food logging and daily nutrition tracking.</p>
+                    <p>Food logging, daily nutrition tracking, and a protected starter food library for basics like coffee, tea, water, and sandwiches.</p>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">📊</span> Digest</h4>
@@ -687,7 +697,7 @@ npm run dev</code></pre>
                 </div>
                 <div class="feature-card">
                     <h4><span class="feature-icon">⚙</span> Settings</h4>
-                    <p>App configuration, skin selection, and preferences.</p>
+                    <p>App configuration, skin selection, vault sync, and a unified integrations overview.</p>
                 </div>
             </div>
         </section>
@@ -741,14 +751,17 @@ npm run dev</code></pre>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/commands/history</span></div>
 
             <div class="tip">
-                <strong>Voice command words:</strong> spoken command routing is intentionally explicit in the current v2 branch.
-                Use prefixes like <code>task ...</code>, <code>journal ...</code>, and <code>calendar ...</code>.
-                The app previews the action first, then asks for confirmation before execution.
+                <strong>Voice command preview:</strong> spoken commands no longer require strict prefixes.
+                You can still say <code>task ...</code> or <code>calendar ...</code>, but natural phrases like <code>buy milk tomorrow</code> and <code>schedule dentist tomorrow at 2pm</code> now go through the same preview-first flow.
             </div>
 
             <h3>Calendar</h3>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/calendar/events</span></div>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/calendar/events</span></div>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/calendar/events/{id}</span></div>
+            <div class="endpoint"><span class="method patch">PATCH</span><span class="path">/calendar/events/{id}</span></div>
+            <div class="endpoint"><span class="method delete">DELETE</span><span class="path">/calendar/events/{id}</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/calendar/events/{id}/move</span></div>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/calendar/google/sync</span></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/calendar/sync/status</span></div>
 
@@ -926,6 +939,18 @@ npm run dev</code></pre>
                 <code>sunset-blues</code>, <code>classic-noir</code>, <code>neon-punk</code>,
                 <code>forest-gradient</code>, <code>ocean-gradient</code>, and <code>amber-night</code>.
             </div>
+
+            <h3>Using the Theme Picker</h3>
+            <p>The theme picker in Settings provides a preview workflow for choosing skins:</p>
+            <ul>
+                <li><strong>Single-click</strong> any theme card to preview it without applying</li>
+                <li><strong>Double-click</strong> to immediately apply a theme</li>
+                <li>Use the <strong>Apply</strong> button to confirm a previewed theme</li>
+                <li>Use <strong>Reset to default</strong> to restore Ink & Stone</li>
+                <li><strong>Export</strong> saves the current theme as a JSON file for backup or sharing</li>
+                <li><strong>Import</strong> loads a custom theme JSON file</li>
+            </ul>
+            <p>The active theme shows "Currently active" status. While previewing, it shows "Previewing (not applied yet)" with a dashed border.</p>
         </section>
 
         <!-- Security -->

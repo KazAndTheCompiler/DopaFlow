@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+
 import Button from "@ds/primitives/Button";
 
 interface DigestInsight {
@@ -7,9 +8,14 @@ interface DigestInsight {
 }
 
 interface DigestViewModel {
+  headline: string;
   summary: string;
+  momentum_label: string;
+  score: number;
+  date_label: string;
   tasks_completed: number;
   focus_sessions: number;
+  focus_minutes: number;
   habits_logged: number;
   journal_entries: number;
   calories_kcal: number;
@@ -43,22 +49,51 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
   const label = raw.momentum_label ?? "steady";
   const score = raw.score ?? 0;
   const dateLabel = period === "today" ? raw.date : `${raw.week_start ?? ""} to ${raw.week_end ?? ""}`.trim();
+  const tasksCompleted = Number(tasks.completed ?? 0);
+  const focusSessions = Number(focus.total_sessions ?? 0);
+  const focusMinutes = Number(focus.total_minutes ?? 0);
+  const habitLogs = Array.isArray(habits.by_habit)
+    ? habits.by_habit.reduce((sum: number, item: { count?: number }) => sum + Number(item.count ?? 0), 0)
+    : 0;
+  const journalEntries = Number(journal.entries_written ?? 0);
+
+  let headline = "A quieter day than usual.";
+  if (score >= 80) {
+    headline = period === "today"
+      ? "You had a strong day across the core loops."
+      : "This was a strong week with real follow-through.";
+  } else if (score >= 60) {
+    headline = period === "today"
+      ? "You kept momentum moving in the right direction."
+      : "The week stayed on track without falling apart.";
+  } else if (tasksCompleted + focusSessions + habitLogs + journalEntries > 0) {
+    headline = period === "today"
+      ? "Some progress landed, but the day stayed uneven."
+      : "There was activity this week, but the system did not lock in.";
+  }
 
   return {
-    summary: `Digest for ${dateLabel || period}: score ${score}, momentum ${label}.`,
-    tasks_completed: Number(tasks.completed ?? 0),
-    focus_sessions: Number(focus.total_sessions ?? 0),
-    habits_logged: Array.isArray(habits.by_habit)
-      ? habits.by_habit.reduce((sum: number, item: { count?: number }) => sum + Number(item.count ?? 0), 0)
-      : 0,
-    journal_entries: Number(journal.entries_written ?? 0),
+    headline,
+    summary: score >= 70
+      ? `Momentum is ${label}. Keep protecting the routines that produced it.`
+      : `Momentum is ${label}. The next gain comes from tightening consistency rather than adding more input.`,
+    momentum_label: label,
+    score,
+    date_label: dateLabel || period,
+    tasks_completed: tasksCompleted,
+    focus_sessions: focusSessions,
+    focus_minutes: focusMinutes,
+    habits_logged: habitLogs,
+    journal_entries: journalEntries,
     calories_kcal: Number(nutrition.total_kcal ?? 0),
     avg_kcal: Number(nutrition.avg_kcal ?? 0),
     nutrition_days: nutritionDays,
     insights: [
       {
         title: "Momentum",
-        body: `Momentum is ${label} with a score of ${score}.`,
+        body: score >= 70
+          ? `Score ${score} with ${label} momentum. The system is holding together.`
+          : `Score ${score} with ${label} momentum. The system needs a cleaner next step, not more complexity.`,
       },
       {
         title: "Habits",
@@ -68,7 +103,7 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
       },
       {
         title: "Focus",
-        body: `${Number(focus.total_minutes ?? 0)} focused minutes across ${Number(focus.total_sessions ?? 0)} sessions.`,
+        body: `${focusMinutes} focused minutes across ${focusSessions} session${focusSessions === 1 ? "" : "s"}.`,
       },
       ...(nutritionDays > 0
         ? [
@@ -82,19 +117,37 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
   };
 }
 
-
 export default function DigestView(): JSX.Element {
   const [rawDigest, setRawDigest] = useState<DigestResponse | null>(null);
   const [period, setPeriod] = useState<"today" | "week">("today");
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/digest/${period}`)
-      .then((r) => r.json())
-      .then((body) => setRawDigest(body))
-      .catch(() => setRawDigest(null));
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Digest request failed (${response.status})`);
+        }
+        return response.json();
+      })
+      .then((body) => {
+        setRawDigest(body);
+        setLoading(false);
+      })
+      .catch((fetchError: unknown) => {
+        setRawDigest(null);
+        setError(fetchError instanceof Error ? fetchError.message : "Unable to load digest");
+        setLoading(false);
+      });
   }, [period]);
 
   const digest = useMemo(() => toViewModel(period, rawDigest), [period, rawDigest]);
+  const activityTotal = digest
+    ? digest.tasks_completed + digest.focus_sessions + digest.habits_logged + digest.journal_entries
+    : 0;
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -103,29 +156,110 @@ export default function DigestView(): JSX.Element {
         <Button onClick={() => setPeriod("week")} variant={period === "week" ? "primary" : "secondary"} style={{ padding: "0.5rem 1rem" }}>Week</Button>
       </div>
 
-      {digest && (
+      {loading && (
+        <section
+          style={{
+            padding: "1.25rem",
+            borderRadius: "16px",
+            background: "var(--surface)",
+            border: "1px solid var(--border-subtle)",
+            color: "var(--text-secondary)",
+          }}
+        >
+          Loading digest…
+        </section>
+      )}
+
+      {!loading && error && (
+        <section
+          style={{
+            padding: "1.25rem",
+            borderRadius: "16px",
+            background: "var(--surface)",
+            border: "1px solid color-mix(in srgb, var(--state-overdue) 35%, var(--border-subtle))",
+            color: "var(--text-secondary)",
+            display: "grid",
+            gap: "0.35rem",
+          }}
+        >
+          <strong>Digest unavailable</strong>
+          <span>{error}</span>
+        </section>
+      )}
+
+      {!loading && !error && digest && (
         <div style={{ display: "grid", gap: "1rem" }}>
+          <section
+            style={{
+              padding: "1.25rem",
+              borderRadius: "20px",
+              background: "linear-gradient(145deg, color-mix(in srgb, var(--accent) 8%, var(--surface)), var(--surface))",
+              border: "1px solid var(--border-subtle)",
+              display: "grid",
+              gap: "0.75rem",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem", flexWrap: "wrap" }}>
+              <strong style={{ fontSize: "1.1rem" }}>{digest.headline}</strong>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {period === "today" ? digest.date_label : `Week ${digest.date_label}`}
+              </span>
+            </div>
+            <p style={{ color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>{digest.summary}</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem" }}>
+              <div style={{ padding: "0.85rem", borderRadius: "14px", background: "color-mix(in srgb, var(--surface) 88%, white 12%)", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Score</div>
+                <div style={{ fontSize: "1.5rem", fontWeight: 800 }}>{digest.score}</div>
+              </div>
+              <div style={{ padding: "0.85rem", borderRadius: "14px", background: "color-mix(in srgb, var(--surface) 88%, white 12%)", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Momentum</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700, textTransform: "capitalize" }}>{digest.momentum_label}</div>
+              </div>
+              <div style={{ padding: "0.85rem", borderRadius: "14px", background: "color-mix(in srgb, var(--surface) 88%, white 12%)", border: "1px solid var(--border-subtle)" }}>
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Focus time</div>
+                <div style={{ fontSize: "1.1rem", fontWeight: 700 }}>{digest.focus_minutes}m</div>
+              </div>
+            </div>
+          </section>
+
           <section
             style={{
               padding: "1.25rem",
               borderRadius: "16px",
               background: "var(--surface)",
               border: "1px solid var(--border-subtle)",
+              display: "grid",
+              gap: "0.6rem",
             }}
           >
-            <strong>Summary</strong>
-            <p style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>{digest.summary}</p>
+            <strong>What this period says</strong>
+            {activityTotal === 0 ? (
+              <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                There is not enough activity here yet to draw a real conclusion. Use this view after a day or week with actual task, focus, or habit activity.
+              </p>
+            ) : (
+              <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                {digest.tasks_completed > 0
+                  ? `Execution is visible with ${digest.tasks_completed} completed task${digest.tasks_completed === 1 ? "" : "s"}. `
+                  : "Task completion did not carry this period. "}
+                {digest.focus_minutes >= (period === "today" ? 45 : 180)
+                  ? "Focus time was strong enough to support meaningful work. "
+                  : "Focus time was present, but not yet strong enough to anchor the whole system. "}
+                {digest.habits_logged > 0
+                  ? "Habit logging stayed alive, which helps keep momentum from collapsing."
+                  : "Habit logging was quiet, so momentum relied on fewer anchors than it should."}
+              </p>
+            )}
           </section>
 
-          {/* Activity distribution bar */}
           {(() => {
             const segments = [
               { label: "Tasks", value: digest.tasks_completed, color: "var(--accent)" },
               { label: "Focus", value: digest.focus_sessions, color: "#3b82f6" },
               { label: "Habits", value: digest.habits_logged, color: "#8b5cf6" },
               { label: "Journal", value: digest.journal_entries, color: "#f59e0b" },
-            ].filter((s) => s.value > 0);
-            const total = segments.reduce((sum, s) => sum + s.value, 0);
+            ].filter((segment) => segment.value > 0);
+            const total = segments.reduce((sum, segment) => sum + segment.value, 0);
             if (total === 0) return null;
             return (
               <div
@@ -142,20 +276,20 @@ export default function DigestView(): JSX.Element {
                   Activity
                 </strong>
                 <div style={{ display: "flex", height: 12, borderRadius: 999, overflow: "hidden", gap: 2 }}>
-                  {segments.map((s) => (
+                  {segments.map((segment) => (
                     <div
-                      key={s.label}
-                      title={`${s.label}: ${s.value}`}
-                      style={{ flex: s.value / total, background: s.color, minWidth: 4, transition: "flex 0.5s ease" }}
+                      key={segment.label}
+                      title={`${segment.label}: ${segment.value}`}
+                      style={{ flex: segment.value / total, background: segment.color, minWidth: 4, transition: "flex 0.5s ease" }}
                     />
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-                  {segments.map((s) => (
-                    <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--text-xs)" }}>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                      <span style={{ color: "var(--text-secondary)" }}>{s.label}</span>
-                      <span style={{ fontWeight: 600 }}>{s.value}</span>
+                  {segments.map((segment) => (
+                    <div key={segment.label} style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--text-xs)" }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: segment.color, flexShrink: 0 }} />
+                      <span style={{ color: "var(--text-secondary)" }}>{segment.label}</span>
+                      <span style={{ fontWeight: 600 }}>{segment.value}</span>
                     </div>
                   ))}
                 </div>
@@ -163,7 +297,6 @@ export default function DigestView(): JSX.Element {
             );
           })()}
 
-          {/* Stat bars */}
           {(() => {
             const rows = [
               { label: "Tasks completed", value: digest.tasks_completed, max: period === "today" ? 20 : 100, color: "var(--accent)" },
@@ -207,7 +340,7 @@ export default function DigestView(): JSX.Element {
 
           {digest.insights.length > 0 && (
             <section style={{ display: "grid", gap: "0.75rem" }}>
-              <strong>Insights</strong>
+              <strong>What to reinforce</strong>
               {digest.insights.map((insight) => (
                 <article
                   key={insight.title}

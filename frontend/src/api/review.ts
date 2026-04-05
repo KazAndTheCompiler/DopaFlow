@@ -61,6 +61,10 @@ export function deleteReviewDeck(deckId: string): Promise<{ deleted: boolean }> 
   return apiClient<{ deleted: boolean }>(`/review/decks/${deckId}`, { method: "DELETE" });
 }
 
+export function updateReviewCard(cardId: string, patch: { front: string; back: string }): Promise<ReviewCard> {
+  return apiClient<ReviewCard>(`/review/cards/${cardId}`, { method: "PATCH", body: JSON.stringify(patch) });
+}
+
 export async function importApkg(deckId: string, file: File): Promise<ImportApkgResponse> {
   const form = new FormData();
   form.append("file", file);

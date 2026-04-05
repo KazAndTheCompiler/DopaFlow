@@ -231,6 +231,15 @@ export interface PeerFeedSyncResult {
   detail?: string | null;
 }
 
+export interface IntegrationsStatus {
+  gmail_status: string;
+  gmail_connected: boolean;
+  webhooks_enabled: boolean;
+  webhook_pending: number;
+  webhook_retry_wait: number;
+  webhook_sent: number;
+}
+
 export interface VaultConfig {
   vault_enabled: boolean;
   vault_path: string;
@@ -282,6 +291,14 @@ export interface VaultStatus {
   conflicts: number;
   last_push_at: string | null;
   last_pull_at: string | null;
+}
+
+export interface VaultConflictPreview {
+  record: VaultFileRecord;
+  snapshot_body: string | null;
+  current_body: string | null;
+  current_exists: boolean;
+  diff_lines: string[];
 }
 
 export interface TaskImportCandidate {

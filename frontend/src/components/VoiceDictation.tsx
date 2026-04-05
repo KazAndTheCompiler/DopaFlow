@@ -16,6 +16,25 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
   const unavailable = disabled || typeof navigator === "undefined" || !navigator.mediaDevices;
 
   const stopTracks = (): void => streamRef.current?.getTracks().forEach((track) => track.stop());
+  const mapMicError = (exc: unknown): string => {
+    if (exc && typeof exc === "object" && "name" in exc) {
+      const name = String((exc as { name?: unknown }).name ?? "");
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        return "Microphone permission was denied by the browser.";
+      }
+      if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        return "No microphone was found for dictation.";
+      }
+      if (name === "NotReadableError") {
+        return "The microphone is busy or unavailable right now.";
+      }
+    }
+    const message = exc instanceof Error ? exc.message : "Microphone unavailable";
+    return /denied|notallowed|permission/i.test(message)
+      ? "Microphone permission was denied by the browser."
+      : message;
+  };
+
   const toggle = async (): Promise<void> => {
     setError(null);
     if (recording && recorderRef.current) return recorderRef.current.stop();
@@ -43,8 +62,7 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
       recorder.start();
       setRecording(true);
     } catch (exc) {
-      const message = exc instanceof Error ? exc.message : "Microphone unavailable";
-      setError(/denied|notallowed|permission/i.test(message) ? "Microphone permission denied by the browser." : message);
+      setError(mapMicError(exc));
     }
   };
 

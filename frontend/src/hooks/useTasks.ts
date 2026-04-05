@@ -118,6 +118,7 @@ export function useTasks(): UseTasksResult {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: true, status: "done" as const } : t));
       try {
         await completeTask(id);
+        window.dispatchEvent(new CustomEvent("dopaflow:gamification-refresh"));
       } catch {
         setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: false, status: "todo" as const } : t));
         showToast("Failed to complete task.", "error");
@@ -148,6 +149,7 @@ export function useTasks(): UseTasksResult {
       setSelectedIds(new Set());
       try {
         await bulkCompleteTask(ids);
+        window.dispatchEvent(new CustomEvent("dopaflow:gamification-refresh"));
         showToast(`${ids.length} tasks completed.`, "success");
       } catch {
         await refresh();

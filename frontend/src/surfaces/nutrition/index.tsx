@@ -34,6 +34,18 @@ interface Goals {
   fat_g: number;
 }
 
+interface FoodLibraryItem {
+  id: string;
+  name: string;
+  kj: number;
+  unit: string;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  meal_label: string;
+  is_preset: boolean;
+}
+
 function MacroBar({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }): JSX.Element {
   const pct = goal > 0 ? Math.min((value / goal) * 100, 100) : 0;
   return (
@@ -67,11 +79,14 @@ export default function NutritionView(): JSX.Element {
   const [goalProtein, setGoalProtein] = useState("");
   const [goalCarbs, setGoalCarbs] = useState("");
   const [goalFat, setGoalFat] = useState("");
+  const [foods, setFoods] = useState<FoodLibraryItem[]>([]);
+  const [loggingPresetId, setLoggingPresetId] = useState<string | null>(null);
 
   const load = async (): Promise<void> => {
-    const [todayData, goalsData] = await Promise.all([
+    const [todayData, goalsData, foodsData] = await Promise.all([
       fetch(`${API}/nutrition/today`).then((r) => r.json()).catch(() => null),
       fetch(`${API}/nutrition/goals`).then((r) => r.json()).catch(() => null),
+      fetch(`${API}/nutrition/foods`).then((r) => r.json()).catch(() => []),
     ]);
     if (todayData) setToday(todayData as DailyTotals);
     if (goalsData) {
@@ -81,6 +96,7 @@ export default function NutritionView(): JSX.Element {
       setGoalCarbs(String((goalsData as Goals).carbs_g));
       setGoalFat(String((goalsData as Goals).fat_g));
     }
+    setFoods(Array.isArray(foodsData) ? foodsData as FoodLibraryItem[] : []);
   };
 
   useEffect(() => { void load(); }, []);
@@ -129,6 +145,24 @@ export default function NutritionView(): JSX.Element {
       }),
     });
     await load();
+  };
+
+  const handleLogPreset = async (food: FoodLibraryItem): Promise<void> => {
+    setLoggingPresetId(food.id);
+    try {
+      await fetch(`${API}/nutrition/log/from-food`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          food_id: food.id,
+          qty: 1,
+          meal_label: meal || food.meal_label,
+        }),
+      });
+      await load();
+    } finally {
+      setLoggingPresetId(null);
+    }
   };
 
   const kjPct = goals.daily_kj > 0 ? Math.min(((today?.total_kj ?? 0) / goals.daily_kj) * 100, 100) : 0;
@@ -186,6 +220,46 @@ export default function NutritionView(): JSX.Element {
 
       {tab === "log" && (
         <div style={{ display: "grid", gap: "0.75rem" }}>
+          {foods.length > 0 && (
+            <div style={cardStyle}>
+              <div style={{ display: "grid", gap: "0.25rem", marginBottom: "0.75rem" }}>
+                <strong>Starter food library</strong>
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+                  Protected basics ship with every install so quick logging works from day one.
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.6rem" }}>
+                {foods
+                  .filter((food) => food.is_preset)
+                  .map((food) => (
+                    <button
+                      key={food.id}
+                      onClick={() => void handleLogPreset(food)}
+                      disabled={loggingPresetId === food.id}
+                      style={{
+                        textAlign: "left",
+                        padding: "0.75rem 0.85rem",
+                        borderRadius: "14px",
+                        border: "1px solid var(--border-subtle)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-primary)",
+                        cursor: "pointer",
+                        display: "grid",
+                        gap: "0.22rem",
+                      }}
+                    >
+                      <span style={{ fontWeight: 700 }}>{food.name}</span>
+                      <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+                        {Math.round(food.kj)} kJ · {food.unit} · {Math.round(food.protein_g)}p · {Math.round(food.carbs_g)}c · {Math.round(food.fat_g)}f
+                      </span>
+                      <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)" }}>
+                        {loggingPresetId === food.id ? "Logging…" : "Log 1 serving"}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
           <div style={cardStyle}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "0.5rem", marginBottom: "0.75rem" }}>
               <Input

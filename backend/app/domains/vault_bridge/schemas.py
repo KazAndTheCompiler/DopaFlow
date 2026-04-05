@@ -80,6 +80,16 @@ class VaultStatus(BaseModel):
     last_pull_at: str | None = None
 
 
+class VaultConflictPreview(BaseModel):
+    """Preview payload for inspecting a conflicted vault file."""
+
+    record: VaultFileRecord
+    snapshot_body: str | None = None
+    current_body: str | None = None
+    current_exists: bool = False
+    diff_lines: list[str] = []
+
+
 class TaskImportCandidate(BaseModel):
     """A single task line from a vault file, ready for preview or import."""
 

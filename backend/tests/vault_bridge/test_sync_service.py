@@ -91,6 +91,41 @@ def test_push_tasks_marks_conflict_when_vault_and_app_both_drift(db_path: Path, 
     assert any(record.file_path == "Tasks/Inbox.md" for record in conflicts)
 
 
+def test_conflict_preview_returns_snapshot_and_current_file(db_path: Path, tmp_path: Path) -> None:
+    service = VaultSyncService(str(db_path))
+    _configure_vault(service, tmp_path)
+
+    created = tasks_repo.create_task(
+        str(db_path),
+        {
+            "title": "Preview me",
+            "status": "todo",
+            "done": False,
+            "priority": 3,
+            "tags": [],
+        },
+    )
+    service.push_tasks()
+
+    inbox_file = tmp_path / "Tasks" / "Inbox.md"
+    original = inbox_file.read_text(encoding="utf-8")
+    inbox_file.write_text(original.replace("Preview me", "Vault changed"), encoding="utf-8")
+    tasks_repo.update_task(str(db_path), created["id"], {"title": "App changed"})
+
+    second_push = service.push_tasks()
+    assert second_push.conflicts == 1
+
+    conflict = next(record for record in service.index_repo.list_conflicts() if record.file_path == "Tasks/Inbox.md")
+    preview = service.get_conflict_preview(conflict.id)
+
+    assert preview.record.file_path == "Tasks/Inbox.md"
+    assert preview.current_exists is True
+    assert "Vault changed" in (preview.current_body or "")
+    assert "Preview me" in (preview.snapshot_body or "")
+    assert any("Vault changed" in line for line in preview.diff_lines)
+    assert any("Preview me" in line for line in preview.diff_lines)
+
+
 def test_preview_task_import_lists_importable_candidates(db_path: Path, tmp_path: Path) -> None:
     service = VaultSyncService(str(db_path))
     _configure_vault(service, tmp_path)
@@ -115,6 +150,25 @@ def test_preview_task_import_lists_importable_candidates(db_path: Path, tmp_path
     assert len(preview.importable) == 1
     assert preview.importable[0].title == "Preview this task"
     assert preview.importable[0].line_number == 9
+
+
+def test_preview_task_import_includes_plain_markdown_task_files(db_path: Path, tmp_path: Path) -> None:
+    service = VaultSyncService(str(db_path))
+    _configure_vault(service, tmp_path)
+
+    tasks_dir = tmp_path / "Tasks"
+    tasks_dir.mkdir(parents=True, exist_ok=True)
+    (tasks_dir / "Scratchpad.md").write_text(
+        "# Scratchpad\n\n"
+        "- [ ] Plain imported task\n",
+        encoding="utf-8",
+    )
+
+    preview = service.preview_task_import()
+
+    assert len(preview.importable) == 1
+    assert preview.importable[0].title == "Plain imported task"
+    assert preview.importable[0].project_name == "Scratchpad"
 
 
 def test_confirm_task_import_is_idempotent_by_source_locator(db_path: Path, tmp_path: Path) -> None:

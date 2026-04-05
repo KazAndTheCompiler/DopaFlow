@@ -5,6 +5,7 @@ import Input from "@ds/primitives/Input";
 import VoiceButton from "@ds/primitives/VoiceButton";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useUpdateBanner, installUpdate } from "../hooks/useUpdateBanner";
+import type { PlayerLevel } from "../../../shared/types/gamification";
 
 export interface TopBarProps {
   unreadCount: number;
@@ -15,6 +16,7 @@ export interface TopBarProps {
   focusModeEnabled: boolean;
   onToggleFocusMode: () => void;
   activeTimerLabel?: string | undefined;
+  gamificationLevel?: PlayerLevel | undefined;
 }
 
 export function TopBar({
@@ -26,11 +28,12 @@ export function TopBar({
   focusModeEnabled,
   onToggleFocusMode,
   activeTimerLabel,
+  gamificationLevel,
 }: TopBarProps): JSX.Element {
   const [showHint, setShowHint] = useState<boolean>(false);
   const [isCompact, setIsCompact] = useState<boolean>(() => window.matchMedia("(max-width: 1080px)").matches);
 
-  const { listening, transcript, interim, start, stop, supported, reset } = useSpeechRecognition();
+  const { listening, transcript, interim, error: sttError, start, stop, supported, reset } = useSpeechRecognition();
   const updateState = useUpdateBanner();
   const buildInfo = updateState.buildInfo;
 
@@ -147,7 +150,7 @@ export function TopBar({
           <div style={{ display: "grid", gap: "0.1rem" }}>
             <strong style={{ fontSize: "1.05rem", letterSpacing: "0.03em" }}>DopaFlow</strong>
             <span style={{ fontSize: "10px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Local-first command center
+              Daily systems, not dashboard sprawl
             </span>
           </div>
         )}
@@ -187,7 +190,7 @@ export function TopBar({
             onChange={(event) => onCommandChange(event.currentTarget.value)}
             onFocus={() => setShowHint(true)}
             onBlur={() => setShowHint(false)}
-            placeholder={listening ? "Listening…" : "Tell Packy what you need..."}
+            placeholder={listening ? "Listening…" : "Ask Packy or quick-capture a task, event, or note"}
             style={{ flex: 1 }}
           />
           <VoiceButton
@@ -198,7 +201,11 @@ export function TopBar({
             title="Speak a command"
           />
         </div>
-        {showHint && !isCompact ? <small style={{ color: "var(--text-muted)" }}>Natural language quick actions, quick-add parsing, and voice capture in one place.</small> : null}
+        {sttError ? (
+          <small style={{ color: "var(--state-error)" }}>{sttError}</small>
+        ) : showHint && !isCompact ? (
+          <small style={{ color: "var(--text-muted)" }}>One entry point for quick capture, command routing, and voice input.</small>
+        ) : null}
       </label>
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", justifyContent: isCompact ? "space-between" : "flex-end" }}>
         <Button onClick={onCommandSubmit} style={{ minWidth: isCompact ? "84px" : undefined }}>{isCompact ? "Run" : "Run"}</Button>
@@ -225,30 +232,49 @@ export function TopBar({
             {isCompact ? activeTimerLabel : `Timer ${activeTimerLabel}`}
           </span>
         )}
+        <span
+          style={{
+            fontSize: "var(--text-xs)",
+            color: "var(--accent)",
+            fontWeight: 700,
+            padding: "0.42rem 0.72rem",
+            borderRadius: "999px",
+            background: "color-mix(in srgb, var(--accent) 10%, var(--surface))",
+            border: "1px solid color-mix(in srgb, var(--accent) 26%, transparent)",
+            whiteSpace: "nowrap",
+          }}
+          title="Progress to next level"
+        >
+          {`LV ${gamificationLevel?.level ?? 1} · ${gamificationLevel?.xp_to_next ?? 100} XP to next`}
+        </span>
         <button
           onClick={onInboxClick}
-          title="Notifications"
+          title={unreadCount > 0 ? `${unreadCount} unread notifications` : "Open notifications"}
+          aria-label={unreadCount > 0 ? `Open notifications, ${unreadCount} unread` : "Open notifications"}
           style={{
             position: "relative",
-            background: "transparent",
-            color: "var(--text-secondary)",
+            background: unreadCount > 0
+              ? "linear-gradient(140deg, color-mix(in srgb, var(--accent) 14%, var(--surface)), color-mix(in srgb, var(--surface) 90%, white 10%))"
+              : "transparent",
+            color: unreadCount > 0 ? "var(--text-primary)" : "var(--text-secondary)",
             cursor: "pointer",
-            padding: "0.45rem",
+            padding: "0.45rem 0.7rem",
             borderRadius: "12px",
             lineHeight: 1,
-            fontSize: "0.9rem",
+            fontSize: "0.78rem",
             border: "1px solid var(--border-subtle)",
             boxShadow: "var(--shadow-soft)",
             fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            gap: "0.4rem",
+            whiteSpace: "nowrap",
           }}
         >
-          IN
+          Inbox
           {unreadCount > 0 && (
             <span
               style={{
-                position: "absolute",
-                top: 0,
-                right: 0,
                 minWidth: "16px",
                 height: "16px",
                 borderRadius: "999px",

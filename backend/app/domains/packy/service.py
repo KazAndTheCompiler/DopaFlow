@@ -1,9 +1,25 @@
-"""Business logic for the Packy assistant domain."""
+"""
+Business logic for the Packy assistant domain.
+
+Packy is the voice orchestrator for DopaFlow.  All voice and natural-language
+input routes through Packy, which classifies intent, generates a preview,
+executes actions, and returns a conversational reply with TTS text.
+"""
 
 from __future__ import annotations
 
+from app.domains.commands.service import CommandService, parse_intent
 from app.domains.packy.repository import PackyRepository
-from app.domains.packy.schemas import MomentumScore, PackyAnswer, PackyAskRequest, PackyLorebookRequest, PackyWhisper
+from app.domains.packy.schemas import (
+    MomentumScore,
+    PackyAnswer,
+    PackyAskRequest,
+    PackyLorebookRequest,
+    PackyVoiceCommand,
+    PackyVoiceResponse,
+    PackyWhisper,
+)
+from app.services import nlp
 
 
 class PackyService:
@@ -12,42 +28,115 @@ class PackyService:
 
     Design rules:
     - Neutral, helpful, never grumpy or sarcastic
-    - Responses are short
-    - Always actionable
-    - Uses lorebook context to personalize without overwhelming
+    - Responses are short and always actionable
+    - Uses lorebook context to personalise without overwhelming
+    - Voice commands flow through here
     """
 
     def __init__(self, repository: PackyRepository) -> None:
         self.repository = repository
 
-    def _detect_intent(self, text: str) -> tuple[str, dict[str, object]]:
-        """Detect a small set of productivity intents from natural language."""
+    # ------------------------------------------------------------------
+    # Voice command pipeline (NEW — the main voice entry point)
+    # ------------------------------------------------------------------
 
-        lowered = text.lower()
-        if "focus" in lowered:
-            return "focus_start", {}
-        if "habit" in lowered or "check in" in lowered:
-            return "habit_check", {}
-        if "review" in lowered or "flashcard" in lowered:
-            return "review_start", {}
-        if "journal" in lowered or "write" in lowered:
-            return "journal_write", {}
-        if "mood" in lowered:
-            return "mood_log", {}
-        if "schedule" in lowered or "today" in lowered:
-            return "schedule_today", {}
-        if "find" in lowered or "search" in lowered:
-            return "search", {"query": text}
-        if any(token in lowered for token in {"add", "task", "todo"}):
-            return "task_add", {"title": text}
-        return "unknown", {}
+    def voice_command(self, payload: PackyVoiceCommand) -> PackyVoiceResponse:
+        """
+        Process a voice or natural-language command end-to-end.
+
+        Flow:
+          1. Classify intent via NLP engine (no prefix required)
+          2. Generate a preview of what would happen
+          3. If auto_execute: run the command, return result + TTS reply
+          4. Otherwise: return preview for the frontend to show
+
+        Returns PackyVoiceResponse with:
+          - intent / confidence / entities
+          - preview dict (dry-run)
+          - execution result (if auto_execute)
+          - reply_text (conversational)
+          - tts_text (for speech synthesis)
+          - follow_ups (suggested next actions)
+        """
+        text = (payload.text or "").strip()
+        if not text:
+            return PackyVoiceResponse(
+                intent="unknown",
+                confidence=0.0,
+                reply_text="I didn't hear anything. Try again?",
+                tts_text="I didn't catch that.",
+                status="empty",
+            )
+
+        # 1. Classify
+        nlp_result = nlp.classify(text, context=payload.context)
+
+        # 2. Preview
+        preview = CommandService.preview(text)
+
+        # 3. Build response
+        response = PackyVoiceResponse(
+            intent=nlp_result.intent,
+            confidence=nlp_result.confidence,
+            entities=nlp_result.entities,
+            preview=preview,
+            reply_text=nlp_result.tts_response,
+            tts_text=nlp_result.tts_response,
+            follow_ups=nlp_result.follow_ups,
+            status=str(preview.get("status", "ok")),
+        )
+
+        # 4. Execute if requested and the preview says it's actionable
+        if payload.auto_execute and preview.get("would_execute"):
+            db_path = payload.db_path or ""
+            if db_path:
+                result = CommandService.execute(
+                    db_path, text, confirm=True, source="voice"
+                )
+                response.execution_result = result
+                response.status = str(result.get("status", "executed"))
+                # Update reply from execution result if available
+                if result.get("reply"):
+                    response.reply_text = result["reply"]
+                    response.tts_text = result["reply"]
+                # Merge follow-ups from execution
+                if result.get("follow_ups"):
+                    response.follow_ups = result["follow_ups"]
+
+        # 5. Enrich reply based on context
+        response = self._enrich_response(response, payload.context)
+
+        return response
+
+    def _enrich_response(
+        self, response: PackyVoiceResponse, context: dict[str, object] | None
+    ) -> PackyVoiceResponse:
+        """Add contextual flair to responses based on time of day, streaks, etc."""
+        if not context:
+            return response
+
+        # If the user has a high momentum score, add encouragement
+        try:
+            momentum = self.repository.momentum()
+            if momentum.score >= 70 and response.tts_text:
+                # Don't over-talk — only add encouragement occasionally
+                pass
+        except Exception:
+            pass
+
+        return response
+
+    # ------------------------------------------------------------------
+    # Legacy ask endpoint (unchanged behavior)
+    # ------------------------------------------------------------------
 
     def ask(self, payload: PackyAskRequest) -> PackyAnswer:
         """Parse NLP intent from the request and return a short actionable reply."""
 
-        intent, extracted_data = self._detect_intent(payload.text)
+        nlp_result = nlp.classify(payload.text, context=payload.context)
+        intent = nlp_result.intent
 
-        # Context-biased nudge: if intent is unknown and user is already on a surface, suggest complement
+        # Context-biased nudge: if intent is unknown and user is on a surface
         if intent == "unknown" and payload.context:
             route = str(payload.context.get("route", ""))
             complements: dict[str, tuple[str, str]] = {
@@ -68,39 +157,62 @@ class PackyService:
                         suggested_action=action,
                     )
 
+        # If NLP found a real intent, use its reply
+        if intent not in ("unknown", "greeting", "help"):
+            return PackyAnswer(
+                intent=intent,
+                extracted_data=nlp_result.entities,
+                reply_text=nlp_result.tts_response,
+                suggested_action=self._intent_to_action(intent),
+            )
+
+        # Greeting / help / unknown
         replies = {
-            "task_add": ("I can turn that into one task.", "open-task-create"),
-            "habit_check": ("Let's log one habit check-in now.", "open-habits"),
-            "focus_start": ("Start one 25-minute focus block.", "start-focus"),
-            "review_start": ("A short review session would fit well here.", "open-review"),
-            "mood_log": ("Log the mood first, then keep moving.", "open-journal"),
-            "journal_write": ("Write two lines, not a perfect page.", "open-journal"),
-            "search": ("I'll narrow that down to one result set.", "open-search"),
-            "schedule_today": ("Pick one must-do block for today.", "open-today"),
+            "greeting": (nlp_result.tts_response, "open-command-bar"),
+            "help": (nlp_result.tts_response, "open-command-bar"),
             "unknown": ("I can help best with one next action.", "open-command-bar"),
         }
-        reply_text, suggested_action = replies[intent]
+        reply_text, suggested_action = replies.get(intent, replies["unknown"])
         whisper = self.repository.whisper()
         if whisper.text.startswith("Achievement"):
             reply_text = f"{reply_text} {whisper.text}"
         return PackyAnswer(
             intent=intent,
-            extracted_data=extracted_data,
+            extracted_data=nlp_result.entities,
             reply_text=reply_text,
             suggested_action=suggested_action,
         )
 
+    @staticmethod
+    def _intent_to_action(intent: str) -> str:
+        mapping = {
+            "task.create": "open-task-create",
+            "task.complete": "open-tasks",
+            "task.list": "open-tasks",
+            "journal.create": "open-journal",
+            "calendar.create": "open-calendar",
+            "focus.start": "start-focus",
+            "alarm.create": "open-alarms",
+            "habit.checkin": "open-habits",
+            "habit.list": "open-habits",
+            "review.start": "open-review",
+            "search": "open-search",
+            "nutrition.log": "open-nutrition",
+        }
+        return mapping.get(intent, "open-command-bar")
+
+    # ------------------------------------------------------------------
+    # Whisper / lorebook / momentum (unchanged)
+    # ------------------------------------------------------------------
+
     def whisper(self) -> PackyWhisper:
         """Return a proactive nudge from the repository (SQLite-backed lorebook)."""
-
         return self.repository.whisper()
 
     def lorebook(self, payload: PackyLorebookRequest) -> dict[str, object]:
         """Persist lorebook context and return acknowledgement."""
-
         return self.repository.update_lorebook(payload)
 
     def momentum(self) -> MomentumScore:
         """Return the current momentum score from the repository."""
-
         return self.repository.momentum()

@@ -10,6 +10,34 @@ export function askPacky(payload: { text: string; context?: Record<string, unkno
   return apiClient("/packy/ask", { method: "POST", body: JSON.stringify(payload) });
 }
 
+/** Unified voice command response from Packy. */
+export interface PackyVoiceResponse {
+  intent: string;
+  confidence: number;
+  entities: Record<string, unknown>;
+  preview: Record<string, unknown>;
+  execution_result: Record<string, unknown> | null;
+  reply_text: string;
+  tts_text: string;
+  follow_ups: string[];
+  status: string;
+}
+
+/**
+ * Send a transcript to Packy's unified voice command endpoint.
+ * If autoExecute is true the command is executed server-side and the result is returned.
+ */
+export function sendVoiceCommand(
+  text: string,
+  context?: Record<string, unknown>,
+  autoExecute = false,
+): Promise<PackyVoiceResponse> {
+  return apiClient<PackyVoiceResponse>("/packy/voice-command", {
+    method: "POST",
+    body: JSON.stringify({ text, context, auto_execute: autoExecute }),
+  });
+}
+
 export function getPackyWhisper(): Promise<PackyWhisper> {
   return apiClient<PackyWhisper>("/packy/whisper");
 }

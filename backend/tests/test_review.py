@@ -82,3 +82,80 @@ def test_imported_apkg_cards_enter_sm2_schedule(db_path) -> None:
     assert updated.interval == 1
     assert updated.last_rating == 3
     assert updated.next_review_at == date.today() + timedelta(days=1)
+
+
+def test_patch_card_updates_front_and_back(client) -> None:
+    response = client.post(
+        "/api/v2/review/cards",
+        json={"deck_id": "deck_default", "front": "Original front", "back": "Original back"},
+    )
+    assert response.status_code == 200
+    card_id = response.json()["id"]
+
+    patch_response = client.patch(
+        f"/api/v2/review/cards/{card_id}",
+        json={"front": "Updated front", "back": "Updated back"},
+    )
+
+    assert patch_response.status_code == 200
+    updated = patch_response.json()
+    assert updated["front"] == "Updated front"
+    assert updated["back"] == "Updated back"
+    assert updated["id"] == card_id
+
+
+def test_patch_card_requires_front(client) -> None:
+    response = client.post(
+        "/api/v2/review/cards",
+        json={"deck_id": "deck_default", "front": "Has front", "back": "Has back"},
+    )
+    assert response.status_code == 200
+    card_id = response.json()["id"]
+
+    patch_response = client.patch(
+        f"/api/v2/review/cards/{card_id}",
+        json={"front": "", "back": "New back"},
+    )
+
+    assert patch_response.status_code == 422
+
+
+def test_patch_nonexistent_card_returns_404(client) -> None:
+    response = client.patch(
+        "/api/v2/review/cards/card_does_not_exist",
+        json={"front": "x", "back": "y"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_sm2_rating_sequence_easy_increases_interval(db_path) -> None:
+    repo = ReviewRepository(str(db_path))
+    svc = ReviewService(repo)
+    deck = repo.create_deck(DeckCreate(name="SM2 Test"))
+    apkg = _build_test_apkg([(["Capital of Denmark?", "Copenhagen"], "geo")])
+    svc.import_apkg(deck["id"], apkg, "test.apkg")
+    card = repo.get_due_cards(deck["id"])[0]
+
+    svc.answer_card(card.id, "good", deck_id=deck["id"])
+    after_good = repo.get_card(card.id)
+    svc.answer_card(card.id, "easy", deck_id=deck["id"])
+    after_easy = repo.get_card(card.id)
+
+    assert after_easy.interval > after_good.interval
+
+
+def test_sm2_rating_again_resets_interval(db_path) -> None:
+    repo = ReviewRepository(str(db_path))
+    svc = ReviewService(repo)
+    deck = repo.create_deck(DeckCreate(name="SM2 Lapse"))
+    apkg = _build_test_apkg([(["Question", "Answer"], "")])
+    svc.import_apkg(deck["id"], apkg, "lapse.apkg")
+    card = repo.get_due_cards(deck["id"])[0]
+
+    svc.answer_card(card.id, "good", deck_id=deck["id"])
+    svc.answer_card(card.id, "again", deck_id=deck["id"])
+    lapsed = repo.get_card(card.id)
+
+    assert lapsed.interval == 1
+    assert lapsed.lapse_count == 1

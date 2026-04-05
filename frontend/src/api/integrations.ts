@@ -1,3 +1,4 @@
+import type { IntegrationsStatus } from "../../../shared/types";
 import { apiClient } from "./client";
 
 export function connectGmail(payload: { code?: string; redirect_uri?: string }): Promise<{ status: string }> {
@@ -24,4 +25,8 @@ export function enqueueWebhook(payload: { event_type: string; payload: Record<st
   event_type: string;
 }> {
   return apiClient("/integrations/webhooks/outbox", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function getIntegrationsStatus(): Promise<IntegrationsStatus> {
+  return apiClient<IntegrationsStatus>("/integrations/status");
 }

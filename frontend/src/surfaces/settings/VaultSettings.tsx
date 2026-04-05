@@ -11,10 +11,12 @@ import {
   previewTaskImport,
   confirmTaskImport,
   getVaultConflicts,
+  getVaultConflictPreview,
   rollbackVaultFile,
   resolveVaultConflict,
 } from "@api/index";
 import type {
+  VaultConflictPreview,
   VaultStatus,
   VaultFileRecord,
   TaskImportPreview,
@@ -112,6 +114,24 @@ function smBtn(onClick: () => void, text: string, primary = false, disabled = fa
       }}
     >{text}</button>
   );
+}
+
+function previewText(body: string | null): string {
+  if (body === null) return "No saved snapshot available.";
+  return body.trim() ? body : "(empty file)";
+}
+
+function diffLineStyle(line: string): React.CSSProperties {
+  if (line.startsWith("+") && !line.startsWith("+++")) {
+    return { color: "var(--color-success, #4ade80)" };
+  }
+  if (line.startsWith("-") && !line.startsWith("---")) {
+    return { color: "var(--color-warn, #f87171)" };
+  }
+  if (line.startsWith("@@")) {
+    return { color: "var(--accent)" };
+  }
+  return { color: "var(--text-secondary)" };
 }
 
 // ── Daily task section panel ──────────────────────────────────────────────────
@@ -227,7 +247,7 @@ function TaskImportPanel({ disabled }: { disabled: boolean }): JSX.Element {
         {smBtn(scan, scanning ? "Scanning…" : "Scan", false, busy)}
       </div>
       <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-        Finds task lines in your vault files that are not yet in DopaFlow. Review before importing.
+        Finds task lines in your vault task files that are not yet in DopaFlow. Review before importing.
       </span>
 
       {preview && (
@@ -296,10 +316,18 @@ function TaskImportPanel({ disabled }: { disabled: boolean }): JSX.Element {
 
 function ConflictList({
   conflicts,
+  previews,
+  loadingId,
+  errorById,
+  onPreview,
   onRollback,
   onResolve,
 }: {
   conflicts: VaultFileRecord[];
+  previews: Record<number, VaultConflictPreview | undefined>;
+  loadingId: number | null;
+  errorById: Record<number, string | undefined>;
+  onPreview: (id: number) => void;
   onRollback: (id: number) => void;
   onResolve: (path: string) => void;
 }): JSX.Element | null {
@@ -337,9 +365,109 @@ function ConflictList({
             )}
           </div>
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+            {smBtn(
+              () => onPreview(c.id),
+              loadingId === c.id
+                ? "Loading preview…"
+                : previews[c.id]
+                  ? "Hide preview"
+                  : "Preview changes",
+              false,
+              loadingId === c.id,
+            )}
             {smBtn(() => onRollback(c.id), "Rollback to DopaFlow")}
             {smBtn(() => onResolve(c.file_path), "Keep vault version")}
           </div>
+          {errorById[c.id] && (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--color-warn, #f87171)" }}>
+              {errorById[c.id]}
+            </span>
+          )}
+          {previews[c.id] && (
+            <div style={{ display: "grid", gap: "0.5rem" }}>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
+                Snapshot is the last DopaFlow-indexed version. Vault is the current file on disk.
+              </span>
+              <div style={{ display: "grid", gap: "0.25rem" }}>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 600 }}>
+                  Diff summary
+                </span>
+                <div
+                  style={{
+                    margin: 0,
+                    padding: "0.6rem",
+                    borderRadius: "8px",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border-subtle)",
+                    fontSize: "11px",
+                    lineHeight: 1.4,
+                    whiteSpace: "pre-wrap",
+                    overflowX: "auto",
+                    maxHeight: "12rem",
+                    fontFamily: "monospace",
+                  }}
+                >
+                  {(previews[c.id]?.diff_lines.length ?? 0) > 0
+                    ? previews[c.id]?.diff_lines.map((line, index) => (
+                        <div key={`${c.id}-diff-${index}`} style={diffLineStyle(line)}>{line}</div>
+                      ))
+                    : <div style={{ color: "var(--text-secondary)" }}>No textual diff available.</div>}
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gap: "0.5rem",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(16rem, 1fr))",
+                }}
+              >
+                <div style={{ display: "grid", gap: "0.25rem" }}>
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 600 }}>
+                    Current vault
+                  </span>
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: "0.6rem",
+                      borderRadius: "8px",
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border-subtle)",
+                      fontSize: "11px",
+                      lineHeight: 1.4,
+                      whiteSpace: "pre-wrap",
+                      overflowX: "auto",
+                      maxHeight: "15rem",
+                    }}
+                  >
+                    {previews[c.id]?.current_exists
+                      ? previewText(previews[c.id]?.current_body ?? null)
+                      : "Vault file is missing."}
+                  </pre>
+                </div>
+                <div style={{ display: "grid", gap: "0.25rem" }}>
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 600 }}>
+                    Last DopaFlow snapshot
+                  </span>
+                  <pre
+                    style={{
+                      margin: 0,
+                      padding: "0.6rem",
+                      borderRadius: "8px",
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border-subtle)",
+                      fontSize: "11px",
+                      lineHeight: 1.4,
+                      whiteSpace: "pre-wrap",
+                      overflowX: "auto",
+                      maxHeight: "15rem",
+                    }}
+                  >
+                    {previewText(previews[c.id]?.snapshot_body ?? null)}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -351,6 +479,9 @@ function ConflictList({
 export function VaultSettings(): JSX.Element {
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [conflicts, setConflicts] = useState<VaultFileRecord[]>([]);
+  const [conflictPreviews, setConflictPreviews] = useState<Record<number, VaultConflictPreview | undefined>>({});
+  const [previewErrorById, setPreviewErrorById] = useState<Record<number, string | undefined>>({});
+  const [loadingPreviewId, setLoadingPreviewId] = useState<number | null>(null);
   const [pathInput, setPathInput] = useState("");
   const [enabledInput, setEnabledInput] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>("idle");
@@ -407,6 +538,28 @@ export function VaultSettings(): JSX.Element {
     void resolveVaultConflict(filePath)
       .then(() => { setLastMessage("Conflict resolved."); refresh(); })
       .catch((e: unknown) => setLastMessage(`Resolve failed: ${e instanceof Error ? e.message : "unknown"}`));
+  };
+
+  const togglePreview = (recordId: number): void => {
+    if (conflictPreviews[recordId]) {
+      setConflictPreviews((current) => ({ ...current, [recordId]: undefined }));
+      setPreviewErrorById((current) => ({ ...current, [recordId]: undefined }));
+      return;
+    }
+
+    setLoadingPreviewId(recordId);
+    setPreviewErrorById((current) => ({ ...current, [recordId]: undefined }));
+    void getVaultConflictPreview(recordId)
+      .then((preview) => {
+        setConflictPreviews((current) => ({ ...current, [recordId]: preview }));
+      })
+      .catch((e: unknown) => {
+        setPreviewErrorById((current) => ({
+          ...current,
+          [recordId]: e instanceof Error ? e.message : "Preview failed",
+        }));
+      })
+      .finally(() => setLoadingPreviewId((current) => (current === recordId ? null : current)));
   };
 
   const busy = syncState === "working";
@@ -520,7 +673,15 @@ export function VaultSettings(): JSX.Element {
       )}
 
       {/* Conflicts */}
-      <ConflictList conflicts={conflicts} onRollback={doRollback} onResolve={doResolve} />
+      <ConflictList
+        conflicts={conflicts}
+        previews={conflictPreviews}
+        loadingId={loadingPreviewId}
+        errorById={previewErrorById}
+        onPreview={togglePreview}
+        onRollback={doRollback}
+        onResolve={doResolve}
+      />
     </div>
   );
 }

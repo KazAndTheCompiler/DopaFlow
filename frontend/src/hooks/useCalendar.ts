@@ -13,6 +13,7 @@ import {
   resolveSyncConflict,
   syncGoogleCalendar,
   syncPeerFeed,
+  updateCalendarEvent,
 } from "@api/index";
 
 export interface UseCalendarResult {
@@ -26,6 +27,7 @@ export interface UseCalendarResult {
   refreshPeerFeeds: () => Promise<void>;
   syncAllPeers: () => Promise<void>;
   create: (event: Partial<CalendarEvent>) => Promise<CalendarEvent>;
+  update: (id: string, patch: Partial<CalendarEvent>) => Promise<CalendarEvent>;
   remove: (id: string) => Promise<void>;
   syncGoogle: () => Promise<void>;
   resolveConflict: (id: number, resolution: "prefer_local" | "prefer_incoming") => Promise<void>;
@@ -105,6 +107,12 @@ export function useCalendar(): UseCalendarResult {
       setEvents((prev) => sortEvents([...prev.filter((item) => item.id !== created.id), created]));
       void refresh();
       return created;
+    },
+    update: async (id: string, patch: Partial<CalendarEvent>) => {
+      const updated = await updateCalendarEvent(id, patch);
+      setEvents((prev) => sortEvents(prev.map((item) => (item.id === id ? updated : item))));
+      void refresh();
+      return updated;
     },
     remove: async (id: string) => {
       await deleteCalendarEvent(id);

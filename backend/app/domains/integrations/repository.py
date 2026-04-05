@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 
 from app.core.config import Settings
 from app.core.database import get_db, tx
-from app.domains.integrations.schemas import GmailConnectRequest, GmailImportResult, WebhookDispatch
+from app.domains.integrations.schemas import GmailConnectRequest, GmailImportResult, IntegrationsStatus, WebhookDispatch
 
 
 class IntegrationsRepository:
@@ -87,3 +87,30 @@ class IntegrationsRepository:
                 (event_id, payload.event_type, json.dumps(payload.payload)),
             )
         return {"status": "queued", "event_type": payload.event_type, "id": event_id}
+
+    def get_status(self) -> IntegrationsStatus:
+        gmail_token = self.get_token("gmail")
+        with get_db(self.db_path) as conn:
+            webhook_count = conn.execute(
+                "SELECT COUNT(*) FROM webhooks WHERE enabled = 1"
+            ).fetchone()[0]
+            metrics_rows = conn.execute(
+                """
+                SELECT status, COUNT(*) AS count
+                FROM outbox_events
+                GROUP BY status
+                """
+            ).fetchall()
+
+        metrics = {"pending": 0, "retry_wait": 0, "sent": 0}
+        for row in metrics_rows:
+            metrics[str(row["status"])] = int(row["count"])
+
+        return IntegrationsStatus(
+            gmail_status="connected" if gmail_token else "not_connected",
+            gmail_connected=gmail_token is not None,
+            webhooks_enabled=bool(webhook_count),
+            webhook_pending=metrics.get("pending", 0),
+            webhook_retry_wait=metrics.get("retry_wait", 0),
+            webhook_sent=metrics.get("sent", 0),
+        )

@@ -14,6 +14,20 @@ interface SpeechRecognitionErrorEvent extends Event {
   error: string;
 }
 
+function mapSpeechError(error: string): string {
+  switch (error) {
+    case "not-allowed":
+    case "service-not-allowed":
+      return "Microphone permission was denied by the browser.";
+    case "audio-capture":
+      return "No microphone was found for voice input.";
+    case "network":
+      return "Voice recognition hit a network error.";
+    default:
+      return error;
+  }
+}
+
 interface SpeechRecognitionEvent extends Event {
   resultIndex: number;
   results: SpeechRecognitionResultList;
@@ -90,6 +104,7 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
     setError(null);
     setTranscript("");
     setInterim("");
+    recRef.current?.abort();
 
     const rec = new SR();
     rec.lang = lang;
@@ -117,7 +132,7 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
     rec.onerror = (event: SpeechRecognitionErrorEvent): void => {
       // "no-speech" and "aborted" are benign — user just didn't speak
       if (event.error !== "no-speech" && event.error !== "aborted") {
-        setError(event.error);
+        setError(mapSpeechError(event.error));
       }
       setListening(false);
     };
@@ -128,7 +143,16 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
     };
 
     recRef.current = rec;
-    rec.start();
+    try {
+      rec.start();
+    } catch (exc) {
+      const message = exc instanceof Error ? exc.message : "Voice recognition could not start.";
+      setError(/notallowed|permission|denied/i.test(message)
+        ? "Microphone permission was denied by the browser."
+        : message);
+      setListening(false);
+      recRef.current = null;
+    }
   }, [lang]);
 
   const stop = useCallback((): void => {

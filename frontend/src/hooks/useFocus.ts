@@ -47,6 +47,9 @@ export function useFocus(): UseFocusResult {
         action,
         ...(action === "completed" ? { ended_at: new Date().toISOString() } : {}),
       });
+      if (action === "completed") {
+        window.dispatchEvent(new CustomEvent("dopaflow:gamification-refresh"));
+      }
       await refresh();
     },
   };

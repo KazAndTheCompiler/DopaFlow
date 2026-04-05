@@ -7,6 +7,7 @@ import CalendarSharingSettings from "./CalendarSharingSettings";
 import ExportPanel from "./ExportPanel";
 import GitHubIntegration from "./GitHubIntegration";
 import GmailConnect from "./GmailConnect";
+import IntegrationsOverview from "./IntegrationsOverview";
 import SettingsPanel from "./SettingsPanel";
 import SkinPicker from "./SkinPicker";
 import LayoutPicker from "./LayoutPicker";
@@ -53,6 +54,15 @@ export default function SettingsView(): JSX.Element {
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <SettingsPanel />
+      <section style={groupStyle} id="settings-integrations-overview">
+        <div style={groupHeaderStyle}>
+          <span style={sectionTitleStyle}>System Health</span>
+          <span style={groupDescriptionStyle}>
+            See the integration picture first: what is connected, what is degraded, and what still lives only on this device.
+          </span>
+        </div>
+        <IntegrationsOverview />
+      </section>
       <section style={groupStyle}>
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Look & Feel</span>
@@ -63,7 +73,7 @@ export default function SettingsView(): JSX.Element {
         <SkinPicker current={app.skin.skin} skins={app.skin.skins} loading={app.skin.loading} onPick={app.skin.setSkin} />
         <LayoutPicker current={app.layout.layout} onPick={app.layout.setLayout} />
       </section>
-      <section style={groupStyle}>
+      <section style={groupStyle} id="settings-vault">
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Obsidian Vault</span>
           <span style={groupDescriptionStyle}>
@@ -72,7 +82,7 @@ export default function SettingsView(): JSX.Element {
         </div>
         <VaultSettings />
       </section>
-      <section style={groupStyle}>
+      <section style={groupStyle} id="settings-sync-sharing">
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Sync & Sharing</span>
           <span style={groupDescriptionStyle}>
@@ -82,7 +92,7 @@ export default function SettingsView(): JSX.Element {
         <TursoConfig />
         <CalendarSharingSettings />
       </section>
-      <section style={groupStyle}>
+      <section style={groupStyle} id="settings-integrations">
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Integrations</span>
           <span style={groupDescriptionStyle}>

@@ -29,7 +29,25 @@ export function useAlarms(): UseAlarmsResult {
   const [next_alarm_at, setNextAlarmAt] = useState<string | null>(null);
   const [schedulerRunning, setSchedulerRunning] = useState<boolean>(false);
   const firedRef = useRef<Set<string>>(new Set());
+  const timeoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const { speak } = useTTS();
+
+  const clearScheduledTimeouts = useCallback((): void => {
+    for (const timeoutId of timeoutRef.current.values()) {
+      clearTimeout(timeoutId);
+    }
+    timeoutRef.current.clear();
+  }, []);
+
+  const fireLocally = useCallback((alarm: Alarm): void => {
+    if (alarm.muted || firedRef.current.has(alarm.id)) return;
+    firedRef.current.add(alarm.id);
+    if (alarm.kind === "tts" || alarm.kind == null) {
+      const text = alarm.tts_text || alarm.title;
+      speak(text);
+    }
+    void triggerAlarm(alarm.id).catch(() => undefined);
+  }, [speak]);
 
   const refresh = useCallback(async (): Promise<void> => {
     const [nextAlarms, status] = await Promise.all([listAlarms(), getAlarmSchedulerStatus()]);
@@ -37,23 +55,25 @@ export function useAlarms(): UseAlarmsResult {
     setActiveAlarmId(status.active_alarm_id ?? null);
     setNextAlarmAt(status.next_alarm_at ?? null);
     setSchedulerRunning(status.running);
+    clearScheduledTimeouts();
 
-    // Browser-side TTS poller: fire any alarm whose time has passed and hasn't been spoken yet
+    // Browser-side fallback so local web release alarms work even without OS TTS binaries.
     const now = Date.now();
     for (const alarm of nextAlarms) {
       if (alarm.muted) continue;
-      if (firedRef.current.has(alarm.id)) continue;
       const alarmTime = new Date(alarm.at).getTime();
-      // Fire if within the poll window (past due but not more than 2 minutes stale)
+      if (Number.isNaN(alarmTime)) continue;
       if (alarmTime <= now && now - alarmTime < 2 * 60_000) {
-        firedRef.current.add(alarm.id);
-        const text = alarm.tts_text || alarm.title;
-        if (alarm.kind === "tts" || alarm.kind == null) {
-          speak(text);
-        }
+        fireLocally(alarm);
+        continue;
+      }
+      if (alarmTime > now && !firedRef.current.has(alarm.id)) {
+        const delay = Math.min(alarmTime - now, 2_147_483_647);
+        const timeoutId = setTimeout(() => fireLocally(alarm), delay);
+        timeoutRef.current.set(alarm.id, timeoutId);
       }
     }
-  }, [speak]);
+  }, [clearScheduledTimeouts, fireLocally]);
 
   // Register service worker and request notification permission
   useEffect(() => {
@@ -107,7 +127,10 @@ export function useAlarms(): UseAlarmsResult {
   useEffect(() => {
     void refresh();
     const id = setInterval(() => { void refresh(); }, POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      clearScheduledTimeouts();
+    };
   }, [refresh]);
 
   return {
@@ -127,6 +150,11 @@ export function useAlarms(): UseAlarmsResult {
     },
     trigger: async (id: string) => {
       await triggerAlarm(id);
+      const alarm = alarms.find((item) => item.id === id);
+      if (alarm && !alarm.muted && (alarm.kind === "tts" || alarm.kind == null)) {
+        firedRef.current.add(alarm.id);
+        speak(alarm.tts_text || alarm.title);
+      }
       await refresh();
     },
   };

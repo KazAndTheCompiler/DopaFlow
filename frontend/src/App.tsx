@@ -2,6 +2,7 @@ import { Component, createContext, useCallback, useEffect, useMemo, useRef, useS
 import type { ErrorInfo, ReactNode } from "react";
 
 import { ToastContainer } from "@ds/primitives/Toast";
+import { showToast } from "@ds/primitives/Toast";
 import NotificationInbox from "./components/NotificationInbox";
 import AchievementToast from "./components/gamification/AchievementToast";
 import CommandPalette from "./components/CommandPalette";
@@ -111,6 +112,13 @@ function getRouteFromHash(): string {
   return route || "today";
 }
 
+function localDateISO(offsetDays = 0): string {
+  const value = new Date();
+  value.setDate(value.getDate() + offsetDays);
+  value.setMinutes(value.getMinutes() - value.getTimezoneOffset());
+  return value.toISOString().slice(0, 10);
+}
+
 class SurfaceErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   override state = { hasError: false };
 
@@ -157,7 +165,10 @@ export default function App(): JSX.Element {
   const [planOpen, setPlanOpen] = useState<boolean>(false);
   const [shutdownOpen, setShutdownOpen] = useState<boolean>(false);
   const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => !localStorage.getItem("dopaflow_onboarded"));
+  const [focusNow, setFocusNow] = useState<number>(() => Date.now());
   const lastPackySyncRef = useRef<string>("");
+  const lastXpRef = useRef<number | null>(null);
+  const lastLevelRef = useRef<number | null>(null);
 
   const navigate = useCallback((nextRoute: string): void => {
     if (nextRoute === "plan") {
@@ -208,6 +219,34 @@ export default function App(): JSX.Element {
     void materializeRecurringTasks(168).catch(() => {}); // silent, fire-and-forget
   }, []);
 
+  useEffect(() => {
+    if (!focus.activeSession || focus.activeSession.status !== "running") {
+      return;
+    }
+    const intervalId = window.setInterval(() => setFocusNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [focus.activeSession?.id, focus.activeSession?.status]);
+
+  const activeTimerLabel = useMemo(() => {
+    const session = focus.activeSession;
+    if (!session) return undefined;
+    const totalSeconds = Math.max(0, Math.round((session.duration_minutes ?? 0) * 60));
+    if (!session.started_at) {
+      return `${session.duration_minutes}m ${session.status}`;
+    }
+    const startedAt = new Date(session.started_at).getTime();
+    if (Number.isNaN(startedAt)) {
+      return `${session.duration_minutes}m ${session.status}`;
+    }
+    const elapsedSeconds = Math.max(0, Math.floor((focusNow - startedAt) / 1000));
+    const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
+    const minutes = Math.floor(remainingSeconds / 60).toString().padStart(2, "0");
+    const seconds = (remainingSeconds % 60).toString().padStart(2, "0");
+    return session.status === "paused"
+      ? `${minutes}:${seconds} paused`
+      : `${minutes}:${seconds} left`;
+  }, [focus.activeSession, focusNow]);
+
   useKeyboardShortcuts({
     navigate,
     openPlanModal: () => setPlanOpen(true),
@@ -221,7 +260,7 @@ export default function App(): JSX.Element {
       return;
     }
     const TODAY_KEY = "zoestm_planned_date";
-    const todayISO = new Date().toISOString().slice(0, 10);
+    const todayISO = localDateISO();
     const lastPlanned = localStorage.getItem(TODAY_KEY);
     if (lastPlanned !== todayISO) {
       // Small delay so the app renders first
@@ -256,6 +295,35 @@ export default function App(): JSX.Element {
       );
     }
   }, [focus.sessions, gamification.refresh, habits.habits, journal.entries, packy.updateLorebook, review.cards, tasks.tasks]);
+
+  useEffect(() => {
+    const refreshGamification = (): void => {
+      void gamification.refresh();
+    };
+    window.addEventListener("dopaflow:gamification-refresh", refreshGamification as EventListener);
+    return () => window.removeEventListener("dopaflow:gamification-refresh", refreshGamification as EventListener);
+  }, [gamification.refresh]);
+
+  useEffect(() => {
+    const level = gamification.level;
+    if (!level) {
+      return;
+    }
+    if (lastXpRef.current === null) {
+      lastXpRef.current = level.total_xp;
+      lastLevelRef.current = level.level;
+      return;
+    }
+    const xpDelta = level.total_xp - lastXpRef.current;
+    if (xpDelta > 0) {
+      showToast(`+${xpDelta} XP · Level ${level.level} · ${level.xp_to_next} to next`, "success");
+    }
+    if (lastLevelRef.current !== null && level.level > lastLevelRef.current) {
+      showToast(`Level up! You reached level ${level.level}.`, "success");
+    }
+    lastXpRef.current = level.total_xp;
+    lastLevelRef.current = level.level;
+  }, [gamification.level]);
 
   const contextValue = useMemo<AppContextValue>(
     () => ({
@@ -347,9 +415,7 @@ export default function App(): JSX.Element {
         }}
         focusModeEnabled={focusModeEnabled}
         onToggleFocusMode={() => setFocusModeEnabled((value) => !value)}
-        activeTimerLabel={
-          focus.activeSession ? `${focus.activeSession.duration_minutes}m ${focus.activeSession.status}` : undefined
-        }
+        activeTimerLabel={activeTimerLabel}
         habitPips={Math.min(habits.habits.length, 5)}
         streakCount={habits.habits.reduce((sum, habit) => sum + habit.current_streak, 0)}
         momentumScore={packy.momentum?.score ?? insights.momentum?.score}
@@ -383,34 +449,28 @@ export default function App(): JSX.Element {
       {shutdownOpen && (
         <ShutdownModal
           completedToday={tasks.tasks.filter((t) => {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = localDateISO();
             return t.done && t.updated_at?.slice(0, 10) === today;
           })}
           incompleteToday={tasks.tasks.filter((t) => {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = localDateISO();
             return !t.done && t.due_at?.slice(0, 10) === today;
           })}
           tomorrowTasks={tasks.tasks.filter((t) => {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+            const tomorrowISO = localDateISO(1);
             return !t.done && t.due_at?.slice(0, 10) === tomorrowISO;
           })}
           onDefer={async (taskId, when) => {
             if (when === "drop") {
               await tasks.update(taskId, { status: "cancelled" });
             } else if (when === "tomorrow") {
-              const tom = new Date();
-              tom.setDate(tom.getDate() + 1);
-              await tasks.update(taskId, { due_at: tom.toISOString().slice(0, 10) });
+              await tasks.update(taskId, { due_at: localDateISO(1) });
             } else if (when === "this_week") {
-              const inWeek = new Date();
-              inWeek.setDate(inWeek.getDate() + 7);
-              await tasks.update(taskId, { due_at: inWeek.toISOString().slice(0, 10) });
+              await tasks.update(taskId, { due_at: localDateISO(7) });
             }
           }}
           onJournalNote={async (emoji, note) => {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = localDateISO();
             await journal.save({ date: today, markdown_body: note, emoji, tags: ["shutdown"] });
           }}
           onClose={() => setShutdownOpen(false)}

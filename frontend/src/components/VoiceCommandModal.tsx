@@ -1,153 +1,624 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { executeCommandText, previewVoiceCommand, type VoiceCommandPreview } from "@api/index";
+import { sendVoiceCommand, type PackyVoiceResponse } from "@api/index";
 import { showToast } from "@ds/primitives/Toast";
 import { Modal } from "@ds/primitives/Modal";
 import Button from "@ds/primitives/Button";
 import { useTTS } from "@hooks/useTTS";
+import { useSpeechRecognition } from "@hooks/useSpeechRecognition";
+import { JarvisOverlay } from "./JarvisOverlay";
+
+// ---------------------------------------------------------------------------
+// Intent metadata
+// ---------------------------------------------------------------------------
+
+const INTENT_META: Record<string, { icon: string; label: string; color: string }> = {
+  "task.create": { icon: "✅", label: "New Task", color: "var(--accent-primary)" },
+  "task.complete": { icon: "✔️", label: "Task Completed", color: "var(--state-ok)" },
+  "task.list": { icon: "📋", label: "Task List", color: "var(--accent-primary)" },
+  "journal.create": { icon: "📝", label: "Journal", color: "var(--accent-secondary)" },
+  "calendar.create": { icon: "📅", label: "Event", color: "var(--accent-tertiary)" },
+  "focus.start": { icon: "🎯", label: "Focus", color: "var(--state-warn)" },
+  "alarm.create": { icon: "⏰", label: "Alarm", color: "var(--accent-primary)" },
+  "habit.checkin": { icon: "🔥", label: "Habit", color: "var(--state-ok)" },
+  "habit.list": { icon: "📊", label: "Habits", color: "var(--accent-primary)" },
+  "review.start": { icon: "🃏", label: "Review", color: "var(--accent-secondary)" },
+  search: { icon: "🔍", label: "Search", color: "var(--text-secondary)" },
+  "nutrition.log": { icon: "🍎", label: "Food Log", color: "var(--accent-tertiary)" },
+  compound: { icon: "⚡", label: "Multiple Actions", color: "var(--accent-primary)" },
+  greeting: { icon: "👋", label: "Hello", color: "var(--text-secondary)" },
+  help: { icon: "❓", label: "Help", color: "var(--text-secondary)" },
+  undo: { icon: "↩️", label: "Undo", color: "var(--state-warn)" },
+};
+
+const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
+  1: { label: "High", color: "var(--state-overdue)" },
+  2: { label: "Normal", color: "var(--text-secondary)" },
+  3: { label: "Low", color: "var(--text-tertiary)" },
+  4: { label: "Backlog", color: "var(--text-muted)" },
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatEntityValue(key: string, value: unknown): string {
+  if (value == null || (Array.isArray(value) && value.length === 0)) return "";
+  if (key === "priority" && typeof value === "number") return PRIORITY_LABELS[value]?.label ?? String(value);
+  if (key === "rrule" && typeof value === "string") {
+    if (value.includes("DAILY")) return "Repeats daily";
+    if (value.includes("WEEKLY") && value.includes("BYDAY")) return `Repeats weekly (${value.split("BYDAY=")[1]})`;
+    if (value.includes("WEEKLY")) return "Repeats weekly";
+    if (value.includes("MONTHLY")) return "Repeats monthly";
+    if (value.includes("YEARLY")) return "Repeats yearly";
+    return `Recurring (${value})`;
+  }
+  if (Array.isArray(value)) return value.join(", ");
+  if (key === "estimated_minutes" && typeof value === "number") return `~${value}min`;
+  if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) {
+      return d.toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    }
+  }
+  return String(value);
+}
+
+function shouldShowEntity(key: string, value: unknown): boolean {
+  if (value == null || value === "" || value === false) return false;
+  if (Array.isArray(value) && value.length === 0) return false;
+  // Skip internal/technical keys
+  if (key === "date" && typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 interface VoiceCommandModalProps {
   initialCommandWord?: "task" | "journal" | "calendar";
   onExecuted?: () => void;
+  /** If true, render inline without a modal wrapper. */
+  inline?: boolean;
 }
 
-const COMMAND_LABELS: Record<NonNullable<VoiceCommandModalProps["initialCommandWord"]>, string> = {
-  task: "task",
-  journal: "journal entry",
-  calendar: "calendar event",
-};
-
-export function VoiceCommandModal({ initialCommandWord, onExecuted }: VoiceCommandModalProps): JSX.Element {
+export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: VoiceCommandModalProps): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [preview, setPreview] = useState<VoiceCommandPreview | null>(null);
+  const [phase, setPhase] = useState<"idle" | "listening" | "processing" | "preview" | "executing" | "done">("idle");
+  const [response, setResponse] = useState<PackyVoiceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-  const unavailable = typeof navigator === "undefined" || !navigator.mediaDevices;
-  const expectedLabel = initialCommandWord ? COMMAND_LABELS[initialCommandWord] : "command";
-  const previewStatus = preview?.status ?? null;
-  const previewMessage =
-    typeof preview?.preview?.message === "string" ? preview.preview.message : null;
-  const canExecute = Boolean(preview?.transcript) && previewStatus === "ok";
-  const { speak } = useTTS();
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [commandHistory, setCommandHistory] = useState<PackyVoiceResponse[]>([]);
 
-  const speakPreview = (nextPreview: VoiceCommandPreview): void => {
-    if (!nextPreview.transcript.trim()) return;
-    if (nextPreview.status === "ok") {
-      speak(`Heard ${nextPreview.transcript}. Ready to run ${nextPreview.command_word} command.`);
-      return;
-    }
-    if (nextPreview.status === "incomplete") {
-      speak(nextPreview.preview?.message && typeof nextPreview.preview.message === "string"
-        ? nextPreview.preview.message
-        : "More detail needed before I can run that command.");
-      return;
-    }
-    speak(nextPreview.preview?.message && typeof nextPreview.preview.message === "string"
-      ? nextPreview.preview.message
-      : "Start with task, journal, or calendar.");
-  };
+  const { supported: sttSupported, listening, transcript, interim, error: sttError, start, stop, reset } = useSpeechRecognition();
+  const { speak, speaking } = useTTS();
+  const processingRef = useRef(false);
+  const lastTranscriptRef = useRef("");
+  const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const transcriptText = typeof transcript === "string" ? transcript : "";
+  const interimText = typeof interim === "string" ? interim : "";
 
-  const resetState = (): void => {
-    setRecording(false);
-    setLoading(false);
-    setPreview(null);
-    setError(null);
-  };
+  // -----------------------------------------------------------------------
+  // Process transcript → send to Packy
+  // -----------------------------------------------------------------------
 
-  const close = (): void => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    recorderRef.current = null;
-    chunksRef.current = [];
-    setOpen(false);
-    resetState();
-  };
+  const processTranscript = useCallback(
+    async (text: string) => {
+      if (processingRef.current || !text.trim()) return;
+      processingRef.current = true;
+      setPhase("processing");
+      setError(null);
 
-  const startRecording = async (): Promise<void> => {
-    setError(null);
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const recorder = new MediaRecorder(stream);
-    streamRef.current = stream;
-    recorderRef.current = recorder;
-    chunksRef.current = [];
-    recorder.ondataavailable = (event) => chunksRef.current.push(event.data);
-    recorder.onstop = async () => {
-      setRecording(false);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      setLoading(true);
       try {
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || "audio/webm" });
-        const nextPreview = await previewVoiceCommand(blob, "voice-command.webm");
-        if (initialCommandWord && nextPreview.command_word && nextPreview.command_word !== initialCommandWord) {
-          const mismatchedPreview = {
-            ...nextPreview,
-            status: "needs_command_word",
-            preview: {
-              ...nextPreview.preview,
-              status: "needs_command_word",
-              message: `This button only accepts ${initialCommandWord} commands.`,
-              allowed_prefixes: [initialCommandWord],
-            },
-          };
-          setPreview(mismatchedPreview);
-          speakPreview(mismatchedPreview);
-          return;
-        }
-        setPreview(nextPreview);
-        speakPreview(nextPreview);
-      } catch (exc) {
-        setError(exc instanceof Error ? exc.message : "Voice command preview failed");
-        speak("Voice command preview failed.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    recorder.start();
-    setRecording(true);
-  };
+        const res = await sendVoiceCommand(text, undefined, false);
+        setResponse(res);
+        setPhase("preview");
 
-  const toggleRecording = async (): Promise<void> => {
-    try {
-      if (recording && recorderRef.current) {
-        recorderRef.current.stop();
-        return;
+        // Auto-execute non-actionable intents
+        if (res.intent === "greeting" || res.intent === "help") {
+          if (res.tts_text) speak(res.tts_text);
+          if (continuousMode) scheduleFollowUpRelisten(res);
+        } else if (res.tts_text && res.status === "ok") {
+          speak(res.tts_text);
+        }
+      } catch (exc) {
+        setError(exc instanceof Error ? exc.message : "Voice command failed");
+        setPhase("idle");
+      } finally {
+        processingRef.current = false;
       }
-      await startRecording();
-    } catch (exc) {
-      const message = exc instanceof Error ? exc.message : "Microphone unavailable";
-      setError(/denied|notallowed|permission/i.test(message) ? "Microphone permission denied by the browser." : message);
+    },
+    [speak, continuousMode],
+  );
+
+  // When speech recognition produces a final transcript, process it
+  useEffect(() => {
+    if (transcriptText && transcriptText !== lastTranscriptRef.current && !listening) {
+      lastTranscriptRef.current = transcriptText;
+      void processTranscript(transcriptText);
     }
-  };
+  }, [transcriptText, listening, processTranscript]);
+
+  useEffect(() => {
+    if (!sttError) return;
+    setError(sttError);
+    setPhase("idle");
+  }, [sttError]);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+    };
+  }, []);
+
+  // -----------------------------------------------------------------------
+  // Execute confirmed command
+  // -----------------------------------------------------------------------
 
   const handleExecute = async (): Promise<void> => {
-    if (!canExecute || !preview?.transcript) {
-      return;
-    }
-    setLoading(true);
+    if (!transcriptText) return;
+    setPhase("executing");
+    setError(null);
+
     try {
-      await executeCommandText(preview.transcript, true, "voice");
-      showToast("Voice command executed.", "success");
-      speak(`Done. ${preview.command_word} command executed.`);
-      close();
+      const res = await sendVoiceCommand(transcriptText, undefined, true);
+      setResponse(res);
+      setCommandHistory((prev) => [...prev, res]);
+      setPhase("done");
+
+      const rawReply = res.reply_text ?? res.execution_result?.reply ?? "Done.";
+      const reply = typeof rawReply === "string" ? rawReply : JSON.stringify(rawReply);
+      speak(reply);
+      showToast(reply, res.status === "executed" ? "success" : "warn");
       onExecuted?.();
+
+      // In continuous mode, auto-relisten after speaking
+      if (continuousMode) scheduleFollowUpRelisten(res);
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : "Voice command failed");
-      speak("Voice command failed.");
-    } finally {
-      setLoading(false);
+      setError(exc instanceof Error ? exc.message : "Execution failed");
+      speak("Something went wrong. Try again?");
+      setPhase("preview");
     }
   };
+
+  // -----------------------------------------------------------------------
+  // Continuous conversation
+  // -----------------------------------------------------------------------
+
+  const scheduleFollowUpRelisten = (res: PackyVoiceResponse): void => {
+    if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+    // Wait for TTS to finish (~2s per sentence), then re-listen
+    const replyLen = (res.reply_text ?? res.tts_text ?? "").length;
+    const delay = Math.min(Math.max(replyLen * 50, 1500), 5000);
+    followUpTimeoutRef.current = setTimeout(() => {
+      if (continuousMode && sttSupported) {
+        reset();
+        setResponse(null);
+        setError(null);
+        setPhase("listening");
+        lastTranscriptRef.current = "";
+        start();
+      }
+    }, delay);
+  };
+
+  // -----------------------------------------------------------------------
+  // Follow-up relay
+  // -----------------------------------------------------------------------
+
+  const handleFollowUp = (text: string): void => {
+    reset();
+    lastTranscriptRef.current = "";
+    void processTranscript(text);
+  };
+
+  // -----------------------------------------------------------------------
+  // Start / stop listening
+  // -----------------------------------------------------------------------
+
+  const toggleListening = (): void => {
+    if (listening) {
+      stop();
+      return;
+    }
+    reset();
+    setResponse(null);
+    setError(null);
+    setPhase("listening");
+    lastTranscriptRef.current = "";
+    start();
+  };
+
+  // -----------------------------------------------------------------------
+  // Reset
+  // -----------------------------------------------------------------------
+
+  const handleClose = (): void => {
+    if (listening) stop();
+    if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+    reset();
+    setResponse(null);
+    setError(null);
+    setPhase("idle");
+    setContinuousMode(false);
+    setCommandHistory([]);
+    setOpen(false);
+    lastTranscriptRef.current = "";
+  };
+
+  // -----------------------------------------------------------------------
+  // Render helpers
+  // -----------------------------------------------------------------------
+
+  const meta = response ? INTENT_META[response.intent] : null;
+  const canExecute =
+    phase === "preview" &&
+    response &&
+    !["unknown", "greeting", "help"].includes(response.intent) &&
+    response.status !== "needs_datetime";
+  const canFollowUp = phase === "done" && response?.follow_ups?.length;
+
+  const renderPreview = (): JSX.Element | null => {
+    if (!response) return null;
+
+    const entities = response.entities ?? {};
+    const showEntities = Object.entries(entities).filter(([k, v]) => shouldShowEntity(k, v));
+    const compoundResults = Array.isArray((response.execution_result as { results?: unknown } | null)?.results)
+      ? ((response.execution_result as { results: PackyVoiceResponse[] }).results)
+      : [];
+
+    return (
+      <div
+        style={{
+          display: "grid",
+          gap: "0.75rem",
+          padding: "1rem",
+          borderRadius: "14px",
+          background: "var(--surface-2)",
+          border: "1px solid var(--border-subtle)",
+          animation: "fadeIn 200ms ease",
+        }}
+      >
+        {/* Intent badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <span style={{ fontSize: "1.25rem" }}>{meta?.icon ?? "💬"}</span>
+          <span
+            style={{
+              fontWeight: 700,
+              fontSize: "var(--text-sm)",
+              color: meta?.color ?? "var(--text-primary)",
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
+            {meta?.label ?? response.intent}
+          </span>
+          {response.confidence > 0 && (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--text-tertiary)", marginLeft: "auto" }}>
+              {Math.round(response.confidence * 100)}%
+            </span>
+          )}
+        </div>
+
+        {/* Transcript */}
+        <div>
+          <div
+            style={{
+              fontSize: "var(--text-xs)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--text-secondary)",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Heard
+          </div>
+          <div style={{ fontWeight: 600 }}>{transcriptText}</div>
+        </div>
+
+        {/* Compound results */}
+        {response.intent === "compound" && compoundResults.length > 0 && (
+          <div style={{ display: "grid", gap: "0.5rem" }}>
+            {compoundResults.map((r, i) => {
+              const rMeta = INTENT_META[r.intent];
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.35rem 0.5rem",
+                    borderRadius: "8px",
+                    background: "var(--surface-3)",
+                    fontSize: "var(--text-xs)",
+                  }}
+                >
+                  <span>{rMeta?.icon ?? "💬"}</span>
+                  <span style={{ fontWeight: 600 }}>{rMeta?.label ?? r.intent}</span>
+                  <span style={{ color: "var(--text-tertiary)", marginLeft: "auto" }}>
+                    {r.status === "executed" ? "✓" : r.status}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Entities — rich cards */}
+        {showEntities.length > 0 && (
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+            {showEntities.map(([key, value]) => {
+              const formatted = formatEntityValue(key, value);
+              if (!formatted) return null;
+              return (
+                <span
+                  key={key}
+                  style={{
+                    padding: "0.25rem 0.55rem",
+                    borderRadius: "8px",
+                    background: key === "rrule" ? "var(--accent-primary)22" : "var(--surface-3)",
+                    fontSize: "var(--text-xs)",
+                    color: key === "rrule" ? "var(--accent-primary)" : "var(--text-secondary)",
+                    fontWeight: key === "rrule" ? 600 : 400,
+                    border: key === "rrule" ? "1px solid var(--accent-primary)44" : "none",
+                  }}
+                >
+                  {key === "rrule"
+                    ? formatted
+                    : key === "priority"
+                      ? `⚡ ${formatted}`
+                      : key === "estimated_minutes"
+                        ? `⏱ ${formatted}`
+                        : key === "due_at"
+                          ? `📅 ${formatted}`
+                          : `${key}: ${formatted}`}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Needs datetime hint */}
+        {response.status === "needs_datetime" && (
+          <div style={{ color: "var(--state-warn)", fontSize: "var(--text-sm)" }}>
+            I need a date and time. Say something like &quot;tomorrow at 2pm&quot;.
+          </div>
+        )}
+
+        {/* Reply */}
+        {response.reply_text && (
+          <div
+            style={{
+              padding: "0.5rem 0.75rem",
+              borderRadius: "8px",
+              background: "var(--surface-3)",
+              fontSize: "var(--text-sm)",
+              color: "var(--text-primary)",
+              fontStyle: "italic",
+            }}
+          >
+            &quot;{response.reply_text}&quot;
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderFollowUps = (): JSX.Element | null => {
+    if (!canFollowUp || !response) return null;
+    return (
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        {response.follow_ups.map((fu) => (
+          <button
+            key={fu}
+            onClick={() => handleFollowUp(fu)}
+            style={{
+              padding: "0.35rem 0.7rem",
+              borderRadius: "10px",
+              border: "1px solid var(--border-subtle)",
+              background: "var(--surface-2)",
+              color: "var(--text-secondary)",
+              fontSize: "var(--text-xs)",
+              cursor: "pointer",
+              transition: "background 150ms, border-color 150ms",
+            }}
+            onMouseEnter={(e) => {
+              (e.target as HTMLElement).style.background = "var(--surface-3)";
+              (e.target as HTMLElement).style.borderColor = "var(--accent-primary)44";
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLElement).style.background = "var(--surface-2)";
+              (e.target as HTMLElement).style.borderColor = "var(--border-subtle)";
+            }}
+          >
+            {fu}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  // -----------------------------------------------------------------------
+  // Render
+  // -----------------------------------------------------------------------
+
+  const content = (
+    <>
+      <JarvisOverlay visible={speaking} />
+      <div style={{ display: "grid", gap: "1rem" }}>
+        {/* Instruction */}
+      <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+        {initialCommandWord ? (
+          <>
+            Say a <strong>{initialCommandWord}</strong> command, like &quot;{initialCommandWord} buy milk tomorrow&quot;.
+          </>
+        ) : (
+          <>
+            Just speak naturally — no prefixes needed. Try &quot;buy milk every monday&quot;, &quot;start focus for 25
+            minutes&quot;, or &quot;add task meeting prep and set alarm 9am&quot;.
+          </>
+        )}
+      </p>
+
+      {/* Continuous mode toggle */}
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <button
+          onClick={() => setContinuousMode((v) => !v)}
+          style={{
+            padding: "0.3rem 0.6rem",
+            borderRadius: "8px",
+            border: "1px solid",
+            borderColor: continuousMode ? "var(--accent-primary)" : "var(--border-subtle)",
+            background: continuousMode ? "var(--accent-primary)22" : "transparent",
+            color: continuousMode ? "var(--accent-primary)" : "var(--text-tertiary)",
+            fontSize: "var(--text-xs)",
+            cursor: "pointer",
+            fontWeight: continuousMode ? 600 : 400,
+          }}
+        >
+          {continuousMode ? "🎙 Continuous mode on" : "🎙 Continuous mode"}
+        </button>
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
+          Auto-relisten after each response
+        </span>
+      </div>
+
+      {/* Mic button + status */}
+      <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+        <Button
+          onClick={toggleListening}
+          disabled={!sttSupported || phase === "processing" || phase === "executing"}
+          variant={listening ? "primary" : "secondary"}
+        >
+          {listening ? (
+            <span style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span
+                style={{
+                  width: "0.6rem",
+                  height: "0.6rem",
+                  borderRadius: "50%",
+                  background: "var(--state-overdue)",
+                  animation: "pulse 1s ease-in-out infinite",
+                  display: "inline-block",
+                }}
+              />
+              Listening…
+            </span>
+          ) : phase === "processing" ? (
+            "Processing…"
+          ) : phase === "executing" ? (
+            "Executing…"
+          ) : (
+            "Start Listening"
+          )}
+        </Button>
+        {!sttSupported && (
+          <span style={{ color: "var(--state-warn)", fontSize: "var(--text-sm)" }}>
+            Speech recognition not supported in this browser.
+          </span>
+        )}
+      </div>
+
+      {/* Live transcript */}
+      {(listening || Boolean(interimText)) && (
+        <div
+          style={{
+            padding: "0.75rem 1rem",
+            borderRadius: "10px",
+            background: "var(--surface-2)",
+            border: listening ? "1px solid var(--state-overdue)" : "1px solid var(--border-subtle)",
+            minHeight: "2.5rem",
+            transition: "border-color 200ms",
+          }}
+        >
+          {Boolean(transcriptText) && <span style={{ fontWeight: 500 }}>{transcriptText}</span>}
+          {Boolean(interimText) && (
+            <span style={{ color: "var(--text-tertiary)", fontStyle: "italic" }}>
+              {transcriptText ? " " : ""}
+              {interimText}
+            </span>
+          )}
+          {!transcriptText && !interimText && listening && <span style={{ color: "var(--text-tertiary)" }}>Say something…</span>}
+        </div>
+      )}
+
+      {/* Preview card */}
+      {renderPreview()}
+
+      {/* Error */}
+      {error && <span style={{ color: "var(--state-overdue)", fontSize: "var(--text-sm)" }}>{error}</span>}
+
+      {/* Follow-ups */}
+      {renderFollowUps()}
+
+      {/* Command history (continuous mode) */}
+      {commandHistory.length > 0 && (
+        <div
+          style={{
+            fontSize: "var(--text-xs)",
+            color: "var(--text-tertiary)",
+            borderTop: "1px solid var(--border-subtle)",
+            paddingTop: "0.5rem",
+          }}
+        >
+          {commandHistory.length} command{commandHistory.length > 1 ? "s" : ""} this session
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+        <Button onClick={handleClose} variant="secondary">
+          {phase === "done" ? "Close" : "Cancel"}
+        </Button>
+        {canExecute && (
+          <Button onClick={() => void handleExecute()} variant="primary">
+            Confirm & Run
+          </Button>
+        )}
+        {phase === "done" && (
+          <Button
+            onClick={() => {
+              setPhase("idle");
+              setResponse(null);
+              reset();
+              lastTranscriptRef.current = "";
+              if (continuousMode) {
+                setPhase("listening");
+                start();
+              }
+            }}
+            variant="secondary"
+          >
+            {continuousMode ? "Listen Again" : "Another Command"}
+          </Button>
+        )}
+      </div>
+      </div>
+    </>
+  );
+
+  // Inline mode: render without Modal wrapper
+  if (inline) return content;
 
   return (
     <>
       <Button
-        disabled={unavailable}
+        disabled={!sttSupported}
         onClick={() => {
           setOpen(true);
-          resetState();
+          reset();
+          setResponse(null);
+          setError(null);
+          setPhase("idle");
         }}
         variant="secondary"
         style={{ width: "fit-content" }}
@@ -155,73 +626,8 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted }: VoiceComma
         Voice Command
       </Button>
 
-      <Modal open={open} title="Voice Command" onClose={close}>
-        <div style={{ display: "grid", gap: "1rem" }}>
-          <p style={{ margin: 0, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-            {initialCommandWord ? (
-              <>
-                Start with <strong>{initialCommandWord}</strong> so this creates a {expectedLabel}. Example:{" "}
-                <code>{`${initialCommandWord} `}buy milk tomorrow</code>.
-              </>
-            ) : (
-              <>
-                Start with <strong>task</strong>, <strong>journal</strong>, or <strong>calendar</strong>. Example:{" "}
-                <code>task buy milk tomorrow</code>.
-              </>
-            )}
-          </p>
-
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
-            <Button onClick={() => void toggleRecording()} disabled={loading} variant={recording ? "primary" : "secondary"}>
-              {recording ? "Stop Recording" : "Record Command"}
-            </Button>
-            {loading ? <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>Processing…</span> : null}
-          </div>
-
-          {preview ? (
-            <div style={{ display: "grid", gap: "0.75rem", padding: "1rem", borderRadius: "14px", background: "var(--surface-2)", border: "1px solid var(--border-subtle)" }}>
-              <div>
-                <div style={{ fontSize: "var(--text-xs)", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
-                  Transcript
-                </div>
-                <div style={{ fontWeight: 600 }}>{preview.transcript}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: "var(--text-xs)", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
-                  Status
-                </div>
-                <div>
-                  {previewStatus === "ok" ? `Ready to create: ${preview.command_word}` : null}
-                  {previewStatus === "needs_command_word" ? "Needs command word" : null}
-                  {previewStatus === "incomplete" ? "More detail needed" : null}
-                </div>
-              </div>
-              {previewMessage ? (
-                <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>{previewMessage}</div>
-              ) : null}
-              {previewStatus !== "ok" ? (
-                <div style={{ color: "var(--state-warn)", fontSize: "var(--text-sm)" }}>
-                  {previewStatus === "incomplete"
-                    ? "Say the date and time, then record again."
-                    : initialCommandWord
-                    ? `Start with ${initialCommandWord} so this stays on the ${expectedLabel} flow, then record again.`
-                    : "Start with task, journal, or calendar, then record again."}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {error ? <span style={{ color: "var(--state-overdue)", fontSize: "var(--text-sm)" }}>{error}</span> : null}
-
-          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-            <Button onClick={close} variant="secondary">
-              Cancel
-            </Button>
-            <Button onClick={() => void handleExecute()} disabled={loading || !canExecute} variant="primary">
-              Confirm and Run
-            </Button>
-          </div>
-        </div>
+      <Modal open={open} title="Voice Command" onClose={handleClose}>
+        {content}
       </Modal>
     </>
   );

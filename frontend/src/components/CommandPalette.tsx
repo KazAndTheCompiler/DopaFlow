@@ -43,7 +43,7 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
   const [input, setInput] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { listening, transcript, interim, start, stop, supported, reset } = useSpeechRecognition();
+  const { listening, transcript, interim, error: sttError, start, stop, supported, reset } = useSpeechRecognition();
 
   const q = input.toLowerCase().trim();
   const suggestions: Suggestion[] = [];
@@ -188,6 +188,11 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
           />
         </div>
         </div>
+        {sttError ? (
+          <div style={{ marginTop: "0.65rem", color: "var(--state-error)", fontSize: "var(--text-sm)" }}>
+            {sttError}
+          </div>
+        ) : null}
         {suggestions.length > 0 && (
           <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.35rem", maxHeight: "280px", overflowY: "auto" }}>
             {suggestions.slice(0, 8).map((s, i) => (
