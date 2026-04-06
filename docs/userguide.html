@@ -452,24 +452,34 @@ npm run dev</code></pre>
                     <th>Default</th>
                 </tr>
                 <tr>
-                    <td><code>DB_PATH</code></td>
+                    <td><code>DOPAFLOW_DB_PATH</code></td>
                     <td>SQLite database location</td>
-                    <td>v2/backend/dopaflow.sqlite3</td>
+                    <td>backend/dopaflow.sqlite3</td>
                 </tr>
                 <tr>
-                    <td><code>ZOESTM_DEV_AUTH</code></td>
-                    <td>Development auth key</td>
-                    <td>dev-local-key</td>
+                    <td><code>DOPAFLOW_DEV_AUTH</code></td>
+                    <td>Bypass auth in development (1 / true / yes)</td>
+                    <td>unset (auth enforced)</td>
                 </tr>
                 <tr>
-                    <td><code>DISABLE_LOCAL_AUDIO</code></td>
-                    <td>Disable local audio features</td>
+                    <td><code>DOPAFLOW_DISABLE_LOCAL_AUDIO</code></td>
+                    <td>Disable local audio/TTS features</td>
                     <td>false</td>
                 </tr>
                 <tr>
-                    <td><code>ENFORCE_AUTH</code></td>
-                    <td>Require authentication</td>
-                    <td>false</td>
+                    <td><code>DOPAFLOW_TURSO_URL</code></td>
+                    <td>Optional Turso cloud sync URL</td>
+                    <td>unset (local SQLite only)</td>
+                </tr>
+                <tr>
+                    <td><code>DOPAFLOW_TURSO_TOKEN</code></td>
+                    <td>Optional Turso auth token</td>
+                    <td>unset</td>
+                </tr>
+                <tr>
+                    <td><code>DOPAFLOW_AUTH_TOKEN_SECRET</code></td>
+                    <td>Secret for scoped remote API tokens</td>
+                    <td>unset (advanced integrations only)</td>
                 </tr>
                 <tr>
                     <td><code>VITE_API_URL</code></td>
@@ -745,9 +755,7 @@ npm run dev</code></pre>
 
             <h3>Commands</h3>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/commands/preview</span></div>
-            <div class="endpoint"><span class="method post">POST</span><span class="path">/commands/voice-preview</span></div>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/commands/execute</span></div>
-            <div class="endpoint"><span class="method get">GET</span><span class="path">/commands/list</span></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/commands/history</span></div>
 
             <div class="tip">
@@ -781,6 +789,19 @@ npm run dev</code></pre>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/packy/whisper</span></div>
             <div class="endpoint"><span class="method post">POST</span><span class="path">/packy/lorebook</span></div>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/packy/momentum</span></div>
+
+            <h3>Goals</h3>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/goals</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/goals</span></div>
+            <div class="endpoint"><span class="method patch">PATCH</span><span class="path">/goals/{id}</span></div>
+            <div class="endpoint"><span class="method delete">DELETE</span><span class="path">/goals/{id}</span></div>
+
+            <h3>Vault Bridge (Obsidian Sync)</h3>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/vault/status</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/vault/push</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/vault/pull</span></div>
+            <div class="endpoint"><span class="method get">GET</span><span class="path">/vault/conflicts</span></div>
+            <div class="endpoint"><span class="method post">POST</span><span class="path">/vault/conflicts/{id}/resolve</span></div>
 
             <h3>Notifications</h3>
             <div class="endpoint"><span class="method get">GET</span><span class="path">/notifications</span></div>
@@ -1280,51 +1301,54 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
             <h2>🛠️ Development</h2>
             <p>DopaFlow uses an LLM-powered development workflow with model-specific roles for efficient iteration.</p>
 
-            <h3>Model Roles</h3>
+            <h3>LLM Agent Roles</h3>
+            <p>Each agent has a dedicated folder under <code>LLM_work_folder/</code> with a <code>RULES.md</code> defining their role and scope. Start every session by reading <code>LLM_work_folder/CODEBASE_MAP.md</code>.</p>
             <table>
                 <tr>
-                    <th>Model</th>
+                    <th>Agent</th>
                     <th>Role</th>
                     <th>Use Cases</th>
                 </tr>
                 <tr>
-                    <td>Claude Sonnet</td>
-                    <td>Implementation owner</td>
-                    <td>Multi-file frontend/backend work, workflow upgrades, UX closure</td>
-                </tr>
-                <tr>
-                    <td>Claude Haiku</td>
-                    <td>Narrow implementation closer</td>
-                    <td>Single-file fixes, small hook changes, lint cleanup, dead code removal</td>
-                </tr>
-                <tr>
-                    <td>Minimax</td>
-                    <td>Test builder, regression guard</td>
-                    <td>Smoke tests, targeted regression tests, verification gap coverage</td>
+                    <td>Claude</td>
+                    <td>Full-stack architect</td>
+                    <td>Multi-file frontend/backend work, workflow upgrades, UX closure, ADR decisions</td>
                 </tr>
                 <tr>
                     <td>Qwen</td>
-                    <td>Documentation owner</td>
-                    <td>Documentation sync, repo-state tracking, roadmap maintenance</td>
+                    <td>Lint &amp; hygiene</td>
+                    <td>Type annotations, unused imports, SQL parameterisation, style uniformity</td>
+                </tr>
+                <tr>
+                    <td>MiniMax</td>
+                    <td>Language &amp; copy</td>
+                    <td>ADHD-tone UI text, skin descriptions, onboarding copy, notification messages</td>
+                </tr>
+                <tr>
+                    <td>Mimo</td>
+                    <td>NLP &amp; Packy specialist</td>
+                    <td>Voice intent coverage, Packy lorebook chains, confidence threshold tuning</td>
+                </tr>
+                <tr>
+                    <td>Nematron</td>
+                    <td>Security auditor</td>
+                    <td>IPC surface review, vault bridge path traversal, API input validation — report only</td>
+                </tr>
+                <tr>
+                    <td>OpenClaw</td>
+                    <td>VPS deployment</td>
+                    <td>Release builds, AppImage packaging, OpenClaw VPS deploys — never touches source</td>
                 </tr>
             </table>
 
-            <h3>Prompt Packs</h3>
-            <p>Prompt packs for each model are documented in <code>CHANGELOG.md</code> and define clear task routing patterns.</p>
-
             <h3>Key Files</h3>
             <ul>
+                <li><code>LLM_work_folder/CODEBASE_MAP.md</code> - single-file codebase briefing for any LLM agent</li>
+                <li><code>LLM_work_folder/ADR.md</code> - architecture decisions in effect (read before making structural changes)</li>
                 <li><code>frontend/src/App.tsx</code> - nav surfaces, shared app state, and route wiring</li>
                 <li><code>frontend/tests/e2e/</code> - current Playwright regression coverage</li>
                 <li><code>CHANGELOG.md</code> - version history and active hardening notes</li>
-            </ul>
-
-            <h3>Implementation Notes</h3>
-            <p>Keep working notes in repo-local markdown files that can be refreshed alongside the code:</p>
-            <ul>
-                <li><code>CHANGELOG.md</code> for shipped changes and active hardening work</li>
-                <li><code>LLM_work_folder/promptpack_agents.md</code> for model-specific verification prompts</li>
-                <li><code>LLM_work_folder/run_frontend_verification.sh</code> for the current frontend verification entrypoint</li>
+                <li><code>next_steps.md</code> - current 6 immediate priorities</li>
             </ul>
         </section>
 
@@ -1337,7 +1361,7 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
                 <li>Ensure Python 3.10+ is installed</li>
                 <li>Run <code>pip install -r requirements.txt</code></li>
                 <li>Check that port 8000 is not in use</li>
-                <li>Verify <code>DB_PATH</code> is writable</li>
+                <li>Verify <code>DOPAFLOW_DB_PATH</code> is writable (defaults to <code>backend/dopaflow.sqlite3</code>)</li>
             </ul>
 
             <h3>Frontend can't connect to API</h3>
@@ -1358,12 +1382,12 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
             <ul>
                 <li>Back up your database: <code>cp dopaflow.sqlite3 backup.sqlite3</code></li>
                 <li>Delete the database to trigger fresh migration</li>
-                <li>Check migration SQL files in <code>backend/app/core/migrations/</code></li>
+                <li>Check migration SQL files in <code>backend/migrations/</code></li>
             </ul>
 
             <h3>Audio/TTS not working</h3>
             <ul>
-                <li>Set <code>DISABLE_LOCAL_AUDIO=false</code></li>
+                <li>Ensure <code>DOPAFLOW_DISABLE_LOCAL_AUDIO</code> is not set to <code>true</code></li>
                 <li>Check system audio permissions</li>
                 <li>Verify browser/site has audio permission</li>
                 <li>For voice commands, check microphone permission and browser speech synthesis support</li>
