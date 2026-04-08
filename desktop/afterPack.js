@@ -9,7 +9,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const VENDORED_LIB_DIR = path.join(__dirname, 'vendor-runtime', 'extract', 'usr', 'lib', 'x86_64-linux-gnu');
-const BUNDLED_RUNTIME_LIBS = [
+const REQUIRED_RUNTIME_LIBS = [
   'libasound.so.2',
   'libavahi-client.so.3',
   'libavahi-common.so.3',
@@ -50,6 +50,21 @@ const BUNDLED_RUNTIME_LIBS = [
   'libXrender.so.1',
 ];
 
+const OPTIONAL_RUNTIME_LIBS = [
+  'libXau.so.6',
+  'libXcursor.so.1',
+  'libXdmcp.so.6',
+  'libXinerama.so.1',
+  'libxcb-render.so.0',
+  'libxcb-shm.so.0',
+  'libdatrie.so.1',
+  'libgraphite2.so.3',
+  'libpixman-1.so.0',
+  'libwayland-client.so.0',
+  'libwayland-cursor.so.0',
+  'libwayland-egl.so.1',
+];
+
 function resolveLibraryPath(libName) {
   const vendoredPath = path.join(VENDORED_LIB_DIR, libName);
   if (fs.existsSync(vendoredPath)) {
@@ -79,12 +94,28 @@ function resolveLibraryPath(libName) {
   return resolvedPath;
 }
 
+function tryResolveLibraryPath(libName) {
+  try {
+    return resolveLibraryPath(libName);
+  } catch (error) {
+    console.warn(`[afterPack] Optional runtime library unavailable: ${libName} (${error.message})`);
+    return null;
+  }
+}
+
 function copyBundledRuntimeLibs(appOutDir) {
   const libDir = path.join(appOutDir, 'usr', 'lib');
   fs.mkdirSync(libDir, { recursive: true });
 
-  for (const libName of BUNDLED_RUNTIME_LIBS) {
+  for (const libName of REQUIRED_RUNTIME_LIBS) {
     const sourcePath = resolveLibraryPath(libName);
+    const targetPath = path.join(libDir, libName);
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+
+  for (const libName of OPTIONAL_RUNTIME_LIBS) {
+    const sourcePath = tryResolveLibraryPath(libName);
+    if (!sourcePath) continue;
     const targetPath = path.join(libDir, libName);
     fs.copyFileSync(sourcePath, targetPath);
   }

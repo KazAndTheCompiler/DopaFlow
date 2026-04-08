@@ -21,6 +21,7 @@ export default function FocusView(): JSX.Element {
   const [completedTaskTitle, setCompletedTaskTitle] = useState<string | undefined>();
   const [breakEndsAt, setBreakEndsAt] = useState<Date | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<TaskId | null>(null);
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => window.matchMedia("(max-width: 1120px)").matches);
 
   // Restore break state from localStorage on mount so navigating away and
   // back doesn't silently lose an active break.
@@ -34,6 +35,13 @@ export default function FocusView(): JSX.Element {
         localStorage.removeItem(BREAK_STORAGE_KEY);
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1120px)");
+    const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   const handleSessionComplete = async () => {
@@ -153,10 +161,11 @@ export default function FocusView(): JSX.Element {
       style={{
         display: "grid",
         gap: "1rem",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(240px, 360px)",
+        gridTemplateColumns: isCompactLayout ? "minmax(0, 1fr)" : "minmax(0, 1fr) minmax(240px, 360px)",
+        alignItems: "start",
       }}
     >
-      <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
+      <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
         <section
           style={{
             padding: "1rem 1.1rem",

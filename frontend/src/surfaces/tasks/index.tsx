@@ -8,6 +8,7 @@ import TaskCreateBar from "./TaskCreateBar";
 import TaskEditModal from "./TaskEditModal";
 import TaskFilterBar from "./TaskFilterBar";
 import TasksPanel from "./TasksPanel";
+import { apiClient } from "../../api/client";
 
 interface TasksViewProps {
   initialView?: "list" | "board";
@@ -58,8 +59,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
 
   useEffect(() => {
     if (!isBoard || boardMode !== "eisenhower") return;
-    void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/boards/eisenhower`)
-      .then((r) => r.json())
+    void apiClient<{ q1: []; q2: []; q3: []; q4: [] }>("/boards/eisenhower")
       .then((body) => setQuadrants(body))
       .catch(() => setQuadrants({ q1: [], q2: [], q3: [], q4: [] }));
   }, [isBoard, boardMode, app.tasks.tasks]);

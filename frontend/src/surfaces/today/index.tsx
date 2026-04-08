@@ -10,6 +10,7 @@ import HabitsToday from "./HabitsToday";
 import MomentumCard from "./MomentumCard";
 import TimeBlocks from "./TimeBlocks";
 import { TodaySurfaceSkeleton } from "@ds/primitives/Skeleton";
+import { apiClient } from "../../api/client";
 
 const FOCUS_PREFILL_KEY = "zoestm_focus_prefill";
 const TODAY_KEY = "zoestm_planned_date";
@@ -100,10 +101,21 @@ export default function TodayView(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/motivation/quote`)
-      .then((r) => r.json())
-      .then((body: { quote: string }) => setQuote(body.quote))
-      .catch(() => setQuote(""));
+    let cancelled = false;
+    void apiClient<{ quote?: string }>("/motivation/quote")
+      .then((body) => {
+        if (!cancelled) {
+          setQuote(body.quote ?? "");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQuote("");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

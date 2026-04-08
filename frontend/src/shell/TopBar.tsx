@@ -121,7 +121,7 @@ export function TopBar({
       style={{
         minHeight: "var(--topbar-height)",
         display: "grid",
-        gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : "auto minmax(280px, 1fr) auto",
+        gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : "auto minmax(0, 1fr) auto",
         gap: isCompact ? "0.75rem" : "1rem",
         alignItems: "center",
         padding: isCompact ? "0.65rem 1rem" : "0 1.5rem",
@@ -131,6 +131,7 @@ export function TopBar({
         boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
         position: "relative",
         zIndex: 10,
+        minWidth: 0,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>
@@ -169,6 +170,7 @@ export function TopBar({
           background: "color-mix(in srgb, var(--surface) 76%, white 24%)",
           boxShadow: "var(--shadow-soft)",
           minWidth: 0,
+          width: "100%",
         }}
       >
         <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
@@ -210,7 +212,7 @@ export function TopBar({
           <small style={{ color: "var(--text-muted)" }}>One entry point for quick capture, command routing, and voice input.</small>
         ) : null}
       </label>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", justifyContent: isCompact ? "space-between" : "flex-end" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", justifyContent: isCompact ? "space-between" : "flex-end", minWidth: 0 }}>
         <Button onClick={onCommandSubmit} style={{ minWidth: isCompact ? "84px" : undefined }}>{isCompact ? "Run" : "Run"}</Button>
         <Button
           variant="ghost"
