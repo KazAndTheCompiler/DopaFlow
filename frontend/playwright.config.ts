@@ -1,14 +1,22 @@
 import { defineConfig } from "@playwright/test";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const frontendDir = path.dirname(fileURLToPath(import.meta.url));
-const bundledRuntimeLibs = "/home/henry/release/DopaFlow-2.0.7-linux-unpacked/runtime-libs/usr/lib/x86_64-linux-gnu";
+const bundledRuntimeLibCandidates = [
+  process.env.DOPAFLOW_PLAYWRIGHT_LD_LIBRARY_PATH,
+  "/home/henry/vscode/build/dopaflow/desktop/dist/linux-unpacked/usr/lib",
+  "/home/henry/release/DopaFlow-2.0.7-linux-unpacked/usr/lib",
+].filter((value): value is string => Boolean(value));
+const bundledRuntimeLibs = bundledRuntimeLibCandidates.find((candidate) => fs.existsSync(candidate));
 const existingLdLibraryPath = process.env.LD_LIBRARY_PATH;
 
-process.env.LD_LIBRARY_PATH = existingLdLibraryPath
-  ? `${bundledRuntimeLibs}:${existingLdLibraryPath}`
-  : bundledRuntimeLibs;
+if (bundledRuntimeLibs) {
+  process.env.LD_LIBRARY_PATH = existingLdLibraryPath
+    ? `${bundledRuntimeLibs}:${existingLdLibraryPath}`
+    : bundledRuntimeLibs;
+}
 
 export default defineConfig({
   testDir: "./tests/e2e",
