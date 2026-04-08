@@ -98,7 +98,7 @@
 - Some startup data loading still uses direct fetch logic instead of guarded shared-client access.
 - Manual flow verification across every primary product loop is still incomplete in this environment because Playwright could not launch a fully working browser/runtime stack here.
 - The web release installer still copies a prebuilt backend payload from `release/dopaflow-backend-v2` for packaged mode, so Electron/web parity is still split across two backend delivery paths.
-- Electron desktop packaging is still not runnable on this host because the unpacked desktop binary depends on missing system libraries including `libnss3.so`, `libnspr4.so`, GTK/ATK/CUPS/X11 family libraries, and related desktop runtime dependencies.
+- Electron desktop packaging now produces a Linux AppImage with the required desktop runtime closure bundled inside `usr/lib`, but full local GUI launch verification on this host is still limited by host environment issues (`libfuse.so.2` for direct AppImage launch inside Codex, and missing/blocked X display access for unrestricted Electron boot checks).
 
 ## Next Highest-Value Recovery Steps
 
@@ -145,4 +145,35 @@
   - `focus.start` -> `status: executed`, `task_id: null`
   - `task.create` -> `status: executed`
   - `hello` -> `status: ok`
-- Packaging check on `/home/henry/release/DopaFlow-2.0.7-linux-unpacked/dopaflow-desktop` still fails on this host at process start because required desktop runtime libraries are missing; current `ldd` output shows unresolved dependencies including `libnss3.so`, `libnssutil3.so`, `libsmime3.so`, `libnspr4.so`, `libatk-1.0.so.0`, `libgtk-3.so.0`, `libX11.so.6`, `libxcb.so.1`, `libasound.so.2`, and others.
+- Desktop packaging was reworked so the AppImage/unpacked release now bundles the Linux desktop runtime closure through `desktop/afterPack.js` and the release rebuild scripts.
+- Verified against extracted `DopaFlow-2.0.7.AppImage`:
+  - `ldd` on the packaged `dopaflow-desktop` resolves bundled deps from `squashfs-root/usr/lib`, including `libnss3.so`, `libxcb-render.so.0`, `libxcb-shm.so.0`, `libXau.so.6`, `libXdmcp.so.6`, `libpixman-1.so.0`, `libgraphite2.so.3`, `libdatrie.so.1`, `libwayland-client.so.0`, `libwayland-cursor.so.0`, `libwayland-egl.so.1`, `libXcursor.so.1`, and `libXinerama.so.1`.
+  - the older `DopaFlow-2.0.8.AppImage` still fails that dependency audit on this host, which confirms the new packaging path materially improved the release artifact.
+- Remaining local verification blocker:
+  - inside Codex confinement, direct Electron startup still dies early in a host-specific sandbox/runtime path
+  - outside Codex confinement, the extracted packaged app gets far enough to fail on `Missing X server or $DISPLAY`, which points at local display access rather than a missing packaged library set
+
+### 2026-04-08 Browser smoke verification status
+
+- Browser smoke coverage already exists in `frontend/tests/e2e/`, with narrow mocked regression coverage in:
+  - `frontend/tests/e2e/route_startup.spec.ts`
+  - `frontend/tests/e2e/app_smoke.spec.ts`
+- These tests are the fastest browser-level confidence path because they stub backend calls and only need the frontend dev server plus Playwright browsers.
+- Repo-level smoke verification now works on this host when run outside the Codex network sandbox:
+  - installed Playwright Chromium browser binaries
+  - started the frontend dev server on `127.0.0.1:4173` outside the sandbox
+  - ran `route_startup.spec.ts` -> `8 passed`
+  - ran `app_smoke.spec.ts` -> `7 passed`
+  - ran `tasks_flow.spec.ts` -> `6 passed`
+  - ran `daily_loop.spec.ts` -> `7 passed`
+  - ran `calendar_maturity.spec.ts` -> `6 passed`
+  - ran `focus_flow.spec.ts` -> `4 passed`
+  - ran `goals_flow.spec.ts` -> `3 passed`
+  - ran `habits_flow.spec.ts` -> `3 passed` after updating stale compact-badge expectations (`ST 0d`, `1/ day`) to match the current habits card UI
+- Follow-up hardening shipped during this pass:
+  - `frontend/playwright.config.ts` now auto-detects a usable bundled `usr/lib` directory from the current desktop build or unpacked release instead of relying on a single stale hard-coded path
+  - `frontend/package.json` now exposes `npm run test:e2e:smoke` for the narrow mocked browser regression path
+  - `frontend/package.json` now exposes `npm run test:e2e:core` for the broader mocked browser pass (`route_startup`, `app_smoke`, `tasks_flow`, `daily_loop`)
+  - `frontend/package.json` now exposes `npm run test:e2e:release` for the CI release slice (`route_startup`, `app_smoke`, `tasks_flow`, `daily_loop`, `calendar_maturity`, `focus_flow`, `habits_flow`, `goals_flow`)
+- Remaining local caveat:
+  - the frontend dev server and Playwright runs still need to happen outside the Codex sandbox because sandboxed loopback/networking is restricted in this environment

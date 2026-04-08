@@ -167,6 +167,83 @@ npm run build
 npm run preview
 ```
 
+### Browser smoke checks
+
+The quickest frontend regression pass is the mocked Playwright smoke set:
+
+```bash
+cd frontend
+npm run test:e2e:smoke
+```
+
+Notes:
+
+- this covers the narrow startup/navigation regression specs without requiring a live backend
+- on a fresh machine you may still need to install Playwright browser binaries before the first run
+
+For a broader high-value browser pass that still stays mocked and fast:
+
+```bash
+cd frontend
+npm run test:e2e:core
+```
+
+For the release-oriented browser slice used in CI:
+
+```bash
+cd frontend
+npm run test:e2e:release
+```
+
+That release slice currently covers:
+
+- startup/navigation regressions
+- app-wide smoke coverage
+- tasks, daily loop, calendar, and focus flows
+- habits and goals flows
+
+## Release builds
+
+Desktop release packaging is wired through GitHub Actions in
+[`/.github/workflows/release.yml`](/home/henry/vscode/build/dopaflow/.github/workflows/release.yml).
+
+Recommended path:
+
+- push `main` for normal CI confidence
+- push a `v*` tag to build release artifacts and publish a GitHub Release
+- use the Linux `AppImage` artifact from GitHub as the primary desktop package output
+
+Why this is the default path:
+
+- GitHub runners have a cleaner Linux packaging environment than this local Codex host
+- the local host still has FUSE/X-display limitations that make AppImage boot verification noisy even when the package itself is correct
+- the current desktop packaging path now bundles the Linux runtime closure into the AppImage, and GitHub is the most reliable place to produce that artifact
+
+Local desktop build notes:
+
+```bash
+cd desktop
+npm ci
+npm run dist:stable:linux
+```
+
+Local verification on Linux is best done in two stages:
+
+1. extract the AppImage and inspect the packaged payload
+2. run the extracted `AppRun` on a real desktop session
+
+Example:
+
+```bash
+mkdir -p /tmp/dopaflow-appimage-test
+cd /tmp/dopaflow-appimage-test
+/path/to/DopaFlow-*.AppImage --appimage-extract
+LD_LIBRARY_PATH=$PWD/squashfs-root/usr/lib ldd ./squashfs-root/dopaflow-desktop
+./squashfs-root/AppRun
+```
+
+If `ldd` resolves the bundled GTK/X11/Wayland dependencies from `squashfs-root/usr/lib`, the packaging side is likely healthy even if the local host cannot provide a usable GUI session.
+
 ---
 
 ## Who this is for

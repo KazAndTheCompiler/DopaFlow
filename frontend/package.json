@@ -9,7 +9,10 @@
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "npm run test:e2e",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test tests/e2e/route_startup.spec.ts tests/e2e/app_smoke.spec.ts --reporter=line",
+    "test:e2e:core": "playwright test tests/e2e/route_startup.spec.ts tests/e2e/app_smoke.spec.ts tests/e2e/tasks_flow.spec.ts tests/e2e/daily_loop.spec.ts --reporter=line",
+    "test:e2e:release": "playwright test tests/e2e/route_startup.spec.ts tests/e2e/app_smoke.spec.ts tests/e2e/tasks_flow.spec.ts tests/e2e/daily_loop.spec.ts tests/e2e/calendar_maturity.spec.ts tests/e2e/focus_flow.spec.ts tests/e2e/habits_flow.spec.ts tests/e2e/goals_flow.spec.ts --reporter=line"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.10.8",
