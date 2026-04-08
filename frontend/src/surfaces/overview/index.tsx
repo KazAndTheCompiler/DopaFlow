@@ -281,21 +281,33 @@ export default function OverviewView(): JSX.Element {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem" }}>
-          <div style={{ padding: "0.85rem 0.95rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.2rem" }}>
+          <div style={{ padding: "0.85rem 0.95rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.2rem", position: "relative" }}>
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
             <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Plan</span>
             <strong style={{ fontSize: "1.15rem" }}>{plannedToday ? "Committed" : "Missing"}</strong>
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
               {plannedToday ? "top tasks have been chosen today" : "run the ritual before you start reacting"}
             </span>
           </div>
-          <div style={{ padding: "0.85rem 0.95rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.2rem" }}>
+          <div style={{ padding: "0.85rem 0.95rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.2rem", position: "relative" }}>
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
             <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Next task</span>
             <strong style={{ fontSize: "1.15rem" }}>{nextFocusTask ? "Ready" : "Unclear"}</strong>
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
               {nextFocusTask ? nextFocusTask.title : "nothing due today is clearly leading"}
             </span>
           </div>
-          <div style={{ padding: "0.85rem 0.95rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.2rem" }}>
+          <div style={{ padding: "0.85rem 0.95rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.2rem", position: "relative" }}>
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
             <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>Calendar</span>
             <strong style={{ fontSize: "1.15rem" }}>
               {nextCalendarBlock
@@ -368,14 +380,20 @@ export default function OverviewView(): JSX.Element {
           style={{
             padding: "1.25rem 1.5rem",
             borderRadius: "16px",
-            background: "var(--surface)",
+            background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+            backdropFilter: "var(--surface-glass-blur, blur(14px))",
             border: `1px solid ${momentumColor}44`,
             display: "grid",
             gridTemplateColumns: "auto 1fr",
             gap: "1.25rem",
             alignItems: "center",
+            position: "relative",
           }}
         >
+          <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+          <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+          <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+          <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
           <div
             style={{
               width: "64px",
@@ -412,7 +430,11 @@ export default function OverviewView(): JSX.Element {
 
         {/* Weekly digest */}
         {weeklyDigest && (
-          <div style={{ padding: "1.25rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.5rem" }}>
+          <div style={{ padding: "1.25rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.5rem", position: "relative" }}>
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>This week</span>
             <span style={{ fontWeight: 700 }}>{weeklyDigest.title}</span>
             <ul style={{ margin: 0, paddingLeft: "1.1rem", display: "grid", gap: "0.25rem" }}>
@@ -425,7 +447,11 @@ export default function OverviewView(): JSX.Element {
 
         {/* Mood drivers with mini bar chart */}
         {correlations.length > 0 && (
-          <div style={{ padding: "1.25rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.75rem" }}>
+          <div style={{ padding: "1.25rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.75rem", position: "relative" }}>
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Mood drivers</span>
             {correlations.slice(0, 4).map((corr) => {
               const pct = Math.abs(corr.correlation) * 100;
@@ -451,8 +477,12 @@ export default function OverviewView(): JSX.Element {
         {topLinkedNodes.length > 0 && (
           <button
             onClick={() => { window.location.hash = "#/journal"; }}
-            style={{ padding: "1.25rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.5rem", textAlign: "left", cursor: "pointer", width: "100%" }}
+            style={{ padding: "1.25rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.5rem", textAlign: "left", cursor: "pointer", width: "100%", position: "relative" }}
           >
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+            <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
             <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Journal connections</span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
               {topLinkedNodes.map((node) => (

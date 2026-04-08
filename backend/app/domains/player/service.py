@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import subprocess
 import sys
 
 from app.domains.player.repository import PlayerRepository
+
+logger = logging.getLogger(__name__)
 
 
 def _find_yt_dlp() -> list[str] | None:
@@ -51,6 +54,7 @@ def _resolve_via_api(url: str) -> dict[str, object]:
                 stream_url = info["formats"][-1].get("url")
             return {"stream_url": stream_url, "error": None}
     except Exception as exc:  # noqa: BLE001
+        logger.warning("Player yt-dlp API resolution failed for url=%s: %s", url, exc)
         return {"stream_url": None, "error": str(exc)}
 
 
@@ -81,6 +85,7 @@ class PlayerService:
             except subprocess.TimeoutExpired:
                 return {"stream_url": None, "error": "yt-dlp timed out"}
             except Exception as exc:  # noqa: BLE001
+                logger.warning("Player yt-dlp subprocess resolution failed for url=%s: %s", url, exc)
                 return {"stream_url": None, "error": str(exc)}
 
         # No yt-dlp binary found — use Python API directly (works in PyInstaller bundles)

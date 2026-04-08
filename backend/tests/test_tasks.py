@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
+
+import pytest
 
 
 def create_task(client, **overrides):
@@ -57,6 +60,27 @@ def test_complete_task_marks_it_done(client) -> None:
     assert response.json()["status"] == "done"
 
 
+def test_complete_task_logs_gamification_failures_without_failing_request(client, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    from app.domains.tasks import service as task_service
+
+    task = create_task(client, title="Complete with logging")
+
+    def explode_award(self, source: str, source_id: str | None = None) -> None:
+        raise RuntimeError(f"boom:{source}:{source_id}")
+
+    monkeypatch.setattr(task_service.GamificationService, "award", explode_award)
+    caplog.set_level(logging.ERROR, logger="app.domains.tasks.service")
+
+    response = client.patch(f"/api/v2/tasks/{task['id']}/complete")
+
+    assert response.status_code == 200
+    assert response.json()["done"] is True
+    assert any(
+        "Failed to award gamification for source=task_complete" in record.message and task["id"] in record.message
+        for record in caplog.records
+    )
+
+
 def test_delete_task_removes_it_and_follow_up_get_is_404(client) -> None:
     task = create_task(client)
 
@@ -78,6 +102,15 @@ def test_quick_add_parses_tags_and_priority(client) -> None:
     assert parsed["priority"] == 2
 
 
+def test_quick_add_normalizes_recurrence_rule_field(client) -> None:
+    response = client.post("/api/v2/tasks/quick-add", json={"text": "Water plants every monday"})
+
+    assert response.status_code == 200
+    parsed = response.json()
+    assert parsed["recurrence_rule"] == "FREQ=WEEKLY;BYDAY=MO"
+    assert "rrule" not in parsed
+
+
 def test_bulk_complete_returns_updated_count(client) -> None:
     first = create_task(client, title="First")
     second = create_task(client, title="Second")
@@ -86,6 +119,88 @@ def test_bulk_complete_returns_updated_count(client) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"updated": 2}
+
+
+def test_materialize_recurring_accepts_json_window_hours(client) -> None:
+    create_task(
+        client,
+        title="Weekly review",
+        done=True,
+        recurrence_rule="FREQ=WEEKLY",
+        due_at="2026-01-01T09:00:00+00:00",
+    )
+
+    response = client.post("/api/v2/tasks/materialize-recurring", json={"window_hours": 24 * 365})
+
+    assert response.status_code == 200
+    assert response.json() == {"created": 1}
+
+
+def test_complete_task_creates_next_weekday_instance_from_rrule(client) -> None:
+    task = create_task(
+        client,
+        title="Water plants",
+        done=False,
+        recurrence_rule="FREQ=WEEKLY;BYDAY=MO,TH",
+        due_at="2026-01-05T09:00:00+00:00",
+    )
+
+    response = client.patch(f"/api/v2/tasks/{task['id']}/complete")
+
+    assert response.status_code == 200
+    tasks_response = client.get("/api/v2/tasks/", params={"search": "Water plants"})
+    assert tasks_response.status_code == 200
+    children = [item for item in tasks_response.json() if item.get("recurrence_parent_id") == task["id"]]
+    assert len(children) == 1
+    assert children[0]["due_at"] == "2026-01-08T09:00:00+00:00"
+
+
+def test_materialize_recurring_avoids_duplicate_child_when_title_collides(client) -> None:
+    parent = create_task(
+        client,
+        title="Weekly review",
+        done=True,
+        recurrence_rule="FREQ=WEEKLY",
+        due_at="2026-01-01T09:00:00+00:00",
+    )
+    create_task(
+        client,
+        title="Weekly review",
+        done=False,
+        recurrence_rule=None,
+        due_at="2026-01-08T09:00:00+00:00",
+    )
+
+    response = client.post("/api/v2/tasks/materialize-recurring", json={"window_hours": 24 * 365})
+
+    assert response.status_code == 200
+    assert response.json() == {"created": 1}
+
+    tasks_response = client.get("/api/v2/tasks/", params={"search": "Weekly review"})
+    assert tasks_response.status_code == 200
+    children = [item for item in tasks_response.json() if item.get("recurrence_parent_id") == parent["id"]]
+    assert len(children) == 1
+    assert children[0]["due_at"] == "2026-01-08T09:00:00+00:00"
+
+
+def test_complete_task_does_not_create_duplicate_recurring_child(client) -> None:
+    task = create_task(
+        client,
+        title="Daily standup",
+        done=False,
+        recurrence_rule="FREQ=DAILY",
+        due_at="2026-01-01T09:00:00+00:00",
+    )
+
+    first_response = client.patch(f"/api/v2/tasks/{task['id']}/complete")
+    second_response = client.patch(f"/api/v2/tasks/{task['id']}/complete")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    tasks_response = client.get("/api/v2/tasks/", params={"search": "Daily standup"})
+    assert tasks_response.status_code == 200
+    children = [item for item in tasks_response.json() if item.get("recurrence_parent_id") == task["id"]]
+    assert len(children) == 1
 
 
 def test_done_false_filter_returns_only_incomplete_tasks(client) -> None:

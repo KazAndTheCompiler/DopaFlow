@@ -37,6 +37,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
 
+def _google_oauth_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient()
+
+
+def _zoescal_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(timeout=3.0)
+
+
 async def _svc(settings: Settings = Depends(get_settings_dependency)) -> CalendarService:
     """Build a CalendarService wired to the real database."""
 
@@ -183,8 +191,8 @@ async def today_schedule(svc: CalendarService = Depends(_svc)) -> dict[str, obje
     today = datetime.now(timezone.utc).date().isoformat()
     zoescal_base = os.getenv("ZOESCAL_BASE_URL", "http://localhost:8001").rstrip("/")
     try:
-        with httpx.Client(timeout=3.0) as client:
-            resp = client.get(
+        async with _zoescal_client() as client:
+            resp = await client.get(
                 f"{zoescal_base}/calendar/range",
                 params={"start": f"{today}T00:00:00Z", "end": f"{today}T23:59:59Z"},
             )
@@ -192,8 +200,12 @@ async def today_schedule(svc: CalendarService = Depends(_svc)) -> dict[str, obje
             payload = resp.json()
             entries = payload.get("entries", []) if isinstance(payload, dict) else []
             return {"entries": entries, "available": True, "source": "zoescal"}
-    except Exception:
-        logger.exception("Failed to fetch today's schedule from ZoesCal at %s", zoescal_base)
+    except httpx.HTTPStatusError as exc:
+        logger.warning("ZoesCal schedule request returned %s from %s", exc.response.status_code, zoescal_base)
+    except httpx.RequestError as exc:
+        logger.info("ZoesCal schedule unavailable at %s: %s", zoescal_base, exc)
+    except ValueError as exc:
+        logger.warning("ZoesCal schedule returned invalid JSON from %s: %s", zoescal_base, exc)
     local_events = svc.list_events(from_dt=f"{today}T00:00:00Z", until_dt=f"{today}T23:59:59Z")
     entries = [{"id": ev.id, "title": ev.title, "start_at": ev.start_at.isoformat(), "end_at": ev.end_at.isoformat(), "all_day": ev.all_day, "category": ev.category} for ev in local_events]
     return {"entries": entries, "available": True, "source": "local"}
@@ -235,14 +247,14 @@ async def google_calendar_oauth_callback(
 ) -> dict[str, object]:
     if not settings.google_client_id or not settings.google_client_secret:
         return {"status": "error", "message": "Google credentials not configured"}
-    async with httpx.AsyncClient() as client:
+    async with _google_oauth_client() as client:
         response = await client.post(
             "https://oauth2.googleapis.com/token",
             data={
                 "code": code,
                 "client_id": settings.google_client_id,
                 "client_secret": settings.google_client_secret,
-                "redirect_uri": f"{settings.base_url}/api/v2/calendar/oauth/callback",
+                "redirect_uri": settings.google_redirect_uri,
                 "grant_type": "authorization_code",
             },
         )
@@ -250,7 +262,7 @@ async def google_calendar_oauth_callback(
         return {"status": "error", "message": "Token exchange failed"}
     data = response.json()
     expires_at = (
-        datetime.datetime.utcnow() + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
+        datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
     ).isoformat()
     repo.store_google_token(data["access_token"], data.get("refresh_token"), expires_at)
     return {"status": "connected"}

@@ -74,6 +74,17 @@ export interface Task {
   updated_at: string;
 }
 
+export interface TaskQuickAddPreview {
+  title?: string;
+  due_at?: string | null;
+  priority?: number;
+  tags?: string[];
+  estimated_minutes?: number | null;
+  recurrence_rule?: string | null;
+  /** Legacy parser field still emitted by some preview/voice paths. */
+  rrule?: string | null;
+}
+
 export interface Habit {
   id: HabitId;
   name: string;
@@ -98,6 +109,7 @@ export interface FocusSession {
   ended_at?: string | null;
   duration_minutes: number;
   status: string;
+  paused_duration_ms?: number;
 }
 
 export interface ReviewCard {
@@ -184,6 +196,26 @@ export interface PackyWhisper {
   text: string;
   tone: "neutral" | "helpful";
   suggested_action?: string | null;
+}
+
+export interface VoiceCommandPreview {
+  transcript: string;
+  status: string;
+  command_word: string | null;
+  parsed: Record<string, unknown>;
+  preview: Record<string, unknown>;
+}
+
+export interface PackyVoiceResponse {
+  intent: string;
+  confidence: number;
+  entities: Record<string, unknown>;
+  preview: Record<string, unknown>;
+  execution_result: Record<string, unknown> | null;
+  reply_text: string;
+  tts_text: string;
+  follow_ups: string[];
+  status: string;
 }
 
 export interface MomentumScore {

@@ -1,8 +1,41 @@
 import { useCallback, useRef, useState } from "react";
 import type { SkinMeta } from "../../hooks/useSkin";
+import { saveCustomSkin } from "../../hooks/useSkin";
 import { Skeleton } from "@ds/primitives/Skeleton";
 
 const DEFAULT_SKIN = "ink-and-stone";
+const CUSTOM_SKIN_KEY = "zoestm-custom-skin";
+
+interface SkinDefinition extends SkinMeta {
+  author?: string;
+  vars: Record<string, string>;
+}
+
+function normalizeCategory(value: unknown): "light" | "dark" {
+  return value === "light" ? "light" : "dark";
+}
+
+async function loadExportableSkin(activeSkin: string, skins: SkinMeta[]): Promise<SkinDefinition | null> {
+  try {
+    const rawCustomSkin = window.localStorage.getItem(CUSTOM_SKIN_KEY);
+    if (rawCustomSkin) {
+      const customSkin = JSON.parse(rawCustomSkin) as SkinDefinition;
+      if (customSkin?.id === activeSkin && customSkin.vars) {
+        return customSkin;
+      }
+    }
+  } catch {
+    // Ignore local custom skin parse failures and fall back to the shipped skin fetch.
+  }
+
+  const skinMeta = skins.find((skin) => skin.id === activeSkin);
+  if (!skinMeta) return null;
+
+  const skinsBase = window.location.protocol === "file:" ? "./skins" : "/skins";
+  const response = await fetch(`${skinsBase}/${activeSkin}.json`);
+  if (!response.ok) return null;
+  return (await response.json()) as SkinDefinition;
+}
 
 export function SkinPicker({
   current,
@@ -32,17 +65,21 @@ export function SkinPicker({
   }, [onPick]);
 
   const handleExport = useCallback(() => {
-    const skinToExport = skins.find((s) => s.id === activeSkin);
-    if (!skinToExport) return;
-
-    const dataStr = JSON.stringify(skinToExport, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${skinToExport.id}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+    void loadExportableSkin(activeSkin, skins).then((skinToExport) => {
+      if (!skinToExport) {
+        setImportError("Could not export this skin.");
+        return;
+      }
+      const dataStr = JSON.stringify(skinToExport, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${skinToExport.id}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setImportError(null);
+    });
   }, [activeSkin, skins]);
 
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,13 +89,23 @@ export function SkinPicker({
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const imported = JSON.parse(event.target?.result as string);
+        const imported = JSON.parse(event.target?.result as string) as Partial<SkinDefinition>;
         if (!imported.id || !imported.name || !imported.vars) {
           setImportError("Invalid skin format: missing required fields");
           return;
         }
+        const normalized: SkinDefinition = {
+          id: imported.id,
+          name: imported.name,
+          category: normalizeCategory(imported.category),
+          vars: imported.vars,
+        };
+        if (imported.preview) normalized.preview = imported.preview;
+        if (typeof imported.accessibility === "string") normalized.accessibility = imported.accessibility;
+        if (typeof imported.author === "string") normalized.author = imported.author;
+        saveCustomSkin(normalized);
         setImportError(null);
-        onPick(imported.id);
+        onPick(normalized.id);
       } catch {
         setImportError("Failed to parse skin file");
       }
@@ -222,17 +269,23 @@ export function SkinPicker({
   }
 
   return (
-    <section
-      style={{
-        display: "grid",
-        gap: "1.25rem",
-        padding: "1.1rem 1.25rem",
-        borderRadius: "20px",
-        background: "var(--surface)",
-        border: "1px solid var(--border-subtle)",
-        boxShadow: "var(--shadow-soft)",
-      }}
-    >
+      <section
+        style={{
+          display: "grid",
+          gap: "1.25rem",
+          padding: "1.1rem 1.25rem",
+          borderRadius: "20px",
+          background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+          backdropFilter: "var(--surface-glass-blur, blur(14px))",
+          border: "1px solid var(--border-subtle)",
+          boxShadow: "var(--shadow-soft)",
+          position: "relative",
+        }}
+      >
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
       <div style={{ display: "grid", gap: "0.25rem" }}>
         <strong style={{ fontSize: "var(--text-base)" }}>Theme</strong>
         <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>

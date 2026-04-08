@@ -361,9 +361,6 @@ class CommandService:
     @staticmethod
     def execute(db_path: str, text: str, confirm: bool = False, *, source: str = "text") -> dict[str, object]:
         """Execute parsed command. Tries chaining first, then single execution."""
-        from app.core.database import run_migrations
-
-        run_migrations(db_path)
         parsed = parse_intent(text)
         intent = str(parsed["intent"])
 
@@ -408,8 +405,9 @@ class CommandService:
                     "priority": int(extracted.get("priority") or 2),
                     "tags": extracted.get("tags") or [],
                 }
-                if extracted.get("rrule"):
-                    task_payload["rrule"] = extracted["rrule"]
+                recurrence_rule = extracted.get("recurrence_rule") or extracted.get("rrule")
+                if recurrence_rule:
+                    task_payload["recurrence_rule"] = recurrence_rule
                 result = task_repo.create_task(db_path, task_payload)
                 undo_result = {"id": result["id"], "title": result.get("title", "")}
                 CommandRepository.add_log(db_path, text, intent, "executed", source=source, result=undo_result)

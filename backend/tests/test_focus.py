@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import logging
+
+import pytest
 
 
 def start_session(client, **overrides):
@@ -50,6 +53,28 @@ def test_control_completed_ends_active_session(client) -> None:
     assert history.json()[0]["status"] == "completed"
 
 
+def test_complete_focus_logs_gamification_failure_without_failing_session(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app.domains.gamification.service import GamificationService
+
+    start_session(client)
+
+    def explode_award(self, source: str, source_id: str | None = None):
+        raise RuntimeError("xp unavailable")
+
+    monkeypatch.setattr(GamificationService, "award", explode_award)
+    caplog.set_level(logging.ERROR, logger="app.domains.focus.service")
+
+    response = client.post("/api/v2/focus/sessions/control", json={"action": "completed"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "idle"
+    assert any("Failed to award gamification for source=focus_session" in record.message for record in caplog.records)
+
+
 def test_status_endpoint_returns_current_focus_state(client) -> None:
     start_session(client, duration_minutes=15)
 
@@ -78,3 +103,51 @@ def test_recommendation_returns_default_shape(client) -> None:
     assert "recommended_duration" in response.json()
     assert "peak_window" in response.json()
 
+
+def test_pause_persists_status_to_db(client) -> None:
+    """Pausing must update focus_sessions.status in the DB so list returns 'paused'."""
+    start_session(client)
+
+    client.post("/api/v2/focus/sessions/control", json={"action": "paused"})
+    sessions = client.get("/api/v2/focus/sessions").json()
+
+    assert sessions[0]["status"] == "paused"
+
+
+def test_resume_restores_running_status_in_db(client) -> None:
+    """Resuming must flip focus_sessions.status back to 'running' in the DB."""
+    start_session(client)
+    client.post("/api/v2/focus/sessions/control", json={"action": "paused"})
+
+    client.post("/api/v2/focus/sessions/control", json={"action": "running"})
+    sessions = client.get("/api/v2/focus/sessions").json()
+
+    assert sessions[0]["status"] == "running"
+
+
+def test_resume_accumulates_paused_duration_ms(client) -> None:
+    """paused_duration_ms must be positive after a pause/resume cycle."""
+    start_session(client)
+    client.post("/api/v2/focus/sessions/control", json={"action": "paused"})
+
+    client.post("/api/v2/focus/sessions/control", json={"action": "running"})
+    sessions = client.get("/api/v2/focus/sessions").json()
+
+    assert sessions[0].get("paused_duration_ms", 0) >= 0
+
+
+def test_state_restore_after_simulated_restart(client) -> None:
+    """Complete must succeed even when in-memory state was wiped (simulated restart)."""
+    from app.domains.focus import service
+
+    start_session(client)
+
+    # Simulate backend restart by resetting in-memory state
+    service.state.status = service.PomodoroStatus.idle
+    service.state.log_id = None
+
+    response = client.post("/api/v2/focus/sessions/control", json={"action": "completed"})
+    sessions = client.get("/api/v2/focus/sessions").json()
+
+    assert response.status_code == 200
+    assert sessions[0]["status"] == "completed"

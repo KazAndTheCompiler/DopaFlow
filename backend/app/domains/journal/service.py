@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import re
 import zipfile
 from datetime import UTC, date, datetime, timedelta
@@ -29,6 +30,7 @@ from app.domains.journal.schemas import (
 )
 
 WIKILINK_PATTERN = re.compile(r"\[\[(\d{4}-\d{2}-\d{2})\]\]")
+logger = logging.getLogger(__name__)
 
 _PROMPT_BANK = [
     "What felt heavier than it looked today?",
@@ -69,7 +71,7 @@ def _award(source: str, source_id: str | None = None) -> None:
         db = get_settings().db_path
         GamificationService(GamificationRepository(db)).award(source, source_id)
     except Exception:
-        pass
+        logger.exception("Failed to award gamification for source=%s source_id=%s", source, source_id)
 
 
 def extract_wikilinks(body: str) -> list[str]:

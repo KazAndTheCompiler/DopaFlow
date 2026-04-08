@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+
+import pytest
 
 
 def create_entry(client, **overrides):
@@ -91,3 +94,26 @@ def test_backup_status_and_trigger_create_markdown_backup(client, tmp_path) -> N
     backup_file = tmp_path / ".local" / "share" / "ZoesTM" / "journal-backup" / "2026-03-25.md"
     assert backup_file.exists()
     assert "Daily note" in backup_file.read_text(encoding="utf-8")
+
+
+def test_create_entry_logs_gamification_failure_without_failing_save(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app.domains.gamification.service import GamificationService
+
+    def explode_award(self, source: str, source_id: str | None = None):
+        raise RuntimeError("xp unavailable")
+
+    monkeypatch.setattr(GamificationService, "award", explode_award)
+    caplog.set_level(logging.ERROR, logger="app.domains.journal.service")
+
+    response = client.post(
+        "/api/v2/journal/entries",
+        json={"date": "2026-03-26", "markdown_body": "Logged anyway", "emoji": "🙂", "tags": ["daily"]},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["id"].startswith("jrn_")
+    assert any("Failed to award gamification for source=journal_entry" in record.message for record in caplog.records)

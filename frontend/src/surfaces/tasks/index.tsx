@@ -96,12 +96,18 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
                     minWidth: "112px",
                     padding: "0.7rem 0.8rem",
                     borderRadius: "16px",
-                    background: "var(--surface)",
+                    background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+                    backdropFilter: "var(--surface-glass-blur, blur(14px))",
                     border: "1px solid var(--border-subtle)",
                     display: "grid",
                     gap: "0.08rem",
+                    position: "relative",
                   }}
                 >
+                  <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+                  <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+                  <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+                  <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
                   <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                     {stat.label}
                   </span>
@@ -125,7 +131,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         </section>
         <TaskCreateBar
           onCreate={async (text) => {
-            await app.tasks.createDraftTask(text);
+            await app.tasks.createQuickTask(text);
             await app.tasks.refresh();
           }}
         />
@@ -200,16 +206,19 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
           void app.tasks.refresh();
         }}
         onCreate={async (text) => {
-          const task = await app.tasks.createDraftTask(text);
-          if (activeProjectId && task && typeof task === "object" && "id" in task) {
-            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-            await app.tasks.update(task.id as string, { project_id: activeProjectId } as Partial<Task>);
+          const task = await app.tasks.createQuickTask(text);
+          if (activeProjectId) {
+            await app.tasks.update(task.id, { project_id: activeProjectId } as Partial<Task>);
           }
           await app.tasks.refresh();
         }}
       />
       {activeProject && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.8rem", borderRadius: "14px", background: "var(--surface)", border: "1px solid var(--border-subtle)", fontSize: "var(--text-sm)", boxShadow: "var(--shadow-soft)" }}>
+        <div           style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.8rem", borderRadius: "14px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", fontSize: "var(--text-sm)", boxShadow: "var(--shadow-soft)", position: "relative" }}>
+          <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+          <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+          <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+          <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
           <span>{activeProject.icon || "PR"}</span>
           <span style={{ fontWeight: 600 }}>{activeProject.name}</span>
           <span style={{ color: "var(--text-secondary)" }}>project filter active</span>
@@ -226,7 +235,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         filters={app.tasks.filters}
         onFilterChange={app.tasks.setFilters}
         sortBy={app.tasks.sortBy}
-        onSortByChange={(sortBy) => { app.tasks.setSortBy(sortBy); void app.tasks.refresh(); }}
+        onSortByChange={app.tasks.setSortBy}
       />
       <TasksPanel
         tasks={visibleTasks}

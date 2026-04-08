@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import sqlite3
 from collections import Counter, defaultdict
 from datetime import date
 
@@ -10,6 +12,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 
 _MOOD_MAP = {"😊": 5, "🙂": 4, "😐": 3, "😟": 2, "😢": 1, "😡": 2, "🤩": 5}
+logger = logging.getLogger(__name__)
 
 
 class DigestRepository:
@@ -186,7 +189,10 @@ class DigestRepository:
                     """,
                     (start.isoformat(), end.isoformat()),
                 ).fetchall()
-        except Exception:  # noqa: BLE001
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc).lower():
+                raise
+            logger.warning("Digest nutrition summary unavailable: %s", exc)
             return {"total_kcal": 0, "avg_kcal": 0, "days_logged": 0, "protein_g": 0, "fat_g": 0, "carbs_g": 0}
         total_kcal = sum(float(r["kcal"] or 0) for r in rows)
         days = len(rows)
@@ -213,6 +219,8 @@ class DigestRepository:
                     continue
                 daily[day]["cards_seen"] += int(row["cards_seen"] or 0)
                 daily[day]["retained"] += int(row["cards_good"] or 0) + int(row["cards_easy"] or 0)
-        except Exception:  # noqa: BLE001
-            pass
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc).lower():
+                raise
+            logger.warning("Digest review summary unavailable: %s", exc)
         return dict(daily)

@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 import tempfile
 import zipfile
 from datetime import date, timedelta
+from io import BytesIO
 from pathlib import Path
+
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 from app.domains.review.repository import ReviewRepository
 from app.domains.review.schemas import DeckCreate
@@ -33,6 +38,15 @@ def _build_test_apkg(notes: list[tuple[list[str], str]]) -> bytes:
         with zipfile.ZipFile(apkg_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.write(db_path, arcname="collection.anki21")
 
+        return apkg_path.read_bytes()
+
+
+def _build_zip_payload(entries: dict[str, bytes]) -> bytes:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        apkg_path = Path(tmpdir) / "fixture.apkg"
+        with zipfile.ZipFile(apkg_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for name, content in entries.items():
+                zf.writestr(name, content)
         return apkg_path.read_bytes()
 
 
@@ -159,3 +173,43 @@ def test_sm2_rating_again_resets_interval(db_path) -> None:
 
     assert lapsed.interval == 1
     assert lapsed.lapse_count == 1
+
+
+@pytest.mark.anyio
+async def test_import_apkg_route_rejects_missing_collection_database(_app, db_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING, logger="app.domains.review.router")
+    transport = ASGITransport(app=_app, client=("127.0.0.1", 12345))
+
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        create_deck = await client.post("/api/v2/review/decks", json={"name": "APKG Import Validation"})
+        assert create_deck.status_code == 200
+        deck_id = create_deck.json()["id"]
+
+        response = await client.post(
+            f"/api/v2/review/import-apkg?deck_id={deck_id}",
+            files={"file": ("broken.apkg", _build_zip_payload({"notes.txt": b"no db here"}), "application/zip")},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "APKG missing collection database"
+    assert any("APKG import rejected" in record.message for record in caplog.records)
+
+
+@pytest.mark.anyio
+async def test_import_apkg_route_rejects_invalid_collection_database(_app, db_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level(logging.WARNING, logger="app.domains.review.router")
+    transport = ASGITransport(app=_app, client=("127.0.0.1", 12345))
+
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        create_deck = await client.post("/api/v2/review/decks", json={"name": "APKG Invalid SQLite"})
+        assert create_deck.status_code == 200
+        deck_id = create_deck.json()["id"]
+
+        response = await client.post(
+            f"/api/v2/review/import-apkg?deck_id={deck_id}",
+            files={"file": ("invalid.apkg", _build_zip_payload({"collection.anki21": b"not-a-sqlite-db"}), "application/zip")},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "APKG collection database is invalid"
+    assert any("APKG import rejected" in record.message for record in caplog.records)

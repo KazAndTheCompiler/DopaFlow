@@ -45,7 +45,7 @@ const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
 function formatEntityValue(key: string, value: unknown): string {
   if (value == null || (Array.isArray(value) && value.length === 0)) return "";
   if (key === "priority" && typeof value === "number") return PRIORITY_LABELS[value]?.label ?? String(value);
-  if (key === "rrule" && typeof value === "string") {
+  if ((key === "rrule" || key === "recurrence_rule") && typeof value === "string") {
     if (value.includes("DAILY")) return "Repeats daily";
     if (value.includes("WEEKLY") && value.includes("BYDAY")) return `Repeats weekly (${value.split("BYDAY=")[1]})`;
     if (value.includes("WEEKLY")) return "Repeats weekly";
@@ -365,14 +365,14 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
                   style={{
                     padding: "0.25rem 0.55rem",
                     borderRadius: "8px",
-                    background: key === "rrule" ? "var(--accent-primary)22" : "var(--surface-3)",
+                    background: key === "rrule" || key === "recurrence_rule" ? "var(--accent-primary)22" : "var(--surface-3)",
                     fontSize: "var(--text-xs)",
-                    color: key === "rrule" ? "var(--accent-primary)" : "var(--text-secondary)",
-                    fontWeight: key === "rrule" ? 600 : 400,
-                    border: key === "rrule" ? "1px solid var(--accent-primary)44" : "none",
+                    color: key === "rrule" || key === "recurrence_rule" ? "var(--accent-primary)" : "var(--text-secondary)",
+                    fontWeight: key === "rrule" || key === "recurrence_rule" ? 600 : 400,
+                    border: key === "rrule" || key === "recurrence_rule" ? "1px solid var(--accent-primary)44" : "none",
                   }}
                 >
-                  {key === "rrule"
+                  {key === "rrule" || key === "recurrence_rule"
                     ? formatted
                     : key === "priority"
                       ? `⚡ ${formatted}`
@@ -417,7 +417,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
     if (!canFollowUp || !response) return null;
     return (
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        {response.follow_ups.map((fu) => (
+        {response.follow_ups.map((fu: string) => (
           <button
             key={fu}
             onClick={() => handleFollowUp(fu)}

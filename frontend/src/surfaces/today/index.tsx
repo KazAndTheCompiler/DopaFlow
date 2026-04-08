@@ -259,10 +259,16 @@ export default function TodayView(): JSX.Element {
             justifyContent: "space-between",
             padding: "1rem",
             borderRadius: "20px",
-            background: "var(--surface)",
+            background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+            backdropFilter: "var(--surface-glass-blur, blur(14px))",
             border: "1px solid var(--border-subtle)",
+            position: "relative",
           }}
         >
+      <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+      <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
               <strong style={{ display: "block", fontSize: "var(--text-lg)" }}>Today</strong>
@@ -405,7 +411,9 @@ export default function TodayView(): JSX.Element {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem" }}>
-            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem" }}>
+            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem", position: "relative" }}>
+              <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
               <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                 Queue
               </span>
@@ -414,7 +422,9 @@ export default function TodayView(): JSX.Element {
                 ready to execute
               </span>
             </div>
-            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem" }}>
+            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem", position: "relative" }}>
+              <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
               <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                 Backlog
               </span>
@@ -423,7 +433,9 @@ export default function TodayView(): JSX.Element {
                 unscheduled tasks
               </span>
             </div>
-            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem" }}>
+            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem", position: "relative" }}>
+              <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
               <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                 Done
               </span>
@@ -432,7 +444,9 @@ export default function TodayView(): JSX.Element {
                 completed on this date
               </span>
             </div>
-            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "var(--surface)", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem" }}>
+            <div style={{ padding: "0.8rem 0.9rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.15rem", position: "relative" }}>
+              <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+              <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
               <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 }}>
                 Next event
               </span>

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import logging
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -13,13 +14,15 @@ from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.service import GamificationService
 from app.domains.tasks import repository
 
+logger = logging.getLogger(__name__)
+
 
 def _award(source: str, source_id: str | None = None) -> None:
     try:
         db = get_settings().db_path
         GamificationService(GamificationRepository(db)).award(source, source_id)
     except Exception:
-        pass
+        logger.exception("Failed to award gamification for source=%s source_id=%s", source, source_id)
 
 
 def complete_task(db_path: str, task_id: str) -> dict[str, Any] | None:

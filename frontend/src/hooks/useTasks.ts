@@ -22,7 +22,7 @@ export interface UseTasksResult {
   selectedIds: Set<string>;
   toggleSelect: (id: string) => void;
   clearSelection: () => void;
-  createDraftTask: (text: string) => Promise<Partial<Task>>;
+  createQuickTask: (text: string) => Promise<Task>;
   createStructuredTask: (task: Partial<Task>) => Promise<Task>;
   complete: (id: string) => Promise<void>;
   update: (id: string, patch: Partial<Task>) => Promise<void>;
@@ -58,7 +58,7 @@ export function useTasks(): UseTasksResult {
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [sortBy]);
 
   const toggleSelect = (id: string): void => {
     setSelectedIds((prev) => {
@@ -105,7 +105,7 @@ export function useTasks(): UseTasksResult {
     selectedIds,
     toggleSelect,
     clearSelection,
-    createDraftTask: async (text: string) => {
+    createQuickTask: async (text: string) => {
       const parsed = await quickAddTask({ text });
       const title = parsed.title?.trim() || text.trim();
       if (!title) {

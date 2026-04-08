@@ -59,7 +59,8 @@ function ToastItem({ entry, onRemove }: { entry: ToastEntry; onRemove: (id: numb
         gap: "0.6rem",
         padding: "0.65rem 0.9rem",
         borderRadius: "12px",
-        background: "var(--surface)",
+        background: "color-mix(in srgb, var(--surface) 88%, transparent)",
+        backdropFilter: "var(--surface-glass-blur, blur(14px))",
         border: `1px solid ${TYPE_COLORS[entry.type]}44`,
         boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
         minWidth: "240px",
@@ -68,9 +69,14 @@ function ToastItem({ entry, onRemove }: { entry: ToastEntry; onRemove: (id: numb
         opacity: visible ? 1 : 0,
         transition: "transform 200ms ease, opacity 200ms ease",
         cursor: "pointer",
+        position: "relative",
       }}
       onClick={() => onRemove(entry.id)}
     >
+      <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+      <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
       <span
         style={{
           width: "20px",

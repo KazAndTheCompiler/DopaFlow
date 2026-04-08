@@ -1,6 +1,6 @@
 {
   "name": "dopaflow-desktop",
-  "version": "2.0.10",
+  "version": "2.0.7",
   "description": "DopaFlow — unified productivity for ADHD brains",
   "author": {
     "name": "KazAndTheCompiler",
@@ -34,7 +34,6 @@
       "output": "dist"
     },
     "files": [
-      "dist/**",
       "main.js",
       "backend-runtime.js",
       "preload.js",
@@ -64,9 +63,13 @@
         "filter": ["**/*"]
       },
       {
-        "from": "../release/dopaflow-backend-v2",
+        "from": "../backend/dist/dopaflow-backend",
         "to": "dopaflow-backend",
         "filter": ["**/*"]
+      },
+      {
+        "from": "../shared/version.json",
+        "to": "dopaflow-backend/shared/version.json"
       }
     ],
     "linux": {
@@ -79,11 +82,7 @@
       ],
       "category": "Office"
     },
-    "publish": {
-      "provider": "github",
-      "owner": "${env.DOPAFLOW_GITHUB_OWNER}",
-      "repo": "${env.DOPAFLOW_GITHUB_REPO}"
-    }
+    "publish": null
   },
   "devDependencies": {
     "electron": "^31.7.7",

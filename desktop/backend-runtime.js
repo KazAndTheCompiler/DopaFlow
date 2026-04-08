@@ -13,6 +13,9 @@ class BackendRuntime extends EventEmitter {
     this.env = options.env ?? null;
     this.restartDelayMs = options.restartDelayMs ?? 2000;
     this.healthUrl = options.healthUrl ?? "http://127.0.0.1:8000/health";
+    this.restartTimer = null;
+    this.startGeneration = 0;
+    this.shouldRestart = true;
   }
 
   waitForHealth(timeoutMs = 10000) {
@@ -52,28 +55,64 @@ class BackendRuntime extends EventEmitter {
 
   start() {
     /** Spawn the backend process and emit a ready signal after a health probe delay. */
-    this.child = spawn(this.command, this.args, {
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
+    }
+    if (this.child) {
+      return this.child;
+    }
+
+    this.shouldRestart = true;
+    const generation = ++this.startGeneration;
+    const child = spawn(this.command, this.args, {
       cwd: this.cwd,
       stdio: ["ignore", "ignore", "ignore"],
       env: { ...process.env, ...(this.env ?? {}) },
     });
+    this.child = child;
 
-    this.child.on("spawn", () => {
+    child.on("spawn", () => {
       this.waitForHealth()
-        .then(() => this.emit("ready"))
-        .catch((error) => this.emit("crash", error));
+        .then(() => {
+          if (this.child === child && this.shouldRestart && this.startGeneration === generation) {
+            this.emit("ready");
+          }
+        })
+        .catch((error) => {
+          if (this.child === child && this.startGeneration === generation) {
+            this.emit("crash", error);
+          }
+        });
     });
 
-    this.child.on("exit", (code) => {
+    child.on("exit", (code) => {
+      if (this.child === child) {
+        this.child = null;
+      }
+      if (!this.shouldRestart || this.startGeneration !== generation) {
+        return;
+      }
       this.emit("crash", code);
-      setTimeout(() => this.start(), this.restartDelayMs);
+      this.restartTimer = setTimeout(() => {
+        this.restartTimer = null;
+        if (this.shouldRestart && !this.child && this.startGeneration === generation) {
+          this.start();
+        }
+      }, this.restartDelayMs);
     });
 
-    return this.child;
+    return child;
   }
 
   stop() {
     /** Terminate the backend process if one is active. */
+    this.shouldRestart = false;
+    this.startGeneration += 1;
+    if (this.restartTimer) {
+      clearTimeout(this.restartTimer);
+      this.restartTimer = null;
+    }
     if (this.child) {
       this.child.kill();
       this.child = null;

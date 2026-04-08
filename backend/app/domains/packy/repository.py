@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 from uuid import uuid4
 
 from app.core.database import get_db, tx
 from app.domains.packy.schemas import MomentumScore, PackyAnswer, PackyAskRequest, PackyLorebookRequest, PackyWhisper
+
+logger = logging.getLogger(__name__)
 
 
 class PackyRepository:
@@ -60,6 +63,7 @@ class PackyRepository:
                 if headline.startswith("Achievement"):
                     achievement = f" Recent win: {headline}."
             except Exception:
+                logger.warning("Failed to parse Packy recent_mood payload")
                 achievement = ""
         return PackyAnswer(
             intent="unknown",
@@ -100,7 +104,7 @@ class PackyRepository:
                             suggested_action="open-habits",
                         )
                 except Exception:
-                    pass
+                    logger.warning("Failed to parse Packy recent_mood payload during whisper")
 
             if morning and focus == 0 and habits == 0:
                 return PackyWhisper(

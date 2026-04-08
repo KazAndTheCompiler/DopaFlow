@@ -25,6 +25,30 @@ def _parse_dt(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
+def _add_months(base: datetime, months: int) -> datetime:
+    month_index = base.month - 1 + months
+    year = base.year + month_index // 12
+    month = month_index % 12 + 1
+    month_lengths = [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    day = min(base.day, month_lengths[month - 1])
+    return base.replace(year=year, month=month, day=day)
+
+
+def _parse_rrule(rule: str) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for part in rule.split(";"):
+        if "=" not in part:
+            continue
+        key, value = part.split("=", 1)
+        parsed[key.strip().upper()] = value.strip().upper()
+    return parsed
+
+
+def _weekday_index(code: str) -> int | None:
+    mapping = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
+    return mapping.get(code)
+
+
 def _row_to_task(row) -> dict[str, Any]:
     """Convert a SQLite row into the v2 task payload shape."""
 
@@ -268,17 +292,47 @@ def delete_task(db_path: str, task_identifier: str) -> bool:
 
 
 def _next_due_from_rule(rule: str, current_due_at: str | None) -> str | None:
-    """Very small recurrence materializer for common rules."""
+    """Materialize the next due date for the supported RRULE subset."""
 
     base = _parse_dt(current_due_at) or datetime.now(timezone.utc)
-    lowered = rule.lower()
-    if "day" in lowered:
+    parts = _parse_rrule(rule)
+    freq = parts.get("FREQ")
+    if freq == "HOURLY":
+        return (base + timedelta(hours=1)).isoformat()
+    if freq == "DAILY":
         return (base + timedelta(days=1)).isoformat()
-    if "week" in lowered:
+    if freq == "WEEKLY":
+        byday = [token for token in parts.get("BYDAY", "").split(",") if token]
+        if byday:
+            weekdays = sorted(index for token in byday if (index := _weekday_index(token)) is not None)
+            if weekdays:
+                for weekday in weekdays:
+                    delta = (weekday - base.weekday()) % 7
+                    if delta == 0:
+                        continue
+                    return (base + timedelta(days=delta)).isoformat()
+                return (base + timedelta(days=((weekdays[0] - base.weekday()) % 7 or 7))).isoformat()
         return (base + timedelta(days=7)).isoformat()
-    if "month" in lowered:
-        return (base + timedelta(days=30)).isoformat()
+    if freq == "MONTHLY":
+        return _add_months(base, 1).isoformat()
+    if freq == "YEARLY":
+        return _add_months(base, 12).isoformat()
     return None
+
+
+def _recurring_instance_exists(conn, parent_id: str, due_at: str) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1
+        FROM tasks
+        WHERE recurrence_parent_id = ?
+          AND due_at = ?
+          AND deleted_at IS NULL
+        LIMIT 1
+        """,
+        (parent_id, due_at),
+    ).fetchone()
+    return row is not None
 
 
 def uncomplete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
@@ -289,29 +343,40 @@ def uncomplete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None
 
 def complete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
     """Mark a task complete and spawn the next recurring instance when applicable."""
+    current = get_task(db_path, task_identifier)
+    if current is None:
+        return None
 
     task = update_task(
         db_path,
         task_identifier,
-        {"done": True, "status": "done", "actual_minutes": get_task(db_path, task_identifier).get("actual_minutes")},
+        {"done": True, "status": "done", "actual_minutes": current.get("actual_minutes")},
     )
-    if task and task.get("recurrence_rule"):
-        next_due = _next_due_from_rule(task["recurrence_rule"], task.get("due_at"))
-        if next_due:
-            create_task(
-                db_path,
-                {
-                    "title": task["title"],
-                    "description": task.get("description"),
-                    "due_at": next_due,
-                    "priority": task.get("priority", 3),
-                    "estimated_minutes": task.get("estimated_minutes"),
-                    "tags": task.get("tags", []),
-                    "subtasks": [],
-                    "recurrence_rule": task.get("recurrence_rule"),
-                    "recurrence_parent_id": task["id"],
-                },
-            )
+    if task is None or not task.get("recurrence_rule"):
+        return task
+
+    next_due = _next_due_from_rule(task["recurrence_rule"], task.get("due_at"))
+    if not next_due:
+        return task
+
+    with get_db(db_path) as conn:
+        if _recurring_instance_exists(conn, task["id"], next_due):
+            return task
+
+    create_task(
+        db_path,
+        {
+            "title": task["title"],
+            "description": task.get("description"),
+            "due_at": next_due,
+            "priority": task.get("priority", 3),
+            "estimated_minutes": task.get("estimated_minutes"),
+            "tags": task.get("tags", []),
+            "subtasks": [],
+            "recurrence_rule": task.get("recurrence_rule"),
+            "recurrence_parent_id": task["id"],
+        },
+    )
     return task
 
 
@@ -472,21 +537,22 @@ def materialize_recurring(db_path: str, window_hours: int = 36) -> dict[str, int
             continue
         next_due = _next_due_from_rule(rule, task.get("due_at"))
         if next_due and (_parse_dt(next_due) or window_end) <= window_end:
-            existing = list_tasks(db_path, search=task["title"])
-            if not any(item.get("recurrence_parent_id") == task["id"] and item.get("due_at") == next_due for item in existing):
+            with get_db(db_path) as conn:
+                if _recurring_instance_exists(conn, task["id"], next_due):
+                    continue
                 create_task(
-                    db_path,
-                    {
-                        "title": task["title"],
-                        "description": task.get("description"),
-                        "due_at": next_due,
-                        "priority": task.get("priority", 3),
-                        "estimated_minutes": task.get("estimated_minutes"),
-                        "tags": task.get("tags", []),
-                        "subtasks": [],
-                        "recurrence_rule": rule,
-                        "recurrence_parent_id": task["id"],
-                    },
+                db_path,
+                {
+                    "title": task["title"],
+                    "description": task.get("description"),
+                    "due_at": next_due,
+                    "priority": task.get("priority", 3),
+                    "estimated_minutes": task.get("estimated_minutes"),
+                    "tags": task.get("tags", []),
+                    "subtasks": [],
+                    "recurrence_rule": rule,
+                    "recurrence_parent_id": task["id"],
+                },
                 )
                 created += 1
     return {"created": created}

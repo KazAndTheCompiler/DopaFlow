@@ -35,6 +35,7 @@ async def test_voice_preview_works_without_prefix(monkeypatch) -> None:
     class DummyResult:
         transcript = "buy milk tomorrow"
 
+    monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "true")
     monkeypatch.setattr(commands_router_module, "transcribe_upload", lambda file, lang="en-US": DummyResult())
 
     app = FastAPI()
@@ -93,6 +94,7 @@ async def test_voice_preview_returns_needs_datetime_for_calendar_without_time(mo
     class DummyResult:
         transcript = "calendar dentist tomorrow"
 
+    monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "true")
     monkeypatch.setattr(commands_router_module, "transcribe_upload", lambda file, lang="en-US": DummyResult())
 
     app = FastAPI()

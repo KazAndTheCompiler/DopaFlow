@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator
 
+MAX_OPS_IMPORT_BYTES = 5 * 1024 * 1024
+
 
 class OpsStatsResponse(BaseModel):
     tasks: int
@@ -29,7 +31,7 @@ class OpsConfigResponse(BaseModel):
 
 
 class OpsImportIn(BaseModel):
-    package: str = Field(min_length=2)
+    package: str = Field(min_length=2, max_length=MAX_OPS_IMPORT_BYTES)
     checksum: str = Field(min_length=16, max_length=128)
     dry_run: bool = False
 

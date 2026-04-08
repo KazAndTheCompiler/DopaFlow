@@ -1,4 +1,5 @@
 import { useContext } from "react";
+import type { CSSProperties } from "react";
 
 import { connectGmail } from "@api/index";
 import { AppDataContext } from "../../App";
@@ -21,7 +22,7 @@ export default function SettingsView(): JSX.Element {
     return <div>App context unavailable.</div>;
   }
 
-  const sectionTitleStyle = {
+  const sectionTitleStyle: CSSProperties = {
     fontSize: "var(--text-xs)",
     fontWeight: 700,
     color: "var(--text-secondary)",
@@ -29,22 +30,24 @@ export default function SettingsView(): JSX.Element {
     letterSpacing: "0.08em",
   };
 
-  const groupStyle = {
+  const groupStyle: CSSProperties = {
     display: "grid",
     gap: "0.9rem",
     padding: "1rem 1.05rem 1.1rem",
     borderRadius: "22px",
-    background: "linear-gradient(160deg, color-mix(in srgb, var(--surface) 92%, white 8%), color-mix(in srgb, var(--surface) 98%, black 2%))",
+    background: "color-mix(in srgb, var(--surface) 88%, transparent)",
+    backdropFilter: "var(--surface-glass-blur, blur(14px))",
     border: "1px solid var(--border-subtle)",
     boxShadow: "var(--shadow-soft)",
+    position: "relative",
   };
 
-  const groupHeaderStyle = {
+  const groupHeaderStyle: CSSProperties = {
     display: "grid",
     gap: "0.3rem",
   };
 
-  const groupDescriptionStyle = {
+  const groupDescriptionStyle: CSSProperties = {
     fontSize: "var(--text-sm)",
     color: "var(--text-secondary)",
     lineHeight: 1.5,
@@ -55,6 +58,10 @@ export default function SettingsView(): JSX.Element {
     <div style={{ display: "grid", gap: "1rem" }}>
       <SettingsPanel />
       <section style={groupStyle} id="settings-integrations-overview">
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>System Health</span>
           <span style={groupDescriptionStyle}>
@@ -64,6 +71,10 @@ export default function SettingsView(): JSX.Element {
         <IntegrationsOverview />
       </section>
       <section style={groupStyle}>
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Look & Feel</span>
           <span style={groupDescriptionStyle}>
@@ -74,6 +85,10 @@ export default function SettingsView(): JSX.Element {
         <LayoutPicker current={app.layout.layout} onPick={app.layout.setLayout} />
       </section>
       <section style={groupStyle} id="settings-vault">
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Obsidian Vault</span>
           <span style={groupDescriptionStyle}>
@@ -83,6 +98,10 @@ export default function SettingsView(): JSX.Element {
         <VaultSettings />
       </section>
       <section style={groupStyle} id="settings-sync-sharing">
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Sync & Sharing</span>
           <span style={groupDescriptionStyle}>
@@ -93,6 +112,10 @@ export default function SettingsView(): JSX.Element {
         <CalendarSharingSettings />
       </section>
       <section style={groupStyle} id="settings-integrations">
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Integrations</span>
           <span style={groupDescriptionStyle}>
@@ -104,6 +127,10 @@ export default function SettingsView(): JSX.Element {
         <WebhookPanel />
       </section>
       <section style={groupStyle}>
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
+        <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div style={groupHeaderStyle}>
           <span style={sectionTitleStyle}>Safety & Export</span>
           <span style={groupDescriptionStyle}>

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import logging
+
+import pytest
+
 from app.services.nlp import classify, fuzzy_task_match
 
 
@@ -39,6 +43,20 @@ class TestClassifyTaskCreate:
     def test_tts_response_present(self) -> None:
         result = classify("add task buy groceries")
         assert result.tts_response != ""
+
+    def test_quick_add_fallback_logs_parser_failure(self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+        from app.services import quick_add
+
+        def explode_parse(text: str):
+            raise RuntimeError("parser unavailable")
+
+        monkeypatch.setattr(quick_add, "parse", explode_parse)
+        caplog.set_level(logging.ERROR, logger="app.services.nlp")
+
+        result = classify("buy milk tomorrow")
+
+        assert result.intent == "unknown"
+        assert any("Quick-add fallback parsing failed" in record.message for record in caplog.records)
 
 
 class TestClassifyTaskComplete:
@@ -96,6 +114,27 @@ class TestClassifyCalendar:
         assert result.intent == "calendar.create"
         # Should not have start_at without a specific time
         assert result.entities.get("start_at") is None
+
+    def test_24h_time_calendar(self) -> None:
+        """Voice command with 24-hour time should produce valid start_at/end_at."""
+        result = classify("calendar dentist tomorrow at 14:00 for 45 minutes")
+        assert result.intent == "calendar.create"
+        assert result.entities.get("start_at") is not None
+        assert result.entities.get("end_at") is not None
+        assert "14:00" in result.entities["start_at"]
+        assert "14:45" in result.entities["end_at"]
+
+    def test_late_night_event_does_not_overflow_midnight(self) -> None:
+        """A 90-minute event at 23:00 must produce an end_at on the next day, not '24:30'."""
+        result = classify("calendar late call tomorrow at 23:00 for 90 minutes")
+        assert result.intent == "calendar.create"
+        end_at = result.entities.get("end_at")
+        assert end_at is not None
+        # Must be parseable as a valid datetime
+        from datetime import datetime
+        parsed = datetime.fromisoformat(end_at.replace("Z", "+00:00"))
+        assert parsed.hour == 0
+        assert parsed.minute == 30
 
 
 class TestClassifyFocus:
@@ -293,4 +332,4 @@ class TestClassifyPrecision:
     def test_recurrence_pattern_in_task(self) -> None:
         result = classify("add task water plants every monday")
         assert result.intent == "task.create"
-        assert result.entities.get("rrule") is not None
+        assert result.entities.get("recurrence_rule") is not None

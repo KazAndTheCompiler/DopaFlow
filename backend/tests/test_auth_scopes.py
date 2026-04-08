@@ -6,10 +6,11 @@ from pathlib import Path
 
 import httpx
 import pytest
+from fastapi import Depends, FastAPI
 
 from app.core.config import get_settings
 from app.core.database import run_migrations
-from app.middleware.auth_scopes import create_scope_token
+from app.middleware.auth_scopes import create_scope_token, require_scope
 
 
 def _create_remote_app(db_path: Path):
@@ -145,6 +146,68 @@ async def test_remote_board_view_uses_task_read_scope(tmp_path: Path) -> None:
     assert denied.status_code == 401
     assert denied.json()["detail"]["code"] == "missing_token"
     assert allowed.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_remote_gamification_routes_require_matching_scopes(tmp_path: Path) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    run_migrations(str(db_path))
+    app = _create_remote_app(db_path)
+
+    status_denied = await _request(app, "GET", "/api/v2/gamification/status")
+    award_denied = await _request(
+        app,
+        "POST",
+        "/api/v2/gamification/award",
+        headers=_bearer("read:gamification"),
+        json={"source": "task_complete", "source_id": "tsk_remote"},
+    )
+    status_allowed = await _request(app, "GET", "/api/v2/gamification/status", headers=_bearer("read:gamification"))
+    award_allowed = await _request(
+        app,
+        "POST",
+        "/api/v2/gamification/award",
+        headers=_bearer("write:gamification"),
+        json={"source": "task_complete", "source_id": "tsk_remote"},
+    )
+
+    assert status_denied.status_code == 401
+    assert status_denied.json()["detail"]["code"] == "missing_token"
+    assert award_denied.status_code == 403
+    assert award_denied.json()["detail"]["required"] == "write:gamification"
+    assert status_allowed.status_code == 200
+    assert award_allowed.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_remote_nutrition_routes_require_matching_scopes(tmp_path: Path) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    run_migrations(str(db_path))
+    app = _create_remote_app(db_path)
+
+    read_denied = await _request(app, "GET", "/api/v2/nutrition/foods")
+    write_denied = await _request(
+        app,
+        "POST",
+        "/api/v2/nutrition/log",
+        headers=_bearer("read:nutrition"),
+        json={"name": "Protein shake", "kj": 300, "protein_g": 25, "carbs_g": 10, "fat_g": 5},
+    )
+    read_allowed = await _request(app, "GET", "/api/v2/nutrition/foods", headers=_bearer("read:nutrition"))
+    write_allowed = await _request(
+        app,
+        "POST",
+        "/api/v2/nutrition/log",
+        headers=_bearer("write:nutrition"),
+        json={"name": "Protein shake", "kj": 300, "protein_g": 25, "carbs_g": 10, "fat_g": 5},
+    )
+
+    assert read_denied.status_code == 401
+    assert read_denied.json()["detail"]["code"] == "missing_token"
+    assert write_denied.status_code == 403
+    assert write_denied.json()["detail"]["required"] == "write:nutrition"
+    assert read_allowed.status_code == 200
+    assert write_allowed.status_code == 200
 
 
 @pytest.mark.anyio
@@ -324,3 +387,43 @@ async def test_remote_request_cannot_bypass_scope_check_with_spoofed_app_origin(
 
     assert response.status_code == 401
     assert response.json()["detail"]["code"] == "missing_token"
+
+
+@pytest.mark.anyio
+async def test_loopback_client_still_requires_scope_without_trust_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_path = tmp_path / "scopes.sqlite"
+    monkeypatch.setenv("DOPAFLOW_DB_PATH", str(db_path))
+    monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "false")
+    monkeypatch.setenv("DOPAFLOW_AUTH_TOKEN_SECRET", "test-scope-secret")
+    monkeypatch.setenv("DOPAFLOW_DISABLE_LOCAL_AUDIO", "1")
+    monkeypatch.setenv("DOPAFLOW_DISABLE_BACKGROUND_JOBS", "1")
+    monkeypatch.delenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", raising=False)
+    get_settings.cache_clear()
+    run_migrations(str(db_path))
+    app_main = importlib.import_module("app.main")
+    app_main = importlib.reload(app_main)
+    app = app_main.create_app()
+
+    transport = httpx.ASGITransport(app=app, client=("127.0.0.1", 12345))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v2/tasks/")
+
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "missing_token"
+
+
+@pytest.mark.anyio
+async def test_legacy_scope_env_flags_still_work_as_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DOPAFLOW_DEV_AUTH", raising=False)
+    monkeypatch.setenv("ZOESTM_DEV_AUTH", "true")
+    app = FastAPI()
+
+    @app.get("/protected", dependencies=[Depends(require_scope("read:tasks"))])
+    async def protected() -> dict[str, bool]:
+        return {"ok": True}
+
+    transport = httpx.ASGITransport(app=app, client=("203.0.113.10", 12345))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/protected")
+
+    assert response.status_code == 200

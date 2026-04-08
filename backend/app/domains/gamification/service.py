@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import logging
+
 from app.domains.gamification.badge_engine import badge_progress, newly_earned
 from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.schemas import BadgeRead, PlayerLevelRead
 from app.domains.gamification.xp_engine import level_for, xp_for
+
+logger = logging.getLogger(__name__)
 
 
 class GamificationService:
@@ -31,7 +35,7 @@ class GamificationService:
                 )
             )
         except Exception:
-            pass
+            logger.exception("Failed to notify Packy about earned badge=%s", badge.id)
 
     def award(self, source: str, source_id: str | None = None) -> PlayerLevelRead:
         xp = xp_for(source)

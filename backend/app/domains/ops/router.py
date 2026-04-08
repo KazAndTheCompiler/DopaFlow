@@ -11,16 +11,26 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from app.core.config import Settings, get_settings_dependency
-from app.domains.ops.schemas import OpsConfigResponse, OpsImportIn, OpsStatsResponse, OpsSyncStatus, ScopeTokenCreateIn, ScopeTokenIssued, ScopeTokenRead, TursoTestIn, TursoTestResult
+from app.domains.ops.schemas import MAX_OPS_IMPORT_BYTES, OpsConfigResponse, OpsImportIn, OpsStatsResponse, OpsSyncStatus, ScopeTokenCreateIn, ScopeTokenIssued, ScopeTokenRead, TursoTestIn, TursoTestResult
 from app.domains.ops.service import OpsService
 from app.middleware.auth_scopes import SCOPES, create_scope_token, list_scope_tokens, require_scope, revoke_scope_token, verify_scope_token
 from app.services.upload_security import validate_upload
 
 router = APIRouter(prefix="/ops", tags=["ops"])
+MAX_EXPORT_RESPONSE_BYTES = 25 * 1024 * 1024
 
 
 async def _svc(settings: Settings = Depends(get_settings_dependency)) -> OpsService:
     return OpsService(str(settings.db_path))
+
+
+def _ensure_export_size_within_limit(content: bytes, *, label: str) -> bytes:
+    if len(content) > MAX_EXPORT_RESPONSE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"{label} exceeds the {MAX_EXPORT_RESPONSE_BYTES // (1024 * 1024)} MB export limit",
+        )
+    return content
 
 
 # ── diagnostics ───────────────────────────────────────────────────────────────
@@ -121,9 +131,10 @@ async def export_data_download(svc: OpsService = Depends(_svc)) -> Response:
     """Download full data export as a JSON file."""
     payload = svc.export_payload()
     blob = json.dumps(payload, sort_keys=True, indent=2, default=str)
+    content = _ensure_export_size_within_limit(blob.encode("utf-8"), label="JSON export")
     today = datetime.now(UTC).date().isoformat()
     return Response(
-        content=blob.encode("utf-8"),
+        content=content,
         media_type="application/json",
         headers={"Content-Disposition": f'attachment; filename="dopaflow-backup-{today}.json"'},
     )
@@ -133,7 +144,7 @@ async def export_data_download(svc: OpsService = Depends(_svc)) -> Response:
 async def export_all_zip(svc: OpsService = Depends(_svc)) -> Response:
     """Download full export as a ZIP archive (tasks, habits, journal, alarms, nutrition)."""
     today = datetime.now(UTC).date().isoformat()
-    zip_bytes = svc.export_all_zip()
+    zip_bytes = _ensure_export_size_within_limit(svc.export_all_zip(), label="ZIP export")
     return Response(
         content=zip_bytes,
         media_type="application/zip",
@@ -151,7 +162,7 @@ async def backup_db(svc: OpsService = Depends(_svc)) -> Response:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Backup failed: {exc}") from exc
     try:
-        content = Path(tmp_path).read_bytes()
+        content = _ensure_export_size_within_limit(Path(tmp_path).read_bytes(), label="Database backup")
     finally:
         with suppress(OSError):
             Path(tmp_path).unlink()
@@ -204,6 +215,8 @@ async def seed_first_run(svc: OpsService = Depends(_svc)) -> dict[str, object]:
 @router.post("/import", dependencies=[Depends(require_scope("admin:ops"))])
 async def import_data(payload: OpsImportIn, svc: OpsService = Depends(_svc)) -> dict[str, object]:
     """Import a previously exported data package (checksum-verified)."""
+    if len(payload.package.encode("utf-8")) > MAX_OPS_IMPORT_BYTES:
+        raise HTTPException(status_code=413, detail="Import payload exceeds the 5 MB request limit")
     try:
         return svc.import_data(payload.package, payload.checksum, dry_run=payload.dry_run)
     except ValueError as exc:

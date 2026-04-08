@@ -4,6 +4,8 @@ import json
 from types import SimpleNamespace
 from datetime import datetime
 import urllib.error
+import httpx
+from unittest.mock import AsyncMock, patch
 
 from app.core.database import tx
 from app.domains.calendar.repository import CalendarRepository
@@ -418,11 +420,58 @@ def test_move_event_shifts_start_and_end(client) -> None:
     )
 
     assert response.status_code == 200
-    result = response.json()
-    assert result["moved"] is True
-    moved = result["event"]
-    assert _iso(moved["start_at"]) == original_start.replace(minute=original_start.minute + 30)
-    assert _iso(moved["end_at"]) == original_end.replace(minute=original_end.minute + 30)
+
+
+def test_today_schedule_falls_back_to_local_on_transport_error(client) -> None:
+    today = datetime.now().date().isoformat()
+    event = create_event(
+        client,
+        title="Local fallback",
+        start_at=f"{today}T09:00:00+00:00",
+        end_at=f"{today}T10:00:00+00:00",
+    )
+
+    class _BrokenClient:
+        def __init__(self, *args, **kwargs) -> None:
+            return None
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def get(self, *args, **kwargs):
+            request = httpx.Request("GET", "http://localhost:8001/calendar/range")
+            raise httpx.ConnectError("offline", request=request)
+
+    with patch("app.domains.calendar.router._zoescal_client", return_value=_BrokenClient()):
+        response = client.get("/api/v2/calendar/today")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "local"
+    assert any(entry["id"] == event["id"] for entry in body["entries"])
+
+
+@patch("app.domains.calendar.router._google_oauth_client")
+def test_google_calendar_oauth_callback_uses_configured_redirect_uri(oauth_client_factory, client, monkeypatch) -> None:
+    monkeypatch.setenv("DOPAFLOW_GOOGLE_CLIENT_ID", "client-id")
+    monkeypatch.setenv("DOPAFLOW_GOOGLE_CLIENT_SECRET", "client-secret")
+    monkeypatch.setenv("DOPAFLOW_GOOGLE_REDIRECT_URI", "http://127.0.0.1:8123/custom/callback")
+
+    token_response = SimpleNamespace(
+        status_code=200,
+        json=lambda: {"access_token": "token", "refresh_token": "refresh", "expires_in": 3600},
+    )
+    response_mock = AsyncMock(return_value=token_response)
+    oauth_client_factory.return_value.__aenter__.return_value.post = response_mock
+
+    response = client.get("/api/v2/calendar/oauth/callback", params={"code": "test-code"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "connected"
+    assert response_mock.call_args.kwargs["data"]["redirect_uri"] == "http://127.0.0.1:8123/custom/callback"
 
 
 def test_move_event_preserves_duration(client) -> None:

@@ -238,7 +238,8 @@ export default function App(): JSX.Element {
     if (Number.isNaN(startedAt)) {
       return `${session.duration_minutes}m ${session.status}`;
     }
-    const elapsedSeconds = Math.max(0, Math.floor((focusNow - startedAt) / 1000));
+    const pausedSeconds = Math.floor((session.paused_duration_ms ?? 0) / 1000);
+    const elapsedSeconds = Math.max(0, Math.floor((focusNow - startedAt) / 1000) - pausedSeconds);
     const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
     const minutes = Math.floor(remainingSeconds / 60).toString().padStart(2, "0");
     const seconds = (remainingSeconds % 60).toString().padStart(2, "0");

@@ -16,8 +16,9 @@ To protect an endpoint with a scope requirement, use Depends():
 
 Available scopes are defined in SCOPES dict in auth_scopes.py.
 
-Dev mode: Set ZOESTM_DEV_AUTH=1 to bypass all scope checks (testing only).
-Local trust: Set ZOESTM_TRUST_LOCAL_CLIENTS=1 to trust localhost browser origins from a loopback client.
+Dev mode: Set DOPAFLOW_DEV_AUTH=1 to bypass all scope checks (testing only).
+Local trust: Set DOPAFLOW_TRUST_LOCAL_CLIENTS=1 to trust localhost browser origins from a loopback client.
+Legacy ZOESTM_* env vars are still accepted as fallback for older installs.
 """
 
 from __future__ import annotations
@@ -228,18 +229,24 @@ def require_scope(scope: str):
       Authorization: Bearer <token>
 
     Scopes are validated from a signed bearer token.
-    Dev bypass: ZOESTM_DEV_AUTH=1
-    Local trust: ZOESTM_TRUST_LOCAL_CLIENTS=1 (only loopback clients with localhost origins are auto-trusted)
+    Dev bypass: DOPAFLOW_DEV_AUTH=1
+    Local trust: DOPAFLOW_TRUST_LOCAL_CLIENTS=1 (only loopback clients with localhost origins are auto-trusted)
     """
 
+    def env_flag(name: str) -> bool:
+        primary = f"DOPAFLOW_{name}"
+        legacy = f"ZOESTM_{name}"
+        value = os.getenv(primary)
+        if value is None:
+            value = os.getenv(legacy, "0")
+        return value.lower() in {"1", "true", "yes"}
+
     async def dep(request: Request, authorization: str | None = Header(default=None)) -> bool:
-        if os.getenv("ZOESTM_DEV_AUTH", os.getenv("DOPAFLOW_DEV_AUTH", "0")).lower() in {"1", "true", "yes"}:
+        if env_flag("DEV_AUTH"):
             return True
         origin = request.headers.get("origin", "")
         client_host = request.client.host if request.client else ""
-        if client_host in TRUSTED_HOSTS:
-            return True
-        if os.getenv("ZOESTM_TRUST_LOCAL_CLIENTS", os.getenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "0")).lower() in {"1", "true", "yes"}:
+        if env_flag("TRUST_LOCAL_CLIENTS"):
             if client_host in TRUSTED_HOSTS and (origin.startswith("http://127.0.0.1:") or origin.startswith("http://localhost:")):
                 return True
         if not authorization:

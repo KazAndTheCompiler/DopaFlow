@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from app.core.version import APP_VERSION, SCHEMA_VERSION
 from app.domains.meta.schemas import MetaResponse, VersionResponse
 
 router = APIRouter(prefix="/meta", tags=["meta"])
-
-APP_VERSION = "2.0.7"
-SCHEMA_VERSION = "v2"
 
 
 @router.get("", response_model=MetaResponse)

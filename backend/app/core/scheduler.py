@@ -101,3 +101,12 @@ def start_scheduler(journal_service: JournalService) -> None:
     _scheduler.add_job(_materialize_recurring_tasks, "cron", hour="*/6", id="materialize_recurring", replace_existing=True)
     _scheduler.add_job(_sync_peer_feeds, "interval", minutes=15, id="sync_peer_feeds", replace_existing=True)
     _scheduler.start()
+
+
+def stop_scheduler() -> None:
+    global _scheduler
+
+    if _scheduler is None or not _scheduler.running:
+        return
+
+    _scheduler.shutdown(wait=False)

@@ -15,20 +15,21 @@ type OverviewTone = "Connected" | "Needs attention" | "Disabled" | "Error" | "Lo
 
 function inferTursoStatus(): { tone: OverviewTone; detail: string } {
   const hasUrl = Boolean(localStorage.getItem("dopaflow:turso_url")?.trim());
-  const hasToken = Boolean(localStorage.getItem("dopaflow:turso_token")?.trim());
-  if (hasUrl && hasToken) {
-    return { tone: "Local-only", detail: "Credentials saved on this device. Test in the Turso panel." };
+  if (hasUrl) {
+    return { tone: "Local-only", detail: "Database URL preset saved on this device. Paste a token in the Turso panel when testing." };
   }
-  return { tone: "Disabled", detail: "No Turso credentials saved locally." };
+  return { tone: "Disabled", detail: "No Turso database URL preset saved locally." };
 }
 
 function inferGitHubStatus(): { tone: OverviewTone; detail: string } {
   const hasRepo = Boolean(localStorage.getItem("dopaflow_github_repo")?.trim());
-  const hasToken = Boolean(localStorage.getItem("dopaflow_github_token")?.trim());
-  if (hasRepo && hasToken) {
-    return { tone: "Local-only", detail: `Ready to import from ${localStorage.getItem("dopaflow_github_repo")}.` };
+  if (hasRepo) {
+    return {
+      tone: "Local-only",
+      detail: `Repo preset saved for ${localStorage.getItem("dopaflow_github_repo")}. Paste a token when importing.`,
+    };
   }
-  return { tone: "Disabled", detail: "No GitHub repo/token saved in this browser." };
+  return { tone: "Disabled", detail: "No GitHub repo preset saved in this browser." };
 }
 
 function toneStyle(tone: OverviewTone): CSSProperties {

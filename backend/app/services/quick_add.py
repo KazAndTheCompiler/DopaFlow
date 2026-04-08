@@ -270,7 +270,7 @@ def parse(text: str) -> dict[str, object]:
     text = (text or "").strip()[:MAX_LEN]
     tags = re.findall(r"#(\w+)", text)
     priority, priority_strip_patterns = _parse_priority(text)
-    rrule, recurrence_strip_patterns = _parse_recurrence(text)
+    recurrence_rule, recurrence_strip_patterns = _parse_recurrence(text)
     now = datetime.now(UTC)
     due_candidates, due_strip_patterns = _parse_due(text, now)
     due = due_candidates[0].isoformat().replace("+00:00", "Z") if due_candidates else None
@@ -280,6 +280,6 @@ def parse(text: str) -> dict[str, object]:
         "priority": int(priority),
         "tags": tags,
         "due_at": due,
-        "rrule": rrule,
+        "recurrence_rule": recurrence_rule,
         "estimated_minutes": None,
     }

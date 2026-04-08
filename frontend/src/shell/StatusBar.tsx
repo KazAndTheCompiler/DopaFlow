@@ -27,10 +27,13 @@ export function StatusBar({ whisper, activeAlarm, syncStatus, gamificationLevel 
         justifyContent: "space-between",
         padding: "0 1rem",
         borderTop: "1px solid var(--border)",
-        background: "linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 88%, black 12%))",
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface) 96%, transparent))",
+        backdropFilter: "blur(10px)",
         color: "var(--text-muted)",
         fontSize: "var(--text-sm)",
         gap: "1rem",
+        position: "relative",
+        zIndex: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1, minWidth: 0 }}>
