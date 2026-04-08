@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { executeCommandText } from "@api/index";
+import { apiClient } from "../../api/client";
+import { showToast } from "@ds/primitives/Toast";
 import VoiceCommandModal from "../../components/VoiceCommandModal";
 
 interface CommandDefinition {
@@ -16,8 +18,7 @@ export default function CommandsView(): JSX.Element {
   const [commands, setCommands] = useState<CommandDefinition[]>([]);
 
   useEffect(() => {
-    void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/commands/list`)
-      .then((response) => response.json())
+    void apiClient<{ commands: CommandDefinition[] }>("/commands/list")
       .then((body: { commands: CommandDefinition[] }) => setCommands(Array.isArray(body.commands) ? body.commands : []))
       .catch(() => setCommands([]));
   }, []);
@@ -40,7 +41,7 @@ export default function CommandsView(): JSX.Element {
         <div style={{ display: "grid", gap: "0.2rem" }}>
           <strong style={{ fontSize: "var(--text-lg)" }}>Command Center</strong>
           <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
-            Voice commands must start with task, journal, or calendar.
+            Natural language works here now. Prefixes still work, but they are no longer required.
           </span>
         </div>
         <VoiceCommandModal />
@@ -84,7 +85,14 @@ export default function CommandsView(): JSX.Element {
                 event.currentTarget.style.background = "var(--surface)";
               }}
               onClick={() => {
-                void executeCommandText(command.text, true);
+                void executeCommandText(command.text, true)
+                  .then((result) => {
+                    const reply = typeof result.reply === "string" ? result.reply.trim() : "";
+                    showToast(reply || "Command completed.", "success");
+                  })
+                  .catch(() => {
+                    showToast("Command failed.", "error");
+                  });
               }}
             >
               <strong>{command.name}</strong>

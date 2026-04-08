@@ -71,12 +71,25 @@
   - `frontend/src/surfaces/journal/index.tsx`
   - `frontend/src/surfaces/tasks/index.tsx`
 
+### 2026-04-08 Patch 6
+
+- Corrected the command-center copy so it matches the actual NLP behavior: natural language commands no longer require explicit `task` / `journal` / `calendar` prefixes.
+- Moved the command list fetch in the command center onto the shared API client so transport failures follow the same guarded path as the rest of the app.
+- Added explicit success/error toast feedback when commands are launched from the command center instead of leaving execution visually silent.
+- Fixed a backend command execution bug where `focus.start` passed the database path into the focus service `task_id` slot, corrupting the returned payload and undermining trust in the command system.
+- Added a regression test to ensure natural-language focus commands do not leak the DB path into `task_id`.
+- Files changed:
+  - `frontend/src/surfaces/commands/index.tsx`
+  - `backend/app/domains/commands/service.py`
+  - `backend/tests/test_commands.py`
+
 ## Remaining Weaknesses
 
 - Browser-level visual verification is still partially blocked in this Codex environment because the local headless browser runtime is incomplete; recovery verification is currently based on source inspection, successful production builds, and a running installed local web release.
 - Multiple major surfaces still contain desktop-biased layout rules that need targeted overflow hardening.
 - Some startup data loading still uses direct fetch logic instead of guarded shared-client access.
 - Manual flow verification across every primary product loop is still incomplete in this environment because Playwright could not launch a fully working browser/runtime stack here.
+- The web release installer still copies a prebuilt backend payload from `release/dopaflow-backend-v2`, so backend source fixes do not appear in the installed release until that artifact is rebuilt. Rebuilding that payload is currently blocked on this host because the required `objdump` tool is unavailable.
 
 ## Next Highest-Value Recovery Steps
 
@@ -105,3 +118,10 @@
   - `http://127.0.0.1:8000/health` -> `200`
   - `http://127.0.0.1:8000/api/v2/tasks/` -> `200`
 - This keeps the installed proof copy aligned with the repo after another shared-layout patch set, which matters more than isolated source-only fixes.
+
+### 2026-04-08 Command recovery verification
+
+- Rebuilt the frontend successfully after the command-center copy and feedback fixes.
+- Ran `backend/tests/test_commands.py`; all 28 tests passed, including the new regression assertion for `focus.start`.
+- Live command smoke tests against the installed web release confirmed the command backend is reachable and executing real actions (`greeting`, `task.create`, `task.list`, `focus.start`, `undo`), but also exposed that the installed backend payload still predates the `focus.start` fix because the web installer copies the prebuilt backend artifact.
+- Root cause of that mismatch: `scripts/release_web/install_release_web.sh` copies `release/dopaflow-backend-v2`, and this host cannot currently rebuild that payload because `pyinstaller` requires `objdump`, which is unavailable here.

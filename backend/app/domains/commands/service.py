@@ -541,7 +541,10 @@ class CommandService:
             if intent == "focus.start":
                 from app.domains.focus import service as focus_svc
 
-                result = focus_svc.start(int(extracted.get("duration_minutes") or 25), db_path)
+                result = focus_svc.start(
+                    int(extracted.get("duration_minutes") or 25),
+                    str(extracted.get("task_id")) if extracted.get("task_id") else None,
+                )
                 CommandRepository.add_log(db_path, text, intent, "executed", source=source)
                 return {
                     "text": text, "intent": intent, "status": "executed",
