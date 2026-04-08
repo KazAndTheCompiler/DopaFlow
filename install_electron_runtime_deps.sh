@@ -13,6 +13,18 @@ PACKAGES=(
   libxss1
   libgbm1
   libasound2t64
+  libxcb-render0
+  libxcb-shm0
+  libxau6
+  libxdmcp6
+  libpixman-1-0
+  libgraphite2-3
+  libdatrie1
+  libwayland-client0
+  libwayland-cursor0
+  libwayland-egl1
+  libxcursor1
+  libxinerama1
 )
 
 APT_BIN="$(command -v apt-get || true)"
@@ -51,20 +63,48 @@ have_lib() {
     return 0
   fi
   if command -v dpkg-query >/dev/null 2>&1; then
-    dpkg-query -L libnss3 libnspr4 2>/dev/null | grep -q "$lib_name"
+    dpkg-query -L \
+      libnss3 \
+      libnspr4 \
+      libxcb-render0 \
+      libxcb-shm0 \
+      libxau6 \
+      libxdmcp6 \
+      libpixman-1-0 \
+      libgraphite2-3 \
+      libdatrie1 \
+      libwayland-client0 \
+      libwayland-cursor0 \
+      libwayland-egl1 \
+      libxcursor1 \
+      libxinerama1 \
+      2>/dev/null | grep -q "$lib_name"
     return $?
   fi
   return 1
 }
 
-if ! have_lib "libnss3.so"; then
-  echo "libnss3.so still missing after install." >&2
-  exit 1
-fi
-if ! have_lib "libnspr4.so"; then
-  echo "libnspr4.so still missing after install." >&2
-  exit 1
-fi
+for required_lib in \
+  libnss3.so \
+  libnspr4.so \
+  libxcb-render.so.0 \
+  libxcb-shm.so.0 \
+  libXau.so.6 \
+  libXdmcp.so.6 \
+  libpixman-1.so.0 \
+  libgraphite2.so.3 \
+  libdatrie.so.1 \
+  libwayland-client.so.0 \
+  libwayland-cursor.so.0 \
+  libwayland-egl.so.1 \
+  libXcursor.so.1 \
+  libXinerama.so.1
+do
+  if ! have_lib "$required_lib"; then
+    echo "$required_lib still missing after install." >&2
+    exit 1
+  fi
+done
 
 echo "Installed Electron runtime/build dependencies:"
 printf ' - %s\n' "${PACKAGES[@]}"
