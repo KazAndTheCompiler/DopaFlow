@@ -17,6 +17,7 @@ export default function JournalView(): JSX.Element {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab, setActiveTab] = useState<Tab>("editor");
   const [exportMessage, setExportMessage] = useState<string>("");
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => window.matchMedia("(max-width: 980px)").matches);
 
   if (!app) {
     return <div>App context unavailable.</div>;
@@ -36,6 +37,13 @@ export default function JournalView(): JSX.Element {
       }
     };
   }, [app.journal.entries, today]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 980px)");
+    const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   const handleExportToday = async () => {
     try {
@@ -62,7 +70,7 @@ export default function JournalView(): JSX.Element {
   });
 
   return (
-    <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: "minmax(200px, 240px) minmax(0, 1fr)" }}>
+    <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: isCompactLayout ? "minmax(0, 1fr)" : "minmax(200px, 240px) minmax(0, 1fr)", alignItems: "start" }}>
       <JournalPanel
         entries={app.journal.entries}
         loading={app.journal.loading}
@@ -73,8 +81,8 @@ export default function JournalView(): JSX.Element {
         onTriggerBackup={() => void app.journal.triggerBackup(selectedDate)}
       />
 
-      <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "start" }}>
+      <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "start", flexWrap: "wrap", minWidth: 0 }}>
           <TemplatesPicker onApply={(body, tags) => { void app.journal.save({ date: selectedDate, markdown_body: body, tags, emoji: activeEntry?.emoji ?? null }); }} />
           {selectedDate === today && (
             <button
@@ -99,7 +107,7 @@ export default function JournalView(): JSX.Element {
             </span>
           )}
         </div>
-        <nav style={{ display: "flex", gap: "0.25rem", padding: "0.3rem", background: "var(--surface)", borderRadius: "12px", width: "fit-content" }}>
+        <nav style={{ display: "flex", gap: "0.25rem", padding: "0.3rem", background: "var(--surface)", borderRadius: "12px", width: "fit-content", flexWrap: "wrap", maxWidth: "100%" }}>
           <button style={tabStyle("editor")} onClick={() => setActiveTab("editor")}>Editor</button>
           <button style={tabStyle("graph")} onClick={() => setActiveTab("graph")}>Graph</button>
           <button style={tabStyle("analytics")} onClick={() => setActiveTab("analytics")}>Analytics</button>

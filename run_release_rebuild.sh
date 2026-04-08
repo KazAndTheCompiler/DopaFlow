@@ -101,6 +101,8 @@ build_backend() {
 publish_backend_release() {
   rm -rf "$BACKEND_RELEASE_DIR"
   cp -a "$BACKEND_BUILD_DIR" "$BACKEND_RELEASE_DIR"
+  mkdir -p "$BACKEND_RELEASE_DIR/shared"
+  cp -a "$ROOT/shared/version.json" "$BACKEND_RELEASE_DIR/shared/version.json"
 }
 
 build_desktop() {

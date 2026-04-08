@@ -119,20 +119,59 @@ function localDateISO(offsetDays = 0): string {
   return value.toISOString().slice(0, 10);
 }
 
-class SurfaceErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
-  override state = { hasError: false };
+interface SurfaceErrorBoundaryProps {
+  children: ReactNode;
+  route: string;
+}
 
-  static getDerivedStateFromError(): { hasError: boolean } {
-    return { hasError: true };
+interface SurfaceErrorBoundaryState {
+  hasError: boolean;
+  errorMessage: string | undefined;
+}
+
+class SurfaceErrorBoundary extends Component<SurfaceErrorBoundaryProps, SurfaceErrorBoundaryState> {
+  override state: SurfaceErrorBoundaryState = { hasError: false, errorMessage: undefined };
+
+  override componentDidUpdate(prevProps: SurfaceErrorBoundaryProps): void {
+    if (prevProps.route !== this.props.route && this.state.hasError) {
+      this.setState({ hasError: false, errorMessage: undefined });
+    }
   }
 
-  override componentDidCatch(_error: Error, _errorInfo: ErrorInfo): void {
-    /** Hook point for surface-level error reporting. */
+  static getDerivedStateFromError(error: Error): SurfaceErrorBoundaryState {
+    return { hasError: true, errorMessage: error.message };
+  }
+
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    console.error(`[DopaFlow] Surface crashed on route "${this.props.route}"`, error, errorInfo);
   }
 
   override render(): ReactNode {
     if (this.state.hasError) {
-      return <div>Surface failed to render.</div>;
+      return (
+        <div
+          role="alert"
+          style={{
+            padding: "1rem 1.1rem",
+            borderRadius: "16px",
+            border: "1px solid color-mix(in srgb, var(--state-overdue) 30%, var(--border-subtle))",
+            background: "color-mix(in srgb, var(--state-overdue) 10%, var(--surface))",
+            color: "var(--text)",
+            display: "grid",
+            gap: "0.35rem",
+          }}
+        >
+          <strong>Surface failed to render.</strong>
+          <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>
+            Route: {this.props.route}
+          </span>
+          {this.state.errorMessage ? (
+            <code style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", overflowWrap: "anywhere" }}>
+              {this.state.errorMessage}
+            </code>
+          ) : null}
+        </div>
+      );
     }
 
     return this.props.children;
@@ -430,7 +469,7 @@ export default function App(): JSX.Element {
         activeProjectId={projects.activeProjectId}
         onProjectSelect={projects.setActiveProjectId}
       >
-        <SurfaceErrorBoundary>{surface}</SurfaceErrorBoundary>
+        <SurfaceErrorBoundary route={route}>{surface}</SurfaceErrorBoundary>
       </Shell>
       <NotificationInbox
         open={inboxOpen}

@@ -102,10 +102,13 @@ export function Shell({
         background: "var(--bg-gradient, var(--bg-app))",
         transition: "grid-template-columns 200ms ease-in-out",
         position: "relative",
+        isolation: "isolate",
+        minWidth: 0,
+        overflow: "hidden",
       }}
     >
-      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--bg-vignette)", pointerEvents: "none", zIndex: 0 }} />
-      {!isMobileLayout && <div style={{ gridRow: "1 / span 3" }}>
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--bg-vignette)", pointerEvents: "none", zIndex: -1 }} />
+      {!isMobileLayout && <div style={{ gridRow: "1 / span 3", position: "relative", zIndex: 1, minWidth: 0, minHeight: 0 }}>
         <Sidebar
           items={navItems}
           activeRoute={route}
@@ -136,6 +139,10 @@ export function Shell({
         style={{
           padding: isMobileLayout ? "0.9rem 0.85rem 0.75rem" : sidebarCollapsed ? "1rem 1.15rem 1.1rem" : "1.4rem 1.6rem 1.35rem",
           overflow: "auto",
+          position: "relative",
+          zIndex: 1,
+          minWidth: 0,
+          minHeight: 0,
         }}
       >
         <div
@@ -144,6 +151,8 @@ export function Shell({
           style={{
             width: "min(100%, 1480px)",
             margin: "0 auto",
+            minWidth: 0,
+            maxWidth: "100%",
           }}
         >
           {children}
@@ -158,6 +167,8 @@ export function Shell({
             borderTop: "1px solid var(--border)",
             paddingBottom: "max(0.25rem, env(safe-area-inset-bottom, 0px))",
             boxShadow: "0 -10px 24px rgba(0,0,0,0.08)",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           {MOBILE_NAV.map((item) => {
