@@ -83,13 +83,22 @@
   - `backend/app/domains/commands/service.py`
   - `backend/tests/test_commands.py`
 
+### 2026-04-08 Patch 7
+
+- Added a source-backed backend mode to the local web release installer so the installed web release can run the current backend source when the packaged backend artifact is stale.
+- Added a Python daemon launcher for that source-backed backend path because this host refuses to execute `setsid` reliably from the generated release script.
+- Verified the installed web release now starts its own backend and frontend processes again through the normal `start.sh` path.
+- Files changed:
+  - `scripts/release_web/install_release_web.sh`
+
 ## Remaining Weaknesses
 
 - Browser-level visual verification is still partially blocked in this Codex environment because the local headless browser runtime is incomplete; recovery verification is currently based on source inspection, successful production builds, and a running installed local web release.
 - Multiple major surfaces still contain desktop-biased layout rules that need targeted overflow hardening.
 - Some startup data loading still uses direct fetch logic instead of guarded shared-client access.
 - Manual flow verification across every primary product loop is still incomplete in this environment because Playwright could not launch a fully working browser/runtime stack here.
-- The web release installer still copies a prebuilt backend payload from `release/dopaflow-backend-v2`, so backend source fixes do not appear in the installed release until that artifact is rebuilt. Rebuilding that payload is currently blocked on this host because the required `objdump` tool is unavailable.
+- The web release installer still copies a prebuilt backend payload from `release/dopaflow-backend-v2` for packaged mode, so Electron/web parity is still split across two backend delivery paths.
+- Electron desktop packaging is still not runnable on this host because the unpacked desktop binary depends on missing system libraries including `libnss3.so`, `libnspr4.so`, GTK/ATK/CUPS/X11 family libraries, and related desktop runtime dependencies.
 
 ## Next Highest-Value Recovery Steps
 
@@ -125,3 +134,15 @@
 - Ran `backend/tests/test_commands.py`; all 28 tests passed, including the new regression assertion for `focus.start`.
 - Live command smoke tests against the installed web release confirmed the command backend is reachable and executing real actions (`greeting`, `task.create`, `task.list`, `focus.start`, `undo`), but also exposed that the installed backend payload still predates the `focus.start` fix because the web installer copies the prebuilt backend artifact.
 - Root cause of that mismatch: `scripts/release_web/install_release_web.sh` copies `release/dopaflow-backend-v2`, and this host cannot currently rebuild that payload because `pyinstaller` requires `objdump`, which is unavailable here.
+
+### 2026-04-08 Installed release source-backend verification
+
+- Updated the local web release installer to launch backend source directly via the repo venv when packaged backend refresh is not available on this host.
+- Verified the normal installed release `start.sh` path now keeps both services alive:
+  - frontend `serve_release.py`
+  - backend `python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`
+- Rechecked the installed release command path through `http://127.0.0.1:8000/api/v2/commands/execute`:
+  - `focus.start` -> `status: executed`, `task_id: null`
+  - `task.create` -> `status: executed`
+  - `hello` -> `status: ok`
+- Packaging check on `/home/henry/release/DopaFlow-2.0.7-linux-unpacked/dopaflow-desktop` still fails on this host at process start because required desktop runtime libraries are missing; current `ldd` output shows unresolved dependencies including `libnss3.so`, `libnssutil3.so`, `libsmime3.so`, `libnspr4.so`, `libatk-1.0.so.0`, `libgtk-3.so.0`, `libX11.so.6`, `libxcb.so.1`, `libasound.so.2`, and others.
