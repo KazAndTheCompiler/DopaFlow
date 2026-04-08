@@ -79,7 +79,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
           }}
         >
           <div style={{ display: "flex", alignItems: "start", gap: "0.85rem", justifyContent: "space-between", flexWrap: "wrap" }}>
-            <div style={{ display: "grid", gap: "0.28rem", maxWidth: "72ch" }}>
+            <div style={{ display: "grid", gap: "0.28rem", maxWidth: "72ch", minWidth: 0 }}>
               <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800 }}>
                 Board workflow
               </span>
@@ -93,7 +93,8 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
                 <div
                   key={stat.label}
                   style={{
-                    minWidth: "112px",
+                    minWidth: 0,
+                    flex: "1 1 112px",
                     padding: "0.7rem 0.8rem",
                     borderRadius: "16px",
                     background: "color-mix(in srgb, var(--surface) 92%, transparent)",
@@ -117,9 +118,9 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", minWidth: 0 }}>
             <strong style={{ fontSize: "1.02rem" }}>Board mode</strong>
-            <div style={{ display: "flex", gap: "0.4rem", marginLeft: "auto" }}>
+            <div style={{ display: "flex", gap: "0.4rem", marginLeft: "auto", flexWrap: "wrap" }}>
             <button style={viewToggleStyle(boardMode === "kanban")} onClick={() => setBoardMode("kanban")}>
               Kanban
             </button>
@@ -168,7 +169,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: "0.85rem", alignItems: "start", flexWrap: "wrap" }}>
-          <div style={{ display: "grid", gap: "0.28rem", maxWidth: "72ch" }}>
+          <div style={{ display: "grid", gap: "0.28rem", maxWidth: "72ch", minWidth: 0 }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800 }}>
               Task runway
             </span>
@@ -182,7 +183,8 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
               <div
                 key={stat.label}
                 style={{
-                  minWidth: "112px",
+                  minWidth: 0,
+                  flex: "1 1 112px",
                   padding: "0.7rem 0.8rem",
                   borderRadius: "16px",
                   background: "var(--surface)",
@@ -214,17 +216,17 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         }}
       />
       {activeProject && (
-        <div           style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.8rem", borderRadius: "14px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", fontSize: "var(--text-sm)", boxShadow: "var(--shadow-soft)", position: "relative" }}>
+        <div           style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 0.8rem", borderRadius: "14px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", fontSize: "var(--text-sm)", boxShadow: "var(--shadow-soft)", position: "relative", flexWrap: "wrap", minWidth: 0 }}>
           <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
           <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
           <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
           <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
           <span>{activeProject.icon || "PR"}</span>
-          <span style={{ fontWeight: 600 }}>{activeProject.name}</span>
+          <span style={{ fontWeight: 600, minWidth: 0 }}>{activeProject.name}</span>
           <span style={{ color: "var(--text-secondary)" }}>project filter active</span>
           <button
             onClick={() => app.projects?.setActiveProjectId(null)}
-            style={{ marginLeft: "auto", border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "var(--text-xs)" }}
+            style={{ marginLeft: "auto", border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "var(--text-xs)", flexShrink: 0 }}
           >
             Clear filter X
           </button>

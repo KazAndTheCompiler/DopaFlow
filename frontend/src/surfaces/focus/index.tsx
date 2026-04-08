@@ -21,7 +21,11 @@ export default function FocusView(): JSX.Element {
   const [completedTaskTitle, setCompletedTaskTitle] = useState<string | undefined>();
   const [breakEndsAt, setBreakEndsAt] = useState<Date | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<TaskId | null>(null);
-  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => window.matchMedia("(max-width: 1120px)").matches);
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 1120px)").matches
+      : false
+  ));
 
   // Restore break state from localStorage on mount so navigating away and
   // back doesn't silently lose an active break.
@@ -38,6 +42,9 @@ export default function FocusView(): JSX.Element {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
     const mq = window.matchMedia("(max-width: 1120px)");
     const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
     mq.addEventListener("change", onChange);

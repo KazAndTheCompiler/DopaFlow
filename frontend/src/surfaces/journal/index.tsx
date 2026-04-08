@@ -17,7 +17,11 @@ export default function JournalView(): JSX.Element {
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab, setActiveTab] = useState<Tab>("editor");
   const [exportMessage, setExportMessage] = useState<string>("");
-  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => window.matchMedia("(max-width: 980px)").matches);
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 980px)").matches
+      : false
+  ));
 
   if (!app) {
     return <div>App context unavailable.</div>;
@@ -39,6 +43,9 @@ export default function JournalView(): JSX.Element {
   }, [app.journal.entries, today]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
     const mq = window.matchMedia("(max-width: 980px)");
     const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
     mq.addEventListener("change", onChange);

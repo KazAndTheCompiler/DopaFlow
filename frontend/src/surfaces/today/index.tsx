@@ -27,7 +27,11 @@ export default function TodayView(): JSX.Element {
   const [dayOffset, setDayOffset] = useState<number>(0);
   const [focusQueueIds, setFocusQueueIds] = useState<string[]>([]);
   const [quote, setQuote] = useState<string>("");
-  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => window.matchMedia("(max-width: 1180px)").matches);
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 1180px)").matches
+      : false
+  ));
 
   // selectedDate must be computed before memos that depend on it
   const selectedDate = useMemo(() => {
@@ -119,6 +123,9 @@ export default function TodayView(): JSX.Element {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
     const mq = window.matchMedia("(max-width: 1180px)");
     const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
     mq.addEventListener("change", onChange);
