@@ -23,6 +23,7 @@ import { useLayout } from "./hooks/useLayout";
 import { useTasks } from "./hooks/useTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { executeCommandText } from "./api/commands";
 import { materializeRecurringTasks } from "./api/tasks";
 
 import TodayView from "@surfaces/today";
@@ -107,6 +108,22 @@ const ACTION_ROUTES: Record<string, string> = {
   "open-digest": "digest",
 };
 
+const INTENT_ROUTES: Record<string, string> = {
+  "task.create": "tasks",
+  "task.complete": "tasks",
+  "task.list": "tasks",
+  "journal.create": "journal",
+  "calendar.create": "calendar",
+  "focus.start": "focus",
+  "alarm.create": "alarms",
+  "habit.checkin": "habits",
+  "habit.list": "habits",
+  "review.start": "review",
+  "search": "tasks",
+  "nutrition.log": "nutrition",
+  "undo": "tasks",
+};
+
 function getRouteFromHash(): string {
   const route = window.location.hash.replace(/^#\//, "");
   return route || "today";
@@ -117,6 +134,11 @@ function localDateISO(offsetDays = 0): string {
   value.setDate(value.getDate() + offsetDays);
   value.setMinutes(value.getMinutes() - value.getTimezoneOffset());
   return value.toISOString().slice(0, 10);
+}
+
+function getCommandReply(result: Record<string, unknown>): string {
+  const reply = result.reply;
+  return typeof reply === "string" ? reply.trim() : "";
 }
 
 interface SurfaceErrorBoundaryProps {
@@ -223,6 +245,97 @@ export default function App(): JSX.Element {
     window.location.hash = `#/${nextRoute}`;
     setRoute(nextRoute);
   }, []);
+
+  const handleCommandExecution = useCallback(async (
+    text: string,
+    options?: { source?: "text" | "voice"; clearOnHandled?: boolean },
+  ): Promise<boolean> => {
+    const raw = text.trim();
+    if (!raw) {
+      return false;
+    }
+
+    const source = options?.source ?? "text";
+
+    try {
+      const result = await executeCommandText(raw, true, source);
+      const intent = typeof result.intent === "string" ? result.intent : "";
+      const status = typeof result.status === "string" ? result.status : "";
+      const reply = getCommandReply(result);
+
+      const refreshers: Record<string, Array<() => Promise<void>>> = {
+        "task.create": [tasks.refresh],
+        "task.complete": [tasks.refresh],
+        "task.list": [tasks.refresh],
+        "journal.create": [journal.refresh],
+        "calendar.create": [calendar.refresh],
+        "focus.start": [focus.refresh],
+        "alarm.create": [alarms.refresh],
+        "habit.checkin": [habits.refresh],
+        "habit.list": [habits.refresh],
+        "review.start": [review.refresh],
+        "undo": [tasks.refresh, calendar.refresh],
+      };
+
+      if (status === "executed") {
+        await Promise.all((refreshers[intent] ?? []).map(async (refresh) => {
+          try {
+            await refresh();
+          } catch {
+            // Keep command success visible even if a follow-up refresh fails.
+          }
+        }));
+        void packy.refresh().catch(() => undefined);
+
+        const nextRoute = INTENT_ROUTES[intent];
+        if (nextRoute && nextRoute !== route) {
+          navigate(nextRoute);
+        }
+
+        if (reply) {
+          showToast(reply, "success");
+        } else {
+          showToast("Command completed.", "success");
+        }
+
+        if (options?.clearOnHandled !== false) {
+          commandBar.setInput("");
+        }
+        return true;
+      }
+
+      if (reply) {
+        showToast(reply, status === "error" ? "error" : "info");
+      } else if (status === "needs_datetime") {
+        showToast("I need a date and time before I can schedule that.", "warn");
+      }
+
+      if (status === "greeting" || status === "help" || status === "unknown" || status === "ok") {
+        try {
+          const packyResult = await packy.ask(raw, { route });
+          const nextRoute = ACTION_ROUTES[packyResult.action];
+          if (nextRoute && nextRoute !== route) {
+            navigate(nextRoute);
+          }
+          if (packyResult.reply && packyResult.reply !== reply) {
+            showToast(packyResult.reply, "info");
+          }
+          if (options?.clearOnHandled !== false) {
+            commandBar.setInput("");
+          }
+          return true;
+        } catch (error) {
+          console.error("[DopaFlow] Packy fallback failed after command response", error);
+        }
+      }
+
+      return status !== "error";
+    } catch (error) {
+      console.error("[DopaFlow] Command execution failed", error);
+      showToast("Command failed. The input is still there so you can retry or edit it.", "error");
+      return false;
+    }
+  }, [alarms.refresh, calendar.refresh, commandBar, focus.refresh, habits.refresh, journal.refresh, navigate, packy, review.refresh, route, tasks.refresh]);
 
   useEffect(() => {
     const onHashChange = (): void => {
@@ -441,16 +554,7 @@ export default function App(): JSX.Element {
         onCommandChange={commandBar.setInput}
         onCommandSubmit={() => {
           void commandBar.submit(async (value) => {
-            try {
-              const result = await packy.ask(value, { route });
-              const next = ACTION_ROUTES[result.action];
-              if (next && next !== route) {
-                setRoute(next);
-                window.location.hash = `#/${next}`;
-              }
-            } finally {
-              commandBar.setInput("");
-            }
+            await handleCommandExecution(value, { source: "text" });
           });
         }}
         focusModeEnabled={focusModeEnabled}
@@ -521,27 +625,7 @@ export default function App(): JSX.Element {
         onProjectSelect={projects.setActiveProjectId}
         onNavigate={(nextRoute) => { window.location.hash = `#/${nextRoute}`; setRoute(nextRoute); }}
         onExecute={async (text) => {
-          const result = await packy.ask(text, { route });
-          const actionRoutes: Record<string, string> = {
-            "open-task-create": "#tasks",
-            "open-tasks": "#tasks",
-            "open-habits": "#habits",
-            "start-focus": "#focus",
-            "open-review": "#review",
-            "open-journal": "#journal",
-            "open-today": "#",
-            "open-search": "#tasks",
-            "open-nutrition": "#nutrition",
-            "open-overview": "#overview",
-            "open-insights": "#insights",
-            "open-player": "#player",
-            "open-gamification": "#gamification",
-            "open-digest": "#digest",
-            "open-calendar": "#calendar",
-            "open-alarms": "#alarms",
-          };
-          const dest = actionRoutes[result.action];
-          if (dest !== undefined) window.location.hash = dest;
+          await handleCommandExecution(text, { source: "text", clearOnHandled: false });
         }}
       />
       {onboardingOpen && (
