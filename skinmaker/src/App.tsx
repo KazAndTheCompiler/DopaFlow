@@ -540,25 +540,18 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
 
   const bg = v('--bg-app', '#0e0e14')
   const bgGrad = v('--bg-gradient', '')
-  const surface1 = v('--surface', '#151d24')
   const surface2 = v('--surface-2', '#1e2530')
   const surface3 = v('--surface-3', '#232e38')
   const border = v('--border', '#2a3a48')
   const borderSub = v('--border-subtle', '#1e2d3a')
-  const borderStr = v('--border-strong', '#3d5a70')
   const text1 = v('--text', '#e4eff4')
   const textMuted = v('--text-muted', '#7a9aaa')
   const textInv = v('--text-inverted', '#0a0f14')
   const accent = v('--accent', '#00d4c8')
   const accentSoft = v('--accent-soft', 'rgba(0,212,200,0.15)')
-  const accentGlow = v('--accent-glow', 'rgba(0,212,200,0.25)')
-  const shadowSoft = v('--shadow-soft', '0 2px 12px rgba(0,0,0,0.4)')
-  const shadowElev = v('--shadow-elevated', '0 6px 28px rgba(0,0,0,0.5)')
-  const shadowFloat = v('--shadow-floating', '0 16px 56px rgba(0,0,0,0.6)')
 
   const navRail = v('--nav-rail-fill', 'rgba(7,10,14,0.95)')
   const navBlur = v('--nav-rail-glass-blur', 'blur(20px)')
-  const navFill = v('--nav-item-fill', 'rgba(16,28,38,0.6)')
   const navHover = v('--nav-item-hover', 'rgba(28,45,58,0.7)')
   const navActive = v('--nav-item-active', accent)
   const navGlow = v('--nav-item-active-glow', 'rgba(0,212,200,0.25)')
@@ -573,7 +566,6 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
   const btnQuiet = v('--button-quiet-fill', 'transparent')
 
   const stateOk = v('--state-ok', '#3ecfa0')
-  const stateWarn = v('--state-warn', '#e8a040')
   const stateOver = v('--state-overdue', '#ff6b5a')
 
   const topbarBg = v('--nav-rail-fill', navRail)

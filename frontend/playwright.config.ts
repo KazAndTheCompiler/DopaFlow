@@ -7,7 +7,7 @@ const frontendDir = path.dirname(fileURLToPath(import.meta.url));
 const bundledRuntimeLibCandidates = [
   process.env.DOPAFLOW_PLAYWRIGHT_LD_LIBRARY_PATH,
   "/home/henry/vscode/build/dopaflow/desktop/dist/linux-unpacked/usr/lib",
-  "/home/henry/release/DopaFlow-2.0.7-linux-unpacked/usr/lib",
+  "/home/henry/release/DopaFlow-2.0.11-linux-unpacked/usr/lib",
 ].filter((value): value is string => Boolean(value));
 const bundledRuntimeLibs = bundledRuntimeLibCandidates.find((candidate) => fs.existsSync(candidate));
 const existingLdLibraryPath = process.env.LD_LIBRARY_PATH;
