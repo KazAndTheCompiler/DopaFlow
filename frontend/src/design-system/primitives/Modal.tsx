@@ -52,7 +52,8 @@ export function Modal({
         className="dopaflow-modal-panel"
         onClick={(event) => event.stopPropagation()}
         style={{
-          minWidth: "min(540px, 92vw)",
+          width: "min(540px, 92vw)",
+          maxWidth: "92vw",
           maxHeight: "90vh",
           overflowY: "auto",
           padding: "1.5rem",
@@ -69,13 +70,15 @@ export function Modal({
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
         <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
-          <strong style={{ fontSize: "var(--text-lg)", letterSpacing: "-0.01em" }}>{title}</strong>
+        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.25rem", minWidth: 0 }}>
+          <strong style={{ fontSize: "var(--text-lg)", letterSpacing: "-0.01em", minWidth: 0 }}>{title}</strong>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{
               border: "1px solid var(--border-subtle)",
               background: "var(--surface-2)",
+              flexShrink: 0,
               cursor: "pointer",
               color: "var(--text-secondary)",
               fontSize: "0.9rem",

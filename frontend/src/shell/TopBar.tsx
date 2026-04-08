@@ -31,7 +31,11 @@ export function TopBar({
   gamificationLevel,
 }: TopBarProps): JSX.Element {
   const [showHint, setShowHint] = useState<boolean>(false);
-  const [isCompact, setIsCompact] = useState<boolean>(() => window.matchMedia("(max-width: 1080px)").matches);
+  const [isCompact, setIsCompact] = useState<boolean>(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 1080px)").matches
+      : false
+  ));
 
   const { listening, transcript, interim, error: sttError, start, stop, supported, reset } = useSpeechRecognition();
   const updateState = useUpdateBanner();
@@ -46,6 +50,9 @@ export function TopBar({
   }, [transcript]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
     const mq = window.matchMedia("(max-width: 1080px)");
     const onChange = (event: MediaQueryListEvent): void => setIsCompact(event.matches);
     mq.addEventListener("change", onChange);
@@ -246,7 +253,7 @@ export function TopBar({
             borderRadius: "999px",
             background: "color-mix(in srgb, var(--accent) 10%, var(--surface))",
             border: "1px solid color-mix(in srgb, var(--accent) 26%, transparent)",
-            whiteSpace: "nowrap",
+            whiteSpace: isCompact ? "normal" : "nowrap",
           }}
           title="Progress to next level"
         >

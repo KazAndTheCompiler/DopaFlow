@@ -56,6 +56,21 @@
   - `frontend/src/surfaces/settings/IntegrationsOverview.tsx`
   - `frontend/src/surfaces/settings/VaultSettings.tsx`
 
+### 2026-04-08 Patch 5
+
+- Fixed the shared modal primitive so dialogs size against the viewport with `width`/`maxWidth` instead of a misleading `minWidth`, which could still force panels wider than the screen on tighter desktops.
+- Hardened the modal header so long titles and the close button wrap safely instead of colliding or clipping.
+- Added `matchMedia` guards to the remaining shell and primary-surface responsive state helpers (`Shell`, `TopBar`, `Today`, `Focus`, `Journal`) so the app no longer assumes a fully browser-like runtime during initialization.
+- Relaxed rigid stat-card and filter-banner widths on `Tasks` so the task surface keeps wrapping instead of pushing the main pane outward.
+- Files changed:
+  - `frontend/src/design-system/primitives/Modal.tsx`
+  - `frontend/src/shell/Shell.tsx`
+  - `frontend/src/shell/TopBar.tsx`
+  - `frontend/src/surfaces/today/index.tsx`
+  - `frontend/src/surfaces/focus/index.tsx`
+  - `frontend/src/surfaces/journal/index.tsx`
+  - `frontend/src/surfaces/tasks/index.tsx`
+
 ## Remaining Weaknesses
 
 - Browser-level visual verification is still partially blocked in this Codex environment because the local headless browser runtime is incomplete; recovery verification is currently based on source inspection, successful production builds, and a running installed local web release.
@@ -80,3 +95,13 @@
   - `http://127.0.0.1:8000/health` -> `200`
   - `http://127.0.0.1:8000/api/v2/tasks/` -> `200`
 - This confirms the current recovery branch still produces a runnable local copy after the latest UI stabilization changes, even though full visual browser automation remains blocked in this Codex environment.
+
+### 2026-04-08 Installed web release recheck
+
+- Rebuilt the frontend successfully after Patch 5 with `npm --prefix frontend run build`.
+- Refreshed and restarted `/home/henry/release/DopaFlow-2.0.7-web` again after the shared modal and shell-responsive fixes.
+- Rechecked the same live endpoints after restart:
+  - `http://127.0.0.1:8001/` -> `200`
+  - `http://127.0.0.1:8000/health` -> `200`
+  - `http://127.0.0.1:8000/api/v2/tasks/` -> `200`
+- This keeps the installed proof copy aligned with the repo after another shared-layout patch set, which matters more than isolated source-only fixes.

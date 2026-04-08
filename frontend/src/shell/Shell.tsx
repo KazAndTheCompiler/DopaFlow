@@ -59,7 +59,11 @@ export function Shell({
   activeProjectId,
   onProjectSelect,
 }: ShellProps): JSX.Element {
-  const isMobile = (): boolean => window.matchMedia("(max-width: 640px)").matches;
+  const isMobile = (): boolean => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 640px)").matches
+      : false
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => isMobile());
   const [isMobileLayout, setIsMobileLayout] = useState<boolean>(() => isMobile());
   const [pressedMobileNav, setPressedMobileNav] = useState<string | null>(null);
@@ -78,6 +82,9 @@ export function Shell({
   }, [skin]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
     const mq = window.matchMedia("(max-width: 640px)");
     const onChange = (e: MediaQueryListEvent): void => {
       setSidebarCollapsed(e.matches);
