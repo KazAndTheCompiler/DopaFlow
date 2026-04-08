@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 
 import { AppDataContext } from "../../App";
 import { showToast } from "@ds/primitives/Toast";
@@ -65,6 +65,11 @@ export default function CalendarView(): JSX.Element {
   const [blockReminderOffset, setBlockReminderOffset] = useState<number>(15);
   const [showConflicts, setShowConflicts] = useState<boolean>(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [isNarrowCalendarLayout, setIsNarrowCalendarLayout] = useState<boolean>(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 960px)").matches
+      : false
+  ));
 
   if (!app) {
     return <div>App context unavailable.</div>;
@@ -291,7 +296,15 @@ export default function CalendarView(): JSX.Element {
     </button>
   );
 
-  const isNarrowCalendarLayout = typeof window !== "undefined" && window.innerWidth < 960;
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+    const mq = window.matchMedia("(max-width: 960px)");
+    const onChange = (event: MediaQueryListEvent): void => setIsNarrowCalendarLayout(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
@@ -307,7 +320,7 @@ export default function CalendarView(): JSX.Element {
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "0.75rem" }}>
-          <div style={{ display: "grid", gap: "0.45rem" }}>
+          <div style={{ display: "grid", gap: "0.45rem", minWidth: 0 }}>
             <span style={{ fontSize: "var(--text-xs)", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 800 }}>
               Planning surface
             </span>
@@ -362,7 +375,7 @@ export default function CalendarView(): JSX.Element {
               </span>
             ))}
           </div>
-          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap", minWidth: 0 }}>
           {app.calendar.conflictCount > 0 && (
             <button
               onClick={() => setShowConflicts(true)}
@@ -576,9 +589,9 @@ export default function CalendarView(): JSX.Element {
 
       {tab === "week" && (
         <>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             {navBtn("Previous", () => setWeekOffset((v) => v - 1))}
-            <strong style={{ minWidth: "140px", textAlign: "center" }}>{weekLabel}</strong>
+            <strong style={{ minWidth: isNarrowCalendarLayout ? undefined : "140px", textAlign: "center" }}>{weekLabel}</strong>
             {navBtn("Next", () => setWeekOffset((v) => v + 1))}
             {weekOffset !== 0 && (
               <button
@@ -617,9 +630,9 @@ export default function CalendarView(): JSX.Element {
 
       {tab === "month" && (
         <div style={{ display: "grid", gap: "0.75rem" }}>
-          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
             {navBtn("Previous", () => setWeekOffset((v) => v - 1))}
-            <strong style={{ minWidth: "160px", textAlign: "center" }}>{monthLabel}</strong>
+            <strong style={{ minWidth: isNarrowCalendarLayout ? undefined : "160px", textAlign: "center" }}>{monthLabel}</strong>
             {navBtn("Next", () => setWeekOffset((v) => v + 1))}
             {weekOffset !== 0 && (
               <button
@@ -653,9 +666,9 @@ export default function CalendarView(): JSX.Element {
       {tab === "day" && (
         <div style={{ display: "grid", gridTemplateColumns: isNarrowCalendarLayout ? "1fr" : "minmax(0, 1.5fr) minmax(300px, 0.9fr)", gap: "1rem", alignItems: "start" }}>
           <div style={{ display: "grid", gap: "0.75rem" }}>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
               {navBtn("Previous", () => setDayOffset((v) => v - 1))}
-              <strong style={{ minWidth: "180px", textAlign: "center" }}>{dayLabel}</strong>
+              <strong style={{ minWidth: isNarrowCalendarLayout ? undefined : "180px", textAlign: "center" }}>{dayLabel}</strong>
               {navBtn("Next", () => setDayOffset((v) => v + 1))}
               {dayOffset !== 0 && (
                 <button
@@ -689,7 +702,7 @@ export default function CalendarView(): JSX.Element {
           </div>
 
           {/* Time blocking sidebar */}
-          <div style={{ display: "grid", gap: "0.75rem" }}>
+          <div style={{ display: "grid", gap: "0.75rem", minWidth: 0 }}>
             {/* Quick block form */}
             <div
               style={{
