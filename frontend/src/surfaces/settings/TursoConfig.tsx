@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { apiClient } from "@api/client";
 
@@ -27,14 +27,18 @@ type TestState = "idle" | "testing" | "ok" | "error";
 
 export function TursoConfig(): JSX.Element {
   const [url, setUrl] = useState<string>(() => localStorage.getItem(LS_KEY_URL) ?? "");
-  const [token, setToken] = useState<string>(() => localStorage.getItem(LS_KEY_TOKEN) ?? "");
+  const [token, setToken] = useState<string>("");
   const [saved, setSaved] = useState<boolean>(false);
   const [testState, setTestState] = useState<TestState>("idle");
   const [testError, setTestError] = useState<string | null>(null);
 
+  useEffect(() => {
+    localStorage.removeItem(LS_KEY_TOKEN);
+  }, []);
+
   const handleSave = (): void => {
     localStorage.setItem(LS_KEY_URL, url.trim());
-    localStorage.setItem(LS_KEY_TOKEN, token.trim());
+    localStorage.removeItem(LS_KEY_TOKEN);
     setSaved(true);
     setTestState("idle");
     setTimeout(() => setSaved(false), 2000);
@@ -95,7 +99,7 @@ export function TursoConfig(): JSX.Element {
         )}
       </div>
         <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-          Store connection details locally on this device, then verify the backend can reach the remote libsql database before switching workflows over to it.
+          Keep the database URL on this device, then paste a token only when testing the connection. Tokens are not stored in this browser.
         </span>
       </div>
       {testState === "error" && testError && (

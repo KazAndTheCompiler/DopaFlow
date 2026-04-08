@@ -101,8 +101,10 @@ export function Shell({
           : "var(--topbar-height) 1fr var(--statusbar-height)",
         background: "var(--bg-gradient, var(--bg-app))",
         transition: "grid-template-columns 200ms ease-in-out",
+        position: "relative",
       }}
     >
+      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--bg-vignette)", pointerEvents: "none", zIndex: 0 }} />
       {!isMobileLayout && <div style={{ gridRow: "1 / span 3" }}>
         <Sidebar
           items={navItems}

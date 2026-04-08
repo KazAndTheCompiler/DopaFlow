@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { importGitHubIssues } from "@api/integrations";
 import Button from "@ds/primitives/Button";
@@ -28,19 +28,23 @@ const label: React.CSSProperties = {
 };
 
 export default function GitHubIntegration(): JSX.Element {
-  const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEY_TOKEN) ?? "");
+  const [token, setToken] = useState("");
   const [repo, setRepo] = useState(() => localStorage.getItem(STORAGE_KEY_REPO) ?? "");
   const [state, setState] = useState<"open" | "closed" | "all">("open");
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    localStorage.removeItem(STORAGE_KEY_TOKEN);
+  }, []);
 
   const handleImport = async (): Promise<void> => {
     if (!token.trim() || !repo.trim()) {
       setStatus({ type: "error", message: "Token and repo are required." });
       return;
     }
-    localStorage.setItem(STORAGE_KEY_TOKEN, token.trim());
     localStorage.setItem(STORAGE_KEY_REPO, repo.trim());
+    localStorage.removeItem(STORAGE_KEY_TOKEN);
     setLoading(true);
     setStatus(null);
     try {
@@ -76,6 +80,9 @@ export default function GitHubIntegration(): JSX.Element {
       </div>
       <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
         Import open issues from any GitHub repo as tasks using a Personal Access Token (read:repo scope).
+      </p>
+      <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--text-muted)", lineHeight: 1.5 }}>
+        Tokens are used only for the current import and are not stored in this browser.
       </p>
 
       <div>

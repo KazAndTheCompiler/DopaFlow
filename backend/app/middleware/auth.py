@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from secrets import compare_digest
 
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -9,6 +10,21 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 TRUSTED_HOSTS = {"127.0.0.1", "localhost", "::1"}
+
+
+def _env_flag(name: str) -> bool:
+    primary = f"DOPAFLOW_{name}"
+    legacy = f"ZOESTM_{name}"
+    value = os.getenv(primary)
+    if value is None:
+        value = os.getenv(legacy, "0")
+    return value.lower() in {"1", "true", "yes"}
+
+
+def trust_local_clients_enabled() -> bool:
+    """Return whether loopback callers may bypass API-key checks."""
+
+    return _env_flag("TRUST_LOCAL_CLIENTS")
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -29,7 +45,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if self.settings.dev_auth:
             return await call_next(request)
 
-        if host in TRUSTED_HOSTS:
+        if host in TRUSTED_HOSTS and trust_local_clients_enabled():
             return await call_next(request)
 
         if self.settings.enforce_auth:

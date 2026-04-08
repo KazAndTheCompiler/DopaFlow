@@ -253,24 +253,32 @@ class ReviewService:
                     fh.write(data)
                 with zipfile.ZipFile(apkg_path, "r") as z:
                     names = z.namelist()
-                    db_name = "collection.anki21" if "collection.anki21" in names else "collection.anki2"
+                    if "collection.anki21" in names:
+                        db_name = "collection.anki21"
+                    elif "collection.anki2" in names:
+                        db_name = "collection.anki2"
+                    else:
+                        raise ValueError("APKG missing collection database")
                     z.extract(db_name, tmp)
-                anki_conn = sqlite3.connect(os.path.join(tmp, db_name))
-                anki_conn.row_factory = sqlite3.Row
-                created = skipped = 0
                 try:
-                    notes = anki_conn.execute("SELECT flds, tags FROM notes").fetchall()
-                    for note in notes:
-                        fields = note["flds"].split("\x1f")
-                        front, back = convert_cloze(fields)
-                        if not front or not back:
-                            skipped += 1
-                            continue
-                        tags = [t.strip() for t in (note["tags"] or "").split() if t.strip()]
-                        self.repository.create_card_full(deck_id, front, back, tags, source="apkg")
-                        created += 1
-                finally:
-                    anki_conn.close()
+                    anki_conn = sqlite3.connect(os.path.join(tmp, db_name))
+                    anki_conn.row_factory = sqlite3.Row
+                    created = skipped = 0
+                    try:
+                        notes = anki_conn.execute("SELECT flds, tags FROM notes").fetchall()
+                        for note in notes:
+                            fields = note["flds"].split("\x1f")
+                            front, back = convert_cloze(fields)
+                            if not front or not back:
+                                skipped += 1
+                                continue
+                            tags = [t.strip() for t in (note["tags"] or "").split() if t.strip()]
+                            self.repository.create_card_full(deck_id, front, back, tags, source="apkg")
+                            created += 1
+                    finally:
+                        anki_conn.close()
+                except sqlite3.DatabaseError as exc:
+                    raise ValueError("APKG collection database is invalid") from exc
             return {"imported": created, "skipped": skipped, "source": filename}
         except zipfile.BadZipFile:
             raise ValueError("File is not a valid .apkg (bad zip)")

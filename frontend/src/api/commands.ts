@@ -1,12 +1,5 @@
+import type { VoiceCommandPreview } from "../../../shared/types";
 import { apiClient } from "./client";
-
-export interface VoiceCommandPreview {
-  transcript: string;
-  status: string;
-  command_word: string | null;
-  parsed: Record<string, unknown>;
-  preview: Record<string, unknown>;
-}
 
 export function previewVoiceCommand(file: Blob, filename = "voice.webm", lang = "en-US"): Promise<VoiceCommandPreview> {
   const form = new FormData();

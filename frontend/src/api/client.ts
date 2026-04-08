@@ -9,6 +9,32 @@ function fireToast(message: string, type: "error" | "warn"): void {
   window.dispatchEvent(new CustomEvent("dopaflow:toast", { detail: { id: Date.now(), message, type } }));
 }
 
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+  const contentLength = response.headers.get("content-length");
+  if (contentLength === "0") {
+    return undefined as T;
+  }
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as T;
+  }
+
+  if (contentType.startsWith("text/") || contentType.includes("xml") || contentType.includes("javascript")) {
+    return (await response.text()) as T;
+  }
+
+  const body = await response.blob();
+  if (body.size === 0) {
+    return undefined as T;
+  }
+  return body as T;
+}
+
 export async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
   let response: Response;
@@ -41,8 +67,24 @@ export async function apiClient<T>(path: string, init?: RequestInit): Promise<T>
   }
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    let detail = response.statusText;
+    try {
+      const parsed = await parseApiResponse<unknown>(response);
+      if (typeof parsed === "string" && parsed.trim()) {
+        detail = parsed.trim();
+      } else if (
+        parsed &&
+        typeof parsed === "object" &&
+        "detail" in parsed &&
+        typeof (parsed as { detail?: unknown }).detail === "string"
+      ) {
+        detail = (parsed as { detail: string }).detail;
+      }
+    } catch {
+      // Ignore parse failures and preserve the HTTP status detail.
+    }
+    throw new Error(`API request failed: ${response.status} ${detail}`);
   }
 
-  return (await response.json()) as T;
+  return parseApiResponse<T>(response);
 }

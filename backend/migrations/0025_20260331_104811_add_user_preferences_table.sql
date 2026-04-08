@@ -1,15 +1,18 @@
 -- Migration 0025: add user preferences table
 -- Generated: 2026-03-31T10:48:11.187826
 
--- TODO: Add your schema changes here
--- Example:
--- CREATE TABLE IF NOT EXISTS example_table (
---     id TEXT PRIMARY KEY,
---     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
---     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
--- );
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id TEXT PRIMARY KEY,
+    namespace TEXT NOT NULL DEFAULT 'app',
+    preference_key TEXT NOT NULL,
+    value_json TEXT NOT NULL DEFAULT 'null',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(namespace, preference_key)
+);
 
--- Remember:
--- - Keep SQLite compatibility in mind
--- - Include indexes where needed
--- - Do not rely on unsupported ALTER patterns
+CREATE INDEX IF NOT EXISTS idx_user_preferences_namespace
+ON user_preferences(namespace);
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_key
+ON user_preferences(preference_key);

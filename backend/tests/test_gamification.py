@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import logging
+
+import pytest
+
 AUTH_HEADERS = {"Authorization": "Bearer dev-local-key"}
 
 
@@ -56,3 +60,33 @@ def test_habit_checkins_unlock_streak_three_badge(client) -> None:
     badges = client.get("/api/v2/gamification/badges", headers=AUTH_HEADERS).json()
     streak_badge = next(badge for badge in badges if badge["id"] == "streak_3")
     assert streak_badge["earned_at"] is not None
+
+
+def test_gamification_logs_packy_notification_failure_without_failing_award(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app.domains.packy.service import PackyService
+
+    def explode_lorebook(self, payload) -> None:
+        raise RuntimeError("packy unavailable")
+
+    monkeypatch.setattr(PackyService, "lorebook", explode_lorebook)
+    caplog.set_level(logging.ERROR, logger="app.domains.gamification.service")
+
+    habit = client.post(
+        "/api/v2/habits/",
+        json={"name": "Stretch", "target_freq": 1, "target_period": "day", "color": "#22c55e"},
+        headers=AUTH_HEADERS,
+    ).json()
+
+    for checkin_date in ("2026-03-24", "2026-03-25", "2026-03-26"):
+        response = client.post(
+            f"/api/v2/habits/{habit['id']}/checkin",
+            json={"checkin_date": checkin_date},
+            headers=AUTH_HEADERS,
+        )
+        assert response.status_code == 200
+
+    assert any("Failed to notify Packy about earned badge=streak_3" in record.message for record in caplog.records)

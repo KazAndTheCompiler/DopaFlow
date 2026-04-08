@@ -13,6 +13,7 @@ from app.core.config import Settings, get_settings_dependency
 from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.schemas import BadgeRead, PlayerLevelRead, XPAwardRequest
 from app.domains.gamification.service import GamificationService
+from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(prefix="/gamification", tags=["gamification"])
 
@@ -21,16 +22,16 @@ async def _svc(settings: Settings = Depends(get_settings_dependency)) -> Gamific
     return GamificationService(GamificationRepository(settings.db_path))
 
 
-@router.get("/status", response_model=dict[str, object])
+@router.get("/status", response_model=dict[str, object], dependencies=[Depends(require_scope("read:gamification"))])
 async def get_status(svc: GamificationService = Depends(_svc)) -> dict[str, object]:
     return svc.get_status()
 
 
-@router.get("/badges", response_model=list[BadgeRead])
+@router.get("/badges", response_model=list[BadgeRead], dependencies=[Depends(require_scope("read:gamification"))])
 async def get_badges(svc: GamificationService = Depends(_svc)) -> list[BadgeRead]:
     return svc.get_badges()
 
 
-@router.post("/award", response_model=PlayerLevelRead)
+@router.post("/award", response_model=PlayerLevelRead, dependencies=[Depends(require_scope("write:gamification"))])
 async def award_xp(payload: XPAwardRequest, svc: GamificationService = Depends(_svc)) -> PlayerLevelRead:
     return svc.award(payload.source, payload.source_id)

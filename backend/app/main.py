@@ -11,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.database import run_migrations
-from app.core.scheduler import start_scheduler
+from app.core.scheduler import start_scheduler, stop_scheduler
+from app.core.version import APP_VERSION
 from app.domains.boards.router import router as boards_router
 from app.domains.alarms.audio_router import router as alarm_audio_router
 from app.domains.alarms.router import router as alarms_router
@@ -77,6 +78,13 @@ _DOMAIN_ROUTERS = [
     (commands_router, ""),
 ]
 
+_AUXILIARY_ROUTERS = (
+    (alarm_audio_router, API_PREFIX),
+    (meta_router, API_PREFIX),
+    (ops_router, API_PREFIX),
+    (vault_router, API_PREFIX),
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -87,15 +95,27 @@ async def lifespan(app: FastAPI):
         start_scheduler(journal_service)
         backup_task = asyncio.create_task(backup_scheduler.start())
     yield
-    from app.core import scheduler as scheduler_module
-
     backup_scheduler.stop()
     if backup_task is not None:
         backup_task.cancel()
         with suppress(asyncio.CancelledError):
             await backup_task
-    if scheduler_module._scheduler is not None and scheduler_module._scheduler.running:
-        scheduler_module._scheduler.shutdown(wait=False)
+    stop_scheduler()
+
+
+def register_routers(app: FastAPI) -> None:
+    """Attach all API routers to the provided FastAPI app."""
+
+    for domain_router, domain_prefix in _DOMAIN_ROUTERS:
+        existing_prefix = getattr(domain_router, "prefix", "") or ""
+        if existing_prefix and domain_prefix.endswith(existing_prefix):
+            mount_prefix = domain_prefix[: -len(existing_prefix)]
+        else:
+            mount_prefix = domain_prefix
+        app.include_router(domain_router, prefix=f"{API_PREFIX}{mount_prefix}")
+
+    for router, prefix in _AUXILIARY_ROUTERS:
+        app.include_router(router, prefix=prefix)
 
 
 def create_app() -> FastAPI:
@@ -106,7 +126,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="DopaFlow API",
-        version="2.0.7",
+        version=APP_VERSION,
         docs_url=f"{API_PREFIX}/docs" if settings.dev_auth else None,
         openapi_url=f"{API_PREFIX}/openapi.json" if settings.dev_auth else None,
         lifespan=lifespan,
@@ -114,27 +134,17 @@ def create_app() -> FastAPI:
 
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(CORSMiddleware, **build_cors_options(settings.extra_cors_origins))
-    app.add_middleware(RateLimitMiddleware, calls_per_minute=120)
+    app.add_middleware(RateLimitMiddleware, calls_per_minute=120, db_path=settings.db_path)
     app.add_middleware(AuthMiddleware, settings=settings)
     app.add_middleware(RequestLogMiddleware)
 
-    for domain_router, domain_prefix in _DOMAIN_ROUTERS:
-        existing_prefix = getattr(domain_router, "prefix", "") or ""
-        if existing_prefix and domain_prefix.endswith(existing_prefix):
-            mount_prefix = domain_prefix[: -len(existing_prefix)]
-        else:
-            mount_prefix = domain_prefix
-        app.include_router(domain_router, prefix=f"{API_PREFIX}{mount_prefix}")
-    app.include_router(alarm_audio_router, prefix=API_PREFIX)
-    app.include_router(meta_router, prefix=API_PREFIX)
-    app.include_router(ops_router, prefix=API_PREFIX)
-    app.include_router(vault_router, prefix=API_PREFIX)
+    register_routers(app)
 
     @app.get("/health", tags=["system"])
     async def healthcheck() -> dict[str, str]:
         """Return a minimal liveness payload for desktop startup checks."""
 
-        return {"status": "ok", "app": "dopaflow", "version": "2.0.7"}
+        return {"status": "ok", "app": "dopaflow", "version": APP_VERSION}
 
     return app
 

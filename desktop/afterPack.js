@@ -6,15 +6,100 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
+
+const VENDORED_LIB_DIR = path.join(__dirname, 'vendor-runtime', 'extract', 'usr', 'lib', 'x86_64-linux-gnu');
+const BUNDLED_RUNTIME_LIBS = [
+  'libasound.so.2',
+  'libavahi-client.so.3',
+  'libavahi-common.so.3',
+  'libatk-1.0.so.0',
+  'libatk-bridge-2.0.so.0',
+  'libatspi.so.0',
+  'libcairo.so.2',
+  'libcairo-gobject.so.2',
+  'libcups.so.2',
+  'libepoxy.so.0',
+  'libfontconfig.so.1',
+  'libfribidi.so.0',
+  'libgdk-3.so.0',
+  'libgdk_pixbuf-2.0.so.0',
+  'libgbm.so.1',
+  'libgtk-3.so.0',
+  'libharfbuzz.so.0',
+  'libjpeg.so.8',
+  'libnss3.so',
+  'libnssutil3.so',
+  'libsmime3.so',
+  'libssl3.so',
+  'libnspr4.so',
+  'libpango-1.0.so.0',
+  'libpangocairo-1.0.so.0',
+  'libpangoft2-1.0.so.0',
+  'libplds4.so',
+  'libplc4.so',
+  'libthai.so.0',
+  'libX11.so.6',
+  'libXcomposite.so.1',
+  'libXdamage.so.1',
+  'libXext.so.6',
+  'libXfixes.so.3',
+  'libXi.so.6',
+  'libXrandr.so.2',
+  'libxcb.so.1',
+  'libXrender.so.1',
+];
+
+function resolveLibraryPath(libName) {
+  const vendoredPath = path.join(VENDORED_LIB_DIR, libName);
+  if (fs.existsSync(vendoredPath)) {
+    return vendoredPath;
+  }
+  const output = execFileSync('/usr/sbin/ldconfig', ['-p'], { encoding: 'utf8' });
+  const line = output
+    .split('\n')
+    .find((entry) => entry.includes(` ${libName} `) || entry.includes(`\t${libName} `));
+  if (!line) {
+    throw new Error(`Could not resolve ${libName} from ldconfig cache`);
+  }
+  const match = line.match(/=>\s+(.+)$/);
+  if (!match) {
+    throw new Error(`Could not parse ldconfig entry for ${libName}: ${line}`);
+  }
+  let resolvedPath = match[1].trim();
+  if (!fs.existsSync(resolvedPath) && resolvedPath.startsWith('/lib/')) {
+    const altPath = path.join('/usr/lib', resolvedPath.slice('/lib/'.length));
+    if (fs.existsSync(altPath)) {
+      resolvedPath = altPath;
+    }
+  }
+  if (!fs.existsSync(resolvedPath)) {
+    throw new Error(`Resolved path for ${libName} does not exist: ${resolvedPath}`);
+  }
+  return resolvedPath;
+}
+
+function copyBundledRuntimeLibs(appOutDir) {
+  const libDir = path.join(appOutDir, 'usr', 'lib');
+  fs.mkdirSync(libDir, { recursive: true });
+
+  for (const libName of BUNDLED_RUNTIME_LIBS) {
+    const sourcePath = resolveLibraryPath(libName);
+    const targetPath = path.join(libDir, libName);
+    fs.copyFileSync(sourcePath, targetPath);
+  }
+}
 
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'linux') return;
+
+  copyBundledRuntimeLibs(context.appOutDir);
 
   const appRunPath = path.join(context.appOutDir, 'AppRun');
 
   const appRun = [
     '#!/bin/bash',
-    '# Custom AppRun - preserves Electron sandboxing by default.',
+    '# Custom AppRun - normalizes the host environment before Electron starts.',
     '',
     'THIS="$0"',
     '',
@@ -22,12 +107,14 @@ exports.default = async function afterPack(context) {
     '  APPDIR="$(dirname "$(readlink -f "${THIS}")")"',
     'fi',
     '',
-    'export PATH="${APPDIR}:${APPDIR}/usr/sbin:${PATH}"',
-    'export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"',
+    'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${APPDIR}:${APPDIR}/usr/sbin"',
+    'export LD_LIBRARY_PATH="${APPDIR}/usr/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"',
     'export XDG_DATA_DIRS="${APPDIR}/usr/share/:${XDG_DATA_DIRS}:/usr/share/gnome/:/usr/local/share/:/usr/share/"',
+    'unset SNAP SNAP_NAME SNAP_REVISION SNAP_ARCH SNAP_COMMON SNAP_USER_COMMON SNAP_DATA SNAP_USER_DATA SNAP_INSTANCE_NAME SNAP_INSTANCE_KEY SNAP_REAL_HOME SNAP_CONTEXT',
     '',
-    '# Chromiums SUID sandbox check fires before JS starts, so app.commandLine.appendSwitch',
-    '# in main.js cannot prevent the crash. --no-sandbox is always required on Linux AppImage.',
+    '# Use direct exec (not ld-linux --library-path) so /proc/self/exe resolves correctly',
+    '# for Electron resource discovery (icudtl.dat etc.). LD_LIBRARY_PATH handles lib lookup.',
+    '# --no-sandbox is required: Chromium SUID sandbox check fires before JS starts.',
     'exec "${APPDIR}/dopaflow-desktop" --no-sandbox --disable-setuid-sandbox "$@"',
     '',
   ].join('\n');

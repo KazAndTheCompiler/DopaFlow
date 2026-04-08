@@ -171,7 +171,9 @@ async def quick_add(request: Request, db_path: str = Depends(_db_path)) -> dict[
         form = await request.form()
         text = str(form.get("text", ""))
         commit = str(form.get("commit", "")).lower() in {"1", "true", "yes"}
-    parsed = parse(text) if text else parse_quick_add(text)
+    parsed = parse(text) if text else {}
+    if "rrule" in parsed and "recurrence_rule" not in parsed:
+        parsed["recurrence_rule"] = parsed.pop("rrule")
     if commit:
         task = repository.create_task(db_path, parsed)
         _emit(db_path, "task.created", {"id": task["id"]})
@@ -180,7 +182,20 @@ async def quick_add(request: Request, db_path: str = Depends(_db_path)) -> dict[
 
 
 @router.post("/materialize-recurring", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
-async def materialize_recurring(window_hours: int = Query(default=36), db_path: str = Depends(_db_path)) -> dict[str, int]:
+async def materialize_recurring(
+    request: Request,
+    window_hours: int = Query(default=36),
+    db_path: str = Depends(_db_path),
+) -> dict[str, int]:
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        payload = await request.json()
+        raw_window_hours = payload.get("window_hours")
+        if raw_window_hours is not None:
+            try:
+                window_hours = int(raw_window_hours)
+            except (TypeError, ValueError) as exc:
+                raise HTTPException(status_code=422, detail="window_hours must be an integer") from exc
     return repository.materialize_recurring(db_path, window_hours=window_hours)
 
 
@@ -322,12 +337,12 @@ async def delete_subtask(identifier: str, sub_id: str, db_path: str = Depends(_d
     return task
 
 
-@router.post("/{identifier}/time/start", response_model=dict)
+@router.post("/{identifier}/time/start", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
 async def start_time(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     return repository.start_time_log(db_path, identifier)
 
 
-@router.post("/{identifier}/time/stop", response_model=dict)
+@router.post("/{identifier}/time/stop", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
 async def stop_time(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     log = repository.stop_time_log(db_path, identifier)
     if log is None:
@@ -335,6 +350,6 @@ async def stop_time(identifier: str, db_path: str = Depends(_db_path)) -> dict[s
     return log
 
 
-@router.get("/{identifier}/time", response_model=list[dict])
+@router.get("/{identifier}/time", response_model=list[dict], dependencies=[Depends(require_scope("read:tasks"))])
 async def get_time_logs(identifier: str, db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
     return repository.list_time_logs(db_path, identifier)

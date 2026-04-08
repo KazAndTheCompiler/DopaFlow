@@ -31,12 +31,15 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
   const isRunning = session?.status === "running";
   const isPaused = session?.status === "paused";
 
+  const pausedSeconds = Math.floor((session?.paused_duration_ms ?? 0) / 1000);
+
   // When a session starts or changes, restore elapsed from started_at so
   // re-mounting mid-session shows the correct remaining time instead of 0:00.
   useEffect(() => {
     if (session?.started_at && session.status === "running") {
       const serverStart = new Date(session.started_at).getTime();
-      const alreadyElapsed = Math.floor((Date.now() - serverStart) / 1000);
+      const wallElapsed = Math.floor((Date.now() - serverStart) / 1000);
+      const alreadyElapsed = Math.max(0, wallElapsed - pausedSeconds);
       setElapsed(Math.min(alreadyElapsed, totalSeconds));
     } else {
       setElapsed(0);
@@ -51,7 +54,8 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
         : Date.now() - elapsed * 1000;
 
       intervalRef.current = setInterval(() => {
-        const newElapsed = Math.floor((Date.now() - startedAt) / 1000);
+        const wallElapsed = Math.floor((Date.now() - startedAt) / 1000);
+        const newElapsed = Math.max(0, wallElapsed - pausedSeconds);
         if (newElapsed >= totalSeconds) {
           clearInterval(intervalRef.current!);
           setElapsed(totalSeconds);
@@ -66,7 +70,7 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
     return () => {
       if (intervalRef.current !== null) clearInterval(intervalRef.current);
     };
-  }, [isRunning, totalSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRunning, totalSeconds, pausedSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const remaining = Math.max(0, totalSeconds - elapsed);
   const progress = elapsed / totalSeconds;

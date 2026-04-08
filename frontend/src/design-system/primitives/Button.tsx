@@ -20,7 +20,7 @@ export function Button({
           background: "var(--accent)",
           color: "var(--text-inverted)",
           border: "1px solid transparent",
-          boxShadow: "0 1px 3px color-mix(in srgb, var(--accent) 40%, transparent), inset 0 1px 0 color-mix(in srgb, white 15%, transparent)",
+          boxShadow: "var(--button-primary-glow, 0 1px 3px color-mix(in srgb, var(--accent) 40%, transparent)), inset 0 1px 0 color-mix(in srgb, white 15%, transparent)",
         }
       : variant === "secondary"
         ? {

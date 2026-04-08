@@ -126,8 +126,11 @@ export function TopBar({
         alignItems: "center",
         padding: isCompact ? "0.65rem 1rem" : "0 1.5rem",
         borderBottom: "1px solid var(--border)",
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, white 8%), color-mix(in srgb, var(--surface) 98%, black 2%))",
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface) 96%, transparent))",
+        backdropFilter: "var(--topbar-glass-blur, blur(12px))",
         boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
+        position: "relative",
+        zIndex: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", minWidth: 0 }}>

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 
 def test_execute_command_endpoint_returns_intent(client) -> None:
     response = client.post("/api/v2/commands/execute", json={"text": "add task finish docs"})
@@ -91,6 +93,23 @@ def test_natural_language_task_no_prefix(client) -> None:
     body = response.json()
     assert body["intent"] == "task.create"
     assert body["status"] == "executed"
+
+
+def test_execute_command_persists_recurrence_rule(client) -> None:
+    response = client.post("/api/v2/commands/execute", json={"text": "every monday water plants"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "task.create"
+    assert body["result"]["recurrence_rule"] == "FREQ=WEEKLY;BYDAY=MO"
+
+
+def test_execute_command_does_not_run_migrations_on_hot_path(client) -> None:
+    with patch("app.core.database.run_migrations") as run_migrations_mock:
+        response = client.post("/api/v2/commands/execute", json={"text": "add task finish docs"})
+
+    assert response.status_code == 200
+    run_migrations_mock.assert_not_called()
 
 
 def test_natural_language_focus_no_prefix(client) -> None:

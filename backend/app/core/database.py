@@ -31,19 +31,40 @@ def _connect(db_path: str, turso_url: str | None = None, turso_token: str | None
     return sqlite3.connect(db_path)
 
 
-def _prepare_connection(conn) -> None:
+def _prepare_sqlite_connection(conn: sqlite3.Connection) -> None:
     try:
         conn.execute("PRAGMA journal_mode=WAL")
-    except Exception:
-        logger.exception("Failed to set PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.row_factory = sqlite3.Row
+    except sqlite3.Error as exc:
+        logger.exception("SQLite connection setup failed")
+        raise RuntimeError("SQLite connection setup failed") from exc
+
+
+def _prepare_connection(conn) -> None:
+    if isinstance(conn, sqlite3.Connection):
+        _prepare_sqlite_connection(conn)
+        return
+
     try:
         conn.execute("PRAGMA foreign_keys=ON")
-    except Exception:
-        logger.exception("Failed to set PRAGMA foreign_keys=ON")
-    try:
         conn.row_factory = sqlite3.Row
-    except Exception:
-        logger.exception("Failed to set row_factory")
+    except (AttributeError, TypeError, sqlite3.Error) as exc:
+        logger.exception("Database connection setup failed")
+        raise RuntimeError("Database connection setup failed") from exc
+
+
+def _apply_migration_sql(conn, sql: str) -> None:
+    """Execute a full migration script while preserving SQL bodies intact."""
+
+    if isinstance(conn, sqlite3.Connection):
+        conn.executescript(sql)
+        return
+
+    for statement in sql.split(";"):
+        statement = statement.strip()
+        if statement:
+            conn.execute(statement)
 
 
 def run_migrations(db_path: str, turso_url: str | None = None, turso_token: str | None = None) -> None:
@@ -64,13 +85,10 @@ def run_migrations(db_path: str, turso_url: str | None = None, turso_token: str 
     for migration_file in migration_files:
         if migration_file.name not in applied:
             logger.info("Applying migration: %s", migration_file.name)
-            sql = migration_file.read_text()
+            sql = migration_file.read_text(encoding="utf-8")
             try:
                 conn.execute("BEGIN")
-                for statement in sql.split(";"):
-                    statement = statement.strip()
-                    if statement:
-                        conn.execute(statement)
+                _apply_migration_sql(conn, sql)
                 conn.execute("INSERT INTO _migrations (filename) VALUES (?)", (migration_file.name,))
                 conn.execute("COMMIT")
                 logger.info("Migration applied: %s", migration_file.name)

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
+import tempfile
 import time
+from pathlib import Path
 from urllib.parse import urlparse
 
 from fastapi import Request
@@ -13,6 +16,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 COMMAND_PATHS = {"/api/v2/packy/ask", "/api/v2/tasks/quick-add", "/api/v2/commands/execute"}
 TRUSTED_PROXY_HOSTS = {"127.0.0.1", "localhost", "::1"}
+logger = logging.getLogger(__name__)
+
+
+def _resolve_storage_path(db_path: str | None) -> str:
+    if db_path and db_path != ":memory:":
+        return f"{db_path}.rate_limit.sqlite"
+    return str(Path(tempfile.gettempdir()) / "dopaflow-rate-limit.sqlite")
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -29,7 +39,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.calls_per_minute = calls_per_minute if default_limit_per_minute is None else default_limit_per_minute
         self.command_limit = command_limit_per_minute
         self.window_seconds = 60
-        self.db_path = db_path or ":memory:"
+        self.db_path = _resolve_storage_path(db_path)
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path, timeout=1.0)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS _rate_limit_hits (
+              key TEXT NOT NULL,
+              hit_at REAL NOT NULL
+            )
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_rate_limit_hits_key_time ON _rate_limit_hits(key, hit_at)")
+        return conn
 
     async def dispatch(self, request: Request, call_next):
         if request.url.path == "/health":
@@ -45,15 +69,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         cutoff = now - self.window_seconds
 
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS _rate_limit_hits (
-                  key TEXT NOT NULL,
-                  hit_at REAL NOT NULL
-                )
-                """
-            )
+            conn = self._connect()
             conn.execute("DELETE FROM _rate_limit_hits WHERE key = ? AND hit_at < ?", (bucket, cutoff))
             count = conn.execute("SELECT COUNT(*) FROM _rate_limit_hits WHERE key = ?", (bucket,)).fetchone()[0]
             if count >= limit:
@@ -62,8 +78,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             conn.execute("INSERT INTO _rate_limit_hits(key, hit_at) VALUES(?, ?)", (bucket, now))
             conn.commit()
             conn.close()
-        except Exception:
-            pass
+        except (sqlite3.Error, OSError) as exc:
+            logger.warning("Rate limit storage unavailable for %s: %s", request.url.path, exc)
+            return JSONResponse(
+                status_code=503,
+                content={"code": "rate_limit_unavailable", "message": "Rate limit backend unavailable"},
+            )
 
         return await call_next(request)
 

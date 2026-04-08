@@ -69,6 +69,34 @@ def clear_active_session(db_path: str) -> None:
         conn.execute("DELETE FROM focus_active_session WHERE id = 1")
 
 
+def get_session(db_path: str, session_id: str) -> dict[str, Any] | None:
+    """Fetch a single focus session by ID."""
+
+    with get_db(db_path) as conn:
+        row = conn.execute(
+            "SELECT fs.*, t.title AS task_title FROM focus_sessions fs LEFT JOIN tasks t ON t.id = fs.task_id WHERE fs.id = ?",
+            (session_id,),
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def update_session_status(db_path: str, session_id: str, status: str) -> None:
+    """Update the status column of a focus session."""
+
+    with tx(db_path) as conn:
+        conn.execute("UPDATE focus_sessions SET status = ? WHERE id = ?", (status, session_id))
+
+
+def add_pause_duration(db_path: str, session_id: str, pause_ms: int) -> None:
+    """Accumulate pause time into paused_duration_ms."""
+
+    with tx(db_path) as conn:
+        conn.execute(
+            "UPDATE focus_sessions SET paused_duration_ms = paused_duration_ms + ? WHERE id = ?",
+            (pause_ms, session_id),
+        )
+
+
 def list_sessions(db_path: str, limit: int = 30) -> list[dict[str, Any]]:
     """List recent focus sessions joined to task titles when available."""
 

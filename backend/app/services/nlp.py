@@ -7,10 +7,13 @@ No prefix required — "buy milk tomorrow" works as well as "task buy milk tomor
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Intent patterns: (compiled_regex, weight)
@@ -295,19 +298,19 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
 
     # 2. Pick best intent
     if not scores:
-        # Fallback: try quick_add parse — if it extracts a real title + date/priority/rrule, assume task.create
+        # Fallback: try quick_add parse — if it extracts a real title + date/priority/recurrence, assume task.create
         from app.services import quick_add
         try:
             parsed = quick_add.parse(text)
             has_signal = (
                 parsed.get("due_at")
                 or parsed.get("priority") != 2
-                or parsed.get("rrule")
+                or parsed.get("recurrence_rule")
             )
             if parsed.get("title") and has_signal:
                 title = parsed["title"]
-                rrule = parsed.get("rrule")
-                tts = f'Recurring task created: "{title}".' if rrule else f'Task added: "{title}".'
+                recurrence_rule = parsed.get("recurrence_rule")
+                tts = f'Recurring task created: "{title}".' if recurrence_rule else f'Task added: "{title}".'
                 return NLPResult(
                     intent="task.create",
                     confidence=0.6,
@@ -316,13 +319,13 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
                         "due_at": parsed.get("due_at"),
                         "priority": int(parsed.get("priority") or 2),
                         "tags": parsed.get("tags") or [],
-                        "rrule": rrule,
+                        "recurrence_rule": recurrence_rule,
                     },
                     follow_ups=["Add another task?", "Start a focus session?"],
                     tts_response=tts,
                 )
         except Exception:
-            pass
+            logger.exception("Quick-add fallback parsing failed for NLP text=%r", text)
         return NLPResult(
             intent="unknown",
             confidence=0.0,
@@ -348,13 +351,13 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
             "due_at": parsed.get("due_at"),
             "priority": int(parsed.get("priority") or 2),
             "tags": parsed.get("tags") or [],
-            "rrule": parsed.get("rrule"),
+            "recurrence_rule": parsed.get("recurrence_rule"),
             "estimated_minutes": estimated,
         }
         follow_ups = ["Add another task?", "Start a focus session on this?", "Anything else?"]
         # Build varied TTS
         title = entities["title"]
-        if entities.get("rrule"):
+        if entities.get("recurrence_rule"):
             tts_response = f'Recurring task created: "{title}".'
         elif entities.get("due_at"):
             tts_response = f'Task created: "{title}".'
@@ -389,9 +392,10 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
         if date_str and time_str:
             start_dt = f"{date_str}T{time_str[0]:02d}:{time_str[1]:02d}:00Z"
             dur_min = duration or 60
-            h, m = time_str
-            total_min = h * 60 + m + dur_min
-            end_dt = f"{date_str}T{total_min // 60:02d}:{total_min % 60:02d}:00Z"
+            # Use datetime arithmetic to avoid midnight overflow
+            start_datetime = datetime.fromisoformat(start_dt.replace("Z", "+00:00"))
+            end_datetime = start_datetime + timedelta(minutes=dur_min)
+            end_dt = end_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
         title_clean = re.sub(r"\b(today|tomorrow|next\s+\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|for\s+\d+\s*(?:minutes?|hours?|mins?|hrs?))\b", "", body or text, flags=re.I).strip()
         title_clean = re.sub(r"\s+", " ", title_clean).strip(" ,.;:-") or body or "Untitled event"
         entities = {

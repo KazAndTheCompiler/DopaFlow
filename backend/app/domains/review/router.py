@@ -368,7 +368,10 @@ async def import_apkg(
     try:
         return svc.import_apkg(deck_id, data, file.filename or "deck.apkg")
     except ValueError as exc:
+        logger.warning(
+            "APKG import rejected for deck_id=%s filename=%s: %s",
+            deck_id,
+            file.filename or "deck.apkg",
+            exc,
+        )
         raise HTTPException(status_code=422, detail=str(exc))
-    except Exception as exc:
-        logger.exception("APKG import failed")
-        raise HTTPException(status_code=422, detail=f"Import failed: {exc}")

@@ -1,12 +1,14 @@
 {
   "name": "dopaflow-frontend",
-  "version": "2.0.0",
+  "version": "2.0.7",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
+    "test": "npm run test:e2e",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -24,4 +26,3 @@
     "@types/react-dom": "^18.3.1"
   }
 }
-

@@ -34,6 +34,7 @@ const runtime = new BackendRuntime({
   cwd: backendCwd,
   command: backendCommand,
   args: backendArgs,
+  env: { ...process.env, DOPAFLOW_DEV_AUTH: "1" },
 });
 
 const releaseChannel = pkg.dopaflowReleaseChannel === "stable" ? "stable" : "dev";
@@ -51,7 +52,7 @@ function getBuildInfo() {
 function createWindow(route = "#/today", key = "main") {
   const window = new BrowserWindow({
     width: key === "journal" ? 980 : 1440,
-    height: key === "journal" ? 900 : 960,
+    height: key === "journal" ? 860 : 880,
     show: false,
     icon: path.join(__dirname, "assets", "icon.png"),
     webPreferences: {

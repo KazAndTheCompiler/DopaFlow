@@ -117,11 +117,13 @@ export function Sidebar({
         transition: "width 180ms ease",
         borderRight: "1px solid var(--border)",
         background: "var(--sidebar-gradient, var(--surface))",
+        backdropFilter: "var(--nav-rail-glass-blur)",
         padding: "1rem 0.5rem",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
         height: "100%",
+        position: "relative",
       }}
     >
       <div
