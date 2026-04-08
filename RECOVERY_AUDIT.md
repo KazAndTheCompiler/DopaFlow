@@ -44,9 +44,21 @@
   - `frontend/src/App.tsx`
   - `frontend/src/shell/Shell.tsx`
 
+### 2026-04-08 Patch 4
+
+- Hardened `Today` header/actions so the startup surface keeps its controls onscreen instead of forcing a horizontal push when the shell narrows.
+- Hardened `Calendar` navigation rows and blocking sidebar so week/day/month controls wrap before overflowing, and removed direct render-time `window.innerWidth` dependence in favor of responsive state.
+- Hardened `Settings` integration rows and vault sync rows so status pills and action buttons collapse safely instead of clipping long labels or pushing the panel wider than the viewport.
+- Added `matchMedia` guards so the responsive helpers used in this pass do not create a new boot failure in runtimes where `window` or `matchMedia` is unavailable during initialization.
+- Files changed:
+  - `frontend/src/surfaces/today/index.tsx`
+  - `frontend/src/surfaces/calendar/index.tsx`
+  - `frontend/src/surfaces/settings/IntegrationsOverview.tsx`
+  - `frontend/src/surfaces/settings/VaultSettings.tsx`
+
 ## Remaining Weaknesses
 
-- Browser-level visual verification is partially blocked in this Codex environment because the local headless browser runtime is incomplete; recovery verification is currently based on source inspection, dev server startup, and successful frontend production build.
+- Browser-level visual verification is still partially blocked in this Codex environment because the local headless browser runtime is incomplete; recovery verification is currently based on source inspection, successful production builds, and a running installed local web release.
 - Multiple major surfaces still contain desktop-biased layout rules that need targeted overflow hardening.
 - Some startup data loading still uses direct fetch logic instead of guarded shared-client access.
 - Manual flow verification across every primary product loop is still incomplete in this environment because Playwright could not launch a fully working browser/runtime stack here.
@@ -56,3 +68,15 @@
 - Harden the highest-risk remaining surfaces: `Today`, `Tasks`, `Calendar`, `Settings`, plus modal-heavy flows.
 - Complete manual loop verification against a working browser/Electron runtime: startup, navigation, settings, task create/edit, calendar event create/edit, journal, focus, shutdown/review.
 - Replace raw startup-surface fetches with guarded, non-blocking loading where blank or brittle states can occur.
+
+## Verification Notes
+
+### 2026-04-08 Installed web release
+
+- Rebuilt the frontend successfully after Patch 4 with `npm --prefix frontend run build`.
+- Refreshed the installed local release with `scripts/release_web/install_release_web.sh /home/henry/release/DopaFlow-2.0.7-web`.
+- Restarted the installed release and rechecked the live endpoints:
+  - `http://127.0.0.1:8001/` -> `200`
+  - `http://127.0.0.1:8000/health` -> `200`
+  - `http://127.0.0.1:8000/api/v2/tasks/` -> `200`
+- This confirms the current recovery branch still produces a runnable local copy after the latest UI stabilization changes, even though full visual browser automation remains blocked in this Codex environment.

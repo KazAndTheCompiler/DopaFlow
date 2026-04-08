@@ -73,7 +73,7 @@ function SyncRow({
   );
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-      <div style={{ flex: 1, minWidth: "12ch" }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "var(--text-sm)", fontWeight: 600 }}>{label}</div>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>{description}</div>
       </div>

@@ -63,6 +63,11 @@ function JumpButton({ targetId }: { targetId: string }): JSX.Element {
 export default function IntegrationsOverview(): JSX.Element {
   const [state, setState] = useState<OverviewState>({ integrations: null, peerFeeds: [], vault: null });
   const [error, setError] = useState<string | null>(null);
+  const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() => (
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 900px)").matches
+      : false
+  ));
 
   useEffect(() => {
     void Promise.all([
@@ -72,6 +77,16 @@ export default function IntegrationsOverview(): JSX.Element {
     ])
       .then(([integrations, peerFeeds, vault]) => setState({ integrations, peerFeeds, vault }))
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Failed to load integration overview"));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+    const mq = window.matchMedia("(max-width: 900px)");
+    const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   const calendarTone: OverviewTone =
@@ -162,7 +177,7 @@ export default function IntegrationsOverview(): JSX.Element {
             key={row.name}
             style={{
               display: "grid",
-              gridTemplateColumns: "minmax(0, 1fr) auto auto",
+              gridTemplateColumns: isCompactLayout ? "minmax(0, 1fr)" : "minmax(0, 1fr) auto auto",
               gap: "0.75rem",
               alignItems: "center",
               padding: "0.7rem 0.75rem",
@@ -177,19 +192,21 @@ export default function IntegrationsOverview(): JSX.Element {
                 {row.detail}
               </span>
             </div>
-            <span
-              style={{
-                ...tone,
-                padding: "0.28rem 0.55rem",
-                borderRadius: "999px",
-                fontSize: "var(--text-xs)",
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {row.tone}
-            </span>
-            <JumpButton targetId={row.targetId} />
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: isCompactLayout ? "flex-start" : "flex-end" }}>
+              <span
+                style={{
+                  ...tone,
+                  padding: "0.28rem 0.55rem",
+                  borderRadius: "999px",
+                  fontSize: "var(--text-xs)",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {row.tone}
+              </span>
+              <JumpButton targetId={row.targetId} />
+            </div>
           </div>
         );
       })}

@@ -263,12 +263,14 @@ export default function TodayView(): JSX.Element {
         alignItems: "start",
       }}
     >
-      <section style={{ display: "grid", gap: "1rem" }}>
+      <section style={{ display: "grid", gap: "1rem", minWidth: 0 }}>
         <header
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: "0.75rem",
+            flexWrap: "wrap",
             padding: "1rem",
             borderRadius: "20px",
             background: "color-mix(in srgb, var(--surface) 92%, transparent)",
@@ -281,7 +283,7 @@ export default function TodayView(): JSX.Element {
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
       <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
               <strong style={{ display: "block", fontSize: "var(--text-lg)" }}>Today</strong>
               <span
@@ -301,7 +303,7 @@ export default function TodayView(): JSX.Element {
             </div>
             <span style={{ color: "var(--text-secondary)" }}>{dateLabel}</span>
           </div>
-          <div style={{ display: "flex", gap: "0.35rem" }}>
+          <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
             <button
               onClick={() => setDayOffset((v) => v - 1)}
               aria-label="Previous day"
@@ -498,6 +500,7 @@ export default function TodayView(): JSX.Element {
           gap: "1rem",
           alignContent: "start",
           gridTemplateColumns: isCompactLayout ? "repeat(auto-fit, minmax(260px, 1fr))" : "minmax(0, 1fr)",
+          minWidth: 0,
         }}
       >
         <BacklogColumn tasks={backlog} onComplete={(id) => void app.tasks.complete(id)} draggable />
