@@ -75,11 +75,40 @@ have_runtime_lib() {
 }
 
 ensure_runtime_deps() {
-  if have_runtime_lib "libnss3.so" && have_runtime_lib "libnspr4.so"; then
-    return 0
-  fi
-  echo "Warning: runtime library preflight could not confirm libnss3/libnspr4; attempting launch anyway." >&2
+  local required_runtime_libs=(
+    libnss3.so
+    libnspr4.so
+    libxcb-render.so.0
+    libxcb-shm.so.0
+    libXau.so.6
+    libXdmcp.so.6
+    libpixman-1.so.0
+    libgraphite2.so.3
+    libdatrie.so.1
+    libwayland-client.so.0
+    libwayland-cursor.so.0
+    libwayland-egl.so.1
+    libXcursor.so.1
+    libXinerama.so.1
+  )
+
+  for lib_name in "${required_runtime_libs[@]}"; do
+    if ! have_runtime_lib "$lib_name"; then
+      echo "Installing missing Electron runtime dependency: $lib_name"
+      ensure_host_deps
+      return 0
+    fi
+  done
+
   return 0
+}
+
+ensure_desktop_build_deps() {
+  if [[ ! -d "$ROOT/desktop/vendor-runtime/extract/usr/lib/x86_64-linux-gnu" ]]; then
+    echo "Desktop vendor runtime extract missing; relying on host libraries."
+  fi
+
+  ensure_runtime_deps
 }
 
 build_frontend() {
@@ -106,6 +135,7 @@ publish_backend_release() {
 }
 
 build_desktop() {
+  ensure_desktop_build_deps
   (
     cd "$ROOT/desktop"
     PATH="$NODE_DIR:$PATH" \

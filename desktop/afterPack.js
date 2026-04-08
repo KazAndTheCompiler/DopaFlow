@@ -9,6 +9,14 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const VENDORED_LIB_DIR = path.join(__dirname, 'vendor-runtime', 'extract', 'usr', 'lib', 'x86_64-linux-gnu');
+const SYSTEM_LIB_DIRS = [
+  '/lib/x86_64-linux-gnu',
+  '/usr/lib/x86_64-linux-gnu',
+  '/lib64',
+  '/usr/lib64',
+  '/lib',
+  '/usr/lib',
+];
 const REQUIRED_RUNTIME_LIBS = [
   'libasound.so.2',
   'libavahi-client.so.3',
@@ -40,23 +48,20 @@ const REQUIRED_RUNTIME_LIBS = [
   'libplc4.so',
   'libthai.so.0',
   'libX11.so.6',
+  'libXau.so.6',
   'libXcomposite.so.1',
   'libXdamage.so.1',
+  'libXdmcp.so.6',
   'libXext.so.6',
   'libXfixes.so.3',
+  'libXinerama.so.1',
   'libXi.so.6',
   'libXrandr.so.2',
-  'libxcb.so.1',
-  'libXrender.so.1',
-];
-
-const OPTIONAL_RUNTIME_LIBS = [
-  'libXau.so.6',
   'libXcursor.so.1',
-  'libXdmcp.so.6',
-  'libXinerama.so.1',
+  'libxcb.so.1',
   'libxcb-render.so.0',
   'libxcb-shm.so.0',
+  'libXrender.so.1',
   'libdatrie.so.1',
   'libgraphite2.so.3',
   'libpixman-1.so.0',
@@ -65,33 +70,37 @@ const OPTIONAL_RUNTIME_LIBS = [
   'libwayland-egl.so.1',
 ];
 
+const OPTIONAL_RUNTIME_LIBS = [];
+
 function resolveLibraryPath(libName) {
   const vendoredPath = path.join(VENDORED_LIB_DIR, libName);
   if (fs.existsSync(vendoredPath)) {
     return vendoredPath;
   }
-  const output = execFileSync('/usr/sbin/ldconfig', ['-p'], { encoding: 'utf8' });
-  const line = output
-    .split('\n')
-    .find((entry) => entry.includes(` ${libName} `) || entry.includes(`\t${libName} `));
-  if (!line) {
-    throw new Error(`Could not resolve ${libName} from ldconfig cache`);
-  }
-  const match = line.match(/=>\s+(.+)$/);
-  if (!match) {
-    throw new Error(`Could not parse ldconfig entry for ${libName}: ${line}`);
-  }
-  let resolvedPath = match[1].trim();
-  if (!fs.existsSync(resolvedPath) && resolvedPath.startsWith('/lib/')) {
-    const altPath = path.join('/usr/lib', resolvedPath.slice('/lib/'.length));
-    if (fs.existsSync(altPath)) {
-      resolvedPath = altPath;
+
+  for (const dir of SYSTEM_LIB_DIRS) {
+    const candidate = path.join(dir, libName);
+    if (fs.existsSync(candidate)) {
+      return candidate;
     }
   }
-  if (!fs.existsSync(resolvedPath)) {
-    throw new Error(`Resolved path for ${libName} does not exist: ${resolvedPath}`);
+
+  try {
+    const output = execFileSync('/usr/sbin/ldconfig', ['-p'], { encoding: 'utf8' });
+    const line = output
+      .split('\n')
+      .find((entry) => entry.trim().startsWith(`${libName} `));
+    if (line) {
+      const match = line.match(/=>\s+(.+)$/);
+      if (match && fs.existsSync(match[1].trim())) {
+        return match[1].trim();
+      }
+    }
+  } catch (error) {
+    // Sandboxed builds may block ldconfig execution; fall through to the final error.
   }
-  return resolvedPath;
+
+  throw new Error(`Could not resolve ${libName} from vendored or system library directories`);
 }
 
 function tryResolveLibraryPath(libName) {
