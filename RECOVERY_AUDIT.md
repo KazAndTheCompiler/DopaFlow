@@ -170,6 +170,9 @@
   - ran `focus_flow.spec.ts` -> `4 passed`
   - ran `goals_flow.spec.ts` -> `3 passed`
   - ran `habits_flow.spec.ts` -> `3 passed` after updating stale compact-badge expectations (`ST 0d`, `1/ day`) to match the current habits card UI
+  - ran `review_premium.spec.ts` -> `6 passed`
+  - ran `skin_editor.spec.ts` -> `4 passed`
+  - ran the consolidated `npm run test:e2e:release` slice -> `44 passed`
 - Follow-up hardening shipped during this pass:
   - `frontend/playwright.config.ts` now auto-detects a usable bundled `usr/lib` directory from the current desktop build or unpacked release instead of relying on a single stale hard-coded path
   - `frontend/package.json` now exposes `npm run test:e2e:smoke` for the narrow mocked browser regression path
