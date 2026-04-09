@@ -5,48 +5,58 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from app.middleware.auth_scopes import require_scope
+from app.domains.player.schemas import (
+    PlayerNextTrackResponse,
+    PlayerPredownloadJobResponse,
+    PlayerPredownloadStatusResponse,
+    PlayerPredownloadTickResponse,
+    PlayerQueueRequest,
+    PlayerQueueResponse,
+    PlayerResolveUrlRequest,
+    PlayerResolveUrlResponse,
+)
 from app.domains.player.service import PlayerService
 
 router = APIRouter(prefix="/player", tags=["player"])
 _svc = PlayerService()
 
 
-@router.post("/resolve-url", dependencies=[Depends(require_scope("write:player"))])
-async def resolve_url(payload: dict[str, object]) -> dict[str, object]:
-    return _svc.resolve_url(str(payload.get("url", "")))
+@router.post("/resolve-url", response_model=PlayerResolveUrlResponse, dependencies=[Depends(require_scope("write:player"))])
+async def resolve_url(payload: PlayerResolveUrlRequest) -> PlayerResolveUrlResponse:
+    return PlayerResolveUrlResponse(**_svc.resolve_url(payload.url))
 
 
-@router.post("/queue", dependencies=[Depends(require_scope("write:player"))])
-async def save_queue(payload: dict[str, object] | None = None) -> dict[str, object]:
-    items = payload.get("items", []) if payload else []
-    return _svc.save_queue(items if isinstance(items, list) else [])
+@router.post("/queue", response_model=PlayerQueueResponse, dependencies=[Depends(require_scope("write:player"))])
+async def save_queue(payload: PlayerQueueRequest | None = None) -> PlayerQueueResponse:
+    items = payload.items if payload else []
+    return PlayerQueueResponse(**_svc.save_queue(items))
 
 
-@router.get("/queue", dependencies=[Depends(require_scope("read:player"))])
-async def get_queue() -> dict[str, object]:
-    return _svc.get_queue()
+@router.get("/queue", response_model=PlayerQueueResponse, dependencies=[Depends(require_scope("read:player"))])
+async def get_queue() -> PlayerQueueResponse:
+    return PlayerQueueResponse(**_svc.get_queue())
 
 
-@router.post("/queue/next", dependencies=[Depends(require_scope("write:player"))])
-async def next_track() -> dict[str, object]:
-    return _svc.next_track()
+@router.post("/queue/next", response_model=PlayerNextTrackResponse, dependencies=[Depends(require_scope("write:player"))])
+async def next_track() -> PlayerNextTrackResponse:
+    return PlayerNextTrackResponse(**_svc.next_track())
 
 
-@router.post("/predownload/enqueue", dependencies=[Depends(require_scope("write:player"))])
-async def enqueue_predownload(payload: dict[str, object] | None = None) -> dict[str, object]:
-    return _svc.enqueue_predownload(payload or {})
+@router.post("/predownload/enqueue", response_model=PlayerPredownloadJobResponse, dependencies=[Depends(require_scope("write:player"))])
+async def enqueue_predownload(payload: dict[str, object] | None = None) -> PlayerPredownloadJobResponse:
+    return PlayerPredownloadJobResponse(**_svc.enqueue_predownload(payload or {}))
 
 
-@router.get("/predownload/status", dependencies=[Depends(require_scope("read:player"))])
-async def predownload_status() -> dict[str, object]:
-    return _svc.predownload_status()
+@router.get("/predownload/status", response_model=PlayerPredownloadStatusResponse, dependencies=[Depends(require_scope("read:player"))])
+async def predownload_status() -> PlayerPredownloadStatusResponse:
+    return PlayerPredownloadStatusResponse(**_svc.predownload_status())
 
 
-@router.post("/predownload/retry/{job_id}", dependencies=[Depends(require_scope("write:player"))])
-async def retry_predownload(job_id: str) -> dict[str, object]:
-    return _svc.retry_predownload(job_id)
+@router.post("/predownload/retry/{job_id}", response_model=PlayerPredownloadJobResponse, dependencies=[Depends(require_scope("write:player"))])
+async def retry_predownload(job_id: str) -> PlayerPredownloadJobResponse:
+    return PlayerPredownloadJobResponse(**_svc.retry_predownload(job_id))
 
 
-@router.post("/predownload/tick/{job_id}", dependencies=[Depends(require_scope("write:player"))])
-async def tick_predownload(job_id: str) -> dict[str, object]:
-    return _svc.tick_predownload(job_id)
+@router.post("/predownload/tick/{job_id}", response_model=PlayerPredownloadTickResponse, dependencies=[Depends(require_scope("write:player"))])
+async def tick_predownload(job_id: str) -> PlayerPredownloadTickResponse:
+    return PlayerPredownloadTickResponse(**_svc.tick_predownload(job_id))

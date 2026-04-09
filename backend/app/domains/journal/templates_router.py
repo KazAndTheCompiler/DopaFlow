@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.core.config import Settings, get_settings_dependency
 from app.core.db_utils import get_conn
+from app.domains.journal.schemas import JournalTemplateApplyResponse
 from app.domains.journal.template_schemas import JournalTemplateCreate, JournalTemplateRead
 
 router = APIRouter(tags=["journal"])
@@ -62,11 +63,11 @@ async def delete_template(identifier: str, settings: Settings = Depends(get_sett
     return Response(status_code=204)
 
 
-@router.post("/journal/templates/{identifier}/apply", response_model=dict[str, object])
-async def apply_template(identifier: str, settings: Settings = Depends(get_settings_dependency)) -> dict[str, object]:
+@router.post("/journal/templates/{identifier}/apply", response_model=JournalTemplateApplyResponse)
+async def apply_template(identifier: str, settings: Settings = Depends(get_settings_dependency)) -> JournalTemplateApplyResponse:
     conn = get_conn(settings.db_path)
     row = conn.execute("SELECT body, tags FROM journal_templates WHERE id = ?", (identifier,)).fetchone()
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Journal template not found")
-    return {"body": row["body"], "tags": json.loads(row["tags"] or "[]")}
+    return JournalTemplateApplyResponse(body=row["body"], tags=json.loads(row["tags"] or "[]"))

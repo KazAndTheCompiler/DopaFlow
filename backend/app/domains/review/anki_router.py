@@ -22,6 +22,7 @@ from fastapi.responses import Response
 
 from app.core.config import Settings, get_settings_dependency
 from app.core.database import get_db, tx
+from app.domains.review.anki_schemas import ReviewApkgExportResponse, ReviewApkgImportRouteResponse, ReviewDeckNamesResponse
 from app.services.upload_security import validate_upload
 
 router = APIRouter(tags=["review"])
@@ -128,25 +129,25 @@ async def download_apkg(deck_id: str, settings: Settings = Depends(get_settings_
     )
 
 
-@router.post("/review/decks/{deck_id}/export-apkg")
-async def export_apkg(deck_id: str, settings: Settings = Depends(get_settings_dependency)) -> dict[str, object]:
+@router.post("/review/decks/{deck_id}/export-apkg", response_model=ReviewApkgExportResponse)
+async def export_apkg(deck_id: str, settings: Settings = Depends(get_settings_dependency)) -> ReviewApkgExportResponse:
     """Export a deck as a base64-encoded .apkg (for API consumers)."""
     filename, apkg_bytes = _create_apkg(deck_id, settings.db_path)
-    return {
-        "filename": filename,
-        "content_type": "application/zip",
-        "encoding": "base64",
-        "size": len(apkg_bytes),
-        "data": base64.b64encode(apkg_bytes).decode("utf-8"),
-    }
+    return ReviewApkgExportResponse(
+        filename=filename,
+        content_type="application/zip",
+        encoding="base64",
+        size=len(apkg_bytes),
+        data=base64.b64encode(apkg_bytes).decode("utf-8"),
+    )
 
 
-@router.post("/review/import-apkg")
+@router.post("/review/import-apkg", response_model=ReviewApkgImportRouteResponse)
 async def import_apkg(
     file: UploadFile = File(...),
     target_deck_name: str | None = None,
     settings: Settings = Depends(get_settings_dependency),
-) -> dict[str, object]:
+) -> ReviewApkgImportRouteResponse:
     """Import a .apkg file and create cards."""
     content, _ = validate_upload(
         file,
@@ -212,12 +213,12 @@ async def import_apkg(
             )
             created += 1
 
-    return {"success": True, "deck_id": deck_id, "deck_name": deck_name, "cards_created": created}
+    return ReviewApkgImportRouteResponse(success=True, deck_id=deck_id, deck_name=deck_name, cards_created=created)
 
 
-@router.get("/review/deck-names")
-async def list_deck_names(settings: Settings = Depends(get_settings_dependency)) -> dict[str, list[str]]:
+@router.get("/review/deck-names", response_model=ReviewDeckNamesResponse)
+async def list_deck_names(settings: Settings = Depends(get_settings_dependency)) -> ReviewDeckNamesResponse:
     """Get a simple list of deck names for UI selection."""
     with get_db(settings.db_path) as conn:
         rows = conn.execute("SELECT name FROM review_decks ORDER BY name").fetchall()
-    return {"decks": [r["name"] for r in rows]}
+    return ReviewDeckNamesResponse(decks=[r["name"] for r in rows])

@@ -128,3 +128,52 @@ class JournalTemplatePatch(BaseModel):
     name: str | None = None
     body: str | None = None
     tags: list[str] | None = None
+
+
+class JournalTranscriptResponse(BaseModel):
+    """Speech-to-text transcription payload."""
+
+    transcript: str
+
+
+class JournalTemplateApplyResponse(BaseModel):
+    """Applied template content."""
+
+    body: str
+    tags: list[str] = Field(default_factory=list)
+
+
+class JournalTemplateDeleteResponse(BaseModel):
+    """Template deletion acknowledgement."""
+
+    deleted: bool
+    id: str
+
+
+class JournalExportTodayResponse(BaseModel):
+    """Result of exporting today's journal entry."""
+
+    path: str
+    entry_count: int
+
+
+class JournalGraphNode(BaseModel):
+    """One node in the journal wikilink graph."""
+
+    id: str
+    date: str
+    entry_count: int
+
+
+class JournalGraphEdge(BaseModel):
+    """One edge in the journal wikilink graph."""
+
+    source: str
+    target: str
+
+
+class JournalGraphResponse(BaseModel):
+    """Journal wikilink graph payload."""
+
+    nodes: list[JournalGraphNode]
+    edges: list[JournalGraphEdge]

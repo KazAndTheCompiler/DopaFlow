@@ -1,6 +1,22 @@
 import type { JournalEntry } from "../../../shared/types";
 import { apiClient } from "./client";
 
+export interface JournalGraphNode {
+  id: string;
+  date: string;
+  entry_count: number;
+}
+
+export interface JournalGraphEdge {
+  source: string;
+  target: string;
+}
+
+export interface JournalGraphData {
+  nodes: JournalGraphNode[];
+  edges: JournalGraphEdge[];
+}
+
 export function listJournalEntries(params?: { tag?: string; search?: string }): Promise<JournalEntry[]> {
   const qs = new URLSearchParams();
   if (params?.tag) qs.set("tag", params.tag);
@@ -30,8 +46,8 @@ export function triggerJournalBackup(date?: string): Promise<{ message: string; 
   return apiClient(`/journal/backup/trigger${qs}`, { method: "POST" });
 }
 
-export function getJournalGraph(): Promise<{ nodes: object[]; edges: object[] }> {
-  return apiClient<{ nodes: object[]; edges: object[] }>("/journal/graph");
+export function getJournalGraph(): Promise<JournalGraphData> {
+  return apiClient<JournalGraphData>("/journal/graph");
 }
 
 export function getJournalBacklinks(identifier: string): Promise<string[]> {

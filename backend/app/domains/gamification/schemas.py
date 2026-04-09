@@ -27,3 +27,9 @@ class BadgeRead(BaseModel):
     earned_at: str | None = None
     progress: float
     target: int
+
+
+class GamificationStatus(BaseModel):
+    level: PlayerLevelRead
+    badges: list[BadgeRead]
+    earned_count: int

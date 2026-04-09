@@ -79,3 +79,63 @@ class ScopeTokenRead(BaseModel):
     expires_at: str
     revoked_at: str | None = None
     last_used_at: str | None = None
+
+
+class OpsTokenRevocation(BaseModel):
+    revoked: bool
+
+
+class OpsExportManifest(BaseModel):
+    schema_version: str
+    app_version: str
+
+
+class OpsExportPayload(BaseModel):
+    manifest: OpsExportManifest
+    tasks: list[dict[str, object]]
+    commands: list[dict[str, object]]
+    habits: list[dict[str, object]]
+    journal: list[dict[str, object]]
+    decks: list[dict[str, object]]
+    cards: list[dict[str, object]]
+    nutrition_log: list[dict[str, object]]
+
+
+class OpsExportResponse(BaseModel):
+    checksum: str
+    payload: OpsExportPayload
+
+
+class OpsBackupVerification(BaseModel):
+    valid: bool
+    tables: list[str]
+    migration_version: str | None = None
+    error: str | None = None
+
+
+class OpsRestoreResponse(BaseModel):
+    ok: bool
+    message: str
+
+
+class OpsSeedResponse(BaseModel):
+    seeded: bool
+    message: str
+
+
+class OpsImportSummary(BaseModel):
+    tasks: int
+    habits: int
+    dry_run: bool
+    applied: bool
+
+
+class OpsImportResponse(BaseModel):
+    status: str
+    summary: OpsImportSummary
+    conflicts: list[object]
+
+
+class OpsReconcileResponse(BaseModel):
+    status: str
+    dispatched: int

@@ -32,7 +32,11 @@ from app.domains.nutrition.schemas import (
     FoodItemRead,
     FoodLibraryItem,
     LogEntryCreate,
+    NutritionDeleteResponse,
     NutritionGoals,
+    NutritionLogResponse,
+    NutritionMonthlyResponse,
+    NutritionSummaryResponse,
 )
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
@@ -66,14 +70,14 @@ async def delete_food(food_id: str, repo: NutritionRepository = Depends(_repo)) 
 
 # ── log entries ───────────────────────────────────────────────────────────────
 
-@router.get("/log", dependencies=[Depends(require_scope("read:nutrition"))])
-async def get_log(date: str | None = Query(default=None), repo: NutritionRepository = Depends(_repo)) -> dict:
-    return repo.get_log(date)
+@router.get("/log", response_model=NutritionLogResponse, dependencies=[Depends(require_scope("read:nutrition"))])
+async def get_log(date: str | None = Query(default=None), repo: NutritionRepository = Depends(_repo)) -> NutritionLogResponse:
+    return NutritionLogResponse(**repo.get_log(date))
 
 
-@router.get("/log/monthly", dependencies=[Depends(require_scope("read:nutrition"))])
-async def get_monthly(month: str | None = Query(default=None), repo: NutritionRepository = Depends(_repo)) -> dict:
-    return repo.get_monthly(month)
+@router.get("/log/monthly", response_model=NutritionMonthlyResponse, dependencies=[Depends(require_scope("read:nutrition"))])
+async def get_monthly(month: str | None = Query(default=None), repo: NutritionRepository = Depends(_repo)) -> NutritionMonthlyResponse:
+    return NutritionMonthlyResponse(**repo.get_monthly(month))
 
 
 @router.post("/log", response_model=FoodItemRead, dependencies=[Depends(require_scope("write:nutrition"))])
@@ -98,18 +102,18 @@ async def delete_log_entry(entry_id: str, repo: NutritionRepository = Depends(_r
 
 # ── summary / goals ───────────────────────────────────────────────────────────
 
-@router.get("/summary/{date}", dependencies=[Depends(require_scope("read:nutrition"))])
-async def get_summary(date: str, repo: NutritionRepository = Depends(_repo)) -> dict:
-    return repo.get_summary(date)
+@router.get("/summary/{date}", response_model=NutritionSummaryResponse, dependencies=[Depends(require_scope("read:nutrition"))])
+async def get_summary(date: str, repo: NutritionRepository = Depends(_repo)) -> NutritionSummaryResponse:
+    return NutritionSummaryResponse(**repo.get_summary(date))
 
 
 @router.get("/goals", response_model=NutritionGoals, dependencies=[Depends(require_scope("read:nutrition"))])
-async def get_goals(repo: NutritionRepository = Depends(_repo)) -> dict:
+async def get_goals(repo: NutritionRepository = Depends(_repo)) -> NutritionGoals:
     return repo.get_goals()
 
 
 @router.post("/goals", response_model=NutritionGoals, dependencies=[Depends(require_scope("write:nutrition"))])
-async def set_goals(payload: NutritionGoals, repo: NutritionRepository = Depends(_repo)) -> dict:
+async def set_goals(payload: NutritionGoals, repo: NutritionRepository = Depends(_repo)) -> NutritionGoals:
     return repo.set_goals(payload)
 
 
@@ -145,8 +149,8 @@ async def recent(repo: NutritionRepository = Depends(_repo)) -> list[FoodItemRea
     return repo.list_recent()
 
 
-@router.delete("/{identifier}", response_model=dict[str, bool], dependencies=[Depends(require_scope("write:nutrition"))])
-async def delete_entry(identifier: str, repo: NutritionRepository = Depends(_repo)) -> dict[str, bool]:
+@router.delete("/{identifier}", response_model=NutritionDeleteResponse, dependencies=[Depends(require_scope("write:nutrition"))])
+async def delete_entry(identifier: str, repo: NutritionRepository = Depends(_repo)) -> NutritionDeleteResponse:
     if not repo.delete_entry(identifier):
         raise HTTPException(status_code=404, detail="Nutrition entry not found")
-    return {"deleted": True}
+    return NutritionDeleteResponse(deleted=True)

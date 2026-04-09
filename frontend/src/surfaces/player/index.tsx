@@ -33,7 +33,7 @@ export default function PlayerView(): JSX.Element {
   // Load saved queue on mount
   useEffect(() => {
     getQueue()
-      .then((res) => setQueue(Array.isArray(res) ? res : (res.items ?? [])))
+      .then((res) => setQueue(res.items))
       .catch(() => {});
   }, []);
 

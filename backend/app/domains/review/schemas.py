@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel
 
@@ -39,3 +39,155 @@ class ReviewRating(BaseModel):
 
     card_id: str
     rating: int
+
+
+class DeckRead(BaseModel):
+    """Serialized review deck."""
+
+    id: str
+    name: str
+    source_type: str | None = None
+    description: str | None = None
+    created_at: datetime | None = None
+    card_count: int | None = None
+
+
+class DeckRenameRequest(BaseModel):
+    """Payload for renaming a deck."""
+
+    name: str
+
+
+class DeleteResponse(BaseModel):
+    """Simple delete acknowledgement."""
+
+    deleted: bool
+
+
+class NextDueResponse(BaseModel):
+    """Next due card timestamp for a deck."""
+
+    next_due: str | None = None
+
+
+class ReviewImportPreview(BaseModel):
+    """Dry-run results for CSV/TSV import."""
+
+    total_cards: int
+    new_cards: int
+    duplicate_cards: int
+    errors: list[str]
+
+
+class ReviewImportResult(BaseModel):
+    """Result of importing CSV/TSV cards."""
+
+    created_cards: int
+    duplicate_cards: int
+
+
+class ReviewApkgImportResult(BaseModel):
+    """Result of importing an APKG package."""
+
+    imported: int
+    skipped: int
+    source: str
+
+
+class ReviewSessionStateCard(BaseModel):
+    """Current card preview inside session state."""
+
+    id: str
+    front: str
+    back: str
+
+
+class ReviewSessionState(BaseModel):
+    """Current review session status."""
+
+    queue_size: int
+    state: str | None = None
+    interval: int | None = None
+    last_rating: int | None = None
+    card: ReviewSessionStateCard | None = None
+
+
+class ReviewSessionQueueCard(BaseModel):
+    """Card summary returned when a session starts."""
+
+    id: str
+    deck_id: str
+    front: str
+    state: str
+    next_review_at: str | None = None
+
+
+class ReviewSessionStart(BaseModel):
+    """Initial queue for a started review session."""
+
+    count: int
+    cards: list[ReviewSessionQueueCard]
+
+
+class ReviewAnswerSession(BaseModel):
+    """Session metadata returned after answering a card."""
+
+    state: str
+    interval: int
+    last_rating: str
+
+
+class ReviewAnswerResponse(BaseModel):
+    """Answer result with updated card and session summary."""
+
+    session: ReviewAnswerSession
+    card: ReviewCardRead
+
+
+class ReviewHistoryItem(BaseModel):
+    """Historical review session summary."""
+
+    session_id: str
+    deck_name: str
+    started_at: str | None = None
+    ended_at: str | None = None
+    cards_seen: int
+    retention_pct: float
+
+
+class ReviewHistoryResponse(BaseModel):
+    """List of recent review sessions."""
+
+    items: list[ReviewHistoryItem]
+
+
+class ReviewSessionEndResponse(BaseModel):
+    """Result of explicitly closing a session."""
+
+    ok: bool
+    session_log_id: str | None = None
+
+
+class ReviewBulkCardsResponse(BaseModel):
+    """Result of a bulk card mutation."""
+
+    affected: int
+
+
+class ReviewExportPreviewCard(BaseModel):
+    """Card row shown in export preview."""
+
+    id: str
+    front: str
+    back: str
+    state: str
+    next_review_at: str | None = None
+    tags: list[str]
+
+
+class ReviewExportPreviewResponse(BaseModel):
+    """Preview of cards that would be exported."""
+
+    deck_id: str
+    card_count: int
+    cards: list[ReviewExportPreviewCard]

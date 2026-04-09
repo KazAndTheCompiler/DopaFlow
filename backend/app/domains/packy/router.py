@@ -18,6 +18,7 @@ from app.domains.packy.schemas import (
     MomentumScore,
     PackyAnswer,
     PackyAskRequest,
+    PackyLorebookResponse,
     PackyLorebookRequest,
     PackyVoiceCommand,
     PackyVoiceResponse,
@@ -123,10 +124,10 @@ async def get_whisper(svc: PackyService = Depends(_svc)) -> PackyWhisper:
     return svc.whisper()
 
 
-@router.post("/lorebook", response_model=dict[str, object], dependencies=[Depends(require_scope("write:packy"))])
-async def update_lorebook(payload: PackyLorebookRequest, svc: PackyService = Depends(_svc)) -> dict[str, object]:
+@router.post("/lorebook", response_model=PackyLorebookResponse, dependencies=[Depends(require_scope("write:packy"))])
+async def update_lorebook(payload: PackyLorebookRequest, svc: PackyService = Depends(_svc)) -> PackyLorebookResponse:
     """Push contextual lorebook updates into Packy."""
-    return svc.lorebook(payload)
+    return PackyLorebookResponse(**svc.lorebook(payload))
 
 
 @router.get("/momentum", response_model=MomentumScore, dependencies=[Depends(require_scope("read:packy"))])

@@ -63,6 +63,15 @@ class PackyLorebookRequest(BaseModel):
     tags: list[str] = Field(default_factory=list)
 
 
+class PackyLorebookResponse(BaseModel):
+    """Persistence acknowledgement for lorebook updates."""
+
+    status: str
+    session_id: str
+    persisted: bool
+    id: str
+
+
 class PackyWhisper(BaseModel):
     """Proactive tip surfaced in the shell status bar."""
 

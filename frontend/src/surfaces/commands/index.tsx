@@ -1,25 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { executeCommandText } from "@api/index";
-import { apiClient } from "../../api/client";
+import { executeCommandText, getCommandList, type CommandListItem } from "@api/index";
 import { showToast } from "@ds/primitives/Toast";
 import VoiceCommandModal from "../../components/VoiceCommandModal";
 
-interface CommandDefinition {
-  id: string;
-  name: string;
-  description: string;
-  category?: string;
-  text: string;
-}
-
 export default function CommandsView(): JSX.Element {
   const [search, setSearch] = useState("");
-  const [commands, setCommands] = useState<CommandDefinition[]>([]);
+  const [commands, setCommands] = useState<CommandListItem[]>([]);
 
   useEffect(() => {
-    void apiClient<{ commands: CommandDefinition[] }>("/commands/list")
-      .then((body: { commands: CommandDefinition[] }) => setCommands(Array.isArray(body.commands) ? body.commands : []))
+    void getCommandList()
+      .then((body) => setCommands(Array.isArray(body.commands) ? body.commands : []))
       .catch(() => setCommands([]));
   }, []);
 

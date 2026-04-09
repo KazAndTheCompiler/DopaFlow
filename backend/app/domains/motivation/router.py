@@ -15,23 +15,23 @@ from fastapi.responses import FileResponse
 from app.middleware.auth_scopes import require_scope
 from app.domains.motivation.quotes import QUOTES
 from app.domains.motivation.resources import get_goggins_mp3_path
-from app.domains.motivation.schemas import GogginsTriggerResponse
+from app.domains.motivation.schemas import GogginsTriggerResponse, MotivationQuoteResponse
 from app.domains.motivation.service import MotivationService
 
 router = APIRouter(prefix="/motivation", tags=["motivation"])
 _svc = MotivationService()
 
 
-@router.get("/quote", response_model=dict[str, object], dependencies=[Depends(require_scope("read:motivation"))])
-async def daily_quote() -> dict[str, object]:
+@router.get("/quote", response_model=MotivationQuoteResponse, dependencies=[Depends(require_scope("read:motivation"))])
+async def daily_quote() -> MotivationQuoteResponse:
     index = date.today().toordinal() % len(QUOTES)
-    return {"quote": QUOTES[index], "index": index}
+    return MotivationQuoteResponse(quote=QUOTES[index], index=index)
 
 
-@router.get("/quote/random", response_model=dict[str, object], dependencies=[Depends(require_scope("read:motivation"))])
-async def random_quote() -> dict[str, object]:
+@router.get("/quote/random", response_model=MotivationQuoteResponse, dependencies=[Depends(require_scope("read:motivation"))])
+async def random_quote() -> MotivationQuoteResponse:
     index = randrange(len(QUOTES))
-    return {"quote": QUOTES[index], "index": index}
+    return MotivationQuoteResponse(quote=QUOTES[index], index=index)
 
 
 @router.post("/trigger", response_model=GogginsTriggerResponse, dependencies=[Depends(require_scope("write:motivation"))])

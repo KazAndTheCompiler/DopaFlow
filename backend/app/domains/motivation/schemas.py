@@ -9,3 +9,8 @@ class GogginsTriggerResponse(BaseModel):
     triggered: bool
     file_size: int | None = None
     error: str | None = None
+
+
+class MotivationQuoteResponse(BaseModel):
+    quote: str
+    index: int

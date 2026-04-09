@@ -14,8 +14,30 @@ from app.core.config import get_settings
 from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.service import GamificationService
 from app.domains.review.repository import ReviewRepository
-from app.domains.review.schemas import DeckCreate, ReviewCardCreate, ReviewCardRead, ReviewRating
-from app.domains.review.schemas_extra import CardBuryResponse, CardSuspendResponse, DeckStatsResponse, ReviewSearchResult
+from app.domains.review.schemas import (
+    DeckCreate,
+    DeckRead,
+    NextDueResponse,
+    ReviewAnswerResponse,
+    ReviewAnswerSession,
+    ReviewApkgImportResult,
+    ReviewBulkCardsResponse,
+    ReviewCardCreate,
+    ReviewCardRead,
+    ReviewExportPreviewCard,
+    ReviewExportPreviewResponse,
+    ReviewHistoryItem,
+    ReviewHistoryResponse,
+    ReviewImportPreview,
+    ReviewImportResult,
+    ReviewRating,
+    ReviewSessionEndResponse,
+    ReviewSessionQueueCard,
+    ReviewSessionStart,
+    ReviewSessionState,
+    ReviewSessionStateCard,
+)
+from app.domains.review.schemas_extra import CardBuryResponse, CardSuspendResponse, DeckStatsResponse, ReviewSearchResult, ReviewSearchResponse
 
 MIN_EASE = 1.3
 DEFAULT_EASE = 2.5
@@ -125,7 +147,7 @@ class ReviewService:
         _award("review_card", existing.id)
         return card
 
-    def answer_card(self, card_id: str, rating_label: str, deck_id: str | None = None) -> dict[str, object]:
+    def answer_card(self, card_id: str, rating_label: str, deck_id: str | None = None) -> ReviewAnswerResponse:
         """Apply a string rating to a card. Bumps the active session if deck_id given."""
 
         int_rating = _RATING_MAP.get(rating_label.lower())
@@ -151,14 +173,14 @@ class ReviewService:
         if deck_id:
             self.repository.bump_session_answer(deck_id, rating_label.lower())
         _award("review_card", card_id)
-        return {
-            "session": {
-                "state": updated.id,
-                "interval": next_interval,
-                "last_rating": rating_label,
-            },
-            "card": updated.model_dump(),
-        }
+        return ReviewAnswerResponse(
+            session=ReviewAnswerSession(
+                state=updated.id,
+                interval=next_interval,
+                last_rating=rating_label,
+            ),
+            card=updated,
+        )
 
     def reset_card(self, card_id: str) -> ReviewCardRead:
         self.repository.get_card(card_id)
@@ -183,44 +205,56 @@ class ReviewService:
         rows = self.repository.search_cards(deck_id, q=q, state=state, limit=limit)
         return [ReviewSearchResult(**row) for row in rows]
 
-    def bulk_cards(self, deck_id: str, ids: list[str], action: str) -> dict[str, int]:
+    def bulk_cards(self, deck_id: str, ids: list[str], action: str) -> ReviewBulkCardsResponse:
         affected = self.repository.bulk_cards(deck_id, ids, action)
-        return {"affected": affected}
+        return ReviewBulkCardsResponse(affected=affected)
 
     # ── decks ─────────────────────────────────────────────────────────────────
 
-    def list_decks(self) -> list[dict[str, object]]:
-        return self.repository.list_decks()
+    def list_decks(self) -> list[DeckRead]:
+        return [DeckRead(**row) for row in self.repository.list_decks()]
 
-    def create_deck(self, payload: DeckCreate) -> dict[str, object]:
-        return self.repository.create_deck(payload)
+    def create_deck(self, payload: DeckCreate) -> DeckRead:
+        return DeckRead(**self.repository.create_deck(payload))
 
-    def get_deck(self, deck_id: str) -> dict[str, object] | None:
-        return self.repository.get_deck(deck_id)
+    def get_deck(self, deck_id: str) -> DeckRead | None:
+        deck = self.repository.get_deck(deck_id)
+        return DeckRead(**deck) if deck is not None else None
+
+    def rename_deck(self, deck_id: str, name: str) -> dict[str, object] | None:
+        return self.repository.rename_deck(deck_id, name)
+
+    def delete_deck(self, deck_id: str) -> bool:
+        return self.repository.delete_deck(deck_id)
 
     def get_deck_stats(self, deck_id: str) -> DeckStatsResponse:
         return DeckStatsResponse(**self.repository.get_deck_stats(deck_id))
 
-    def get_next_due(self, deck_id: str) -> dict[str, object]:
-        return {"next_due": self.repository.get_next_due(deck_id)}
+    def get_next_due(self, deck_id: str) -> NextDueResponse:
+        return NextDueResponse(next_due=self.repository.get_next_due(deck_id))
 
     # ── export ────────────────────────────────────────────────────────────────
 
     def get_all_cards_for_export(self, deck_id: str) -> list[dict[str, object]]:
         return self.repository.get_all_cards_for_export(deck_id)
 
-    def export_preview(self, deck_id: str, limit: int = 50) -> dict[str, object]:
-        return self.repository.export_preview(deck_id, limit)
+    def export_preview(self, deck_id: str, limit: int = 50) -> ReviewExportPreviewResponse:
+        preview = self.repository.export_preview(deck_id, limit)
+        return ReviewExportPreviewResponse(
+            deck_id=str(preview["deck_id"]),
+            card_count=int(preview["card_count"]),
+            cards=[ReviewExportPreviewCard(**card) for card in preview["cards"]],
+        )
 
     # ── import ────────────────────────────────────────────────────────────────
 
-    def import_notes(self, deck_id: str, content: str, fmt: str = "csv") -> dict[str, int]:
-        return self.repository.import_notes(deck_id, content, fmt)
+    def import_notes(self, deck_id: str, content: str, fmt: str = "csv") -> ReviewImportResult:
+        return ReviewImportResult(**self.repository.import_notes(deck_id, content, fmt))
 
-    def preview_import(self, deck_id: str, content: str, fmt: str = "csv") -> dict[str, object]:
-        return self.repository.preview_import(deck_id, content, fmt)
+    def preview_import(self, deck_id: str, content: str, fmt: str = "csv") -> ReviewImportPreview:
+        return ReviewImportPreview(**self.repository.preview_import(deck_id, content, fmt))
 
-    def import_apkg(self, deck_id: str, data: bytes, filename: str) -> dict[str, object]:
+    def import_apkg(self, deck_id: str, data: bytes, filename: str) -> ReviewApkgImportResult:
         """Import an Anki .apkg file. Handles cloze deletions and HTML stripping."""
 
         def strip_html(text: str) -> str:
@@ -279,53 +313,53 @@ class ReviewService:
                         anki_conn.close()
                 except sqlite3.DatabaseError as exc:
                     raise ValueError("APKG collection database is invalid") from exc
-            return {"imported": created, "skipped": skipped, "source": filename}
+            return ReviewApkgImportResult(imported=created, skipped=skipped, source=filename)
         except zipfile.BadZipFile:
             raise ValueError("File is not a valid .apkg (bad zip)")
 
     # ── sessions ──────────────────────────────────────────────────────────────
 
-    def get_session_state(self, limit: int = 20, deck_id: str | None = None) -> dict[str, object]:
+    def get_session_state(self, limit: int = 20, deck_id: str | None = None) -> ReviewSessionState:
         """Return the current session state: next card and queue size."""
 
         queue = self.repository.get_due_cards(deck_id, limit) if deck_id else self.repository.list_cards()[:limit]
         if queue:
             top = queue[0]
-            return {
-                "state": "active",
-                "interval": top.interval or 1,
-                "last_rating": top.last_rating,
-                "card": {"id": top.id, "front": top.front, "back": top.back},
-                "queue_size": len(queue),
-            }
-        return {"queue_size": 0}
+            return ReviewSessionState(
+                state="active",
+                interval=top.interval or 1,
+                last_rating=top.last_rating,
+                card=ReviewSessionStateCard(id=top.id, front=top.front, back=top.back),
+                queue_size=len(queue),
+            )
+        return ReviewSessionState(queue_size=0)
 
-    def start_session(self, limit: int = 20, deck_id: str | None = None) -> dict[str, object]:
+    def start_session(self, limit: int = 20, deck_id: str | None = None) -> ReviewSessionStart:
         """Start a review session and return the initial queue."""
 
         if deck_id and self.repository.get_deck(deck_id):
             self.repository.start_session(deck_id)
         queue = self.repository.get_due_cards(deck_id, limit) if deck_id else self.repository.list_cards()[:limit]
-        return {
-            "count": len(queue),
-            "cards": [
-                {
-                    "id": c.id,
-                    "deck_id": c.deck_id,
-                    "front": c.front,
-                    "state": "active",
-                    "next_review_at": str(c.next_review_at) if c.next_review_at else None,
-                }
+        return ReviewSessionStart(
+            count=len(queue),
+            cards=[
+                ReviewSessionQueueCard(
+                    id=c.id,
+                    deck_id=c.deck_id,
+                    front=c.front,
+                    state="active",
+                    next_review_at=str(c.next_review_at) if c.next_review_at else None,
+                )
                 for c in queue
             ],
-        }
+        )
 
-    def start_deck_session(self, deck_id: str, limit: int = 20) -> dict[str, object]:
+    def start_deck_session(self, deck_id: str, limit: int = 20) -> ReviewSessionStart:
         """Start a deck-specific session."""
 
         return self.start_session(limit=limit, deck_id=deck_id)
 
-    def answer_card_for_deck(self, deck_id: str, card_id: str, rating_label: str) -> dict[str, object]:
+    def answer_card_for_deck(self, deck_id: str, card_id: str, rating_label: str) -> ReviewAnswerResponse:
         """Answer a card within a deck session. Ends session when queue empties."""
 
         result = self.answer_card(card_id, rating_label, deck_id=deck_id)
@@ -334,14 +368,14 @@ class ReviewService:
             self.repository.end_session(deck_id)
         return result
 
-    def end_session(self, deck_id: str) -> dict[str, object]:
+    def end_session(self, deck_id: str) -> ReviewSessionEndResponse:
         """Explicitly close the active session for a deck."""
 
         session_id = self.repository.end_session(deck_id)
-        return {"ok": True, "session_log_id": session_id}
+        return ReviewSessionEndResponse(ok=True, session_log_id=session_id)
 
     def log_session(self, deck_id: str, ratings_summary: dict[str, int]) -> dict[str, object]:
         return self.repository.log_session(deck_id, ratings_summary)
 
-    def get_history(self, limit: int = 20) -> dict[str, object]:
-        return {"items": self.repository.get_history(limit)}
+    def get_history(self, limit: int = 20) -> ReviewHistoryResponse:
+        return ReviewHistoryResponse(items=[ReviewHistoryItem(**item) for item in self.repository.get_history(limit)])

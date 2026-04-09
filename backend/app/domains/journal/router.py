@@ -16,14 +16,19 @@ from app.domains.journal.schemas import (
     JournalEntryCreate,
     JournalEntryPatch,
     JournalEntryRead,
+    JournalGraphResponse,
     JournalPromptResponse,
     JournalSearchResult,
+    JournalTemplateApplyResponse,
     JournalTemplate,
     JournalTemplateCreate,
+    JournalTemplateDeleteResponse,
     JournalTemplatePatch,
+    JournalTranscriptResponse,
     JournalToCardIn,
     JournalVersionDetail,
     JournalVersionSummary,
+    JournalExportTodayResponse,
 )
 from app.domains.journal.service import JournalService
 from app.middleware.auth_scopes import require_scope
@@ -192,16 +197,16 @@ async def journal_to_card(payload: JournalToCardIn, db_path: str = Depends(_db_p
 
 # ── transcribe ────────────────────────────────────────────────────────────────
 
-@router.post("/transcribe", dependencies=[Depends(require_scope("write:journal"))])
-async def transcribe_audio(file: UploadFile = File(...), lang: str = Query(default="en-US")) -> dict:
+@router.post("/transcribe", response_model=JournalTranscriptResponse, dependencies=[Depends(require_scope("write:journal"))])
+async def transcribe_audio(file: UploadFile = File(...), lang: str = Query(default="en-US")) -> JournalTranscriptResponse:
     result = transcribe_upload(file, lang=lang)
-    return {"transcript": result.transcript}
+    return JournalTranscriptResponse(transcript=result.transcript)
 
 
 # ── graph / backlinks ─────────────────────────────────────────────────────────
 
-@router.get("/graph", response_model=dict[str, list[dict[str, object]]], dependencies=[Depends(require_scope("read:journal"))])
-async def graph_data(svc: JournalService = Depends(_svc)) -> dict[str, list[dict[str, object]]]:
+@router.get("/graph", response_model=JournalGraphResponse, dependencies=[Depends(require_scope("read:journal"))])
+async def graph_data(svc: JournalService = Depends(_svc)) -> JournalGraphResponse:
     return svc.get_graph_data()
 
 
@@ -222,9 +227,9 @@ async def trigger_backup(date: str | None = Query(default=None), svc: JournalSer
     return svc.trigger_backup(date=date)
 
 
-@router.post("/export-today", dependencies=[Depends(require_scope("write:journal"))])
-async def export_today(svc: JournalService = Depends(_svc)) -> dict:
-    return svc.export_today()
+@router.post("/export-today", response_model=JournalExportTodayResponse, dependencies=[Depends(require_scope("write:journal"))])
+async def export_today(svc: JournalService = Depends(_svc)) -> JournalExportTodayResponse:
+    return JournalExportTodayResponse(**svc.export_today())
 
 
 # ── templates ─────────────────────────────────────────────────────────────────
@@ -255,17 +260,17 @@ async def update_template(template_id: str, payload: JournalTemplatePatch, svc: 
     return tpl
 
 
-@router.delete("/templates/{template_id}", dependencies=[Depends(require_scope("write:journal"))])
-async def delete_template(template_id: str, svc: JournalService = Depends(_svc)) -> dict:
+@router.delete("/templates/{template_id}", response_model=JournalTemplateDeleteResponse, dependencies=[Depends(require_scope("write:journal"))])
+async def delete_template(template_id: str, svc: JournalService = Depends(_svc)) -> JournalTemplateDeleteResponse:
     deleted = svc.delete_template(template_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Template not found")
-    return {"deleted": True, "id": template_id}
+    return JournalTemplateDeleteResponse(deleted=True, id=template_id)
 
 
-@router.post("/templates/{template_id}/apply", response_model=dict[str, object], dependencies=[Depends(require_scope("write:journal"))])
-async def apply_template(template_id: str, svc: JournalService = Depends(_svc)) -> dict[str, object]:
+@router.post("/templates/{template_id}/apply", response_model=JournalTemplateApplyResponse, dependencies=[Depends(require_scope("write:journal"))])
+async def apply_template(template_id: str, svc: JournalService = Depends(_svc)) -> JournalTemplateApplyResponse:
     tpl = svc.get_template(template_id)
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
-    return {"body": tpl.body, "tags": tpl.tags}
+    return JournalTemplateApplyResponse(body=tpl.body, tags=tpl.tags)

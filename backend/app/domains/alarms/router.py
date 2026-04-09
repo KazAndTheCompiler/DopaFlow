@@ -17,7 +17,14 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.alarms.repository import AlarmsRepository
-from app.domains.alarms.schemas import AlarmCreate, AlarmRead, AlarmSchedulerStatus, AlarmTriggerResponse
+from app.domains.alarms.schemas import (
+    AlarmCreate,
+    AlarmDeleteResponse,
+    AlarmRead,
+    AlarmSchedulerStatus,
+    AlarmTriggerResponse,
+    AlarmUrlResolution,
+)
 from app.domains.alarms.service import AlarmsService
 from app.middleware.auth_scopes import require_scope
 
@@ -37,11 +44,11 @@ async def list_alarms(svc: AlarmsService = Depends(_svc)) -> list[AlarmRead]:
     return svc.list_alarms()
 
 
-@router.post("/resolve-url", response_model=dict[str, object], dependencies=[Depends(require_scope("write:alarms"))])
+@router.post("/resolve-url", response_model=AlarmUrlResolution, dependencies=[Depends(require_scope("write:alarms"))])
 def resolve_alarm_url(
     youtube_url: str = "",
     url: str = "",
-) -> dict[str, object]:
+) -> AlarmUrlResolution:
     """Resolve a YouTube URL to a direct audio stream URL for alarm playback."""
     from app.domains.player.service import PlayerService
     target = youtube_url or url
@@ -82,13 +89,13 @@ async def update_alarm(identifier: str, patch: dict, svc: AlarmsService = Depend
     return alarm
 
 
-@router.delete("/{identifier}", response_model=dict, dependencies=[Depends(require_scope("write:alarms"))])
-async def delete_alarm(identifier: str, svc: AlarmsService = Depends(_svc)) -> dict:
+@router.delete("/{identifier}", response_model=AlarmDeleteResponse, dependencies=[Depends(require_scope("write:alarms"))])
+async def delete_alarm(identifier: str, svc: AlarmsService = Depends(_svc)) -> AlarmDeleteResponse:
     """Delete an alarm."""
 
     if not svc.delete_alarm(identifier):
         raise HTTPException(status_code=404, detail="Alarm not found")
-    return {"deleted": True}
+    return AlarmDeleteResponse(deleted=True)
 
 
 @router.post("/{identifier}/trigger", response_model=AlarmTriggerResponse, dependencies=[Depends(require_scope("write:alarms"))])

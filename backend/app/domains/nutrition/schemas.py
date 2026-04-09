@@ -53,3 +53,52 @@ class DailyTotals(BaseModel):
     total_carbs_g: float
     total_fat_g: float
     entries: list[FoodItemRead]
+
+
+class NutritionMealSummary(BaseModel):
+    entries: list[FoodItemRead]
+    kj_total: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+
+
+class NutritionLogResponse(BaseModel):
+    date: str
+    entries: list[FoodItemRead]
+    total_kj: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+    by_meal: dict[str, NutritionMealSummary]
+
+
+class NutritionMonthDay(BaseModel):
+    date: str
+    total_kj: float
+
+
+class NutritionMonthlyResponse(BaseModel):
+    month: str
+    days: list[NutritionMonthDay]
+    total_kj: float
+
+
+class NutritionGoalProgress(BaseModel):
+    daily_kj: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+
+
+class NutritionSummaryResponse(BaseModel):
+    date: str
+    total_kj: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+    goal_progress: NutritionGoalProgress
+
+
+class NutritionDeleteResponse(BaseModel):
+    deleted: bool

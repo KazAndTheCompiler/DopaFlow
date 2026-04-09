@@ -65,7 +65,9 @@ def test_import_apkg_creates_cards_from_generated_package(db_path) -> None:
     result = svc.import_apkg(deck["id"], apkg_bytes, "fixture.apkg")
     cards = repo.search_cards(deck["id"], limit=10)
 
-    assert result == {"imported": 2, "skipped": 1, "source": "fixture.apkg"}
+    assert result.imported == 2
+    assert result.skipped == 1
+    assert result.source == "fixture.apkg"
     assert sorted(card["front"] for card in cards) == [
         "What is dopamine?",
         "[...] helps protect focus blocks",
@@ -141,6 +143,73 @@ def test_patch_nonexistent_card_returns_404(client) -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_review_search_and_session_routes_return_typed_contracts(client) -> None:
+    deck_response = client.post("/api/v2/review/decks", json={"name": "Typed Deck"})
+    assert deck_response.status_code == 200
+    deck = deck_response.json()
+    deck_id = deck["id"]
+    assert set(deck) >= {"id", "name", "source_type"}
+
+    card_response = client.post(
+        "/api/v2/review/decks/{deck_id}/cards".format(deck_id=deck_id),
+        json={"front": "Typed front", "back": "Typed back", "tags": ["ts"], "source": "manual"},
+    )
+    assert card_response.status_code == 200
+    card_id = card_response.json()["id"]
+
+    search_response = client.get(f"/api/v2/review/decks/{deck_id}/cards/search", params={"q": "Typed"})
+    assert search_response.status_code == 200
+    search_payload = search_response.json()
+    assert search_payload["limit"] == 50
+    assert search_payload["items"][0]["card_id"] == card_id
+
+    session_response = client.get("/api/v2/review/session", params={"deck_id": deck_id})
+    assert session_response.status_code == 200
+    session_payload = session_response.json()
+    assert session_payload["queue_size"] >= 1
+    assert session_payload["card"]["id"] == card_id
+
+    answer_response = client.post(
+        "/api/v2/review/session/{deck_id}/answer".format(deck_id=deck_id),
+        params={"card_id": card_id, "rating": "good"},
+    )
+    assert answer_response.status_code == 200
+    answer_payload = answer_response.json()
+    assert answer_payload["session"]["last_rating"] == "good"
+    assert answer_payload["card"]["id"] == card_id
+
+
+def test_review_bulk_and_export_preview_routes_return_typed_contracts(client) -> None:
+    deck_response = client.post("/api/v2/review/decks", json={"name": "Preview Deck"})
+    assert deck_response.status_code == 200
+    deck_id = deck_response.json()["id"]
+
+    first_card = client.post(
+        f"/api/v2/review/decks/{deck_id}/cards",
+        json={"front": "Front one", "back": "Back one", "tags": ["alpha"], "source": "manual"},
+    )
+    second_card = client.post(
+        f"/api/v2/review/decks/{deck_id}/cards",
+        json={"front": "Front two", "back": "Back two", "tags": ["beta"], "source": "manual"},
+    )
+    assert first_card.status_code == 200
+    assert second_card.status_code == 200
+
+    bulk_response = client.post(
+        f"/api/v2/review/decks/{deck_id}/cards/bulk",
+        json={"ids": [first_card.json()["id"], second_card.json()["id"]], "action": "suspend"},
+    )
+    assert bulk_response.status_code == 200
+    assert bulk_response.json()["affected"] == 2
+
+    preview_response = client.get("/api/v2/review/export-preview", params={"deck_id": deck_id, "limit": 10})
+    assert preview_response.status_code == 200
+    preview_body = preview_response.json()
+    assert preview_body["deck_id"] == deck_id
+    assert preview_body["card_count"] == 2
+    assert isinstance(preview_body["cards"][0]["tags"], list)
 
 
 def test_sm2_rating_sequence_easy_increases_interval(db_path) -> None:
