@@ -9,6 +9,15 @@ from typing import Any
 
 from app.core.database import get_db, tx
 from app.core.id_gen import task_id
+from app.domains.tasks.schemas import (
+    CreatedCountResponse,
+    SubTask,
+    Task,
+    TaskContext,
+    TaskDependency,
+    TaskTemplate,
+    TaskTimeLog,
+)
 
 
 def _iso_now() -> str:
@@ -29,7 +38,20 @@ def _add_months(base: datetime, months: int) -> datetime:
     month_index = base.month - 1 + months
     year = base.year + month_index // 12
     month = month_index % 12 + 1
-    month_lengths = [31, 29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    month_lengths = [
+        31,
+        29 if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0) else 28,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ]
     day = min(base.day, month_lengths[month - 1])
     return base.replace(year=year, month=month, day=day)
 
@@ -49,31 +71,31 @@ def _weekday_index(code: str) -> int | None:
     return mapping.get(code)
 
 
-def _row_to_task(row) -> dict[str, Any]:
+def _row_to_task(row) -> Task:
     """Convert a SQLite row into the v2 task payload shape."""
 
-    return {
-        "id": row["id"],
-        "title": row["title"],
-        "description": row["description"],
-        "due_at": row["due_at"],
-        "priority": row["priority"],
-        "status": row["status"],
-        "done": bool(row["done"]),
-        "estimated_minutes": row["estimated_minutes"],
-        "actual_minutes": row["actual_minutes"],
-        "recurrence_rule": row["recurrence_rule"],
-        "recurrence_parent_id": row["recurrence_parent_id"],
-        "sort_order": row["sort_order"],
-        "subtasks": json.loads(row["subtasks_json"] or "[]"),
-        "tags": json.loads(row["tags_json"] or "[]"),
-        "source_type": row["source_type"],
-        "source_external_id": row["source_external_id"],
-        "source_instance_id": row["source_instance_id"],
-        "project_id": row["project_id"] if "project_id" in row.keys() else None,
-        "created_at": row["created_at"],
-        "updated_at": row["updated_at"],
-    }
+    return Task(
+        id=row["id"],
+        title=row["title"],
+        description=row["description"],
+        due_at=row["due_at"],
+        priority=row["priority"],
+        status=row["status"],
+        done=bool(row["done"]),
+        estimated_minutes=row["estimated_minutes"],
+        actual_minutes=row["actual_minutes"],
+        recurrence_rule=row["recurrence_rule"],
+        recurrence_parent_id=row["recurrence_parent_id"],
+        sort_order=row["sort_order"],
+        subtasks=json.loads(row["subtasks_json"] or "[]"),
+        tags=json.loads(row["tags_json"] or "[]"),
+        source_type=row["source_type"],
+        source_external_id=row["source_external_id"],
+        source_instance_id=row["source_instance_id"],
+        project_id=row["project_id"] if "project_id" in row.keys() else None,
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
 
 
 def _fetch_deps(c, task_ids: list[str]) -> dict[str, list[dict[str, str]]]:
@@ -93,11 +115,13 @@ def _fetch_deps(c, task_ids: list[str]) -> dict[str, list[dict[str, str]]]:
     ).fetchall()
     grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in rows:
-        grouped[row["task_id"]].append({"id": row["depends_on_id"], "title": row["title"]})
+        grouped[row["task_id"]].append(
+            {"id": row["depends_on_id"], "title": row["title"]}
+        )
     return grouped
 
 
-def create_task(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
+def create_task(db_path: str, payload: dict[str, Any]) -> Task:
     """Insert a task row and return the created task."""
 
     identifier = payload.get("id") or task_id()
@@ -155,19 +179,24 @@ def create_task(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
     return created
 
 
-def get_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
+def get_task(db_path: str, task_identifier: str) -> Task | None:
     """Return a task by internal ID."""
 
     with get_db(db_path) as conn:
-        row = conn.execute("SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL", (task_identifier,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL",
+            (task_identifier,),
+        ).fetchone()
         if row is None:
             return None
         task = _row_to_task(row)
-        task["dependencies"] = _fetch_deps(conn, [task_identifier]).get(task_identifier, [])
+        deps = _fetch_deps(conn, [task_identifier]).get(task_identifier, [])
+        if deps:
+            task.dependencies = [Task.model_validate(d) for d in deps]
         return task
 
 
-def get_task_by_source_id(db_path: str, source_external_id: str) -> dict[str, Any] | None:
+def get_task_by_source_id(db_path: str, source_external_id: str) -> Task | None:
     """Return a task by external provider ID."""
 
     with get_db(db_path) as conn:
@@ -189,7 +218,7 @@ def list_tasks(
     limit: int | None = None,
     offset: int | None = None,
     sort_by: str = "default",
-) -> list[dict[str, Any]]:
+) -> list[Task]:
     """List tasks with common filters used by Today and Tasks views."""
 
     sql = "SELECT * FROM tasks WHERE deleted_at IS NULL"
@@ -236,19 +265,30 @@ def list_tasks(
         tasks = []
         for row in rows:
             task = _row_to_task(row)
-            task["dependencies"] = deps.get(row["id"], [])
+            task_deps = deps.get(row["id"], [])
+            if task_deps:
+                task.dependencies = [
+                    TaskDependency.model_validate(d) for d in task_deps
+                ]
             tasks.append(task)
         return tasks
 
 
-def update_task(db_path: str, task_identifier: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+def update_task(
+    db_path: str, task_identifier: str, payload: dict[str, Any]
+) -> Task | None:
     """Patch task columns using the keys provided."""
 
     current = get_task(db_path, task_identifier)
     if current is None:
         return None
-    merged = {**current, **{key: value for key, value in payload.items() if value is not None}}
+    merged = {
+        **current.model_dump(),
+        **{key: value for key, value in payload.items() if value is not None},
+    }
     merged["updated_at"] = _iso_now()
+    subtasks_val = merged.get("subtasks", [])
+    tags_val = merged.get("tags", [])
     with tx(db_path) as conn:
         conn.execute(
             """
@@ -271,8 +311,13 @@ def update_task(db_path: str, task_identifier: str, payload: dict[str, Any]) -> 
                 merged.get("recurrence_rule"),
                 merged.get("recurrence_parent_id"),
                 merged.get("sort_order", 0),
-                json.dumps(merged.get("subtasks", [])),
-                json.dumps(merged.get("tags", [])),
+                json.dumps(
+                    [
+                        s.model_dump() if hasattr(s, "model_dump") else s
+                        for s in subtasks_val
+                    ]
+                ),
+                json.dumps(tags_val),
                 merged.get("source_type"),
                 merged.get("source_external_id"),
                 merged.get("source_instance_id"),
@@ -308,14 +353,18 @@ def _next_due_from_rule(rule: str, current_due_at: str | None) -> str | None:
     if freq == "WEEKLY":
         byday = [token for token in parts.get("BYDAY", "").split(",") if token]
         if byday:
-            weekdays = sorted(index for token in byday if (index := _weekday_index(token)) is not None)
+            weekdays = sorted(
+                index for token in byday if (index := _weekday_index(token)) is not None
+            )
             if weekdays:
                 for weekday in weekdays:
                     delta = (weekday - base.weekday()) % 7
                     if delta == 0:
                         continue
                     return (base + timedelta(days=delta)).isoformat()
-                return (base + timedelta(days=((weekdays[0] - base.weekday()) % 7 or 7))).isoformat()
+                return (
+                    base + timedelta(days=((weekdays[0] - base.weekday()) % 7 or 7))
+                ).isoformat()
         return (base + timedelta(days=7)).isoformat()
     if freq == "MONTHLY":
         return _add_months(base, 1).isoformat()
@@ -339,13 +388,13 @@ def _recurring_instance_exists(conn, parent_id: str, due_at: str) -> bool:
     return row is not None
 
 
-def uncomplete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
+def uncomplete_task(db_path: str, task_identifier: str) -> Task | None:
     """Re-open a completed task."""
 
     return update_task(db_path, task_identifier, {"done": False, "status": "todo"})
 
 
-def complete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
+def complete_task(db_path: str, task_identifier: str) -> Task | None:
     """Mark a task complete and spawn the next recurring instance when applicable."""
     current = get_task(db_path, task_identifier)
     if current is None:
@@ -354,68 +403,75 @@ def complete_task(db_path: str, task_identifier: str) -> dict[str, Any] | None:
     task = update_task(
         db_path,
         task_identifier,
-        {"done": True, "status": "done", "actual_minutes": current.get("actual_minutes")},
+        {
+            "done": True,
+            "status": "done",
+            "actual_minutes": current.actual_minutes,
+        },
     )
-    if task is None or not task.get("recurrence_rule"):
+    if task is None or not task.recurrence_rule:
         return task
 
-    next_due = _next_due_from_rule(task["recurrence_rule"], task.get("due_at"))
+    next_due = _next_due_from_rule(task.recurrence_rule, task.due_at)
     if not next_due:
         return task
 
     with get_db(db_path) as conn:
-        if _recurring_instance_exists(conn, task["id"], next_due):
+        if _recurring_instance_exists(conn, task.id, next_due):
             return task
 
     create_task(
         db_path,
         {
-            "title": task["title"],
-            "description": task.get("description"),
+            "title": task.title,
+            "description": task.description,
             "due_at": next_due,
-            "priority": task.get("priority", 3),
-            "estimated_minutes": task.get("estimated_minutes"),
-            "tags": task.get("tags", []),
+            "priority": task.priority,
+            "estimated_minutes": task.estimated_minutes,
+            "tags": task.tags,
             "subtasks": [],
-            "recurrence_rule": task.get("recurrence_rule"),
-            "recurrence_parent_id": task["id"],
+            "recurrence_rule": task.recurrence_rule,
+            "recurrence_parent_id": task.id,
         },
     )
     return task
 
 
-def add_subtask(db_path: str, task_identifier: str, title: str) -> dict[str, Any] | None:
+def add_subtask(db_path: str, task_identifier: str, title: str) -> Task | None:
     """Append a subtask into the subtasks JSON array."""
 
     task = get_task(db_path, task_identifier)
     if task is None:
         return None
-    subtasks = list(task.get("subtasks", []))
-    subtasks.append({"id": task_id(), "title": title, "done": False})
+    subtasks = list(task.subtasks)
+    subtasks.append(SubTask(id=task_id(), title=title, done=False))
     return update_task(db_path, task_identifier, {"subtasks": subtasks})
 
 
-def patch_subtask(db_path: str, task_identifier: str, subtask_id: str, done: bool) -> dict[str, Any] | None:
+def patch_subtask(
+    db_path: str, task_identifier: str, subtask_id: str, done: bool
+) -> Task | None:
     """Patch the done state for a subtask."""
 
     task = get_task(db_path, task_identifier)
     if task is None:
         return None
     subtasks = []
-    for subtask in task.get("subtasks", []):
-        if subtask["id"] == subtask_id:
-            subtask = {**subtask, "done": done}
-        subtasks.append(subtask)
+    for subtask in task.subtasks:
+        if subtask.id == subtask_id:
+            subtasks.append(SubTask(id=subtask.id, title=subtask.title, done=done))
+        else:
+            subtasks.append(subtask)
     return update_task(db_path, task_identifier, {"subtasks": subtasks})
 
 
-def delete_subtask(db_path: str, task_identifier: str, subtask_id: str) -> dict[str, Any] | None:
+def delete_subtask(db_path: str, task_identifier: str, subtask_id: str) -> Task | None:
     """Remove a subtask from the JSON array."""
 
     task = get_task(db_path, task_identifier)
     if task is None:
         return None
-    subtasks = [subtask for subtask in task.get("subtasks", []) if subtask["id"] != subtask_id]
+    subtasks = [subtask for subtask in task.subtasks if subtask.id != subtask_id]
     return update_task(db_path, task_identifier, {"subtasks": subtasks})
 
 
@@ -482,7 +538,7 @@ def bulk_delete(db_path: str, ids: list[str]) -> int:
     return count
 
 
-def start_time_log(db_path: str, task_identifier: str) -> dict[str, Any]:
+def start_time_log(db_path: str, task_identifier: str) -> TaskTimeLog:
     """Start a task time log entry."""
 
     log_identifier = task_id()
@@ -492,10 +548,12 @@ def start_time_log(db_path: str, task_identifier: str) -> dict[str, Any]:
             "INSERT INTO task_time_log (id, task_id, started_at) VALUES (?, ?, ?)",
             (log_identifier, task_identifier, started_at),
         )
-    return {"id": log_identifier, "task_id": task_identifier, "started_at": started_at}
+    return TaskTimeLog(
+        id=log_identifier, task_id=task_identifier, started_at=started_at
+    )
 
 
-def stop_time_log(db_path: str, task_identifier: str) -> dict[str, Any] | None:
+def stop_time_log(db_path: str, task_identifier: str) -> TaskTimeLog | None:
     """Close the most recent open time log."""
 
     with tx(db_path) as conn:
@@ -516,10 +574,15 @@ def stop_time_log(db_path: str, task_identifier: str) -> dict[str, Any] | None:
             "UPDATE task_time_log SET ended_at = ?, duration_m = ? WHERE id = ?",
             (ended_at.isoformat(), duration_m, row["id"]),
         )
-        return {"id": row["id"], "task_id": task_identifier, "ended_at": ended_at.isoformat(), "duration_m": duration_m}
+        return TaskTimeLog(
+            id=row["id"],
+            task_id=task_identifier,
+            ended_at=ended_at.isoformat(),
+            duration_m=duration_m,
+        )
 
 
-def list_time_logs(db_path: str, task_identifier: str) -> list[dict[str, Any]]:
+def list_time_logs(db_path: str, task_identifier: str) -> list[TaskTimeLog]:
     """Return time logs for a task."""
 
     with get_db(db_path) as conn:
@@ -527,50 +590,70 @@ def list_time_logs(db_path: str, task_identifier: str) -> list[dict[str, Any]]:
             "SELECT * FROM task_time_log WHERE task_id = ? ORDER BY started_at DESC",
             (task_identifier,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [
+            TaskTimeLog(
+                id=row["id"],
+                task_id=row["task_id"],
+                started_at=row["started_at"],
+                ended_at=row["ended_at"],
+                duration_m=row["duration_m"],
+            )
+            for row in rows
+        ]
 
 
-def materialize_recurring(db_path: str, window_hours: int = 36) -> dict[str, int]:
+def materialize_recurring(db_path: str, window_hours: int = 36) -> CreatedCountResponse:
     """Create upcoming recurring instances inside the requested window."""
 
     created = 0
     window_end = datetime.now(timezone.utc) + timedelta(hours=window_hours)
     for task in list_tasks(db_path, done=True):
-        rule = task.get("recurrence_rule")
+        rule = task.recurrence_rule
         if not rule:
             continue
-        next_due = _next_due_from_rule(rule, task.get("due_at"))
+        next_due = _next_due_from_rule(rule, task.due_at)
         if next_due and (_parse_dt(next_due) or window_end) <= window_end:
             with get_db(db_path) as conn:
-                if _recurring_instance_exists(conn, task["id"], next_due):
+                if _recurring_instance_exists(conn, task.id, next_due):
                     continue
                 create_task(
-                db_path,
-                {
-                    "title": task["title"],
-                    "description": task.get("description"),
-                    "due_at": next_due,
-                    "priority": task.get("priority", 3),
-                    "estimated_minutes": task.get("estimated_minutes"),
-                    "tags": task.get("tags", []),
-                    "subtasks": [],
-                    "recurrence_rule": rule,
-                    "recurrence_parent_id": task["id"],
-                },
+                    db_path,
+                    {
+                        "title": task.title,
+                        "description": task.description,
+                        "due_at": next_due,
+                        "priority": task.priority,
+                        "estimated_minutes": task.estimated_minutes,
+                        "tags": task.tags,
+                        "subtasks": [],
+                        "recurrence_rule": rule,
+                        "recurrence_parent_id": task.id,
+                    },
                 )
                 created += 1
-    return {"created": created}
+    return CreatedCountResponse(created=created)
 
 
-def list_templates(db_path: str) -> list[dict[str, Any]]:
+def list_templates(db_path: str) -> list[TaskTemplate]:
     """Return task templates."""
 
     with get_db(db_path) as conn:
         rows = conn.execute("SELECT * FROM task_templates ORDER BY name ASC").fetchall()
-        return [dict(row) | {"tags": json.loads(row["tags_json"] or "[]")} for row in rows]
+        return [
+            TaskTemplate(
+                id=row["id"],
+                name=row["name"],
+                title=row["title"],
+                priority=row["priority"],
+                tags=json.loads(row["tags_json"] or "[]"),
+                estimated_minutes=row["estimated_minutes"],
+                recurrence_rule=row["recurrence_rule"],
+            )
+            for row in rows
+        ]
 
 
-def create_template(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
+def create_template(db_path: str, payload: dict[str, Any]) -> TaskTemplate:
     """Create a task template row."""
 
     identifier = payload.get("id") or task_id()
@@ -590,7 +673,15 @@ def create_template(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("recurrence_rule"),
             ),
         )
-    return {"id": identifier, **payload}
+    return TaskTemplate(
+        id=identifier,
+        name=payload["name"],
+        title=payload["title"],
+        priority=payload.get("priority", 3),
+        tags=payload.get("tags", []),
+        estimated_minutes=payload.get("estimated_minutes"),
+        recurrence_rule=payload.get("recurrence_rule"),
+    )
 
 
 def delete_template(db_path: str, template_id: str) -> bool:
@@ -601,11 +692,13 @@ def delete_template(db_path: str, template_id: str) -> bool:
         return result.rowcount > 0
 
 
-def create_from_template(db_path: str, template_id: str) -> dict[str, Any] | None:
+def create_from_template(db_path: str, template_id: str) -> Task | None:
     """Instantiate a task from a saved template."""
 
     with get_db(db_path) as conn:
-        row = conn.execute("SELECT * FROM task_templates WHERE id = ?", (template_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM task_templates WHERE id = ?", (template_id,)
+        ).fetchone()
         if row is None:
             return None
         return create_task(
@@ -620,13 +713,20 @@ def create_from_template(db_path: str, template_id: str) -> dict[str, Any] | Non
         )
 
 
-def get_task_context(db_path: str, task_identifier: str) -> dict[str, Any]:
+def get_task_context(db_path: str, task_identifier: str) -> TaskContext:
     """Return lightweight cross-domain context for a task."""
 
     with get_db(db_path) as conn:
-        task = conn.execute("SELECT updated_at FROM tasks WHERE id = ?", (task_identifier,)).fetchone()
+        task = conn.execute(
+            "SELECT updated_at FROM tasks WHERE id = ?", (task_identifier,)
+        ).fetchone()
         if task is None:
-            return {"last_touched_days_ago": None, "focus_sessions": 0, "focus_minutes_total": 0, "journal_connections": 0}
+            return TaskContext(
+                last_touched_days_ago=None,
+                focus_sessions=0,
+                focus_minutes_total=0,
+                journal_connections=0,
+            )
         updated_at = _parse_dt(task["updated_at"]) or datetime.now(timezone.utc)
         focus = conn.execute(
             "SELECT COUNT(*) AS sessions, COALESCE(SUM(duration_minutes), 0) AS minutes FROM focus_sessions WHERE task_id = ?",
@@ -639,9 +739,9 @@ def get_task_context(db_path: str, task_identifier: str) -> dict[str, Any]:
             """,
             (f"%{task_identifier.lower()}%",),
         ).fetchone()
-        return {
-            "last_touched_days_ago": (datetime.now(timezone.utc) - updated_at).days,
-            "focus_sessions": int(focus["sessions"]),
-            "focus_minutes_total": int(focus["minutes"]),
-            "journal_connections": int(journal[0]),
-        }
+        return TaskContext(
+            last_touched_days_ago=(datetime.now(timezone.utc) - updated_at).days,
+            focus_sessions=int(focus["sessions"]),
+            focus_minutes_total=int(focus["minutes"]),
+            journal_connections=int(journal[0]),
+        )

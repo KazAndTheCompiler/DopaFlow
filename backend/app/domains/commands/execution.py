@@ -126,7 +126,7 @@ def execute_single(
             if recurrence_rule:
                 task_payload["recurrence_rule"] = recurrence_rule
             result = task_repo.create_task(db_path, task_payload)
-            undo_result = {"id": result["id"], "title": result.get("title", "")}
+            undo_result = {"id": result.id, "title": result.title}
             CommandRepository.add_log(
                 db_path, text, intent, "executed", source=source, result=undo_result
             )
@@ -137,16 +137,17 @@ def execute_single(
 
             query = (extracted.get("query") or "").strip().lower()
             open_tasks = task_repo.list_tasks(db_path, done=False)
+            open_tasks_dicts = [t.model_dump() for t in open_tasks]
             exact_matches = [
                 task
                 for task in open_tasks
-                if query and query in (task.get("title") or "").lower()
+                if query and query in (task.title or "").lower()
             ]
 
             if len(exact_matches) == 1:
                 match = exact_matches[0]
-                result = task_repo.complete_task(db_path, match["id"])
-                undo_result = {"id": match["id"], "title": match.get("title", "")}
+                result = task_repo.complete_task(db_path, match.id)
+                undo_result = {"id": match.id, "title": match.title}
                 CommandRepository.add_log(
                     db_path, text, intent, "executed", source=source, result=undo_result
                 )
@@ -155,10 +156,10 @@ def execute_single(
                     intent,
                     parsed,
                     result=result,
-                    reply=f'Checked off: "{match.get("title", "")}".',
+                    reply=f'Checked off: "{match.title}".',
                 )
 
-            fuzzy = nlp.fuzzy_task_match(query, open_tasks, min_score=0.35)
+            fuzzy = nlp.fuzzy_task_match(query, open_tasks_dicts, min_score=0.35)
             if len(fuzzy) == 1:
                 match = fuzzy[0]
                 result = task_repo.complete_task(db_path, match["id"])
@@ -204,7 +205,10 @@ def execute_single(
                 text,
                 intent,
                 parsed,
-                result={"tasks": tasks[:20], "total": len(tasks)},
+                result={
+                    "tasks": [t.model_dump() for t in tasks[:20]],
+                    "total": len(tasks),
+                },
                 reply=f"You have {len(tasks)} open task{'s' if len(tasks) != 1 else ''}.",
             )
 
