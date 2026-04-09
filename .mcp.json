@@ -3,11 +3,11 @@
     "dopaflow-node": {
       "command": "python3",
       "args": [
-        "/home/henry/vscode/build/dopaflow/tools/mcp/node-tooling-bridge/server.py"
+        "${DOPAFLOW_TOOLS_DIR:-./tools}/mcp/node-tooling-bridge/server.py"
       ],
       "env": {
-        "DOPAFLOW_NODE_BIN": "/home/henry/vscode/.codex-bin",
-        "DOPAFLOW_FRONTEND_DIR": "/home/henry/vscode/build/dopaflow/frontend"
+        "DOPAFLOW_NODE_BIN": "${DOPAFLOW_NODE_BIN:-.codex-bin}",
+        "DOPAFLOW_FRONTEND_DIR": "${DOPAFLOW_FRONTEND_DIR:-./frontend}"
       }
     }
   }
