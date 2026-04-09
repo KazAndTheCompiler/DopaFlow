@@ -3,8 +3,8 @@ set -euo pipefail
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
-ROOT="/home/henry/vscode/build/dopaflow"
-RELEASE_DIR="/home/henry/release"
+ROOT="${DOPAFLOW_ROOT:-$(cd "$(dirname "$0") && pwd)}"
+RELEASE_DIR="${DOPAFLOW_RELEASE_DIR:-/tmp/dopaflow-release}"
 BACKEND_RELEASE_DIR="$RELEASE_DIR/dopaflow-backend-v2"
 BACKEND_BUILD_DIR="$ROOT/backend/dist/dopaflow-backend"
 DESKTOP_BIN_NAME="dopaflow-desktop"
@@ -14,7 +14,7 @@ export DOPAFLOW_GITHUB_REPO="${DOPAFLOW_GITHUB_REPO:-dopaflow}"
 
 NODE_BIN=""
 for candidate in \
-  "/home/henry/vscode/.codex-tools/node-v20.20.2-linux-x64/bin/node" \
+  "${DOPAFLOW_NODE_BIN:-}" \
   "/home/henry/.nvm/versions/node/v20.20.1/bin/node" \
   "$(command -v node 2>/dev/null || true)"
 do

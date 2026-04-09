@@ -6,12 +6,12 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any
 
 from app.core.config import get_settings
 from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.service import GamificationService
 from app.domains.focus import repository
+from app.domains.focus.schemas import FocusStatus
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,9 @@ def _restore_from_db() -> None:
             repository.clear_active_session(db_path)
             return
         db_status = db_session.get("status", "running")
-        state.status = PomodoroStatus.paused if db_status == "paused" else PomodoroStatus.running
+        state.status = (
+            PomodoroStatus.paused if db_status == "paused" else PomodoroStatus.running
+        )
         state.duration_minutes = db_session.get("duration_minutes") or 25
         state.started_at = active.get("started_at")
         state.log_id = session_id
@@ -71,7 +73,9 @@ def _award(source: str, source_id: str | None = None) -> None:
         db = get_settings().db_path
         GamificationService(GamificationRepository(db)).award(source, source_id)
     except Exception:
-        logger.exception("Failed to award gamification for source=%s source_id=%s", source, source_id)
+        logger.exception(
+            "Failed to award gamification for source=%s source_id=%s", source, source_id
+        )
 
 
 def _now() -> datetime:
@@ -85,14 +89,20 @@ def _elapsed_seconds() -> int:
     return max(state.elapsed_seconds, int((_now() - started_at).total_seconds()))
 
 
-def start(minutes: int, task_id: str | None = None) -> dict[str, Any]:
+def start(minutes: int, task_id: str | None = None) -> FocusStatus:
     """Start a Pomodoro session."""
 
     db_path = get_settings().db_path
     reconcile_stale(db_path)
     session_id = repository.create_session(db_path, task_id, minutes)
     started_at = _now().isoformat()
-    repository.write_active_session(db_path, session_id=session_id, task_id=task_id, started_at=started_at, paused_duration_ms=0)
+    repository.write_active_session(
+        db_path,
+        session_id=session_id,
+        task_id=task_id,
+        started_at=started_at,
+        paused_duration_ms=0,
+    )
     state.status = PomodoroStatus.running
     state.duration_minutes = minutes
     state.started_at = started_at
@@ -103,7 +113,7 @@ def start(minutes: int, task_id: str | None = None) -> dict[str, Any]:
     return get_status()
 
 
-def pause() -> dict[str, Any]:
+def pause() -> FocusStatus:
     """Pause the active Pomodoro."""
 
     _restore_from_db()
@@ -116,7 +126,7 @@ def pause() -> dict[str, Any]:
     return get_status()
 
 
-def resume() -> dict[str, Any]:
+def resume() -> FocusStatus:
     """Resume the active Pomodoro."""
 
     _restore_from_db()
@@ -134,7 +144,7 @@ def resume() -> dict[str, Any]:
     return get_status()
 
 
-def stop() -> dict[str, Any]:
+def stop() -> FocusStatus:
     """Stop the active Pomodoro without marking it complete."""
 
     _restore_from_db()
@@ -146,7 +156,7 @@ def stop() -> dict[str, Any]:
     return get_status()
 
 
-def complete() -> dict[str, Any]:
+def complete() -> FocusStatus:
     """Complete the active Pomodoro."""
 
     _restore_from_db()
@@ -160,18 +170,18 @@ def complete() -> dict[str, Any]:
     return get_status()
 
 
-def get_status() -> dict[str, Any]:
+def get_status() -> FocusStatus:
     """Return the current in-memory Pomodoro state."""
 
-    return {
-        "status": state.status.value,
-        "duration_minutes": state.duration_minutes,
-        "started_at": state.started_at,
-        "paused_at": state.paused_at,
-        "elapsed_seconds": _elapsed_seconds(),
-        "log_id": state.log_id,
-        "task_id": state.task_id,
-    }
+    return FocusStatus(
+        status=state.status.value,
+        duration_minutes=state.duration_minutes,
+        started_at=state.started_at,
+        paused_at=state.paused_at,
+        elapsed_seconds=_elapsed_seconds(),
+        log_id=state.log_id,
+        task_id=state.task_id,
+    )
 
 
 def reconcile_stale(db_path: str) -> None:

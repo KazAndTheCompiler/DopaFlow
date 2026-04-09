@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/henry/vscode/build/dopaflow"
+ROOT="${DOPAFLOW_ROOT:-$(cd "$(dirname "$0")/../.. && pwd)}"
 FRONTEND_DIR="$ROOT/frontend"
-BACKEND_RELEASE_DIR="$ROOT/release/dopaflow-backend-v2"
+BACKEND_RELEASE_DIR="${DOPAFLOW_BACKEND_RELEASE_DIR:-$ROOT/release/dopaflow-backend-v2}"
 BACKEND_SOURCE_DIR="$ROOT/backend"
 BACKEND_VENV_PYTHON="$ROOT/.venv/bin/python"
-RELEASE_ROOT="${1:-/home/henry/release/DopaFlow-2.0.11-web}"
+RELEASE_ROOT="${1:-${DOPAFLOW_RELEASE_ROOT:-/tmp/dopaflow-release}}"
 RELEASE_FRONTEND_DIR="$RELEASE_ROOT/frontend"
 STATE_DIR="$RELEASE_ROOT/runtime-state"
 BACKEND_LOG="$STATE_DIR/backend.log"
 FRONTEND_LOG="$STATE_DIR/frontend.log"
 
-export PATH="/home/henry/vscode/.codex-bin:$PATH"
+export PATH="${DOPAFLOW_NODE_BIN:-/usr/local/bin}:$PATH"
 
 mkdir -p "$RELEASE_FRONTEND_DIR" "$STATE_DIR"
 
