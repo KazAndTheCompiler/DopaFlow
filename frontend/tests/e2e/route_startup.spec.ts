@@ -19,6 +19,7 @@ test.describe("Route startup regression", () => {
 
     await page.route(`${apiBase}/tasks**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/projects**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/goals**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/habits**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/sessions**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/focus/**`, (route) => route.fulfill(json({})));
@@ -34,6 +35,7 @@ test.describe("Route startup regression", () => {
     await page.route(`${apiBase}/digest/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/nutrition/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/search/**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/player/queue**`, (route) => route.fulfill(json({ items: [] })));
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
@@ -59,7 +61,7 @@ test.describe("Route startup regression", () => {
 
   test("default route lands on the today surface with runway guidance", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("You have room to plan intentionally")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("main strong").filter({ hasText: "Today" }).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Open overview" })).toBeVisible({ timeout: 15_000 });
   });
 
@@ -117,9 +119,10 @@ test.describe("Route startup regression", () => {
 
   test("settings surface renders with correct sections", async ({ page }) => {
     await page.goto("/#/settings");
-    await expect(page.getByText("Look & Feel", { exact: true })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Sync & Sharing", { exact: true })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Safety & Export", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#settings-integrations-overview")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#settings-vault")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#settings-sync-sharing")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#settings-integrations")).toBeVisible({ timeout: 15_000 });
   });
 
   test("navigation between surfaces maintains state", async ({ page }) => {
@@ -144,6 +147,7 @@ test.describe("Command palette navigation", () => {
 
     await page.route(`${apiBase}/tasks**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/projects**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/goals**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/habits**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/sessions**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/focus/**`, (route) => route.fulfill(json({})));
@@ -159,6 +163,7 @@ test.describe("Command palette navigation", () => {
     await page.route(`${apiBase}/digest/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/nutrition/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/search/**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/player/queue**`, (route) => route.fulfill(json({ items: [] })));
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
@@ -222,6 +227,7 @@ test.describe("Console error detection", () => {
 
     await page.route(`${apiBase}/tasks**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/projects**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/goals**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/habits**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/sessions**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/focus/**`, (route) => route.fulfill(json({})));
@@ -237,6 +243,7 @@ test.describe("Console error detection", () => {
     await page.route(`${apiBase}/digest/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/nutrition/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/search/**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/player/queue**`, (route) => route.fulfill(json({ items: [] })));
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));
@@ -292,6 +299,7 @@ test.describe("Console error detection", () => {
 
     await page.route(`${apiBase}/tasks**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/projects**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/goals**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/habits**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/sessions**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/focus/**`, (route) => route.fulfill(json({})));
@@ -307,6 +315,7 @@ test.describe("Console error detection", () => {
     await page.route(`${apiBase}/digest/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/nutrition/**`, (route) => route.fulfill(json([])));
     await page.route(`${apiBase}/search/**`, (route) => route.fulfill(json([])));
+    await page.route(`${apiBase}/player/queue**`, (route) => route.fulfill(json({ items: [] })));
     await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
     await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
     await page.route(`${apiBase}/integrations/**`, (route) => route.fulfill(json({})));

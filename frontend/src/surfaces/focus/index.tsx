@@ -1,7 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { TaskId } from "@shared/types";
 
-import { AppDataContext } from "../../App";
+import { useAppFocus, useAppTasks } from "../../app/AppContexts";
 import FocusPanel from "./FocusPanel";
 import FocusTimer from "./FocusTimer";
 import SessionHistory from "./SessionHistory";
@@ -9,12 +9,9 @@ import FocusCompleteModal from "./FocusCompleteModal";
 import BreakTimerBanner, { BREAK_STORAGE_KEY } from "./BreakTimerBanner";
 
 export default function FocusView(): JSX.Element {
-  const app = useContext(AppDataContext);
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
-
-  const { activeSession, sessions, start, control } = app.focus;
+  const focus = useAppFocus();
+  const tasks = useAppTasks();
+  const { activeSession, sessions, start, control } = focus;
   const [showComplete, setShowComplete] = useState(false);
   const [completedDuration, setCompletedDuration] = useState(0);
   const [completedTaskId, setCompletedTaskId] = useState<string | undefined>();
@@ -56,7 +53,7 @@ export default function FocusView(): JSX.Element {
       setCompletedDuration(activeSession.duration_minutes);
       if (activeSession.task_id) {
         setCompletedTaskId(activeSession.task_id);
-        const task = app.tasks.tasks.find((t) => t.id === activeSession.task_id);
+        const task = tasks.tasks.find((t) => t.id === activeSession.task_id);
         setCompletedTaskTitle(task?.title);
       }
     }
@@ -66,7 +63,7 @@ export default function FocusView(): JSX.Element {
 
   const handleLogToTask = async () => {
     if (completedTaskId) {
-      await app.tasks.complete(completedTaskId);
+      await tasks.complete(completedTaskId);
     }
     setShowComplete(false);
   };
@@ -94,9 +91,9 @@ export default function FocusView(): JSX.Element {
     (session) => session.status === "completed" && session.started_at?.slice(0, 10) === todayIso,
   );
   const focusMinutesToday = todayCompletedSessions.reduce((sum, session) => sum + (session.duration_minutes ?? 0), 0);
-  const selectedTask = selectedTaskId ? app.tasks.tasks.find((task) => task.id === selectedTaskId) : null;
+  const selectedTask = selectedTaskId ? tasks.tasks.find((task) => task.id === selectedTaskId) : null;
   const activeTask = activeSession?.task_id
-    ? app.tasks.tasks.find((task) => task.id === activeSession.task_id) ?? null
+    ? tasks.tasks.find((task) => task.id === activeSession.task_id) ?? null
     : null;
 
   const focusRunway = (() => {
@@ -277,7 +274,7 @@ export default function FocusView(): JSX.Element {
         <FocusPanel
           isActive={Boolean(activeSession)}
           onStart={(minutes) => void start(selectedTaskId || undefined, minutes)}
-          tasks={app.tasks.tasks}
+          tasks={tasks.tasks}
           onTaskSelect={setSelectedTaskId}
         />
         <FocusTimer

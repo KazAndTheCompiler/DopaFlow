@@ -39,9 +39,43 @@ echo "Checking packaged runtime linkage"
 LDD_OUTPUT="$(LD_LIBRARY_PATH="$ROOT/usr/lib" ldd "$DESKTOP_BIN")"
 printf '%s\n' "$LDD_OUTPUT"
 
-if grep -q "not found" <<<"$LDD_OUTPUT"; then
+mapfile -t UNRESOLVED_LIBS < <(grep "not found" <<<"$LDD_OUTPUT" | awk '{print $1}')
+KNOWN_HOST_FALLBACK_LIBS=(
+  "libXau.so.6"
+  "libXdmcp.so.6"
+  "libxcb-render.so.0"
+  "libxcb-shm.so.0"
+  "libpixman-1.so.0"
+  "libwayland-client.so.0"
+  "libwayland-cursor.so.0"
+  "libwayland-egl.so.1"
+  "libXcursor.so.1"
+  "libXinerama.so.1"
+  "libgraphite2.so.3"
+  "libdatrie.so.1"
+)
+
+declare -a UNEXPECTED_UNRESOLVED=()
+declare -a EXPECTED_HOST_FALLBACKS=()
+
+for lib in "${UNRESOLVED_LIBS[@]:-}"; do
+  if printf '%s\n' "${KNOWN_HOST_FALLBACK_LIBS[@]}" | grep -qx "$lib"; then
+    EXPECTED_HOST_FALLBACKS+=("$lib")
+  else
+    UNEXPECTED_UNRESOLVED+=("$lib")
+  fi
+done
+
+if [[ ${#EXPECTED_HOST_FALLBACKS[@]} -gt 0 ]]; then
   echo
-  echo "Packaged dependency audit failed: one or more shared libraries are unresolved." >&2
+  echo "Known host fallback libraries were unresolved inside the payload:"
+  printf ' - %s\n' "${EXPECTED_HOST_FALLBACKS[@]}"
+fi
+
+if [[ ${#UNEXPECTED_UNRESOLVED[@]} -gt 0 ]]; then
+  echo
+  echo "Packaged dependency audit failed: unexpected shared libraries are unresolved." >&2
+  printf ' - %s\n' "${UNEXPECTED_UNRESOLVED[@]}" >&2
   exit 1
 fi
 

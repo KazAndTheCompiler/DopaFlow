@@ -12,14 +12,24 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.integrations.repository import IntegrationsRepository
-from app.domains.integrations.schemas import GmailConnectRequest, GmailImportResult, IntegrationsStatus, WebhookDispatch
+from app.domains.integrations.schemas import (
+    GitHubImportIssuesRequest,
+    GitHubImportIssuesResult,
+    GmailConnectRequest,
+    GmailConnectResult,
+    GmailImportResult,
+    IntegrationsStatus,
+    OutboxDispatchResult,
+    OutboxMetrics,
+    WebhookDispatch,
+    WebhookEnqueueResult,
+)
 from app.domains.integrations.service import dispatch_once, snapshot_metrics
 from app.middleware.auth_scopes import require_scope
 
@@ -30,8 +40,8 @@ async def _repo(settings: Settings = Depends(get_settings_dependency)) -> Integr
     return IntegrationsRepository(settings.db_path, settings=settings)
 
 
-@router.post("/gmail/connect", response_model=dict, dependencies=[Depends(require_scope("write:integrations"))])
-async def connect_gmail(payload: GmailConnectRequest, repo: IntegrationsRepository = Depends(_repo)) -> dict[str, object]:
+@router.post("/gmail/connect", response_model=GmailConnectResult, dependencies=[Depends(require_scope("write:integrations"))])
+async def connect_gmail(payload: GmailConnectRequest, repo: IntegrationsRepository = Depends(_repo)) -> GmailConnectResult:
     return repo.connect_gmail(payload)
 
 
@@ -40,14 +50,14 @@ async def import_gmail_tasks(repo: IntegrationsRepository = Depends(_repo)) -> G
     return repo.import_gmail_tasks_real()
 
 
-@router.get("/gmail/callback", response_model=dict, dependencies=[Depends(require_scope("write:integrations"))])
+@router.get("/gmail/callback", response_model=GmailConnectResult, dependencies=[Depends(require_scope("write:integrations"))])
 async def gmail_oauth_callback(
     code: str,
     settings: Settings = Depends(get_settings_dependency),
     repo: IntegrationsRepository = Depends(_repo),
-) -> dict[str, object]:
+) -> GmailConnectResult:
     if not settings.google_client_id or not settings.google_client_secret:
-        return {"status": "error", "message": "Google credentials not configured"}
+        return GmailConnectResult(status="error", message="Google credentials not configured")
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://oauth2.googleapis.com/token",
@@ -60,27 +70,24 @@ async def gmail_oauth_callback(
             },
         )
     if response.status_code != 200:
-        return {"status": "error", "message": "Token exchange failed"}
+        return GmailConnectResult(status="error", message="Token exchange failed")
     data = response.json()
     expires_at = (
         datetime.datetime.utcnow() + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
     ).isoformat()
     repo.store_token("gmail", data["access_token"], data.get("refresh_token"), expires_at, data.get("scope", ""))
-    return {"status": "connected"}
+    return GmailConnectResult(status="connected")
 
 
-@router.post("/github/import-issues", response_model=dict, dependencies=[Depends(require_scope("write:integrations"))])
+@router.post("/github/import-issues", response_model=GitHubImportIssuesResult, dependencies=[Depends(require_scope("write:integrations"))])
 async def import_github_issues(
-    payload: dict[str, Any],
+    payload: GitHubImportIssuesRequest,
     settings: Settings = Depends(get_settings_dependency),
-) -> dict[str, Any]:
+) -> GitHubImportIssuesResult:
     """Import GitHub issues as tasks using a Personal Access Token."""
-    token = payload.get("token", "")
-    repo = payload.get("repo", "")  # format: "owner/repo"
-    state = payload.get("state", "open")  # "open", "closed", "all"
-
-    if not token or not repo:
-        raise HTTPException(status_code=422, detail="token and repo are required")
+    token = payload.token
+    repo = payload.repo  # format: "owner/repo"
+    state = payload.state  # "open", "closed", "all"
 
     async with httpx.AsyncClient() as client:
         resp = await client.get(
@@ -119,7 +126,7 @@ async def import_github_issues(
         })
         created += 1
 
-    return {"created": created, "skipped": skipped, "repo": repo}
+    return GitHubImportIssuesResult(created=created, skipped=skipped, repo=repo)
 
 
 @router.get("/status", response_model=IntegrationsStatus, dependencies=[Depends(require_scope("read:integrations"))])
@@ -127,16 +134,16 @@ async def integrations_status(repo: IntegrationsRepository = Depends(_repo)) -> 
     return repo.get_status()
 
 
-@router.post("/webhooks/outbox", response_model=dict, dependencies=[Depends(require_scope("write:integrations"))])
-async def enqueue_webhook(payload: WebhookDispatch, repo: IntegrationsRepository = Depends(_repo)) -> dict[str, object]:
+@router.post("/webhooks/outbox", response_model=WebhookEnqueueResult, dependencies=[Depends(require_scope("write:integrations"))])
+async def enqueue_webhook(payload: WebhookDispatch, repo: IntegrationsRepository = Depends(_repo)) -> WebhookEnqueueResult:
     return repo.enqueue_webhook(payload)
 
 
-@router.get("/outbox/metrics", response_model=dict, dependencies=[Depends(require_scope("read:integrations"))])
-async def outbox_metrics(settings: Settings = Depends(get_settings_dependency)) -> dict[str, int]:
+@router.get("/outbox/metrics", response_model=OutboxMetrics, dependencies=[Depends(require_scope("read:integrations"))])
+async def outbox_metrics(settings: Settings = Depends(get_settings_dependency)) -> OutboxMetrics:
     return snapshot_metrics(settings.db_path)
 
 
-@router.post("/outbox/dispatch", response_model=dict, dependencies=[Depends(require_scope("write:integrations"))])
-async def outbox_dispatch(settings: Settings = Depends(get_settings_dependency)) -> dict[str, int]:
+@router.post("/outbox/dispatch", response_model=OutboxDispatchResult, dependencies=[Depends(require_scope("write:integrations"))])
+async def outbox_dispatch(settings: Settings = Depends(get_settings_dependency)) -> OutboxDispatchResult:
     return dispatch_once(settings.db_path)

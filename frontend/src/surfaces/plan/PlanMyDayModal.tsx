@@ -1,6 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppCalendar, useAppFocus, useAppHabits, useAppPacky, useAppTasks } from "../../app/AppContexts";
+import { APP_STORAGE_KEYS } from "../../app/appStorage";
 import {
   ENERGY_LEVELS,
   isOverdue,
@@ -26,13 +27,17 @@ interface PlanMyDayModalProps {
 }
 
 export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalProps): JSX.Element | null {
-  const app = useContext(AppDataContext);
+  const tasksState = useAppTasks();
+  const focus = useAppFocus();
+  const habits = useAppHabits();
+  const calendar = useAppCalendar();
+  const packy = useAppPacky();
   const [step, setStep] = useState(0);
   const [energy, setEnergy] = useState<number | null>(null);
   const [decisions, setDecisions] = useState<Record<string, "keep" | "postpone" | "drop">>({});
   const [picks, setPicks] = useState<Set<string>>(new Set());
 
-  const tasks = app?.tasks.tasks ?? [];
+  const tasks = tasksState.tasks;
   const overdue = tasks.filter(
     (t) => !t.done && t.status !== "cancelled" && t.status !== "done" && isOverdue(t),
   );
@@ -46,24 +51,22 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
         .slice(0, MAX_PICKS);
       setPicks(new Set(pre.map((t) => t.id)));
     }
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!app) return null;
+  }, [step, tasks]);
 
   // Yesterday's stats
   const yISO = yesterdayISO();
   const yesterdayTasks = tasks.filter(
     (t) => t.done && (t as { updated_at?: string }).updated_at?.slice(0, 10) === yISO,
   ).length;
-  const yesterdayFocus = (app.focus.sessions ?? [])
+  const yesterdayFocus = focus.sessions
     .filter((s) => s.status === "completed" && (s as { ended_at?: string }).ended_at?.slice(0, 10) === yISO)
     .reduce((sum, s) => sum + ((s as { duration_minutes?: number }).duration_minutes ?? 0), 0);
-  const habitStreak = (app.habits.habits ?? []).reduce(
+  const habitStreak = habits.habits.reduce(
     (max, h) => Math.max(max, h.current_streak ?? 0), 0,
   );
 
   // Today's events
-  const todayEvents = (app.calendar.events ?? [])
+  const todayEvents = calendar.events
     .filter((e) => e.start_at?.slice(0, 10) === todayISO())
     .sort((a, b) => a.start_at.localeCompare(b.start_at));
 
@@ -93,9 +96,9 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
     const tomorrowISO = tom.toISOString().slice(0, 10);
     for (const [id, decision] of Object.entries(decisions)) {
       if (decision === "drop") {
-        await app.tasks.update(id, { status: "cancelled" });
+        await tasksState.update(id, { status: "cancelled" });
       } else if (decision === "postpone") {
-        await app.tasks.update(id, { due_at: tomorrowISO });
+        await tasksState.update(id, { due_at: tomorrowISO });
       }
     }
   };
@@ -104,20 +107,20 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
     await applyDecisions();
     if (energy !== null) {
       const level = ENERGY_LEVELS[energy];
-      void app.packy.updateLorebook(
+      void packy.updateLorebook(
         `Energy: ${level.label}`,
         `Morning energy logged as ${level.label} (${level.value}/4)`,
       );
     }
     localStorage.setItem(TODAY_KEY, todayISO());
     if (dest === "focus" && focusTitle) {
-      localStorage.setItem("zoestm_focus_prefill", focusTitle);
+      localStorage.setItem(APP_STORAGE_KEYS.focusPrefill, focusTitle);
     }
     onNavigate(dest);
     onClose();
   };
 
-  const whisper = app.packy.whisper?.text ?? "";
+  const whisper = packy.whisper?.text ?? "";
 
   return (
     <PlanMyDayFrame stepTitle={STEP_TITLES[step]} onClose={onClose}>

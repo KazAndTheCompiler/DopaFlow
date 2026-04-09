@@ -25,3 +25,12 @@ def test_outbox_dispatch_endpoint_returns_result(client) -> None:
     assert response.status_code == 200
     body = response.json()
     assert set(body).issuperset({"processed", "delivered", "failed"})
+
+
+def test_gmail_connect_returns_typed_status_payload(client) -> None:
+    response = client.post("/api/v2/integrations/gmail/connect", json={"redirect_uri": "http://localhost/callback"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] in {"unconfigured", "redirect"}
+    assert set(body).issuperset({"status", "message", "url"})

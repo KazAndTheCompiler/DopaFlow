@@ -1,7 +1,7 @@
-import { useContext, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import type { MomentumScore } from "../../../../shared/types";
-import { AppDataContext } from "../../App";
+import { useAppFocus, useAppInsights, useAppTasks } from "../../app/AppContexts";
 import type { CorrelationInsight, WeeklyDigest } from "@api/insights";
 
 interface TaskVelocityData {
@@ -251,16 +251,16 @@ function CorrelationsCard({ correlations }: { correlations: CorrelationInsight[]
 }
 
 export default function InsightsView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const insights = useAppInsights();
+  const focus = useAppFocus();
+  const tasks = useAppTasks();
 
   useEffect(() => {
-    if (app) {
-      void app.insights.refresh();
-    }
-  }, [app]);
+    void insights.refresh();
+  }, [insights]);
 
   const focusPatterns = useMemo((): FocusPatternData => {
-    const sessions = app?.focus.sessions ?? [];
+    const sessions = focus.sessions;
     const completed = sessions.filter((s) => s.status === "completed");
 
     const hourlyCounts = Array(24).fill(0) as number[];
@@ -281,12 +281,11 @@ export default function InsightsView(): JSX.Element {
     const totalFocusHours = durations.reduce((a, b) => a + b, 0) / 60;
 
     return { hourlyCounts, avgSessionMinutes, totalFocusHours };
-  }, [app?.focus.sessions]);
+  }, [focus.sessions]);
 
   const taskVelocity = useMemo((): TaskVelocityData => {
-    const tasks = app?.tasks.tasks ?? [];
-    const total = tasks.length;
-    const done = tasks.filter((t) => t.done);
+    const total = tasks.tasks.length;
+    const done = tasks.tasks.filter((t) => t.done);
     const completionRate = total > 0 ? (done.length / total) * 100 : 0;
 
     const durations = done
@@ -297,18 +296,14 @@ export default function InsightsView(): JSX.Element {
       : null;
 
     const now = new Date().toISOString().slice(0, 10);
-    const pending = tasks.filter((t) => !t.done);
+    const pending = tasks.tasks.filter((t) => !t.done);
     const overdue = pending.filter((t) => t.due_at && t.due_at.slice(0, 10) < now);
     const overdueRate = pending.length > 0 ? (overdue.length / pending.length) * 100 : 0;
 
     return { completionRate, avgDaysToComplete, overdueRate };
-  }, [app?.tasks.tasks]);
+  }, [tasks.tasks]);
 
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
-
-  const { momentum, weeklyDigest, correlations } = app.insights;
+  const { momentum, weeklyDigest, correlations } = insights;
 
   return (
     <div style={{ display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))" }}>

@@ -1,6 +1,6 @@
-import { useContext, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { Task } from "../../../../shared/types";
-import { AppDataContext } from "../../App";
+import { useAppProjects } from "../../app/AppContexts";
 import { startTaskTimer, stopTaskTimer } from "../../api/tasks";
 import { showToast } from "../../design-system/primitives/Toast";
 
@@ -32,8 +32,8 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 }
 
 export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSelect }: TaskRowProps): JSX.Element {
-  const ctx = useContext(AppDataContext);
-  const project = task.project_id ? (ctx?.projects.projects ?? []).find((p) => p.id === task.project_id) : null;
+  const projects = useAppProjects();
+  const project = task.project_id ? projects.projects.find((p) => p.id === task.project_id) : null;
   const prio = PRIORITY_LABELS[task.priority] ?? { label: "P?", color: "var(--border-subtle)", bg: "var(--surface-2)" };
   const opacity = STATUS_OPACITY[task.status] ?? 1;
   const isDone = task.status === "done" || task.done;

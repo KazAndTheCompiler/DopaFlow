@@ -45,3 +45,15 @@ class UnreadCount(BaseModel):
     """Unread notification counter payload."""
 
     count: int
+
+
+class NotificationMutationResult(BaseModel):
+    """Stable response for notification mutations."""
+
+    ok: bool = True
+
+
+class NotificationDeleteResult(BaseModel):
+    """Stable response for notification deletion."""
+
+    deleted: bool = True

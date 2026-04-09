@@ -1,8 +1,9 @@
 import type { CSSProperties } from "react";
 
 import type { Task } from "@shared/types";
+import { APP_STORAGE_KEYS } from "../../app/appStorage";
 
-export const TODAY_KEY = "zoestm_planned_date";
+export const TODAY_KEY = APP_STORAGE_KEYS.plannedDate;
 export const MAX_PICKS = 3;
 
 export const ENERGY_LEVELS = [

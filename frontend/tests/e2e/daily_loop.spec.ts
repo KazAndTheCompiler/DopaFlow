@@ -198,7 +198,7 @@ test.describe("Daily loop regression", () => {
 
     await page.getByRole("button", { name: "Continue" }).click();
     await page.waitForTimeout(500);
-    await expect(page.getByText("Tomorrow")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Tomorrow", { exact: true })).toBeVisible({ timeout: 15_000 });
   });
 
   test("shutdown modal can go back from defer to wins", async ({ page }) => {
@@ -213,6 +213,84 @@ test.describe("Daily loop regression", () => {
 
     await page.getByRole("button", { name: "Back" }).click();
     await expect(page.getByText("Wins")).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("shutdown completion uses defer choices in tomorrow lineup and lands on a completion state", async ({ page }) => {
+    const taskPatches: Array<Record<string, unknown>> = [];
+    const journalPosts: Array<Record<string, unknown>> = [];
+
+    await page.route(`${apiBase}/tasks**`, async (route) => {
+      const request = route.request();
+      const url = request.url();
+      if (url.includes("/boards/")) {
+        await route.fulfill(json([]));
+        return;
+      }
+      if (request.method() === "GET") {
+        await route.fulfill(json([
+          {
+            id: "tsk_due_today",
+            title: "Ship UI polish pass",
+            description: null,
+            due_at: `${todayISO}T09:00:00Z`,
+            priority: 1,
+            status: "todo",
+            done: false,
+            estimated_minutes: 45,
+            actual_minutes: null,
+            recurrence_rule: null,
+            recurrence_parent_id: null,
+            sort_order: 0,
+            subtasks: [],
+            tags: [],
+            source_type: null,
+            source_external_id: null,
+            project_id: null,
+            created_at: `${todayISO}T07:00:00Z`,
+            updated_at: `${todayISO}T07:00:00Z`,
+          },
+        ]));
+        return;
+      }
+      const body = request.postDataJSON() as Record<string, unknown>;
+      taskPatches.push(body);
+      await route.fulfill(json({ ok: true }));
+    });
+
+    await page.route(`${apiBase}/journal/**`, async (route) => {
+      if (route.request().method() === "POST") {
+        journalPosts.push(route.request().postDataJSON() as Record<string, unknown>);
+        await route.fulfill(json({ id: "jrn_shutdown", markdown_body: "Closed with intent." }));
+        return;
+      }
+      await route.fulfill(json([]));
+    });
+
+    await page.goto("/");
+    await page.waitForTimeout(1000);
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent("dopaflow:open-shutdown"));
+    });
+
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Continue" }).click();
+    await expect(page.getByText("Defer")).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Tomorrow" }).click();
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(page.getByText("Tomorrow", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("dialog").getByText("Ship UI polish pass", { exact: true })).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Good" }).click();
+    await page.getByPlaceholder("(Optional) Any thoughts?").fill("Closed with intent.");
+    await page.getByRole("button", { name: "Finish shutdown" }).click();
+
+    await expect(page.getByText("Shutdown complete")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Tomorrow is set and today is closed.")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Close shutdown" })).toBeVisible({ timeout: 15_000 });
+    expect(taskPatches.some((body) => body?.due_at === `${todayISO}` || typeof body?.due_at === "string")).toBe(true);
+    expect(journalPosts).toHaveLength(1);
   });
 
   test("shutdown modal closes and returns to app", async ({ page }) => {

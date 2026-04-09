@@ -1,14 +1,10 @@
-import { useContext } from "react";
-import { AppDataContext } from "../../App";
+import { useAppGamification } from "../../app/AppContexts";
 import BadgeGallery from "../../components/gamification/BadgeGallery";
 import LevelBadge from "../../components/gamification/LevelBadge";
 import XPBar from "../../components/gamification/XPBar";
 
 export default function GamificationView(): JSX.Element {
-  const app = useContext(AppDataContext);
-  if (!app) return <div>App context unavailable.</div>;
-
-  const { level, badges, earnedCount } = app.gamification;
+  const { level, badges, earnedCount } = useAppGamification();
 
   return (
     <div style={{ display: "grid", gap: "1.25rem" }}>

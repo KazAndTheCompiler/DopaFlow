@@ -74,6 +74,7 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.route(`${apiBase}/projects**`, (route) => route.fulfill(json([])));
+  await page.route(`${apiBase}/goals**`, (route) => route.fulfill(json([])));
   await page.route(`${apiBase}/habits**`, (route) => route.fulfill(json([])));
   await page.route(`${apiBase}/sessions**`, (route) => route.fulfill(json([])));
   await page.route(`${apiBase}/focus/**`, (route) => route.fulfill(json({})));
@@ -218,6 +219,7 @@ test.beforeEach(async ({ page }) => {
     return route.fulfill(json([]));
   });
   await page.route(`${apiBase}/search/**`, (route) => route.fulfill(json([])));
+  await page.route(`${apiBase}/player/queue**`, (route) => route.fulfill(json({ items: [] })));
   await page.route(`${apiBase}/commands/**`, (route) => route.fulfill(json({ action: "open-today" })));
   await page.route(`${apiBase}/meta/**`, (route) => route.fulfill(json({})));
   await page.route(`${apiBase}/integrations/status**`, (route) => route.fulfill(json({
@@ -462,7 +464,7 @@ test("tasks surface tolerates a task with missing title field", async ({ page })
   });
 
   await page.goto("/#/tasks");
-  await expect(page.getByText("Task runway")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByPlaceholder("Quick add — type or speak")).toBeVisible({ timeout: 15_000 });
 
   // The surface should still render even with a blank-title task.
   // No unhandled JS exceptions.

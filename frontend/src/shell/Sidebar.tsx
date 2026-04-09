@@ -1,3 +1,4 @@
+import type { AppRoute } from "../appRoutes";
 import type { Project } from "../../../shared/types";
 import {
   NavButton,
@@ -7,14 +8,14 @@ import {
 import { SidebarFooter } from "./SidebarFooter";
 
 export interface SidebarItem {
-  id: string;
+  id: AppRoute;
   label: string;
   icon: string;
 }
 
 export interface SidebarProps {
   items: SidebarItem[];
-  activeRoute: string;
+  activeRoute: AppRoute;
   collapsed: boolean;
   habitPips: number;
   streakCount: number;
@@ -23,7 +24,7 @@ export interface SidebarProps {
   projectTaskCounts: Record<string, number>;
   activeProjectId: string | null;
   onProjectSelect: (id: string | null) => void;
-  onNavigate: (route: string) => void;
+  onNavigate: (route: AppRoute) => void;
   onToggle: () => void;
 }
 
@@ -43,6 +44,7 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
   return (
     <aside
+      data-testid="sidebar-desktop"
       style={{
         width: collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-expanded-width)",
         transition: "width 180ms ease",
@@ -59,7 +61,7 @@ export function Sidebar({
     >
       <SidebarHeader collapsed={collapsed} onToggle={onToggle} />
 
-      <nav style={{ display: "grid", gap: "0.25rem", flex: 1, overflowY: "auto" }}>
+      <nav data-testid="sidebar-nav" style={{ display: "grid", gap: "0.25rem", flex: 1, overflowY: "auto" }}>
         {items.map((item) => (
           <NavButton
             key={item.id}

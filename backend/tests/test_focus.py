@@ -31,6 +31,8 @@ def test_get_sessions_returns_started_session(client) -> None:
 
     assert response.status_code == 200
     assert len(response.json()) == 1
+    assert response.json()[0]["paused_duration_ms"] == 0
+    assert response.json()[0]["task_title"] is None
 
 
 def test_control_pauses_active_session(client) -> None:
@@ -82,6 +84,7 @@ def test_status_endpoint_returns_current_focus_state(client) -> None:
 
     assert response.status_code == 200
     assert response.json()["duration_minutes"] == 15
+    assert response.json()["elapsed_seconds"] >= 0
     assert response.json()["status"] == "running"
 
 

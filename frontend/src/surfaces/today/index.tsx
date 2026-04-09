@@ -1,7 +1,7 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DragEvent } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppCalendar, useAppFocus, useAppHabits, useAppInsights, useAppPacky, useAppProjects, useAppTasks } from "../../app/AppContexts";
 import BacklogColumn from "./BacklogColumn";
 import ContextCard from "./ContextCard";
 import DailyQuote from "../../components/DailyQuote";
@@ -15,7 +15,13 @@ import { apiClient } from "../../api/client";
 import { TODAY_KEY, getTodayDayState, getTodayNextAction, isSameDay } from "./TodayShared";
 
 export default function TodayView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const tasks = useAppTasks();
+  const projects = useAppProjects();
+  const habits = useAppHabits();
+  const insights = useAppInsights();
+  const focus = useAppFocus();
+  const calendar = useAppCalendar();
+  const packy = useAppPacky();
   const [dayOffset, setDayOffset] = useState<number>(0);
   const [focusQueueIds, setFocusQueueIds] = useState<string[]>([]);
   const [quote, setQuote] = useState<string>("");
@@ -32,69 +38,62 @@ export default function TodayView(): JSX.Element {
     return d;
   }, [dayOffset]);
 
-  const activeProjectId = app?.projects?.activeProjectId ?? null;
+  const activeProjectId = projects.activeProjectId ?? null;
   const selectedDateIso = selectedDate.toISOString().slice(0, 10);
   const plannedToday = dayOffset === 0 && localStorage.getItem(TODAY_KEY) === selectedDateIso;
 
   const focusQueue = useMemo(
     () =>
-      (app?.tasks.tasks ?? []).filter(
+      tasks.tasks.filter(
         (task) =>
           (isSameDay(task.due_at, selectedDate) || focusQueueIds.includes(task.id)) &&
           (!activeProjectId || task.project_id === activeProjectId),
       ),
-    [app?.tasks.tasks, focusQueueIds, selectedDate, activeProjectId],
+    [tasks.tasks, focusQueueIds, selectedDate, activeProjectId],
   );
 
   const backlog = useMemo(
     () =>
-      (app?.tasks.tasks ?? []).filter(
+      tasks.tasks.filter(
         (task) =>
           !task.due_at &&
           !focusQueueIds.includes(task.id) &&
           (!activeProjectId || task.project_id === activeProjectId),
       ),
-    [app?.tasks.tasks, focusQueueIds, activeProjectId],
+    [tasks.tasks, focusQueueIds, activeProjectId],
   );
 
   const overdueTasks = useMemo(
     () =>
-      (app?.tasks.tasks ?? []).filter(
+      tasks.tasks.filter(
         (task) =>
           !task.done &&
           Boolean(task.due_at) &&
           task.due_at!.slice(0, 10) < selectedDateIso &&
           (!activeProjectId || task.project_id === activeProjectId),
       ),
-    [activeProjectId, app?.tasks.tasks, selectedDateIso],
+    [activeProjectId, tasks.tasks, selectedDateIso],
   );
 
   const completedToday = useMemo(
     () =>
-      (app?.tasks.tasks ?? []).filter(
+      tasks.tasks.filter(
         (task) =>
           task.done &&
           task.updated_at?.slice(0, 10) === selectedDateIso &&
           (!activeProjectId || task.project_id === activeProjectId),
       ).length,
-    [activeProjectId, app?.tasks.tasks, selectedDateIso],
+    [activeProjectId, tasks.tasks, selectedDateIso],
   );
 
   const upcomingEvents = useMemo(
     () =>
-      (app?.calendar.events ?? [])
+      calendar.events
         .filter((event) => isSameDay(event.start_at, selectedDate))
         .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())
         .slice(0, 3),
-    [app?.calendar.events, selectedDate],
+    [calendar.events, selectedDate],
   );
-
-  useEffect(() => {
-    if (!app) return;
-    void Promise.all([app.tasks.refresh(), app.habits.refresh(), app.insights.refresh(), app.focus.refresh()]);
-    // Run once on mount — app context reference is stable after first render
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,11 +123,7 @@ export default function TodayView(): JSX.Element {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
-
-  const isLoading = app.tasks.loading || app.habits.loading;
+  const isLoading = tasks.loading || habits.loading;
 
   if (isLoading) {
     return <TodaySurfaceSkeleton />;
@@ -152,7 +147,7 @@ export default function TodayView(): JSX.Element {
   const nextUpcomingEvent = upcomingEvents[0] ?? null;
   const dayState = getTodayDayState(dayOffset, plannedToday);
   const nextAction = getTodayNextAction({
-    activeFocusSession: Boolean(app.focus.activeSession),
+    activeFocusSession: Boolean(focus.activeSession),
     dayOffset,
     plannedToday,
     overdueTasks,
@@ -187,15 +182,15 @@ export default function TodayView(): JSX.Element {
         <div onDragOver={(event) => event.preventDefault()} onDrop={onDropToQueue}>
           <FocusQueue
             tasks={focusQueue}
-            activeSession={app.focus.activeSession}
-            onStartFocus={(taskId, mins) => void app.focus.start(taskId, mins ?? 25)}
-            onComplete={(taskId) => void app.tasks.complete(taskId)}
+            activeSession={focus.activeSession}
+            onStartFocus={(taskId, mins) => void focus.start(taskId, mins ?? 25)}
+            onComplete={(taskId) => void tasks.complete(taskId)}
           />
         </div>
 
-        <TimeBlocks sessions={app.focus.sessions} events={app.calendar.events} />
+        <TimeBlocks sessions={focus.sessions} events={calendar.events} />
 
-        <MomentumCard momentum={app.packy.momentum ?? app.insights.momentum} packyLine={app.packy.whisper?.text} />
+        <MomentumCard momentum={packy.momentum ?? insights.momentum} packyLine={packy.whisper?.text} />
         {quote ? <DailyQuote quote={quote} /> : null}
       </section>
 
@@ -208,13 +203,13 @@ export default function TodayView(): JSX.Element {
           minWidth: 0,
         }}
       >
-        <BacklogColumn tasks={backlog} onComplete={(id) => void app.tasks.complete(id)} draggable />
+        <BacklogColumn tasks={backlog} onComplete={(id) => void tasks.complete(id)} draggable />
 
-        <HabitsToday habits={app.habits.habits} onCheckIn={app.habits.checkIn} />
+        <HabitsToday habits={habits.habits} onCheckIn={habits.checkIn} />
 
         <ContextCard
-          weeklyDigest={app.insights.weeklyDigest}
-          correlations={app.insights.correlations}
+          weeklyDigest={insights.weeklyDigest}
+          correlations={insights.correlations}
         />
       </aside>
     </div>

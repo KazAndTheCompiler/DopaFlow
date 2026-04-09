@@ -11,6 +11,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "electron .",
+    "test": "node --test tests/*.test.js",
     "dist": "node scripts/build-desktop.js dev",
     "dist:mac": "node scripts/build-desktop.js dev --mac",
     "dist:win": "node scripts/build-desktop.js dev --win",
@@ -27,6 +28,7 @@
     "afterPack": "./afterPack.js",
     "productName": "DopaFlow",
     "artifactName": "${productName}-${version}.${ext}",
+    "icon": "assets/icon.png",
     "extraMetadata": {
       "dopaflowReleaseChannel": "${env.DOPAFLOW_RELEASE_CHANNEL}"
     },
@@ -73,6 +75,7 @@
       }
     ],
     "linux": {
+      "icon": "assets/icon.png",
       "executableName": "dopaflow-desktop",
       "target": [
         {
