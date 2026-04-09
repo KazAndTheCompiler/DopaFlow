@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 
 from app.core.database import get_db, tx
 from app.core.id_gen import focus_id
+from app.domains.focus.schemas import FocusSessionRead, FocusStats, FocusRecommendation
 
 
 def create_session(db_path: str, task_id: str | None, duration_minutes: int) -> str:
@@ -16,7 +16,13 @@ def create_session(db_path: str, task_id: str | None, duration_minutes: int) -> 
     with tx(db_path) as conn:
         conn.execute(
             "INSERT INTO focus_sessions (id, task_id, started_at, duration_minutes, status) VALUES (?, ?, ?, ?, ?)",
-            (identifier, task_id, datetime.now(timezone.utc).isoformat(), duration_minutes, "running"),
+            (
+                identifier,
+                task_id,
+                datetime.now(timezone.utc).isoformat(),
+                duration_minutes,
+                "running",
+            ),
         )
     return identifier
 
@@ -27,11 +33,15 @@ def end_session(db_path: str, session_id: str, completed: bool) -> None:
     with tx(db_path) as conn:
         conn.execute(
             "UPDATE focus_sessions SET ended_at = ?, status = ? WHERE id = ?",
-            (datetime.now(timezone.utc).isoformat(), "completed" if completed else "stopped", session_id),
+            (
+                datetime.now(timezone.utc).isoformat(),
+                "completed" if completed else "stopped",
+                session_id,
+            ),
         )
 
 
-def get_active_session(db_path: str) -> dict[str, Any] | None:
+def get_active_session(db_path: str) -> dict | None:
     """Read the active session singleton."""
 
     with get_db(db_path) as conn:
@@ -39,7 +49,7 @@ def get_active_session(db_path: str) -> dict[str, Any] | None:
         return dict(row) if row else None
 
 
-def write_active_session(db_path: str, **kwargs: Any) -> None:
+def write_active_session(db_path: str, **kwargs) -> None:
     """Upsert the active session singleton."""
 
     with tx(db_path) as conn:
@@ -69,7 +79,7 @@ def clear_active_session(db_path: str) -> None:
         conn.execute("DELETE FROM focus_active_session WHERE id = 1")
 
 
-def get_session(db_path: str, session_id: str) -> dict[str, Any] | None:
+def get_session(db_path: str, session_id: str) -> dict | None:
     """Fetch a single focus session by ID."""
 
     with get_db(db_path) as conn:
@@ -84,7 +94,9 @@ def update_session_status(db_path: str, session_id: str, status: str) -> None:
     """Update the status column of a focus session."""
 
     with tx(db_path) as conn:
-        conn.execute("UPDATE focus_sessions SET status = ? WHERE id = ?", (status, session_id))
+        conn.execute(
+            "UPDATE focus_sessions SET status = ? WHERE id = ?", (status, session_id)
+        )
 
 
 def add_pause_duration(db_path: str, session_id: str, pause_ms: int) -> None:
@@ -97,7 +109,7 @@ def add_pause_duration(db_path: str, session_id: str, pause_ms: int) -> None:
         )
 
 
-def list_sessions(db_path: str, limit: int = 30) -> list[dict[str, Any]]:
+def list_sessions(db_path: str, limit: int = 30) -> list[FocusSessionRead]:
     """List recent focus sessions joined to task titles when available."""
 
     with get_db(db_path) as conn:
@@ -111,33 +123,55 @@ def list_sessions(db_path: str, limit: int = 30) -> list[dict[str, Any]]:
             """,
             (limit,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [
+            FocusSessionRead(
+                id=row["id"],
+                task_id=row["task_id"],
+                started_at=row["started_at"],
+                duration_minutes=row["duration_minutes"],
+                paused_duration_ms=row["paused_duration_ms"],
+                task_title=row["task_title"],
+                ended_at=row["ended_at"],
+                status=row["status"],
+            )
+            for row in rows
+        ]
 
 
-def session_stats(db_path: str) -> dict[str, Any]:
+def session_stats(db_path: str) -> FocusStats:
     """Return aggregate focus statistics."""
 
     sessions = list_sessions(db_path, limit=500)
     today = datetime.now(timezone.utc).date().isoformat()
-    completed = [session for session in sessions if session.get("status") == "completed"]
-    today_sessions = [session for session in sessions if str(session["started_at"]).startswith(today)]
-    total_minutes = sum(int(session.get("duration_minutes") or 0) for session in sessions)
+    completed = [session for session in sessions if session.status == "completed"]
+    today_sessions = [
+        session
+        for session in sessions
+        if session.started_at and str(session.started_at).startswith(today)
+    ]
+    total_minutes = sum(int(session.duration_minutes or 0) for session in sessions)
     avg_minutes = round(total_minutes / len(sessions), 2) if sessions else 0
-    completion_rate = round((len(completed) / len(sessions) * 100), 2) if sessions else 0
-    return {
-        "total_sessions": len(sessions),
-        "today_sessions": len(today_sessions),
-        "streak": len(today_sessions),
-        "completion_rate": completion_rate,
-        "avg_minutes": avg_minutes,
-    }
+    completion_rate = (
+        round((len(completed) / len(sessions) * 100), 2) if sessions else 0
+    )
+    return FocusStats(
+        total_sessions=len(sessions),
+        today_sessions=len(today_sessions),
+        streak=len(today_sessions),
+        completion_rate=completion_rate,
+        avg_minutes=avg_minutes,
+    )
 
 
-def session_recommendation(db_path: str) -> dict[str, Any]:
+def session_recommendation(db_path: str) -> FocusRecommendation:
     """Return a simple recommendation based on recent history."""
 
     sessions = list_sessions(db_path, limit=100)
     if not sessions:
-        return {"peak_window": "09:00-11:00", "recommended_duration": 25}
-    avg_minutes = round(sum(int(session.get("duration_minutes") or 25) for session in sessions) / len(sessions))
-    return {"peak_window": "10:00-12:00", "recommended_duration": avg_minutes}
+        return FocusRecommendation(peak_window="09:00-11:00", recommended_duration=25)
+    avg_minutes = round(
+        sum(int(session.duration_minutes or 25) for session in sessions) / len(sessions)
+    )
+    return FocusRecommendation(
+        peak_window="10:00-12:00", recommended_duration=avg_minutes
+    )

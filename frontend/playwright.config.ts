@@ -18,8 +18,7 @@ const headlessShellPathCandidate = path.join(
 const realChromiumPath = fs.existsSync(headlessShellPathCandidate) ? headlessShellPathCandidate : chromiumPath;
 const nodeBinCandidates = [
   process.env.DOPAFLOW_PLAYWRIGHT_NODE_BIN,
-  path.resolve(repoRoot, "..", "..", ".codex-bin"),
-  path.resolve(repoRoot, "..", "..", ".codex-tools", "node-v20.20.2-linux-x64", "bin"),
+  path.resolve(repoRoot, "..", "..", "..", ".codex-bin"),
 ].filter((value): value is string => Boolean(value));
 const nodeBinPath = nodeBinCandidates.filter((candidate) => fs.existsSync(candidate)).join(path.delimiter);
 const existingPath = process.env.PATH ?? "";

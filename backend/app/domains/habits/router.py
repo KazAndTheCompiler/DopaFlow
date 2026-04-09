@@ -22,7 +22,6 @@ from __future__ import annotations
 import csv
 import io
 from datetime import date, timedelta
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
@@ -50,15 +49,33 @@ async def _db_path(settings: Settings = Depends(get_settings_dependency)) -> str
     return settings.db_path
 
 
-@router.get("", response_model=list[HabitRead], dependencies=[Depends(require_scope("read:habits"))])
-@router.get("/", response_model=list[HabitRead], include_in_schema=False, dependencies=[Depends(require_scope("read:habits"))])
-async def list_habits(db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
-    return repository.list_habits(db_path)
+@router.get(
+    "",
+    response_model=list[HabitRead],
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+@router.get(
+    "/",
+    response_model=list[HabitRead],
+    include_in_schema=False,
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def list_habits(db_path: str = Depends(_db_path)) -> list[HabitRead]:
+    return [HabitRead(**habit) for habit in repository.list_habits(db_path)]
 
 
-@router.post("", response_model=HabitRead, dependencies=[Depends(require_scope("write:habits"))])
-@router.post("/", response_model=HabitRead, include_in_schema=False, dependencies=[Depends(require_scope("write:habits"))])
-async def add_habit(payload: HabitCreate, db_path: str = Depends(_db_path)) -> dict[str, Any]:
+@router.post(
+    "", response_model=HabitRead, dependencies=[Depends(require_scope("write:habits"))]
+)
+@router.post(
+    "/",
+    response_model=HabitRead,
+    include_in_schema=False,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def add_habit(
+    payload: HabitCreate, db_path: str = Depends(_db_path)
+) -> HabitRead:
     name = payload.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="name is required")
@@ -77,16 +94,24 @@ async def add_habit(payload: HabitCreate, db_path: str = Depends(_db_path)) -> d
         )
         if patched is not None:
             created = patched
-    return created
+    return HabitRead(**created)
 
 
-@router.get("/today", response_model=HabitTodaySummary, dependencies=[Depends(require_scope("read:habits"))])
-async def get_today_summary(db_path: str = Depends(_db_path)) -> dict[str, Any]:
+@router.get(
+    "/today",
+    response_model=HabitTodaySummary,
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def get_today_summary(db_path: str = Depends(_db_path)) -> HabitTodaySummary:
     return service.today_summary(db_path)
 
 
-@router.get("/weekly", response_model=HabitWeeklyOverview, dependencies=[Depends(require_scope("read:habits"))])
-async def weekly(db_path: str = Depends(_db_path)) -> dict[str, Any]:
+@router.get(
+    "/weekly",
+    response_model=HabitWeeklyOverview,
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def weekly(db_path: str = Depends(_db_path)) -> HabitWeeklyOverview:
     habits = repository.list_habits(db_path)
     logs = repository.get_logs(db_path, limit=500)
     names = {habit["id"]: habit["name"] for habit in habits}
@@ -94,83 +119,156 @@ async def weekly(db_path: str = Depends(_db_path)) -> dict[str, Any]:
     return service.weekly_overview(logs, names, meta)
 
 
-@router.get("/insights", response_model=HabitInsights, dependencies=[Depends(require_scope("read:habits"))])
-async def habit_insights(db_path: str = Depends(_db_path)) -> dict[str, Any]:
+@router.get(
+    "/insights",
+    response_model=HabitInsights,
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def habit_insights(db_path: str = Depends(_db_path)) -> HabitInsights:
     habits = repository.list_habits(db_path)
     windows = {}
     for days in (7, 14, 30):
         cutoff = (date.today() - timedelta(days=days - 1)).isoformat()
-        logs = [log for log in repository.get_logs(db_path, limit=5000) if log["checkin_date"] >= cutoff]
+        logs = [
+            log
+            for log in repository.get_logs(db_path, limit=5000)
+            if log["checkin_date"] >= cutoff
+        ]
         windows[f"{days}d"] = len(logs)
-    return {"windows": windows, "habit_count": len(habits)}
+    return HabitInsights(windows=windows, habit_count=len(habits))
 
 
-@router.get("/goals/summary", response_model=list[HabitGoalSummary], dependencies=[Depends(require_scope("read:habits"))])
-async def goals_summary(db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
-    return repository.goals_summary(db_path)
+@router.get(
+    "/goals/summary",
+    response_model=list[HabitGoalSummary],
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def goals_summary(db_path: str = Depends(_db_path)) -> list[HabitGoalSummary]:
+    return [HabitGoalSummary(**goal) for goal in repository.goals_summary(db_path)]
 
 
-@router.post("/{identifier}/checkin", response_model=HabitRead, dependencies=[Depends(require_scope("write:habits"))])
-async def checkin(identifier: str, payload: HabitCheckIn | None = None, db_path: str = Depends(_db_path)) -> dict[str, Any]:
-    target_date = None if payload is None else payload.checkin_date or payload.checked_at
-    return service.checkin(db_path, identifier, target_date)
+@router.post(
+    "/{identifier}/checkin",
+    response_model=HabitRead,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def checkin(
+    identifier: str,
+    payload: HabitCheckIn | None = None,
+    db_path: str = Depends(_db_path),
+) -> HabitRead:
+    target_date = (
+        None if payload is None else payload.checkin_date or payload.checked_at
+    )
+    return HabitRead(**service.checkin(db_path, identifier, target_date))
 
 
-@router.delete("/{identifier}/checkin/{checkin_date}", response_model=DeleteResponse, dependencies=[Depends(require_scope("write:habits"))])
-async def delete_checkin(identifier: str, checkin_date: str, db_path: str = Depends(_db_path)) -> dict[str, bool]:
-    return {"deleted": repository.delete_checkin(db_path, identifier, checkin_date)}
+@router.delete(
+    "/{identifier}/checkin/{checkin_date}",
+    response_model=DeleteResponse,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def delete_checkin(
+    identifier: str, checkin_date: str, db_path: str = Depends(_db_path)
+) -> DeleteResponse:
+    return DeleteResponse(
+        deleted=repository.delete_checkin(db_path, identifier, checkin_date)
+    )
 
 
-@router.get("/{identifier}/logs", response_model=list[HabitCheckinLog], dependencies=[Depends(require_scope("read:habits"))])
-async def habit_logs(identifier: str, db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
-    return repository.get_logs_for_habit(db_path, identifier)
+@router.get(
+    "/{identifier}/logs",
+    response_model=list[HabitCheckinLog],
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def habit_logs(
+    identifier: str, db_path: str = Depends(_db_path)
+) -> list[HabitCheckinLog]:
+    return [
+        HabitCheckinLog(**log)
+        for log in repository.get_logs_for_habit(db_path, identifier)
+    ]
 
 
-@router.get("/{identifier}/export/csv", dependencies=[Depends(require_scope("read:habits"))])
+@router.get(
+    "/{identifier}/export/csv", dependencies=[Depends(require_scope("read:habits"))]
+)
 async def export_csv(identifier: str, db_path: str = Depends(_db_path)) -> Response:
     logs = repository.get_logs_for_habit(db_path, identifier)
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=["habit_id", "checkin_date"])
     writer.writeheader()
     for row in logs:
-        writer.writerow({"habit_id": row["habit_id"], "checkin_date": row["checkin_date"]})
+        writer.writerow(
+            {"habit_id": row["habit_id"], "checkin_date": row["checkin_date"]}
+        )
     return Response(output.getvalue(), media_type="text/csv")
 
 
-@router.patch("/{identifier}", response_model=HabitRead, dependencies=[Depends(require_scope("write:habits"))])
-async def update_habit(identifier: str, payload: HabitPatch, db_path: str = Depends(_db_path)) -> dict[str, Any]:
-    habit = repository.update_habit(db_path, identifier, payload.model_dump(exclude_unset=True))
+@router.patch(
+    "/{identifier}",
+    response_model=HabitRead,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def update_habit(
+    identifier: str, payload: HabitPatch, db_path: str = Depends(_db_path)
+) -> HabitRead:
+    habit = repository.update_habit(
+        db_path, identifier, payload.model_dump(exclude_unset=True)
+    )
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
-    return habit
+    return HabitRead(**habit)
 
 
-@router.delete("/{identifier}", response_model=DeleteResponse, dependencies=[Depends(require_scope("write:habits"))])
-async def delete_habit(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, bool]:
+@router.delete(
+    "/{identifier}",
+    response_model=DeleteResponse,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def delete_habit(
+    identifier: str, db_path: str = Depends(_db_path)
+) -> DeleteResponse:
     deleted = repository.delete_habit(db_path, identifier)
     if not deleted:
         raise HTTPException(status_code=404, detail="Habit not found")
-    return {"deleted": True}
+    return DeleteResponse(deleted=True)
 
 
-@router.patch("/{identifier}/freeze", response_model=HabitRead, dependencies=[Depends(require_scope("write:habits"))])
-async def freeze(identifier: str, payload: HabitPatch, db_path: str = Depends(_db_path)) -> dict[str, Any]:
-    habit = repository.update_habit(db_path, identifier, {"freeze_until": payload.freeze_until})
+@router.patch(
+    "/{identifier}/freeze",
+    response_model=HabitRead,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def freeze(
+    identifier: str, payload: HabitPatch, db_path: str = Depends(_db_path)
+) -> HabitRead:
+    habit = repository.update_habit(
+        db_path, identifier, {"freeze_until": payload.freeze_until}
+    )
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
-    return habit
+    return HabitRead(**habit)
 
 
-@router.patch("/{identifier}/unfreeze", response_model=HabitRead, dependencies=[Depends(require_scope("write:habits"))])
-async def unfreeze(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
+@router.patch(
+    "/{identifier}/unfreeze",
+    response_model=HabitRead,
+    dependencies=[Depends(require_scope("write:habits"))],
+)
+async def unfreeze(identifier: str, db_path: str = Depends(_db_path)) -> HabitRead:
     habit = repository.update_habit(db_path, identifier, {"freeze_until": None})
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
-    return habit
+    return HabitRead(**habit)
 
 
-@router.get("/correlations", response_model=list[HabitCorrelation], dependencies=[Depends(require_scope("read:habits"))])
-async def correlations(db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
+@router.get(
+    "/correlations",
+    response_model=list[HabitCorrelation],
+    dependencies=[Depends(require_scope("read:habits"))],
+)
+async def correlations(db_path: str = Depends(_db_path)) -> list[HabitCorrelation]:
     habits = repository.list_habits(db_path)
     logs = repository.get_logs(db_path, limit=500)
     names = {habit["id"]: habit["name"] for habit in habits}
