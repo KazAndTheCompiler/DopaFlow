@@ -1,6 +1,6 @@
 import { useMemo, useRef } from "react";
 
-import type { JournalGraphData } from "../../hooks/useJournal";
+import type { JournalGraphData } from "@api/journal";
 
 interface GraphViewProps {
   graph: JournalGraphData;

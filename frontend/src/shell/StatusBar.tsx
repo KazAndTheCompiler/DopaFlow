@@ -1,16 +1,18 @@
-import type { PlayerLevel } from "../../../shared/types/gamification";
-import type { PackyWhisper } from "../../../shared/types";
 import LevelBadge from "../components/gamification/LevelBadge";
 import XPBar from "../components/gamification/XPBar";
+import { useAppGamification } from "../app/AppContexts";
+import { useAppPacky } from "../app/AppContexts";
+import { useAppAlarms } from "../app/AppContexts";
 
 export interface StatusBarProps {
-  whisper?: PackyWhisper | undefined;
-  activeAlarm: boolean;
   syncStatus: "idle" | "syncing" | "error";
-  gamificationLevel?: PlayerLevel | undefined;
 }
 
-export function StatusBar({ whisper, activeAlarm, syncStatus, gamificationLevel }: StatusBarProps): JSX.Element {
+export function StatusBar({ syncStatus }: StatusBarProps): JSX.Element {
+  const gamification = useAppGamification();
+  const packy = useAppPacky();
+  const alarms = useAppAlarms();
+
   const syncTone =
     syncStatus === "syncing"
       ? { bg: "var(--accent)18", color: "var(--accent)", label: "Syncing" }
@@ -37,20 +39,20 @@ export function StatusBar({ whisper, activeAlarm, syncStatus, gamificationLevel 
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1, minWidth: 0 }}>
-        <LevelBadge level={gamificationLevel?.level ?? 1} size="sm" />
-        <XPBar totalXp={gamificationLevel?.total_xp ?? 0} level={gamificationLevel?.level ?? 1} progress={gamificationLevel?.progress ?? 0} xpToNext={gamificationLevel?.xp_to_next ?? 100} />
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{whisper?.text ?? "Packy is quiet for now."}</span>
+        <LevelBadge level={gamification.level?.level ?? 1} size="sm" />
+        <XPBar totalXp={gamification.level?.total_xp ?? 0} level={gamification.level?.level ?? 1} progress={gamification.level?.progress ?? 0} xpToNext={gamification.level?.xp_to_next ?? 100} />
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{packy.whisper?.text ?? "Packy is quiet for now."}</span>
       </div>
       <span
         style={{
           padding: "0.22rem 0.55rem",
           borderRadius: "999px",
-          background: activeAlarm ? "var(--state-warn)18" : "var(--surface-2)",
-          color: activeAlarm ? "var(--state-warn)" : "var(--text-secondary)",
+          background: alarms.active_alarm_id ? "var(--state-warn)18" : "var(--surface-2)",
+          color: alarms.active_alarm_id ? "var(--state-warn)" : "var(--text-secondary)",
           fontWeight: 700,
         }}
       >
-        {activeAlarm ? "Alarm armed" : "No alarm"}
+        {alarms.active_alarm_id ? "Alarm armed" : "No alarm"}
       </span>
       <span
         style={{

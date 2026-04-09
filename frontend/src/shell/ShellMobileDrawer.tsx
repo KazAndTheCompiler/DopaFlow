@@ -1,31 +1,27 @@
-import type { PackyWhisper, Project } from "../../../shared/types";
 import type { AppRoute } from "../appRoutes";
 import type { SidebarItem } from "./Sidebar";
+import { useAppProjects } from "../app/AppContexts";
+import { useAppPacky } from "../app/AppContexts";
 
 interface ShellMobileDrawerProps {
   route: AppRoute;
   navItems: SidebarItem[];
-  projects: Project[];
-  projectTaskCounts: Record<string, number>;
-  activeProjectId: string | null;
-  packyWhisper?: PackyWhisper | undefined;
   onNavigate: (route: AppRoute) => void;
-  onProjectSelect: (id: string | null) => void;
   onClose: () => void;
 }
 
 export function ShellMobileDrawer({
   route,
   navItems,
-  projects,
-  projectTaskCounts,
-  activeProjectId,
-  packyWhisper,
   onNavigate,
-  onProjectSelect,
   onClose,
 }: ShellMobileDrawerProps): JSX.Element {
-  const activeProjects = projects.filter((project) => !project.archived);
+  const projects = useAppProjects();
+  const packy = useAppPacky();
+
+  const activeProjects = projects.projects.filter((project) => !project.archived);
+  const activeProjectId = projects.activeProjectId;
+  const projectTaskCounts = projects.taskCounts;
 
   return (
     <>
@@ -134,7 +130,7 @@ export function ShellMobileDrawer({
               return (
                 <button
                   key={project.id}
-                  onClick={() => onProjectSelect(isActive ? null : project.id)}
+                  onClick={() => projects.setActiveProjectId(isActive ? null : project.id)}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -186,7 +182,7 @@ export function ShellMobileDrawer({
             Status
           </span>
           <span style={{ fontSize: "var(--text-sm)", color: "var(--text-primary)" }}>
-            {packyWhisper?.text ?? "Packy is quiet for now."}
+            {packy.whisper?.text ?? "Packy is quiet for now."}
           </span>
         </div>
       </section>

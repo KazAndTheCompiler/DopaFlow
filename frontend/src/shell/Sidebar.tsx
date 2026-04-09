@@ -1,11 +1,14 @@
 import type { AppRoute } from "../appRoutes";
-import type { Project } from "../../../shared/types";
 import {
   NavButton,
   SidebarHeader,
   SidebarProjectList,
 } from "./SidebarSections";
 import { SidebarFooter } from "./SidebarFooter";
+import { useAppHabits } from "../app/AppContexts";
+import { useAppProjects } from "../app/AppContexts";
+import { useAppPacky } from "../app/AppContexts";
+import { useAppInsights } from "../app/AppContexts";
 
 export interface SidebarItem {
   id: AppRoute;
@@ -17,13 +20,6 @@ export interface SidebarProps {
   items: SidebarItem[];
   activeRoute: AppRoute;
   collapsed: boolean;
-  habitPips: number;
-  streakCount: number;
-  momentumScore?: number | undefined;
-  projects: Project[];
-  projectTaskCounts: Record<string, number>;
-  activeProjectId: string | null;
-  onProjectSelect: (id: string | null) => void;
   onNavigate: (route: AppRoute) => void;
   onToggle: () => void;
 }
@@ -32,16 +28,18 @@ export function Sidebar({
   items,
   activeRoute,
   collapsed,
-  habitPips,
-  streakCount,
-  momentumScore,
-  projects,
-  projectTaskCounts,
-  activeProjectId,
-  onProjectSelect,
   onNavigate,
   onToggle,
 }: SidebarProps): JSX.Element {
+  const habits = useAppHabits();
+  const projects = useAppProjects();
+  const packy = useAppPacky();
+  const insights = useAppInsights();
+
+  const habitPips = Math.min(habits.habits.length, 5);
+  const streakCount = habits.habits.reduce((sum, habit) => sum + habit.current_streak, 0);
+  const momentumScore = packy.momentum?.score ?? insights.momentum?.score;
+
   return (
     <aside
       data-testid="sidebar-desktop"
@@ -74,10 +72,10 @@ export function Sidebar({
 
         <SidebarProjectList
           collapsed={collapsed}
-          projects={projects}
-          projectTaskCounts={projectTaskCounts}
-          activeProjectId={activeProjectId}
-          onProjectSelect={onProjectSelect}
+          projects={projects.projects}
+          projectTaskCounts={projects.taskCounts}
+          activeProjectId={projects.activeProjectId}
+          onProjectSelect={projects.setActiveProjectId}
         />
       </nav>
 
