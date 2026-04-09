@@ -21,6 +21,8 @@ def test_create_habit_returns_id(client) -> None:
 
     assert habit["id"].startswith("hab_")
     assert habit["name"] == "Walk"
+    assert habit["current_streak"] == 0
+    assert habit["completion_pct"] == 0
 
 
 def test_list_habits_returns_created_habit(client) -> None:
@@ -66,6 +68,7 @@ def test_logs_returns_habit_checkins(client) -> None:
     response = client.get(f"/api/v2/habits/{habit['id']}/logs")
 
     assert response.status_code == 200
+    assert response.json()[0]["habit_id"] == habit["id"]
     assert response.json()[0]["checkin_date"] == target_date
 
 

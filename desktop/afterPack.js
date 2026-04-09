@@ -115,9 +115,14 @@ function tryResolveLibraryPath(libName) {
 function copyBundledRuntimeLibs(appOutDir) {
   const libDir = path.join(appOutDir, 'usr', 'lib');
   fs.mkdirSync(libDir, { recursive: true });
+  const missingRequired = [];
 
   for (const libName of REQUIRED_RUNTIME_LIBS) {
-    const sourcePath = resolveLibraryPath(libName);
+    const sourcePath = tryResolveLibraryPath(libName);
+    if (!sourcePath) {
+      missingRequired.push(libName);
+      continue;
+    }
     const targetPath = path.join(libDir, libName);
     fs.copyFileSync(sourcePath, targetPath);
   }
@@ -127,6 +132,12 @@ function copyBundledRuntimeLibs(appOutDir) {
     if (!sourcePath) continue;
     const targetPath = path.join(libDir, libName);
     fs.copyFileSync(sourcePath, targetPath);
+  }
+
+  if (missingRequired.length > 0) {
+    console.warn(
+      `[afterPack] Missing ${missingRequired.length} runtime libs; packaged app will fall back to host libraries where available: ${missingRequired.join(', ')}`,
+    );
   }
 }
 

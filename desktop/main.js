@@ -1,11 +1,12 @@
 const path = require("node:path");
-const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain } = require("electron");
+const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const AutoLaunch = require("electron-auto-launch");
 const pkg = require("./package.json");
 
 const { BackendRuntime } = require("./backend-runtime");
 const { NotificationRuntime } = require("./notification-runtime");
+const { buildBackendEnv } = require("./runtime-auth");
 const { WindowRuntime } = require("./window-runtime");
 
 const singleInstance = app.requestSingleInstanceLock();
@@ -24,12 +25,13 @@ const backendArgs = isPackaged ? [] : ["-m", "app.main"];
 const backendCwd = isPackaged
   ? path.join(process.resourcesPath, "dopaflow-backend")
   : path.join(__dirname, "..", "backend");
+const backendEnv = buildBackendEnv(process.env, { isPackaged });
 
 const runtime = new BackendRuntime({
   cwd: backendCwd,
   command: backendCommand,
   args: backendArgs,
-  env: { ...process.env, DOPAFLOW_DEV_AUTH: "1" },
+  env: backendEnv,
 });
 
 const releaseChannel = pkg.dopaflowReleaseChannel === "stable" ? "stable" : "dev";
@@ -138,10 +140,11 @@ function setupIpc() {
 if (singleInstance) {
   app.on("second-instance", (_event, argv) => {
     const deepLink = argv.find((value) => value.startsWith("dopaflow://"));
-    const window = windowRuntime?.focusMainWindow();
     if (deepLink) {
-      window.webContents.send("deep-link", deepLink);
+      windowRuntime?.openDeepLink(deepLink);
+      return;
     }
+    windowRuntime?.focusMainWindow();
   });
 }
 
@@ -155,6 +158,7 @@ app.whenReady().then(() => {
     preloadPath: path.join(__dirname, "preload.js"),
     frontendDistPath: path.join(process.resourcesPath, "frontend", "dist", "index.html"),
     devServerOrigin: "http://127.0.0.1:5173",
+    openExternal: (url) => shell.openExternal(url),
     onMainReady: () => pushBuildInfo(),
   });
 
@@ -182,7 +186,7 @@ app.whenReady().then(() => {
 
 app.on("open-url", (event, url) => {
   event.preventDefault();
-  windowRuntime.ensureMainWindow().webContents.send("deep-link", url);
+  windowRuntime?.openDeepLink(url);
 });
 
 app.on("will-quit", () => {

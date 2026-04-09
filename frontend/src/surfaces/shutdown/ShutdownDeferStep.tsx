@@ -1,38 +1,22 @@
-import { useState } from "react";
-
 import type { Task } from "@shared/types";
 
 import { primaryBtn, secondaryBtn } from "./ShutdownShared";
 
 interface ShutdownDeferStepProps {
   incompleteToday: Task[];
-  onDefer: (taskId: string, when: "tomorrow" | "this_week" | "drop") => void;
+  decisions: Record<string, "tomorrow" | "this_week" | "drop">;
+  onDecide: (taskId: string, when: "tomorrow" | "this_week" | "drop") => void;
   onNext: () => void;
   onBack: () => void;
 }
 
 export function ShutdownDeferStep({
   incompleteToday,
-  onDefer,
+  decisions,
+  onDecide,
   onNext,
   onBack,
 }: ShutdownDeferStepProps): JSX.Element {
-  const [decisions, setDecisions] = useState<Record<string, "tomorrow" | "this_week" | "drop">>({});
-
-  const handleDecide = (id: string, when: "tomorrow" | "this_week" | "drop"): void => {
-    setDecisions((prev) => ({ ...prev, [id]: when }));
-    onDefer(id, when);
-  };
-
-  const handleContinue = (): void => {
-    incompleteToday.forEach((task) => {
-      if (!decisions[task.id]) {
-        onDefer(task.id, "tomorrow");
-      }
-    });
-    onNext();
-  };
-
   return (
     <div>
       <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", marginTop: 0, marginBottom: "1.25rem" }}>
@@ -77,7 +61,7 @@ export function ShutdownDeferStep({
                   {(["tomorrow", "this_week", "drop"] as const).map((action) => (
                     <button
                       key={action}
-                      onClick={() => handleDecide(task.id, action)}
+                      onClick={() => onDecide(task.id, action)}
                       style={{
                         padding: "0.3rem 0.65rem",
                         borderRadius: "8px",
@@ -104,7 +88,7 @@ export function ShutdownDeferStep({
           Back
         </button>
         <button
-          onClick={handleContinue}
+          onClick={onNext}
           style={{
             flex: 1,
             ...primaryBtn,

@@ -1,6 +1,6 @@
-import { useContext, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppReview } from "../../app/AppContexts";
 import { showToast } from "@ds/primitives/Toast";
 import CardReviewer from "./CardReviewer";
 import CardEditModal from "./CardEditModal";
@@ -11,17 +11,14 @@ import type { ReviewCard } from "../../../../shared/types";
 import { ReviewSurfaceSkeleton } from "@ds/primitives/Skeleton";
 
 export default function ReviewView(): JSX.Element {
-  const app = useContext(AppDataContext);
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
+  const review = useAppReview();
 
   const [selectedDeckId, setSelectedDeckId] = useState<string>("deck_default");
   const [sessionDone, setSessionDone] = useState(0);
   const [editingCard, setEditingCard] = useState<ReviewCard | null>(null);
   const visibleCards = useMemo(
-    () => app.review.cards.filter((card) => !selectedDeckId || card.deck_id === selectedDeckId),
-    [app.review.cards, selectedDeckId],
+    () => review.cards.filter((card) => !selectedDeckId || card.deck_id === selectedDeckId),
+    [review.cards, selectedDeckId],
   );
   const dueCards = useMemo(
     () => visibleCards.filter((card) => !card.next_review_at || new Date(card.next_review_at) <= new Date()),
@@ -29,7 +26,7 @@ export default function ReviewView(): JSX.Element {
   );
   const currentCard = dueCards[0];
 
-  if (app.review.loading) {
+  if (review.loading) {
     return <ReviewSurfaceSkeleton />;
   }
 
@@ -43,7 +40,7 @@ export default function ReviewView(): JSX.Element {
           sessionDone={sessionDone}
           onRate={(rating) => {
             if (!currentCard) return;
-            void app.review.rate(currentCard.id, rating).then(() => setSessionDone((n) => n + 1));
+            void review.rate(currentCard.id, rating).then(() => setSessionDone((n) => n + 1));
           }}
           onEditCard={setEditingCard}
         />
@@ -54,7 +51,7 @@ export default function ReviewView(): JSX.Element {
             try {
               await updateReviewCard(id, { front, back });
               showToast("Card updated.", "success");
-              await app.review.refresh();
+              await review.refresh();
             } catch {
               showToast("Could not update card.", "error");
             }

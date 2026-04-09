@@ -110,7 +110,8 @@ def create_task(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
                 estimated_minutes, actual_minutes, recurrence_rule, recurrence_parent_id,
                 sort_order, subtasks_json, tags_json, source_type, source_external_id,
                 source_instance_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                , project_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 title=excluded.title,
                 description=excluded.description,
@@ -122,6 +123,7 @@ def create_task(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
                 recurrence_rule=excluded.recurrence_rule,
                 subtasks_json=excluded.subtasks_json,
                 tags_json=excluded.tags_json,
+                project_id=excluded.project_id,
                 updated_at=excluded.updated_at
             """,
             (
@@ -144,6 +146,7 @@ def create_task(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("source_instance_id"),
                 now,
                 now,
+                payload.get("project_id"),
             ),
         )
     created = get_task(db_path, identifier)
@@ -253,7 +256,7 @@ def update_task(db_path: str, task_identifier: str, payload: dict[str, Any]) -> 
             SET title = ?, description = ?, due_at = ?, priority = ?, status = ?, done = ?,
                 estimated_minutes = ?, actual_minutes = ?, recurrence_rule = ?, recurrence_parent_id = ?,
                 sort_order = ?, subtasks_json = ?, tags_json = ?, source_type = ?, source_external_id = ?,
-                source_instance_id = ?, updated_at = ?
+                source_instance_id = ?, project_id = ?, updated_at = ?
             WHERE id = ?
             """,
             (
@@ -273,6 +276,7 @@ def update_task(db_path: str, task_identifier: str, payload: dict[str, Any]) -> 
                 merged.get("source_type"),
                 merged.get("source_external_id"),
                 merged.get("source_instance_id"),
+                merged.get("project_id"),
                 merged["updated_at"],
                 task_identifier,
             ),

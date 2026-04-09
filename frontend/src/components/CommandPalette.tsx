@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Project } from "@shared/types";
+import { sidebarRoutes, type AppRoute } from "../appRoutes";
 import Button from "../design-system/primitives/Button";
 import Input from "../design-system/primitives/Input";
 import VoiceButton from "../design-system/primitives/VoiceButton";
@@ -17,26 +18,8 @@ interface CommandPaletteProps {
   onExecute: (text: string) => Promise<void>;
   projects?: Project[];
   onProjectSelect?: (id: string | null) => void;
-  onNavigate?: (route: string) => void;
+  onNavigate?: (route: AppRoute) => void;
 }
-
-const NAV_SUGGESTIONS: Array<{ label: string; icon: string; route: string }> = [
-  { label: "Today", icon: "TD", route: "today" },
-  { label: "Tasks", icon: "TS", route: "tasks" },
-  { label: "Focus", icon: "FC", route: "focus" },
-  { label: "Habits", icon: "HB", route: "habits" },
-  { label: "Journal", icon: "JR", route: "journal" },
-  { label: "Review", icon: "RV", route: "review" },
-  { label: "Calendar", icon: "CL", route: "calendar" },
-  { label: "Alarms", icon: "AL", route: "alarms" },
-  { label: "Nutrition", icon: "NT", route: "nutrition" },
-  { label: "Digest", icon: "DG", route: "digest" },
-  { label: "Player", icon: "PL", route: "player" },
-  { label: "Overview", icon: "OV", route: "overview" },
-  { label: "Gamify", icon: "GM", route: "gamification" },
-  { label: "Insights", icon: "IN", route: "insights" },
-  { label: "Settings", icon: "ST", route: "settings" },
-];
 
 export default function CommandPalette({ onExecute, projects = [], onProjectSelect, onNavigate }: CommandPaletteProps): JSX.Element | null {
   const [open, setOpen] = useState(false);
@@ -64,11 +47,11 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
   }
 
   // Nav suggestions
-  NAV_SUGGESTIONS.filter((n) => !q || n.label.toLowerCase().includes(q) || n.route.includes(q)).slice(0, 5).forEach((n) => {
+  sidebarRoutes.filter((route) => !q || route.label.toLowerCase().includes(q) || route.id.includes(q)).slice(0, 5).forEach((route) => {
     suggestions.push({
-      label: `Go to ${n.label}`,
-      icon: n.icon,
-      action: () => { onNavigate?.(n.route); setOpen(false); setInput(""); },
+      label: `Go to ${route.label}`,
+      icon: route.icon,
+      action: () => { onNavigate?.(route.id); setOpen(false); setInput(""); },
     });
   });
 
@@ -83,7 +66,11 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
       setInput(transcript);
       reset();
     }
-  }, [transcript]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, reset, transcript]);
+
+  useEffect(() => {
+    setSelectedIdx(0);
+  }, [input, open]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -119,6 +106,7 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
   if (!open) return null;
   return (
     <div
+      data-testid="command-palette-overlay"
       style={{
         position: "fixed",
         top: 0,
@@ -134,6 +122,7 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
       onClick={() => setOpen(false)}
     >
       <div
+        data-testid="command-palette"
         style={{
           width: "90%",
           maxWidth: "640px",

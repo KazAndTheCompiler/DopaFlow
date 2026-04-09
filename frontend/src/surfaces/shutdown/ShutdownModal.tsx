@@ -4,7 +4,7 @@ import type { Task } from "@shared/types";
 
 import { ShutdownDeferStep } from "./ShutdownDeferStep";
 import { ShutdownJournalPrompt } from "./ShutdownJournalPrompt";
-import { STEP_TITLES, TOTAL_STEPS } from "./ShutdownShared";
+import { STEP_TITLES, TOTAL_STEPS, primaryBtn } from "./ShutdownShared";
 import { ShutdownStepDots } from "./ShutdownStepDots";
 import { ShutdownWinStrip } from "./ShutdownWinStrip";
 
@@ -12,8 +12,8 @@ interface ShutdownModalProps {
   completedToday: Task[];
   incompleteToday: Task[];
   tomorrowTasks: Task[];
-  onDefer: (taskId: string, when: "tomorrow" | "this_week" | "drop") => void;
-  onJournalNote: (emoji: string, note: string) => void;
+  onDefer: (taskId: string, when: "tomorrow" | "this_week" | "drop") => Promise<void> | void;
+  onJournalNote: (emoji: string, note: string) => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -54,7 +54,56 @@ export default function ShutdownModal({
   onClose,
 }: ShutdownModalProps): JSX.Element {
   const [step, setStep] = useState(0);
+  const [decisions, setDecisions] = useState<Record<string, "tomorrow" | "this_week" | "drop">>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [completed, setCompleted] = useState(false);
   const shutdownState = getShutdownState(incompleteToday, tomorrowTasks);
+  const deferredCount = Object.values(decisions).filter((decision) => decision !== "drop").length;
+  const droppedCount = Object.values(decisions).filter((decision) => decision === "drop").length;
+
+  const projectedTomorrowTasks = [
+    ...tomorrowTasks,
+    ...incompleteToday.filter((task) => {
+      const decision = decisions[task.id] ?? "tomorrow";
+      return decision === "tomorrow";
+    }),
+  ].filter((task, index, items) => items.findIndex((candidate) => candidate.id === task.id) === index);
+
+  const handleDecide = (taskId: string, when: "tomorrow" | "this_week" | "drop"): void => {
+    setDecisions((prev) => ({ ...prev, [taskId]: when }));
+  };
+
+  const handleAdvanceFromDefer = (): void => {
+    const next = { ...decisions };
+    for (const task of incompleteToday) {
+      if (!next[task.id]) {
+        next[task.id] = "tomorrow";
+      }
+    }
+    setDecisions(next);
+    setStep(2);
+  };
+
+  const handleJournalSubmit = async (emoji: string, note: string): Promise<void> => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      for (const task of incompleteToday) {
+        await onDefer(task.id, decisions[task.id] ?? "tomorrow");
+      }
+      await onJournalNote(emoji, note);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Shutdown could not be saved. Try again.");
+      throw error;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFinish = (): void => {
+    setCompleted(true);
+  };
 
   return (
     <div
@@ -112,7 +161,9 @@ export default function ShutdownModal({
               <h2 style={{ margin: 0, fontSize: "clamp(1.25rem, 2vw, 1.6rem)", fontWeight: 800, letterSpacing: "-0.03em" }}>
                 End your day
               </h2>
-              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>{STEP_TITLES[step]}</span>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+                {completed ? "Complete" : STEP_TITLES[step]}
+              </span>
             </div>
             <button
               onClick={onClose}
@@ -211,11 +262,93 @@ export default function ShutdownModal({
           </div>
         </div>
 
-        <ShutdownStepDots step={step} total={TOTAL_STEPS} />
+        {!completed && <ShutdownStepDots step={step} total={TOTAL_STEPS} />}
 
-        {step === 0 && <ShutdownWinStrip completedToday={completedToday} onNext={(_highlighted) => setStep(1)} />}
-        {step === 1 && <ShutdownDeferStep incompleteToday={incompleteToday} onDefer={onDefer} onNext={() => setStep(2)} onBack={() => setStep(0)} />}
-        {step === 2 && <ShutdownJournalPrompt tomorrowTasks={tomorrowTasks} onJournalNote={onJournalNote} onBack={() => setStep(1)} onClose={onClose} />}
+        {completed ? (
+          <div style={{ display: "grid", gap: "1rem" }}>
+            <div
+              style={{
+                padding: "1rem",
+                borderRadius: "16px",
+                background: "color-mix(in srgb, var(--state-completed) 8%, var(--surface))",
+                border: "1px solid color-mix(in srgb, var(--state-completed) 20%, var(--border-subtle))",
+                display: "grid",
+                gap: "0.45rem",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "var(--text-xs)",
+                  color: "var(--state-completed)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
+                  fontWeight: 800,
+                }}
+              >
+                Shutdown complete
+              </span>
+              <strong style={{ fontSize: "var(--text-lg)" }}>Tomorrow is set and today is closed.</strong>
+              <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                {deferredCount > 0
+                  ? `${deferredCount} task${deferredCount === 1 ? "" : "s"} moved into tomorrow's runway.`
+                  : "No carry-forward tasks were added to tomorrow."}{" "}
+                {droppedCount > 0 ? `${droppedCount} task${droppedCount === 1 ? "" : "s"} dropped from the plan.` : ""}
+              </span>
+            </div>
+
+            <div
+              style={{
+                padding: "0.85rem 0.95rem",
+                borderRadius: "14px",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-subtle)",
+                display: "grid",
+                gap: "0.35rem",
+              }}
+            >
+              <strong style={{ fontSize: "var(--text-sm)" }}>Tomorrow lineup</strong>
+              {projectedTomorrowTasks.length === 0 ? (
+                <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>Nothing scheduled yet.</span>
+              ) : (
+                projectedTomorrowTasks.slice(0, 5).map((task) => (
+                  <span key={task.id} style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
+                    {task.title}
+                  </span>
+                ))
+              )}
+            </div>
+
+            <button onClick={onClose} style={{ ...primaryBtn, width: "100%" }}>
+              Close shutdown
+            </button>
+          </div>
+        ) : (
+          <>
+            {step === 0 && <ShutdownWinStrip completedToday={completedToday} onNext={(_highlighted) => setStep(1)} />}
+            {step === 1 && (
+              <ShutdownDeferStep
+                incompleteToday={incompleteToday}
+                decisions={decisions}
+                onDecide={handleDecide}
+                onNext={handleAdvanceFromDefer}
+                onBack={() => setStep(0)}
+              />
+            )}
+            {step === 2 && (
+              <ShutdownJournalPrompt
+                tomorrowTasks={projectedTomorrowTasks}
+                saving={saving}
+                error={saveError}
+                onJournalNote={handleJournalSubmit}
+                onBack={() => {
+                  setSaveError(null);
+                  setStep(1);
+                }}
+                onFinish={handleFinish}
+              />
+            )}
+          </>
+        )}
       </div>
     </div>
   );

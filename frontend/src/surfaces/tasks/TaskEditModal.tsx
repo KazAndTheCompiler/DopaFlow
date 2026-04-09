@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import Button from "@ds/primitives/Button";
 import Input from "@ds/primitives/Input";
@@ -6,7 +6,7 @@ import Modal from "@ds/primitives/Modal";
 import type { SubTask, Task } from "@shared/types";
 import { askPacky, createAlarm } from "@api/index";
 import { addTaskDependency, getTaskContext, removeTaskDependency } from "@api/tasks";
-import { AppDataContext } from "../../App";
+import { useAppProjects, useAppTasks } from "../../app/AppContexts";
 
 export interface TaskEditModalProps {
   task: Task | null;
@@ -31,8 +31,9 @@ const RECURRENCE_OPTIONS: Array<{ label: string; value: string }> = [
 ];
 
 export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskEditModalProps): JSX.Element | null {
-  const ctx = useContext(AppDataContext);
-  const availableProjects = ctx?.projects.projects ?? [];
+  const projects = useAppProjects();
+  const tasks = useAppTasks();
+  const availableProjects = projects.projects;
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -338,7 +339,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
               style={{ ...selectStyle, flex: 1 }}
             />
             <datalist id={`dep-options-${task?.id}`}>
-              {(ctx?.tasks.tasks ?? [])
+              {tasks.tasks
                 .filter((t) => t.id !== task?.id && !dependencies.some((d) => d.id === t.id) && t.title.toLowerCase().includes(depSearch.toLowerCase()))
                 .slice(0, 10)
                 .map((t) => <option key={t.id} value={t.title} data-id={t.id} />)}
@@ -346,7 +347,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
             <button
               type="button"
               onClick={() => {
-                const match = (ctx?.tasks.tasks ?? []).find((t) => t.title === depSearch && t.id !== task?.id);
+                const match = tasks.tasks.find((t) => t.title === depSearch && t.id !== task?.id);
                 if (!match || !task) return;
                 void addTaskDependency(task.id, match.id).then(() => { setDependencies((ds) => [...ds, match]); setDepSearch(""); });
               }}

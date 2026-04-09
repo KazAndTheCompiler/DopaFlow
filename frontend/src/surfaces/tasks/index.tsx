@@ -1,7 +1,7 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Task } from "../../../../shared/types";
-import { AppDataContext } from "../../App";
+import { useAppProjects, useAppTasks } from "../../app/AppContexts";
 import EisenhowerView from "./EisenhowerView";
 import KanbanView from "./KanbanView";
 import TaskCreateBar from "./TaskCreateBar";
@@ -29,20 +29,19 @@ const viewToggleStyle = (active: boolean): React.CSSProperties => ({
 });
 
 export default function TasksView({ initialView = "list" }: TasksViewProps): JSX.Element {
-  const app = useContext(AppDataContext);
+  const tasks = useAppTasks();
+  const projects = useAppProjects();
   const [quadrants, setQuadrants] = useState<{ q1: []; q2: []; q3: []; q4: [] }>({ q1: [], q2: [], q3: [], q4: [] });
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [boardMode, setBoardMode] = useState<BoardMode>("kanban");
 
-  if (!app) return <div>App context unavailable.</div>;
-
   const isBoard = initialView === "board";
-  const activeProjectId = app.projects?.activeProjectId ?? null;
+  const activeProjectId = projects.activeProjectId ?? null;
   const visibleTasks = activeProjectId
-    ? app.tasks.filteredTasks.filter((t) => t.project_id === activeProjectId)
-    : app.tasks.filteredTasks;
+    ? tasks.filteredTasks.filter((t) => t.project_id === activeProjectId)
+    : tasks.filteredTasks;
   const activeProject = activeProjectId
-    ? (app.projects?.projects ?? []).find((p) => p.id === activeProjectId)
+    ? projects.projects.find((p) => p.id === activeProjectId)
     : null;
   const doneCount = visibleTasks.filter((task) => task.done || task.status === "done").length;
   const activeCount = visibleTasks.filter((task) => !task.done && task.status !== "done" && task.status !== "cancelled").length;
@@ -62,7 +61,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
     void apiClient<{ q1: []; q2: []; q3: []; q4: [] }>("/boards/eisenhower")
       .then((body) => setQuadrants(body))
       .catch(() => setQuadrants({ q1: [], q2: [], q3: [], q4: [] }));
-  }, [isBoard, boardMode, app.tasks.tasks]);
+  }, [isBoard, boardMode, tasks.tasks]);
 
   if (isBoard) {
     return (
@@ -132,15 +131,15 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         </section>
         <TaskCreateBar
           onCreate={async (text) => {
-            await app.tasks.createQuickTask(text);
-            await app.tasks.refresh();
+            await tasks.createQuickTask(text);
+            await tasks.refresh();
           }}
         />
         {boardMode === "kanban" ? (
           <KanbanView
-            tasks={app.tasks.tasks}
+            tasks={tasks.tasks}
             onEdit={(task) => setEditingTask(task)}
-            onStatusChange={(id, status) => void app.tasks.update(id, { status })}
+            onStatusChange={(id, status) => void tasks.update(id, { status })}
           />
         ) : (
           <EisenhowerView quadrants={quadrants} />
@@ -148,8 +147,8 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         <TaskEditModal
           task={editingTask}
           onClose={() => setEditingTask(null)}
-          onSave={async (id, patch) => { await app.tasks.update(id, patch); }}
-          onDelete={async (id) => { await app.tasks.remove(id); }}
+          onSave={async (id, patch) => { await tasks.update(id, patch); }}
+          onDelete={async (id) => { await tasks.remove(id); }}
         />
       </div>
     );
@@ -205,14 +204,14 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
       </section>
       <TaskCreateBar
         onVoiceExecuted={() => {
-          void app.tasks.refresh();
+          void tasks.refresh();
         }}
         onCreate={async (text) => {
-          const task = await app.tasks.createQuickTask(text);
+          const task = await tasks.createQuickTask(text);
           if (activeProjectId) {
-            await app.tasks.update(task.id, { project_id: activeProjectId } as Partial<Task>);
+            await tasks.update(task.id, { project_id: activeProjectId } as Partial<Task>);
           }
-          await app.tasks.refresh();
+          await tasks.refresh();
         }}
       />
       {activeProject && (
@@ -225,7 +224,7 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
           <span style={{ fontWeight: 600, minWidth: 0 }}>{activeProject.name}</span>
           <span style={{ color: "var(--text-secondary)" }}>project filter active</span>
           <button
-            onClick={() => app.projects?.setActiveProjectId(null)}
+            onClick={() => projects.setActiveProjectId(null)}
             style={{ marginLeft: "auto", border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "var(--text-xs)", flexShrink: 0 }}
           >
             Clear filter X
@@ -234,27 +233,27 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
       )}
       <TaskFilterBar
         total={visibleTasks.length}
-        filters={app.tasks.filters}
-        onFilterChange={app.tasks.setFilters}
-        sortBy={app.tasks.sortBy}
-        onSortByChange={app.tasks.setSortBy}
+        filters={tasks.filters}
+        onFilterChange={tasks.setFilters}
+        sortBy={tasks.sortBy}
+        onSortByChange={tasks.setSortBy}
       />
       <TasksPanel
         tasks={visibleTasks}
-        loading={app.tasks.loading}
-        onComplete={(id) => void app.tasks.complete(id)}
+        loading={tasks.loading}
+        onComplete={(id) => void tasks.complete(id)}
         onEdit={(task) => setEditingTask(task)}
-        selectedIds={app.tasks.selectedIds}
-        onToggleSelect={app.tasks.toggleSelect}
-        onBulkComplete={(ids) => app.tasks.bulkComplete(ids)}
-        onBulkDelete={(ids) => app.tasks.bulkDelete(ids)}
-        onClearSelection={app.tasks.clearSelection}
+        selectedIds={tasks.selectedIds}
+        onToggleSelect={tasks.toggleSelect}
+        onBulkComplete={(ids) => tasks.bulkComplete(ids)}
+        onBulkDelete={(ids) => tasks.bulkDelete(ids)}
+        onClearSelection={tasks.clearSelection}
       />
       <TaskEditModal
         task={editingTask}
         onClose={() => setEditingTask(null)}
-        onSave={async (id, patch) => { await app.tasks.update(id, patch); }}
-        onDelete={async (id) => { await app.tasks.remove(id); }}
+        onSave={async (id, patch) => { await tasks.update(id, patch); }}
+        onDelete={async (id) => { await tasks.remove(id); }}
       />
     </div>
   );

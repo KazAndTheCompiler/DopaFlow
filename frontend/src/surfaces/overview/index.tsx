@@ -1,11 +1,12 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppCalendar, useAppFocus, useAppHabits, useAppInsights, useAppJournal, useAppPacky, useAppTasks } from "../../app/AppContexts";
+import { APP_STORAGE_KEYS } from "../../app/appStorage";
 import DigestCard from "../../components/DigestCard";
 import { OverviewSurfaceSkeleton } from "@ds/primitives/Skeleton";
 
-const FOCUS_PREFILL_KEY = "zoestm_focus_prefill";
-const TODAY_KEY = "zoestm_planned_date";
+const FOCUS_PREFILL_KEY = APP_STORAGE_KEYS.focusPrefill;
+const TODAY_KEY = APP_STORAGE_KEYS.plannedDate;
 
 const LEVEL_COLOR: Record<string, string> = {
   low: "var(--text-secondary)",
@@ -78,8 +79,15 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string 
 }
 
 export default function OverviewView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const tasks = useAppTasks();
+  const focus = useAppFocus();
+  const habits = useAppHabits();
+  const packy = useAppPacky();
+  const insights = useAppInsights();
+  const calendar = useAppCalendar();
+  const journal = useAppJournal();
   const [digestData, setDigestData] = useState<OverviewDigestData | null>(null);
+  const app = { tasks, focus, habits, packy, insights, calendar, journal };
 
   useEffect(() => {
     void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/digest/today`)
@@ -92,29 +100,28 @@ export default function OverviewView(): JSX.Element {
   const plannedToday = localStorage.getItem(TODAY_KEY) === todayIso;
 
   const tasksDueToday = useMemo(
-    () => (app?.tasks.tasks ?? []).filter((t) => !t.done && t.due_at && t.due_at.slice(0, 10) <= todayIso).length,
-    [app?.tasks.tasks, todayIso],
+    () => tasks.tasks.filter((t) => !t.done && t.due_at && t.due_at.slice(0, 10) <= todayIso).length,
+    [tasks.tasks, todayIso],
   );
 
   const tasksCompletedToday = useMemo(
-    () => (app?.tasks.tasks ?? []).filter((t) => t.done && t.updated_at?.slice(0, 10) === todayIso).length,
-    [app?.tasks.tasks, todayIso],
+    () => tasks.tasks.filter((t) => t.done && t.updated_at?.slice(0, 10) === todayIso).length,
+    [tasks.tasks, todayIso],
   );
 
   const focusMinutesToday = useMemo(() => {
-    const sessions = app?.focus.sessions ?? [];
+    const sessions = focus.sessions;
     return sessions
       .filter((s) => s.started_at?.slice(0, 10) === todayIso && s.status === "completed")
       .reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
-  }, [app?.focus.sessions, todayIso]);
+  }, [focus.sessions, todayIso]);
 
   const habitsStreakAvg = useMemo(() => {
-    const habits = app?.habits.habits ?? [];
-    if (!habits.length) return 0;
-    return Math.round(habits.reduce((sum, h) => sum + (h.current_streak ?? 0), 0) / habits.length);
-  }, [app?.habits.habits]);
+    if (!habits.habits.length) return 0;
+    return Math.round(habits.habits.reduce((sum, h) => sum + (h.current_streak ?? 0), 0) / habits.habits.length);
+  }, [habits.habits]);
 
-  const momentum = app?.packy.momentum ?? app?.insights.momentum;
+  const momentum = packy.momentum ?? insights.momentum;
   const momentumLevel = momentum?.level ?? "low";
   const momentumColor = LEVEL_COLOR[momentumLevel] ?? "var(--accent)";
 
@@ -341,7 +348,7 @@ export default function OverviewView(): JSX.Element {
         >
           <span style={{ fontSize: "1.2rem", color: "var(--accent)", lineHeight: 1 }}>◆</span>
           <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-            {app.packy.whisper.text}
+            {packy.whisper?.text ?? ""}
           </p>
         </button>
       )}

@@ -1,6 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppJournal } from "../../app/AppContexts";
 import TemplatesPicker from "../../components/TemplatesPicker";
 import { exportJournalToday } from "../../api/journal";
 import AnalyticsView from "./AnalyticsView";
@@ -12,7 +12,7 @@ import { JournalSurfaceSkeleton } from "@ds/primitives/Skeleton";
 type Tab = "editor" | "graph" | "analytics";
 
 export default function JournalView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const journal = useAppJournal();
   const today = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab, setActiveTab] = useState<Tab>("editor");
@@ -23,24 +23,20 @@ export default function JournalView(): JSX.Element {
       : false
   ));
 
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
-
-  if (app.journal.loading) {
+  if (journal.loading) {
     return <JournalSurfaceSkeleton />;
   }
 
-  const activeEntry = app.journal.entries.find((e) => e.date === selectedDate);
+  const activeEntry = journal.entries.find((e) => e.date === selectedDate);
 
   useEffect(() => {
     return () => {
-      const todayEntry = app.journal.entries.find((e) => e.date === today);
+      const todayEntry = journal.entries.find((e) => e.date === today);
       if (todayEntry) {
         exportJournalToday().catch(() => {});
       }
     };
-  }, [app.journal.entries, today]);
+  }, [journal.entries, today]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -79,18 +75,18 @@ export default function JournalView(): JSX.Element {
   return (
     <div style={{ display: "grid", gap: "1rem", gridTemplateColumns: isCompactLayout ? "minmax(0, 1fr)" : "minmax(200px, 240px) minmax(0, 1fr)", alignItems: "start" }}>
       <JournalPanel
-        entries={app.journal.entries}
-        loading={app.journal.loading}
+        entries={journal.entries}
+        loading={journal.loading}
         selectedDate={selectedDate}
-        backupPath={app.journal.backupPath}
-        lastBackupAt={app.journal.lastBackupAt}
+        backupPath={journal.backupPath}
+        lastBackupAt={journal.lastBackupAt}
         onSelectDate={setSelectedDate}
-        onTriggerBackup={() => void app.journal.triggerBackup(selectedDate)}
+        onTriggerBackup={() => void journal.triggerBackup(selectedDate)}
       />
 
       <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
         <div style={{ display: "flex", gap: "1rem", alignItems: "start", flexWrap: "wrap", minWidth: 0 }}>
-          <TemplatesPicker onApply={(body, tags) => { void app.journal.save({ date: selectedDate, markdown_body: body, tags, emoji: activeEntry?.emoji ?? null }); }} />
+          <TemplatesPicker onApply={(body, tags) => { void journal.save({ date: selectedDate, markdown_body: body, tags, emoji: activeEntry?.emoji ?? null }); }} />
           {selectedDate === today && (
             <button
               onClick={handleExportToday}
@@ -123,18 +119,18 @@ export default function JournalView(): JSX.Element {
         {activeTab === "editor" && (
           <EditorView
             entry={activeEntry}
-            entries={app.journal.entries}
+            entries={journal.entries}
             selectedDate={selectedDate}
-            onSave={app.journal.save}
+            onSave={journal.save}
             onNavigateDate={setSelectedDate}
             onVoiceExecuted={() => {
-              void app.journal.refresh();
-              void app.journal.refreshGraph();
+              void journal.refresh();
+              void journal.refreshGraph();
             }}
           />
         )}
-        {activeTab === "graph" && <GraphView graph={app.journal.graph} />}
-        {activeTab === "analytics" && <AnalyticsView entries={app.journal.entries} />}
+        {activeTab === "graph" && <GraphView graph={journal.graph} />}
+        {activeTab === "analytics" && <AnalyticsView entries={journal.entries} />}
       </div>
     </div>
   );

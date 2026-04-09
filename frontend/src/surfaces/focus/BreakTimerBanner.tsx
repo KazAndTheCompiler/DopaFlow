@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
-const BREAK_STORAGE_KEY = "dopaflow_break_ends_at";
+import { APP_STORAGE_KEYS } from "../../app/appStorage";
+
+const BREAK_STORAGE_KEY = APP_STORAGE_KEYS.breakEndsAt;
 
 export interface BreakTimerBannerProps {
   breakEndsAt: Date | null;

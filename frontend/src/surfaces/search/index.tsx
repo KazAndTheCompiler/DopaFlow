@@ -1,10 +1,11 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import Input from "@ds/primitives/Input";
 import Button from "@ds/primitives/Button";
 import { Skeleton } from "@ds/primitives/Skeleton";
 import type { Habit, Task } from "@shared/types";
-import { AppDataContext } from "../../App";
+import { useAppHabits, useAppTasks } from "../../app/AppContexts";
+import { apiClient } from "../../api/client";
 
 interface JournalSearchResult {
   id: string;
@@ -48,7 +49,8 @@ interface FlatResult {
 }
 
 export default function SearchView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const tasks = useAppTasks();
+  const habits = useAppHabits();
   const [query, setQuery] = useState("");
   const [journalResults, setJournalResults] = useState<JournalSearchResult[]>([]);
   const [journalLoading, setJournalLoading] = useState(false);
@@ -57,12 +59,10 @@ export default function SearchView(): JSX.Element {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  if (!app) return <div>App context unavailable.</div>;
-
   const q = query.toLowerCase().trim();
 
   const taskResults: Task[] = q
-    ? app.tasks.tasks.filter(
+    ? tasks.tasks.filter(
         (t) =>
           t.title.toLowerCase().includes(q) ||
           t.tags.some((tag) => tag.toLowerCase().includes(q)) ||
@@ -71,27 +71,44 @@ export default function SearchView(): JSX.Element {
     : [];
 
   const habitResults: Habit[] = q
-    ? app.habits.habits.filter((h) => h.name.toLowerCase().includes(q))
+    ? habits.habits.filter((h) => h.name.toLowerCase().includes(q))
     : [];
 
-  // Debounced journal search
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    if (!q) { setJournalResults([]); return; }
-    const timer = setTimeout(() => {
+    if (!q) {
+      setJournalResults([]);
+      setJournalLoading(false);
+      return;
+    }
+
+    let active = true;
+    const timer = window.setTimeout(() => {
       setJournalLoading(true);
-      const apiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://127.0.0.1:8000/api/v2";
-      void fetch(`${apiUrl}/journal/search?q=${encodeURIComponent(query)}`)
-        .then((r) => r.json() as Promise<JournalSearchResult[]>)
-        .then(setJournalResults)
-        .catch(() => setJournalResults([]))
-        .finally(() => setJournalLoading(false));
+      void apiClient<JournalSearchResult[]>(`/journal/search?q=${encodeURIComponent(query)}`)
+        .then((results) => {
+          if (active) {
+            setJournalResults(results);
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setJournalResults([]);
+          }
+        })
+        .finally(() => {
+          if (active) {
+            setJournalLoading(false);
+          }
+        });
     }, 300);
-    return () => clearTimeout(timer);
-  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [q, query]);
 
   // Flat list for keyboard nav
-  const flat: FlatResult[] = [
+  const flat: FlatResult[] = useMemo(() => [
     ...taskResults.slice(0, 8).map((t): FlatResult => ({
       type: "task",
       id: t.id,
@@ -114,7 +131,7 @@ export default function SearchView(): JSX.Element {
       sub: e.snippet,
       icon: e.emoji ?? "JR",
     })),
-  ];
+  ], [habitResults, journalResults, taskResults]);
 
   const handleSelect = (result: FlatResult): void => {
     if (result.type === "task") {

@@ -6,25 +6,29 @@ import { EMOJI_CHOICES, primaryBtn, secondaryBtn } from "./ShutdownShared";
 
 interface ShutdownJournalPromptProps {
   tomorrowTasks: Task[];
-  onJournalNote: (emoji: string, note: string) => void;
+  saving?: boolean;
+  error?: string | null;
+  onJournalNote: (emoji: string, note: string) => Promise<void> | void;
   onBack: () => void;
-  onClose: () => void;
+  onFinish: () => void;
 }
 
 export function ShutdownJournalPrompt({
   tomorrowTasks,
+  saving = false,
+  error = null,
   onJournalNote,
   onBack,
-  onClose,
+  onFinish,
 }: ShutdownJournalPromptProps): JSX.Element {
   const [emoji, setEmoji] = useState<string | null>(null);
   const [note, setNote] = useState("");
 
-  const handleSubmit = (): void => {
+  const handleSubmit = async (): Promise<void> => {
     if (emoji) {
-      onJournalNote(emoji, note);
+      await onJournalNote(emoji, note);
     }
-    onClose();
+    onFinish();
   };
 
   return (
@@ -121,24 +125,40 @@ export function ShutdownJournalPrompt({
         }}
       />
 
+      {error && (
+        <div
+          style={{
+            padding: "0.75rem 0.9rem",
+            borderRadius: "12px",
+            border: "1px solid color-mix(in srgb, var(--state-overdue) 35%, var(--border-subtle))",
+            background: "color-mix(in srgb, var(--state-overdue) 8%, transparent)",
+            color: "var(--text-secondary)",
+            fontSize: "var(--text-sm)",
+            marginBottom: "1rem",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: "0.5rem" }}>
-        <button onClick={onBack} style={secondaryBtn}>
+        <button onClick={onBack} style={secondaryBtn} disabled={saving}>
           Back
         </button>
         <button
-          onClick={handleSubmit}
-          disabled={!emoji}
+          onClick={() => void handleSubmit()}
+          disabled={!emoji || saving}
           style={{
             flex: 1,
             ...primaryBtn,
-            background: emoji ? primaryBtn.background : "var(--border-subtle)",
+            background: emoji && !saving ? primaryBtn.background : "var(--border-subtle)",
             color: "var(--text-inverted)",
-            cursor: emoji ? "pointer" : "not-allowed",
-            opacity: emoji ? 1 : 0.5,
-            boxShadow: emoji ? "var(--shadow-soft)" : "none",
+            cursor: emoji && !saving ? "pointer" : "not-allowed",
+            opacity: emoji && !saving ? 1 : 0.5,
+            boxShadow: emoji && !saving ? "var(--shadow-soft)" : "none",
           }}
         >
-          Done
+          {saving ? "Saving…" : "Finish shutdown"}
         </button>
       </div>
     </div>

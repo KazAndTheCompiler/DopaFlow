@@ -7,7 +7,7 @@ import string
 import time
 
 _CHARS = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
-_PREFIXES = {"tsk", "hab", "foc", "rev", "jrn", "evt", "blk", "rem", "ntf", "cmd", "alm", "shr", "pf"}
+_PREFIXES = {"tsk", "hab", "foc", "rev", "jrn", "evt", "blk", "rem", "ntf", "cmd", "alm", "prj", "shr", "pf"}
 
 
 def _encode_base32(value: int, length: int) -> str:

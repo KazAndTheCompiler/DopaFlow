@@ -130,6 +130,11 @@ jobs:
           cd desktop
           npm ci
 
+      - name: Test desktop runtime
+        run: |
+          cd desktop
+          npm test
+
       - name: Build AppImage
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -192,6 +197,11 @@ jobs:
         run: |
           cd desktop
           npm ci
+
+      - name: Test desktop runtime
+        run: |
+          cd desktop
+          npm test
 
       - name: Build NSIS installer
         env:

@@ -1,8 +1,7 @@
-import { useContext } from "react";
 import type { CSSProperties } from "react";
 
 import { connectGmail } from "@api/index";
-import { AppDataContext } from "../../App";
+import { useAppJournal, useAppLayout, useAppSkin } from "../../app/AppContexts";
 import BackupStatus from "./BackupStatus";
 import CalendarSharingSettings from "./CalendarSharingSettings";
 import ExportPanel from "./ExportPanel";
@@ -17,10 +16,9 @@ import WebhookPanel from "./WebhookPanel";
 import VaultSettings from "./VaultSettings";
 
 export default function SettingsView(): JSX.Element {
-  const app = useContext(AppDataContext);
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
+  const skin = useAppSkin();
+  const layout = useAppLayout();
+  const journal = useAppJournal();
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: "var(--text-xs)",
@@ -81,8 +79,8 @@ export default function SettingsView(): JSX.Element {
             Tune the shell, color system, and density. These are the settings that change how DopaFlow feels every time you open it.
           </span>
         </div>
-        <SkinPicker current={app.skin.skin} skins={app.skin.skins} loading={app.skin.loading} onPick={app.skin.setSkin} />
-        <LayoutPicker current={app.layout.layout} onPick={app.layout.setLayout} />
+        <SkinPicker current={skin.skin} skins={skin.skins} loading={skin.loading} onPick={skin.setSkin} />
+        <LayoutPicker current={layout.layout} onPick={layout.setLayout} />
       </section>
       <section style={groupStyle} id="settings-vault">
         <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
@@ -138,9 +136,9 @@ export default function SettingsView(): JSX.Element {
           </span>
         </div>
         <BackupStatus
-          backupPath={app.journal.backupPath}
-          lastBackupAt={app.journal.lastBackupAt}
-          onTrigger={() => app.journal.triggerBackup().then(() => undefined)}
+          backupPath={journal.backupPath}
+          lastBackupAt={journal.lastBackupAt}
+          onTrigger={() => journal.triggerBackup().then(() => undefined)}
         />
         <ExportPanel />
       </section>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { Task, TaskId } from "@shared/types";
 
-const FOCUS_PREFILL_KEY = "zoestm_focus_prefill";
+import { APP_STORAGE_KEYS } from "../../app/appStorage";
+
+const FOCUS_PREFILL_KEY = APP_STORAGE_KEYS.focusPrefill;
 
 export interface FocusPanelProps {
   isActive: boolean;

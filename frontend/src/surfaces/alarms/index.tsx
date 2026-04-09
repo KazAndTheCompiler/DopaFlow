@@ -1,18 +1,10 @@
-import { useContext } from "react";
-
-import { AppDataContext } from "../../App";
+import { useAppAlarms } from "../../app/AppContexts";
 import AlarmForm from "./AlarmForm";
 import AlarmQueue from "./AlarmQueue";
 import AlarmsPanel from "./AlarmsPanel";
 
 export default function AlarmsView(): JSX.Element {
-  const app = useContext(AppDataContext);
-
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
-
-  const { alarms, active_alarm_id, next_alarm_at, schedulerRunning, create, remove, trigger } = app.alarms;
+  const { alarms, active_alarm_id, next_alarm_at, schedulerRunning, create, remove, trigger } = useAppAlarms();
 
   return (
     <div style={{ display: "grid", gap: "1rem" }}>

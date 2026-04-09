@@ -1,6 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppHabits, useAppInsights } from "../../app/AppContexts";
 import { getHabitLogs } from "@api/habits";
 import { showToast } from "@ds/primitives/Toast";
 import CorrelationChart from "./CorrelationChart";
@@ -8,7 +8,8 @@ import HabitsPanel from "./HabitsPanel";
 import StreakHeatmap from "./StreakHeatmap";
 
 export default function HabitsView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const habits = useAppHabits();
+  const insights = useAppInsights();
   const [name, setName] = useState("");
   const [freq, setFreq] = useState(1);
   const [period, setPeriod] = useState("day");
@@ -16,9 +17,9 @@ export default function HabitsView(): JSX.Element {
   const [checkins, setCheckins] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    if (!app || app.habits.habits.length === 0) return;
+    if (habits.habits.length === 0) return;
     void Promise.all(
-      app.habits.habits.map((h) =>
+      habits.habits.map((h) =>
         getHabitLogs(h.id).then((logs) => ({ id: h.id, dates: logs.map((l) => l.checkin_date) }))
       )
     ).then((results) => {
@@ -26,13 +27,11 @@ export default function HabitsView(): JSX.Element {
       for (const r of results) map[r.id] = r.dates;
       setCheckins(map);
     });
-  }, [app?.habits.habits]);
+  }, [habits.habits]);
 
-  if (!app) return <div>App context unavailable.</div>;
-
-  const totalHabits = app.habits.habits.length;
-  const checkedInHabits = app.habits.habits.filter((habit) => (habit.completion_pct ?? 0) >= 100).length;
-  const bestStreak = app.habits.habits.reduce((best, habit) => Math.max(best, habit.current_streak), 0);
+  const totalHabits = habits.habits.length;
+  const checkedInHabits = habits.habits.filter((habit) => (habit.completion_pct ?? 0) >= 100).length;
+  const bestStreak = habits.habits.reduce((best, habit) => Math.max(best, habit.current_streak), 0);
   const nextNudge = totalHabits > 0
     ? checkedInHabits === totalHabits
       ? "Everything due is already handled. Freeze or review tomorrow before you add more."
@@ -44,7 +43,7 @@ export default function HabitsView(): JSX.Element {
     if (!trimmed) return;
     setBusy(true);
     try {
-      await app.habits.create({ name: trimmed, target_freq: freq, target_period: period });
+      await habits.create({ name: trimmed, target_freq: freq, target_period: period });
       setName("");
       setFreq(1);
       setPeriod("day");
@@ -185,9 +184,9 @@ export default function HabitsView(): JSX.Element {
         </div>
       </section>
 
-      <HabitsPanel habits={app.habits.habits} loading={app.habits.loading} onCheckIn={(id) => void app.habits.checkIn(id)} onRefresh={() => void app.habits.refresh()} />
-      {app.habits.habits.length > 0 && <StreakHeatmap habits={app.habits.habits} checkins={checkins} />}
-      <CorrelationChart insights={app.insights.correlations} />
+      <HabitsPanel habits={habits.habits} loading={habits.loading} onCheckIn={(id) => void habits.checkIn(id)} onRefresh={() => void habits.refresh()} />
+      {habits.habits.length > 0 && <StreakHeatmap habits={habits.habits} checkins={checkins} />}
+      <CorrelationChart insights={insights.correlations} />
     </div>
   );
 }

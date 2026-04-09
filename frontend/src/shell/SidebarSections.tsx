@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import type { AppRoute } from "../appRoutes";
 import type { Project } from "../../../shared/types";
 import type { SidebarItem } from "./Sidebar";
 
@@ -10,9 +11,9 @@ export function NavButton({
   onNavigate,
 }: {
   item: SidebarItem;
-  activeRoute: string;
+  activeRoute: AppRoute;
   collapsed: boolean;
-  onNavigate: (route: string) => void;
+  onNavigate: (route: AppRoute) => void;
 }): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const isActive = item.id === activeRoute;

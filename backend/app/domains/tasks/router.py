@@ -37,18 +37,30 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
-from fastapi import Request
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 
 from app.core.config import Settings, get_settings_dependency
-from app.core.database import tx
 from app.domains.integrations.service import emit_event
 from app.domains.tasks import repository
+from app.domains.tasks.schemas import (
+    CreatedCountResponse,
+    DeleteResponse,
+    OkResponse,
+    Task,
+    TaskContext,
+    TaskCreate,
+    TaskQuickAddPreview,
+    TaskTemplate,
+    TaskTemplateCreate,
+    TaskTimeLog,
+    TaskUpdate,
+    UpdatedCountResponse,
+)
 from app.middleware.auth_scopes import require_scope
 from app.services.upload_security import validate_upload
 from app.services.quick_add import parse
 from app.domains.tasks.service import complete_task as complete_task_service
-from app.domains.tasks.service import import_tasks_csv, parse_quick_add
+from app.domains.tasks.service import import_tasks_csv
 
 router = APIRouter(tags=["tasks"])
 
@@ -65,14 +77,14 @@ def _emit(db_path: str, event_type: str, payload: dict[str, Any]) -> None:
     emit_event(db_path, event_type, payload)
 
 
-@router.post("/", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
-async def create_task(payload: dict[str, Any], db_path: str = Depends(_db_path)) -> dict[str, Any]:
-    task = repository.create_task(db_path, payload)
+@router.post("/", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
+async def create_task(payload: TaskCreate, db_path: str = Depends(_db_path)) -> dict[str, Any]:
+    task = repository.create_task(db_path, payload.model_dump(mode="json"))
     _emit(db_path, "task.created", {"id": task["id"]})
     return task
 
 
-@router.get("/", response_model=list[dict], dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/", response_model=list[Task], dependencies=[Depends(require_scope("read:tasks"))])
 async def list_tasks(
     response: Response,
     done: bool | None = Query(default=None),
@@ -104,7 +116,7 @@ async def list_tasks(
     return tasks
 
 
-@router.get("/search", response_model=list[dict], dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/search", response_model=list[Task], dependencies=[Depends(require_scope("read:tasks"))])
 async def search_tasks(
     q: str | None = Query(default=None),
     tag: str | None = Query(default=None),
@@ -123,7 +135,7 @@ async def search_tasks(
     return tasks
 
 
-@router.get("/tomorrow", response_model=list[dict], dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/tomorrow", response_model=list[Task], dependencies=[Depends(require_scope("read:tasks"))])
 async def tomorrow_tasks(db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
     tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).date()
     tasks = repository.list_tasks(db_path)
@@ -134,22 +146,22 @@ async def tomorrow_tasks(db_path: str = Depends(_db_path)) -> list[dict[str, Any
     ]
 
 
-@router.get("/templates", response_model=list[dict], dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/templates", response_model=list[TaskTemplate], dependencies=[Depends(require_scope("read:tasks"))])
 async def list_templates(db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
     return repository.list_templates(db_path)
 
 
-@router.post("/templates", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
-async def create_template(payload: dict[str, Any], db_path: str = Depends(_db_path)) -> dict[str, Any]:
-    return repository.create_template(db_path, payload)
+@router.post("/templates", response_model=TaskTemplate, dependencies=[Depends(require_scope("write:tasks"))])
+async def create_template(payload: TaskTemplateCreate, db_path: str = Depends(_db_path)) -> dict[str, Any]:
+    return repository.create_template(db_path, payload.model_dump(mode="json"))
 
 
-@router.delete("/templates/{identifier}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.delete("/templates/{identifier}", response_model=DeleteResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def delete_template(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, bool]:
     return {"deleted": repository.delete_template(db_path, identifier)}
 
 
-@router.post("/from-template/{identifier}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/from-template/{identifier}", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
 async def create_from_template(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     task = repository.create_from_template(db_path, identifier)
     if task is None:
@@ -158,7 +170,7 @@ async def create_from_template(identifier: str, db_path: str = Depends(_db_path)
     return task
 
 
-@router.post("/quick-add", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/quick-add", response_model=Task | TaskQuickAddPreview, dependencies=[Depends(require_scope("write:tasks"))])
 async def quick_add(request: Request, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     commit = False
     text = ""
@@ -181,7 +193,7 @@ async def quick_add(request: Request, db_path: str = Depends(_db_path)) -> dict[
     return parsed
 
 
-@router.post("/materialize-recurring", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/materialize-recurring", response_model=CreatedCountResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def materialize_recurring(
     request: Request,
     window_hours: int = Query(default=36),
@@ -199,14 +211,14 @@ async def materialize_recurring(
     return repository.materialize_recurring(db_path, window_hours=window_hours)
 
 
-@router.post("/bulk/complete", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/bulk/complete", response_model=UpdatedCountResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def bulk_complete(payload: dict[str, list[str]], db_path: str = Depends(_db_path)) -> dict[str, int]:
     count = repository.bulk_complete(db_path, payload.get("ids", []))
     _emit(db_path, "task.bulk_completed", {"count": count})
     return {"updated": count}
 
 
-@router.post("/bulk/delete", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/bulk/delete", response_model=UpdatedCountResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def bulk_delete(payload: dict[str, list[str]], db_path: str = Depends(_db_path)) -> dict[str, int]:
     count = repository.bulk_delete(db_path, payload.get("ids", []))
     _emit(db_path, "task.bulk_deleted", {"count": count})
@@ -232,7 +244,7 @@ async def export_csv(db_path: str = Depends(_db_path)) -> Response:
     )
 
 
-@router.post("/import/csv", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/import/csv", response_model=CreatedCountResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def import_csv(file: UploadFile = File(...), db_path: str = Depends(_db_path)) -> dict[str, int]:
     data, _ = validate_upload(
         file,
@@ -252,7 +264,7 @@ async def import_csv(file: UploadFile = File(...), db_path: str = Depends(_db_pa
     return {"created": created}
 
 
-@router.get("/{identifier}", response_model=dict, dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/{identifier}", response_model=Task, dependencies=[Depends(require_scope("read:tasks"))])
 async def get_task(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     task = repository.get_task(db_path, identifier)
     if task is None:
@@ -260,12 +272,12 @@ async def get_task(identifier: str, db_path: str = Depends(_db_path)) -> dict[st
     return task
 
 
-@router.patch("/{identifier}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
-async def update_task(identifier: str, payload: dict[str, Any], db_path: str = Depends(_db_path)) -> dict[str, Any]:
+@router.patch("/{identifier}", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
+async def update_task(identifier: str, payload: TaskUpdate, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     previous = repository.get_task(db_path, identifier)
     if previous is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    task = repository.update_task(db_path, identifier, payload)
+    task = repository.update_task(db_path, identifier, payload.model_dump(mode="json", exclude_unset=True))
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     if not previous.get("done") and task.get("done"):
@@ -276,7 +288,7 @@ async def update_task(identifier: str, payload: dict[str, Any], db_path: str = D
     return task
 
 
-@router.delete("/{identifier}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.delete("/{identifier}", response_model=DeleteResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def delete_task(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, bool]:
     deleted = repository.delete_task(db_path, identifier)
     if not deleted:
@@ -285,7 +297,7 @@ async def delete_task(identifier: str, db_path: str = Depends(_db_path)) -> dict
     return {"deleted": True}
 
 
-@router.patch("/{identifier}/complete", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.patch("/{identifier}/complete", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
 async def complete_task(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     task = complete_task_service(db_path, identifier)
     if task is None:
@@ -294,12 +306,12 @@ async def complete_task(identifier: str, db_path: str = Depends(_db_path)) -> di
     return task
 
 
-@router.get("/{identifier}/context", response_model=dict, dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/{identifier}/context", response_model=TaskContext, dependencies=[Depends(require_scope("read:tasks"))])
 async def get_task_context(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     return repository.get_task_context(db_path, identifier)
 
 
-@router.post("/{identifier}/deps/{dep_id}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/{identifier}/deps/{dep_id}", response_model=OkResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def add_dependency(identifier: str, dep_id: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     ok, detail = repository.add_dependency(db_path, identifier, dep_id)
     if not ok:
@@ -307,13 +319,13 @@ async def add_dependency(identifier: str, dep_id: str, db_path: str = Depends(_d
     return {"ok": True}
 
 
-@router.delete("/{identifier}/deps/{dep_id}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.delete("/{identifier}/deps/{dep_id}", response_model=OkResponse, dependencies=[Depends(require_scope("write:tasks"))])
 async def remove_dependency(identifier: str, dep_id: str, db_path: str = Depends(_db_path)) -> dict[str, bool]:
     repository.remove_dependency(db_path, identifier, dep_id)
     return {"ok": True}
 
 
-@router.post("/{identifier}/subtasks", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/{identifier}/subtasks", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
 async def add_subtask(identifier: str, payload: dict[str, str], db_path: str = Depends(_db_path)) -> dict[str, Any]:
     task = repository.add_subtask(db_path, identifier, payload["title"])
     if task is None:
@@ -321,7 +333,7 @@ async def add_subtask(identifier: str, payload: dict[str, str], db_path: str = D
     return task
 
 
-@router.patch("/{identifier}/subtasks/{sub_id}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.patch("/{identifier}/subtasks/{sub_id}", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
 async def patch_subtask(identifier: str, sub_id: str, payload: dict[str, bool], db_path: str = Depends(_db_path)) -> dict[str, Any]:
     task = repository.patch_subtask(db_path, identifier, sub_id, payload.get("done", False))
     if task is None:
@@ -329,7 +341,7 @@ async def patch_subtask(identifier: str, sub_id: str, payload: dict[str, bool], 
     return task
 
 
-@router.delete("/{identifier}/subtasks/{sub_id}", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.delete("/{identifier}/subtasks/{sub_id}", response_model=Task, dependencies=[Depends(require_scope("write:tasks"))])
 async def delete_subtask(identifier: str, sub_id: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     task = repository.delete_subtask(db_path, identifier, sub_id)
     if task is None:
@@ -337,12 +349,12 @@ async def delete_subtask(identifier: str, sub_id: str, db_path: str = Depends(_d
     return task
 
 
-@router.post("/{identifier}/time/start", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/{identifier}/time/start", response_model=TaskTimeLog, dependencies=[Depends(require_scope("write:tasks"))])
 async def start_time(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     return repository.start_time_log(db_path, identifier)
 
 
-@router.post("/{identifier}/time/stop", response_model=dict, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post("/{identifier}/time/stop", response_model=TaskTimeLog, dependencies=[Depends(require_scope("write:tasks"))])
 async def stop_time(identifier: str, db_path: str = Depends(_db_path)) -> dict[str, Any]:
     log = repository.stop_time_log(db_path, identifier)
     if log is None:
@@ -350,6 +362,6 @@ async def stop_time(identifier: str, db_path: str = Depends(_db_path)) -> dict[s
     return log
 
 
-@router.get("/{identifier}/time", response_model=list[dict], dependencies=[Depends(require_scope("read:tasks"))])
+@router.get("/{identifier}/time", response_model=list[TaskTimeLog], dependencies=[Depends(require_scope("read:tasks"))])
 async def get_time_logs(identifier: str, db_path: str = Depends(_db_path)) -> list[dict[str, Any]]:
     return repository.list_time_logs(db_path, identifier)

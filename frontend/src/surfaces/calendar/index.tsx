@@ -1,6 +1,6 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { AppDataContext } from "../../App";
+import { useAppAlarms, useAppCalendar, useAppTasks } from "../../app/AppContexts";
 import { showToast } from "@ds/primitives/Toast";
 import { CalendarDaySidebar } from "./CalendarDaySidebar";
 import { CalendarHeaderPanel } from "./CalendarHeaderPanel";
@@ -13,7 +13,9 @@ import MonthView from "./MonthView";
 import WeekView from "./WeekView";
 
 export default function CalendarView(): JSX.Element {
-  const app = useContext(AppDataContext);
+  const calendar = useAppCalendar();
+  const tasks = useAppTasks();
+  const alarms = useAppAlarms();
   const [tab, setTab] = useState<CalendarTab>("week");
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [dayOffset, setDayOffset] = useState<number>(0);
@@ -32,10 +34,6 @@ export default function CalendarView(): JSX.Element {
       ? window.matchMedia("(max-width: 960px)").matches
       : false
   ));
-
-  if (!app) {
-    return <div>App context unavailable.</div>;
-  }
 
   const anchor = new Date();
   anchor.setDate(anchor.getDate() + weekOffset * 7);
@@ -65,21 +63,21 @@ export default function CalendarView(): JSX.Element {
   } = useMemo(
     () =>
       buildCalendarViewModel({
-        events: app.calendar.events,
-        peerFeeds: app.calendar.peerFeeds,
-        tasks: app.tasks?.tasks ?? [],
+        events: calendar.events,
+        peerFeeds: calendar.peerFeeds,
+        tasks: tasks.tasks,
         hiddenSources,
         selectedEventId,
         anchor,
         dayAnchor,
         monthAnchor,
-        conflictCount: app.calendar.conflictCount,
+        conflictCount: calendar.conflictCount,
       }),
     [
-      app.calendar.conflictCount,
-      app.calendar.events,
-      app.calendar.peerFeeds,
-      app.tasks?.tasks,
+      calendar.conflictCount,
+      calendar.events,
+      calendar.peerFeeds,
+      tasks.tasks,
       anchor,
       dayAnchor,
       hiddenSources,
@@ -118,13 +116,13 @@ export default function CalendarView(): JSX.Element {
   };
 
   const handleRescheduleEvent = async (id: string, newStartAt: string): Promise<void> => {
-    const event = app.calendar.events.find((e) => e.id === id);
+    const event = calendar.events.find((e) => e.id === id);
     if (!event) return;
     const durationMs = new Date(event.end_at).getTime() - new Date(event.start_at).getTime();
     const newStart = new Date(newStartAt);
     const newEnd = new Date(newStart.getTime() + durationMs);
     try {
-      await app.calendar.update(id, { start_at: newStart.toISOString(), end_at: newEnd.toISOString() });
+      await calendar.update(id, { start_at: newStart.toISOString(), end_at: newEnd.toISOString() });
       showToast("Event rescheduled.", "success");
     } catch {
       showToast("Could not reschedule event.", "error");
@@ -133,7 +131,7 @@ export default function CalendarView(): JSX.Element {
 
   const handleResizeEvent = async (id: string, newEndAt: string): Promise<void> => {
     try {
-      await app.calendar.update(id, { end_at: newEndAt });
+      await calendar.update(id, { end_at: newEndAt });
       showToast("Duration updated.", "success");
     } catch {
       showToast("Could not update event.", "error");
@@ -149,7 +147,7 @@ export default function CalendarView(): JSX.Element {
     const end = new Date(start.getTime() + durationTotalMinutes * 60_000);
 
     try {
-      await app.calendar.create({
+      await calendar.create({
         title: prefillTitle.trim(),
         start_at: start.toISOString(),
         end_at: end.toISOString(),
@@ -157,7 +155,7 @@ export default function CalendarView(): JSX.Element {
       });
       if (blockReminder) {
         const fireAt = new Date(start.getTime() - blockReminderOffset * 60_000);
-        await app.alarms.create({
+        await alarms.create({
           title: prefillTitle.trim(),
           at: fireAt.toISOString(),
           kind: "tts",
@@ -188,29 +186,29 @@ export default function CalendarView(): JSX.Element {
         title={tab === "week" ? weekLabel : tab === "day" ? dayLabel : monthLabel}
         calendarRunway={calendarRunway}
         summaryChips={summaryChips}
-        conflictCount={app.calendar.conflictCount}
-        peerFeeds={app.calendar.peerFeeds}
-        syncStatus={app.calendar.syncStatus}
+        conflictCount={calendar.conflictCount}
+        peerFeeds={calendar.peerFeeds}
+        syncStatus={calendar.syncStatus}
         showConflicts={showConflicts}
-        conflicts={app.calendar.conflicts}
+        conflicts={calendar.conflicts}
         onSelectTab={setTab}
         onShowConflicts={() => setShowConflicts(true)}
         onCloseConflicts={() => setShowConflicts(false)}
-        onSyncAllPeers={() => void app.calendar.syncAllPeers()}
-        onSyncGoogle={() => void app.calendar.syncGoogle()}
+        onSyncAllPeers={() => void calendar.syncAllPeers()}
+        onSyncGoogle={() => void calendar.syncGoogle()}
         onResolveConflict={async (id, resolution) => {
-          await app.calendar.resolveConflict(id, resolution);
+          await calendar.resolveConflict(id, resolution);
         }}
       />
 
-      {app.calendar.peerFeeds.length > 0 && (
+      {calendar.peerFeeds.length > 0 && (
         <CalendarSharedFeedsPanel
-          peerFeeds={app.calendar.peerFeeds}
+          peerFeeds={calendar.peerFeeds}
           filteredEventsCount={filteredEvents.length}
           sharedEvents={sharedEvents}
           hiddenSources={hiddenSources}
           sourceMeta={sourceMeta}
-          events={app.calendar.events}
+          events={calendar.events}
           staleFeeds={staleFeeds}
           allSharedSourcesHidden={allSharedSourcesHidden}
           visibleSharedEvents={visibleSharedEvents}
@@ -251,9 +249,9 @@ export default function CalendarView(): JSX.Element {
             onEventClick={(event) => handleEventClick(event.id)}
           />
           <CalendarPanel
-            onCreate={(event) => app.calendar.create(event)}
+            onCreate={(event) => calendar.create(event)}
             onVoiceExecuted={() => {
-              void app.calendar.refresh();
+              void calendar.refresh();
             }}
           />
         </>
@@ -362,7 +360,7 @@ export default function CalendarView(): JSX.Element {
         onClose={() => setSelectedEventId(null)}
         onSave={async (id, patch) => {
           try {
-            await app.calendar.update(id, patch);
+            await calendar.update(id, patch);
             showToast("Calendar event updated.", "success");
           } catch {
             showToast("Could not update the event.", "error");
@@ -370,7 +368,7 @@ export default function CalendarView(): JSX.Element {
         }}
         onDelete={async (id) => {
           try {
-            await app.calendar.remove(id);
+            await calendar.remove(id);
             showToast("Calendar event deleted.", "success");
           } catch {
             showToast("Could not delete the event.", "error");
