@@ -12,15 +12,10 @@ It exposes a persistent workspace Node install instead of relying on `/tmp` or s
 - `frontend_install`
 - `frontend_script`
 
-## Paths
-
-- Node bin: `/home/henry/vscode/.codex-bin`
-- Frontend: `/home/henry/vscode/build/dopaflow/frontend`
-
 ## Run
 
 ```bash
-python3 /home/henry/vscode/build/dopaflow/tools/mcp/node-tooling-bridge/server.py
+python3 ./tools/mcp/node-tooling-bridge/server.py
 ```
 
 ## MCP Config
@@ -32,12 +27,17 @@ Use the repo-level `.mcp.json` or this snippet:
   "mcpServers": {
     "dopaflow-node": {
       "command": "python3",
-      "args": ["/home/henry/vscode/build/dopaflow/tools/mcp/node-tooling-bridge/server.py"],
+      "args": ["./tools/mcp/node-tooling-bridge/server.py"],
       "env": {
-        "DOPAFLOW_NODE_BIN": "/home/henry/vscode/.codex-bin",
-        "DOPAFLOW_FRONTEND_DIR": "/home/henry/vscode/build/dopaflow/frontend"
+        "DOPAFLOW_NODE_BIN": "${DOPAFLOW_NODE_BIN:-.codex-bin}",
+        "DOPAFLOW_FRONTEND_DIR": "${DOPAFLOW_FRONTEND_DIR:-./frontend}"
       }
     }
   }
 }
 ```
+
+## Defaults
+
+- Node bin: `.codex-bin` (relative to repo root)
+- Frontend: `./frontend` (relative to repo root)
