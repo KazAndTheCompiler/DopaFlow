@@ -238,6 +238,16 @@ def _extract_tags(text: str) -> list[str]:
     return re.findall(r"#(\w+)", text)
 
 
+def _clean_task_complete_query(text: str) -> str:
+    cleaned = re.sub(
+        r"^\s*(?:complete|finish|done\s+with|mark\s+done|mark\s+(?:as\s+)?done|check\s*off)\s+",
+        "",
+        text,
+        flags=re.I,
+    )
+    return cleaned.strip()
+
+
 # ---------------------------------------------------------------------------
 # Command-word strip helpers (backward compat)
 # ---------------------------------------------------------------------------
@@ -365,7 +375,7 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
             tts_response = f'Task added: "{title}".'
 
     elif best_intent == "task.complete":
-        entities = {"query": body or text}
+        entities = {"query": _clean_task_complete_query(body or text)}
         follow_ups = ["Another one done?", "Check your habits?"]
         tts_response = "Checked off. Nice work."
 

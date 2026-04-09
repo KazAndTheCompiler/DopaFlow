@@ -72,7 +72,7 @@ class PackyService:
         nlp_result = nlp.classify(text, context=payload.context)
 
         # 2. Preview
-        preview = CommandService.preview(text)
+        preview = CommandService.preview(text, payload.db_path)
 
         # 3. Build response
         response = PackyVoiceResponse(
@@ -85,6 +85,12 @@ class PackyService:
             follow_ups=nlp_result.follow_ups,
             status=str(preview.get("status", "ok")),
         )
+
+        if response.status != "ok":
+            preview_message = str(preview.get("message") or "").strip()
+            if preview_message:
+                response.reply_text = preview_message
+                response.tts_text = preview_message
 
         # 4. Execute if requested and the preview says it's actionable
         if payload.auto_execute and preview.get("would_execute"):

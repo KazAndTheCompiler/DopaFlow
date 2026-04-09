@@ -216,6 +216,23 @@ def test_packy_voice_command_empty_text(client) -> None:
     assert body["status"] == "empty"
 
 
+def test_packy_voice_command_uses_db_aware_preview_for_ambiguous_task_complete(client) -> None:
+    client.post("/api/v2/commands/execute", json={"text": "add task review inbox zero"})
+    client.post("/api/v2/commands/execute", json={"text": "add task review sprint plan"})
+
+    response = client.post(
+        "/api/v2/packy/voice-command",
+        json={"text": "complete review", "auto_execute": False},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ambiguous"
+    assert body["preview"]["status"] == "ambiguous"
+    assert body["preview"]["would_execute"] is False
+    assert "Which one?" in body["reply_text"] or "Multiple" in body["reply_text"]
+
+
 # -----------------------------------------------------------------------
 # Undo — real reversal
 # -----------------------------------------------------------------------
@@ -281,6 +298,20 @@ def test_undo_nothing_to_undo(client) -> None:
     assert body["status"] == "nothing_to_undo"
 
 
+def test_undo_consumes_entry_once(client) -> None:
+    create_res = client.post("/api/v2/commands/execute", json={"text": "add task one shot undo"})
+    assert create_res.status_code == 200
+    assert create_res.json()["status"] == "executed"
+
+    first_undo = client.post("/api/v2/commands/execute", json={"text": "undo"})
+    assert first_undo.status_code == 200
+    assert first_undo.json()["status"] == "executed"
+
+    second_undo = client.post("/api/v2/commands/execute", json={"text": "undo"})
+    assert second_undo.status_code == 200
+    assert second_undo.json()["status"] == "nothing_to_undo"
+
+
 def test_undo_skips_unsupported_intents(client) -> None:
     """Undo after a non-undoable command returns 'unsupported', not a crash."""
     client.delete("/api/v2/commands/history")
@@ -294,6 +325,26 @@ def test_undo_skips_unsupported_intents(client) -> None:
     assert body["status"] == "unsupported"
 
 
+def test_undo_does_not_retry_same_entry_twice(client) -> None:
+    """Completed undo should mark the original command entry as spent."""
+    create_res = client.post("/api/v2/commands/execute", json={"text": "add task only undo once"})
+    assert create_res.status_code == 200
+
+    first_undo = client.post("/api/v2/commands/execute", json={"text": "undo"})
+    assert first_undo.status_code == 200
+    assert first_undo.json()["status"] == "executed"
+
+    second_undo = client.post("/api/v2/commands/execute", json={"text": "undo"})
+    assert second_undo.status_code == 200
+    assert second_undo.json()["status"] == "nothing_to_undo"
+
+    history_res = client.get("/api/v2/commands/history")
+    assert history_res.status_code == 200
+    history = history_res.json()
+    task_create = next(entry for entry in history if entry["intent"] == "task.create")
+    assert task_create["undone_at"] is not None
+
+
 def test_preview_incomplete_calendar_returns_needs_datetime(client) -> None:
     """Calendar without time should show 'needs_datetime' in preview."""
     response = client.post("/api/v2/commands/preview", json={"text": "calendar dentist tomorrow"})
@@ -302,6 +353,117 @@ def test_preview_incomplete_calendar_returns_needs_datetime(client) -> None:
     body = response.json()
     assert body["would_execute"] is False
     assert body["status"] == "needs_datetime"
+
+
+def test_preview_compound_command_is_unsupported(client) -> None:
+    response = client.post("/api/v2/commands/preview", json={"text": "add task meeting prep and set alarm 9am"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is False
+    assert body["status"] == "unsupported"
+    assert len(body["parts"]) == 2
+
+
+def test_execute_compound_command_is_unsupported(client) -> None:
+    response = client.post("/api/v2/commands/execute", json={"text": "add task meeting prep and set alarm 9am"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intent"] == "compound"
+    assert body["status"] == "unsupported"
+
+    tasks_res = client.get("/api/v2/tasks/")
+    assert tasks_res.status_code == 200
+    assert all(task["title"] != "meeting prep" for task in tasks_res.json())
+
+
+def test_preview_complete_task_reports_exact_match(client) -> None:
+    create_res = client.post("/api/v2/commands/execute", json={"text": "add task preview exact match"})
+    assert create_res.status_code == 200
+
+    response = client.post("/api/v2/commands/preview", json={"text": "complete preview exact"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is True
+    assert body["status"] == "ok"
+    assert body["result"]["title"] == "preview exact match"
+
+
+def test_preview_complete_task_reports_ambiguous_match(client) -> None:
+    client.post("/api/v2/commands/execute", json={"text": "add task review inbox zero"})
+    client.post("/api/v2/commands/execute", json={"text": "add task review sprint plan"})
+
+    response = client.post("/api/v2/commands/preview", json={"text": "complete review"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is False
+    assert body["status"] == "ambiguous"
+    assert len(body["options"]) == 2
+
+
+def test_preview_complete_task_reports_not_found(client) -> None:
+    response = client.post("/api/v2/commands/preview", json={"text": "complete missing task title"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is False
+    assert body["status"] == "not_found"
+
+
+def test_preview_habit_checkin_reports_exact_match(client) -> None:
+    create_res = client.post("/api/v2/habits/", json={"name": "Hydration", "target": 1, "unit": "glass"})
+    assert create_res.status_code == 200
+
+    response = client.post("/api/v2/commands/preview", json={"text": "check in hydration"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is True
+    assert body["status"] == "ok"
+    assert body["result"]["name"] == "Hydration"
+
+
+def test_preview_habit_checkin_reports_ambiguous_match(client) -> None:
+    client.post("/api/v2/habits/", json={"name": "Hydration morning", "target": 1, "unit": "glass"})
+    client.post("/api/v2/habits/", json={"name": "Hydration evening", "target": 1, "unit": "glass"})
+
+    response = client.post("/api/v2/commands/preview", json={"text": "check in hydration"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is False
+    assert body["status"] == "ambiguous"
+    assert len(body["options"]) == 2
+
+
+def test_preview_undo_reports_supported_entry(client) -> None:
+    create_res = client.post("/api/v2/commands/execute", json={"text": "add task preview undo target"})
+    assert create_res.status_code == 200
+
+    response = client.post("/api/v2/commands/preview", json={"text": "undo"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is True
+    assert body["status"] == "ok"
+    assert body["result"]["intent"] == "task.create"
+
+
+def test_preview_undo_reports_unsupported_entry(client) -> None:
+    list_res = client.post("/api/v2/commands/execute", json={"text": "show habits"})
+    assert list_res.status_code == 200
+    assert list_res.json()["intent"] == "habit.list"
+    assert list_res.json()["status"] == "executed"
+
+    response = client.post("/api/v2/commands/preview", json={"text": "undo"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["would_execute"] is False
+    assert body["status"] == "unsupported"
 
 
 def test_execute_incomplete_calendar_returns_needs_datetime(client) -> None:

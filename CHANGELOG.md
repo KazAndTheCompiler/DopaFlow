@@ -8,6 +8,9 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 
 ## 2.0.11
 
+- Backend hardening now logs previously silent failures across gamification, focus, journal, digest analytics, NLP fallback parsing, health memory-depth fallback, Packy mood payload parsing, and player media resolution without changing the response contracts.
+- Desktop main-process orchestration was split so notification/alarm polling and window/routing runtime concerns now live in dedicated modules instead of one oversized entrypoint.
+- The shell coordinator pass split `TopBar` and `Sidebar` into smaller focused components, reducing the shell godfile pressure while keeping frontend typecheck green.
 - Desktop packaging now bundles the Linux runtime closure needed for AppImage and unpacked releases.
 - GitHub release workflow now installs Playwright Chromium, runs the release browser slice, and verifies the built AppImage payload before upload.
 - Browser verification now covers the core mocked product loops:
@@ -33,4 +36,5 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 ## Notes
 
 - Root-level working notes, prompts, recovery logs, and conversation artifacts were moved out of the repo surface into the ignored `LLM_work_folder/`.
+- The long-form changelog now absorbs session-level backend/frontend notes so obsolete summary snapshots and one-off prompt artifacts can be retired instead of becoming a second truth set.
 - This file is intentionally short and release-facing. The long-form archive lives under `docs/`.

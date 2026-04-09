@@ -229,6 +229,10 @@ function App() {
   const [exportFormat, setExportFormat] = useState<'json' | 'css'>('json')
   const [copied, setCopied] = useState(false)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [layoutDensity, setLayoutDensity] = useState<'compact' | 'comfortable' | 'expanded'>('comfortable')
+
+  const textMuted = values['--text-muted'] || '#736154'
+  const text1 = values['--text'] || '#3d3128'
 
   const handleValueChange = useCallback((name: string, value: string) => {
     setValues(prev => ({ ...prev, [name]: value }))
@@ -346,6 +350,55 @@ function App() {
     setTimeout(() => setCopied(false), 2000)
   }, [exportFormat, generateJSON, generateCSS])
 
+  const validateSkin = useCallback(() => {
+    const issues: { category: string; label: string; status: 'pass' | 'warn' | 'fail'; detail: string }[] = []
+    const bg = values['--bg-app'] || ''
+    const surface = values['--surface'] || ''
+    const accent = values['--accent'] || ''
+    const text = values['--text'] || ''
+    const textMuted = values['--text-muted'] || ''
+    const navItemText = values['--nav-item-text'] || ''
+    const navItemActive = values['--nav-item-active'] || ''
+    const navItemActiveText = values['--nav-item-active-text'] || ''
+    const btnPri = values['--button-primary-fill'] || ''
+    const btnPriText = values['--button-primary-text'] || ''
+    const stateOk = values['--state-ok'] || ''
+    const stateOver = values['--state-overdue'] || ''
+
+    const getLuminance = (c: string) => {
+      if (!c.startsWith('#') || c.length < 7) return 0.5
+      const r = parseInt(c.slice(1, 3), 16), g = parseInt(c.slice(3, 5), 16), b = parseInt(c.slice(5, 7), 16)
+      return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+    }
+
+    const checkContrast = (fg: string, bgC: string, min = 4.5) => {
+      if (!fg || !bgC) return 'warn'
+      const l1 = getLuminance(fg), l2 = getLuminance(bgC)
+      const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)
+      return ratio >= min ? 'pass' : ratio >= 3 ? 'warn' : 'fail'
+    }
+
+    if (bg) {
+      const cat = inferCategoryFromColor(bg)
+      issues.push({ category: 'contrast', label: 'Background contrast', status: 'pass', detail: `Detected ${cat} category from background` })
+    }
+
+    issues.push({ category: 'contrast', label: 'Primary text on bg', status: checkContrast(text, bg) as any, detail: text && bg ? `Text #${text.slice(0, 6)} on bg #${bg.slice(0, 6)}` : 'Missing text or bg token' })
+    issues.push({ category: 'contrast', label: 'Muted text on bg', status: checkContrast(textMuted, bg, 3) as any, detail: 'WCAG AA for small text' })
+
+    issues.push({ category: 'contrast', label: 'Accent on background', status: checkContrast(accent, bg, 3) as any, detail: accent ? `#${accent.slice(0, 6)}` : 'Missing accent' })
+
+    issues.push({ category: 'accessibility', label: 'Nav item text', status: checkContrast(navItemText, navItemActive) as any, detail: 'Active nav item readability' })
+    issues.push({ category: 'accessibility', label: 'Active nav text', status: checkContrast(navItemActiveText, navItemActive) as any, detail: 'Active nav item text contrast' })
+
+    issues.push({ category: 'buttons', label: 'Primary button', status: checkContrast(btnPriText, btnPri) as any, detail: 'Button text on fill' })
+
+    issues.push({ category: 'state', label: 'Completed state', status: stateOk ? 'pass' : 'warn', detail: stateOk ? `Completed #${stateOk.slice(0, 6)}` : 'Missing --state-ok' })
+    issues.push({ category: 'state', label: 'Overdue state', status: stateOver ? 'pass' : 'warn', detail: stateOver ? `Overdue #${stateOver.slice(0, 6)}` : 'Missing --state-overdue' })
+
+    return issues
+  }, [values])
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -425,7 +478,7 @@ function App() {
       </aside>
 
       <main className="preview">
-        <PreviewPanel values={values} />
+        <PreviewPanel values={values} layoutDensity={layoutDensity} onDensityChange={setLayoutDensity} />
       </main>
 
       {showExport && (
@@ -438,7 +491,35 @@ function App() {
                 <button className={`modal-tab ${exportFormat === 'css' ? 'active' : ''}`} onClick={() => setExportFormat('css')}>CSS</button>
               </div>
             </div>
-            <textarea readOnly value={exportFormat === 'json' ? generateJSON() : generateCSS()} />
+            <div style={{ display: 'flex', gap: 16, flex: 1 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ship-Ready Checklist</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, overflowY: 'auto' }}>
+                  {validateSkin().map((item, i) => (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 10px', borderRadius: 6,
+                      background: item.status === 'pass' ? 'rgba(79,123,90,0.12)' : item.status === 'warn' ? 'rgba(194,122,32,0.12)' : 'rgba(182,63,42,0.12)',
+                      border: `1px solid ${item.status === 'pass' ? 'rgba(79,123,90,0.3)' : item.status === 'warn' ? 'rgba(194,122,32,0.3)' : 'rgba(182,63,42,0.3)'}`,
+                    }}>
+                      <span style={{
+                        width: 16, height: 16, borderRadius: 4,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: item.status === 'pass' ? 'rgba(79,123,90,0.8)' : item.status === 'warn' ? 'rgba(194,122,32,0.8)' : 'rgba(182,63,42,0.8)',
+                        color: '#fff', fontSize: 9, fontWeight: 700,
+                      }}>
+                        {item.status === 'pass' ? '✓' : item.status === 'warn' ? '!' : '✗'}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: text1 }}>{item.label}</div>
+                        <div style={{ fontSize: 10, color: textMuted }}>{item.detail}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <textarea readOnly value={exportFormat === 'json' ? generateJSON() : generateCSS()} style={{ flex: 1 }} />
+            </div>
             <div className="modal-actions">
               <button className="modal-btn secondary" onClick={() => setShowExport(false)}>Close</button>
               <button className="modal-btn primary" onClick={copyExport}>
@@ -535,8 +616,20 @@ function GlassCard({ children, values, style = {} }: { children: React.ReactNode
   )
 }
 
-function PreviewPanel({ values }: { values: Record<string, string> }) {
+function PreviewPanel({ values, layoutDensity = 'comfortable', onDensityChange }: { values: Record<string, string>; layoutDensity?: 'compact' | 'comfortable' | 'expanded'; onDensityChange?: (d: 'compact' | 'comfortable' | 'expanded') => void }) {
   const v = (name: string, fallback: string) => values[name] || fallback
+
+  const density = {
+    compact: { cardPad: 12, rowPad: 8, itemGap: 4, fontScale: 0.92 },
+    comfortable: { cardPad: 20, rowPad: 12, itemGap: 8, fontScale: 1 },
+    expanded: { cardPad: 28, rowPad: 16, itemGap: 12, fontScale: 1.08 },
+  }[layoutDensity]
+
+  React.useEffect(() => {
+    const handler = (e: CustomEvent) => onDensityChange?.(e.detail)
+    window.addEventListener('densityChange', handler as EventListener)
+    return () => window.removeEventListener('densityChange', handler as EventListener)
+  }, [onDensityChange])
 
   const bg = v('--bg-app', '#0e0e14')
   const bgGrad = v('--bg-gradient', '')
@@ -583,6 +676,28 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
       <div style={{ position: 'absolute', inset: 0, backdropFilter: 'blur(1px)' }} />
 
       <div className="preview-shell">
+        {/* Layout density controls */}
+        <div style={{
+          position: 'absolute', top: 12, right: 12, zIndex: 200,
+          display: 'flex', gap: 4, padding: 4,
+          background: surface2, borderRadius: 8, border: `1px solid ${borderSub}`,
+        }}>
+          {(['compact', 'comfortable', 'expanded'] as const).map(d => (
+            <button
+              key={d}
+              onClick={() => onDensityChange?.(d)}
+              style={{
+                padding: '4px 10px', borderRadius: 6,
+                fontSize: 10, fontWeight: 600, textTransform: 'uppercase',
+                background: layoutDensity === d ? accent : 'transparent',
+                color: layoutDensity === d ? textInv : textMuted,
+                border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {d[0].toUpperCase()}
+            </button>
+          ))}
+        </div>
         {/* Top bar — frosted glass strip */}
         <div className="topbar" style={{
           background: topbarBg,
@@ -680,8 +795,8 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
           {/* Content area */}
           <div className="content-area" style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Today's tasks — main card */}
-            <GlassCard values={values} style={{ padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <GlassCard values={values} style={{ padding: density.cardPad }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: density.cardPad * 0.8 }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 600, color: text1 }}>Today — Monday</div>
                   <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>Spring 2025 · Week 14</div>
@@ -699,9 +814,9 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
               ].map((task, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 14px', borderRadius: 10,
+                  padding: density.rowPad, borderRadius: 10,
                   background: surface2,
-                  marginBottom: 8,
+                  marginBottom: density.itemGap,
                   opacity: task.done ? 0.55 : 1,
                   border: `1px solid ${borderSub}`,
                   transition: 'all 0.15s',
@@ -716,7 +831,7 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
                     {task.done && <span style={{ color: textInv, fontSize: 11 }}>✓</span>}
                   </div>
                   <span style={{
-                    fontSize: 13, color: task.done ? textMuted : text1,
+                    fontSize: 13 * density.fontScale, color: task.done ? textMuted : text1,
                     textDecoration: task.done ? 'line-through' : 'none',
                     flex: 1,
                   }}>{task.text}</span>
@@ -788,6 +903,46 @@ function PreviewPanel({ values }: { values: Record<string, string> }) {
                     border: 'none', borderRadius: 10,
                     fontSize: 12, fontWeight: 500, cursor: 'pointer',
                   }}>Open Journal →</button>
+                </div>
+              </GlassCard>
+
+              {/* Focus Timer State */}
+              <GlassCard values={values} style={{ padding: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: textMuted, textTransform: 'uppercase', letterSpacing: '0.8px' }}>Focus Timer</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: stateOk, boxShadow: `0 0 8px ${stateOk}` }} />
+                    <span style={{ fontSize: 10, color: stateOk, fontWeight: 500 }}>ACTIVE</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                  <div style={{
+                    width: 72, height: 72, borderRadius: '50%',
+                    background: accent + '15', border: `3px solid ${accent}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: `0 0 24px ${accent}30`,
+                  }}>
+                    <span style={{ fontSize: 24, fontWeight: 700, color: accent, fontFamily: 'monospace' }}>25:00</span>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: text1, marginBottom: 4 }}>Deep Work Session</div>
+                    <div style={{ fontSize: 12, color: textMuted }}>Session 2 of 4 · Break in 15min</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+                  <button style={{
+                    padding: '10px 16px', borderRadius: 8,
+                    background: btnPri, color: textInv,
+                    border: `1px solid ${btnPriEdge}`,
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    boxShadow: btnPriGlow,
+                  }}>Pause</button>
+                  <button style={{
+                    padding: '10px 16px', borderRadius: 8,
+                    background: surface3, color: text1,
+                    border: `1px solid ${borderSub}`,
+                    fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                  }}>Stop</button>
                 </div>
               </GlassCard>
             </div>
