@@ -1,4 +1,3 @@
-const http = require("node:http");
 const path = require("node:path");
 const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain } = require("electron");
 const { autoUpdater } = require("electron-updater");
@@ -6,6 +5,8 @@ const AutoLaunch = require("electron-auto-launch");
 const pkg = require("./package.json");
 
 const { BackendRuntime } = require("./backend-runtime");
+const { NotificationRuntime } = require("./notification-runtime");
+const { WindowRuntime } = require("./window-runtime");
 
 const singleInstance = app.requestSingleInstanceLock();
 if (!singleInstance) {
@@ -13,13 +14,7 @@ if (!singleInstance) {
 }
 
 let tray = null;
-let mainWindow = null;
-let journalWindow = null;
 let unreadCount = 0;
-let pollHandle = null;
-let alarmPollHandle = null;
-let dueAlarmsPollHandle = null;
-const firedAlarms = new Map(); // { id -> { id, firedAt } }
 
 const isPackaged = app.isPackaged;
 const backendCommand = isPackaged
@@ -49,33 +44,7 @@ function getBuildInfo() {
   };
 }
 
-function createWindow(route = "#/today", key = "main") {
-  const window = new BrowserWindow({
-    width: key === "journal" ? 980 : 1440,
-    height: key === "journal" ? 860 : 880,
-    show: false,
-    icon: path.join(__dirname, "assets", "icon.png"),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-    },
-  });
-
-  window.once("ready-to-show", () => {
-    window.show();
-    if (!isPackaged) {
-      window.webContents.openDevTools();
-    }
-  });
-  if (isPackaged) {
-    window.loadFile(path.join(process.resourcesPath, "frontend", "dist", "index.html"), { hash: route.replace(/^#/, "") });
-  } else {
-    window.loadURL(`http://127.0.0.1:5173/${route}`);
-  }
-  return window;
-}
+let windowRuntime = null;
 
 function updateTray() {
   if (!tray) {
@@ -89,9 +58,9 @@ function updateTray() {
   }
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: "Open DopaFlow", click: () => mainWindow?.show() },
-      { label: "Open Journal", click: () => openJournalWindow() },
-      { label: "Open Calendar", click: () => openCalendar() },
+      { label: "Open DopaFlow", click: () => windowRuntime?.focusMainWindow() },
+      { label: "Open Journal", click: () => windowRuntime?.openJournalWindow() },
+      { label: "Open Calendar", click: () => windowRuntime?.openCalendar() },
       { type: "separator" },
       { label: "Quit", click: () => app.quit() },
     ]),
@@ -102,168 +71,32 @@ function pushUnreadCount() {
   if (typeof app.setBadgeCount === "function") {
     app.setBadgeCount(unreadCount);
   }
-  mainWindow?.webContents.send("notification-count", unreadCount);
-  journalWindow?.webContents.send("notification-count", unreadCount);
+  windowRuntime?.sendToAll("notification-count", unreadCount);
   updateTray();
 }
 
 function pushBuildInfo() {
   const payload = getBuildInfo();
-  mainWindow?.webContents.send("df:build-info", payload);
-  journalWindow?.webContents.send("df:build-info", payload);
+  windowRuntime?.sendToAll("df:build-info", payload);
 }
 
-function fetchUnreadCount() {
-  const request = http.get("http://127.0.0.1:8000/api/v2/notifications/unread-count", (response) => {
-    let body = "";
-    response.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    response.on("end", () => {
-      try {
-        const parsed = JSON.parse(body);
-        unreadCount = Number(parsed.count ?? 0);
-        pushUnreadCount();
-      } catch (_error) {
-        unreadCount = 0;
-        pushUnreadCount();
-      }
-    });
-  });
-
-  request.on("error", () => {
-    unreadCount = 0;
+const notificationRuntime = new NotificationRuntime({
+  Notification,
+  onUnreadCount: (count) => {
+    unreadCount = count;
     pushUnreadCount();
-  });
-}
-
-function fetchDueAlarms() {
-  const request = http.get("http://127.0.0.1:8000/api/v2/alarms/upcoming", (response) => {
-    let body = "";
-    response.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-    response.on("end", () => {
-      try {
-        const alarms = JSON.parse(body);
-        if (!Array.isArray(alarms)) {
-          return;
-        }
-        const now = Date.now();
-        alarms.forEach((alarm) => {
-          const alarmAt = new Date(alarm.at).getTime();
-          if (!Number.isFinite(alarmAt) || alarm.muted) {
-            return;
-          }
-          const delta = alarmAt - now;
-          if (delta < 0 || delta > 90_000 || firedAlarms.has(alarm.id)) {
-            return;
-          }
-          firedAlarms.set(alarm.id, { id: alarm.id, firedAt: now });
-          const alarm_notif = new Notification({
-            title: "DopaFlow Alarm",
-            body: alarm.title ?? "Alarm",
-            silent: false,
-          });
-          alarm_notif.on("click", () => {
-            mainWindow?.show();
-            mainWindow?.focus();
-          });
-          alarm_notif.show();
-          mainWindow?.webContents.send("alarm-fired", { id: alarm.id, label: alarm.title ?? "Alarm" });
-        });
-      } catch (_error) {
-        // Ignore transient parse/network failures, same as unread polling.
-      }
-    });
-  });
-
-  request.on("error", () => undefined);
-}
-
-function cleanupFiredAlarms() {
-  const now = Date.now();
-  const fiveMinutesMs = 5 * 60 * 1000;
-  for (const [id, record] of firedAlarms.entries()) {
-    if (now - record.firedAt > fiveMinutesMs) {
-      firedAlarms.delete(id);
-    }
-  }
-}
-
-function fetchDueAlarmsPolling() {
-  fetch("http://127.0.0.1:8000/api/v2/alarms/due")
-    .then((response) => response.json())
-    .then((alarms) => {
-      if (!Array.isArray(alarms)) {
-        return;
-      }
-      alarms.forEach((alarm) => {
-        if (!firedAlarms.has(alarm.id)) {
-          firedAlarms.set(alarm.id, { id: alarm.id, firedAt: Date.now() });
-          const alarm_notif = new Notification({
-            title: alarm.label ?? "Alarm",
-            body: alarm.time_str ?? "",
-            silent: false,
-          });
-          alarm_notif.on("click", () => {
-            mainWindow?.show();
-            mainWindow?.focus();
-          });
-          alarm_notif.show();
-        }
-      });
-      cleanupFiredAlarms();
-    })
-    .catch(() => {
-      // Backend may not be running yet, log and continue
-    });
-}
-
-function startNotificationPolling() {
-  fetchUnreadCount();
-  pollHandle = setInterval(fetchUnreadCount, 10_000);
-  fetchDueAlarms();
-  alarmPollHandle = setInterval(fetchDueAlarms, 30_000);
-  fetchDueAlarmsPolling();
-  dueAlarmsPollHandle = setInterval(fetchDueAlarmsPolling, 60_000);
-}
-
-function stopNotificationPolling() {
-  if (pollHandle) {
-    clearInterval(pollHandle);
-    pollHandle = null;
-  }
-  if (alarmPollHandle) {
-    clearInterval(alarmPollHandle);
-    alarmPollHandle = null;
-  }
-  if (dueAlarmsPollHandle) {
-    clearInterval(dueAlarmsPollHandle);
-    dueAlarmsPollHandle = null;
-  }
-}
-
-function openJournalWindow() {
-  if (journalWindow && !journalWindow.isDestroyed()) {
-    journalWindow.focus();
-    return;
-  }
-  journalWindow = createWindow("#/journal", "journal");
-}
-
-function openCalendar() {
-  if (!mainWindow) {
-    mainWindow = createWindow("#/calendar", "main");
-    return;
-  }
-  mainWindow.show();
-  mainWindow.focus();
-  mainWindow.webContents.send("deep-link", "dopaflow://calendar");
-}
+  },
+  onAlarmFired: (alarm) => {
+    windowRuntime?.getMainWindow()?.webContents.send("alarm-fired", alarm);
+  },
+  focusMainWindow: () => {
+    windowRuntime?.focusMainWindow();
+  },
+});
 
 function registerShortcuts() {
   globalShortcut.register("CommandOrControl+Shift+D", () => {
+    const mainWindow = windowRuntime?.getMainWindow();
     if (!mainWindow) {
       return;
     }
@@ -283,19 +116,10 @@ function setupIpc() {
       autoUpdater.quitAndInstall();
     }
   });
-  ipcMain.on("open-journal", () => openJournalWindow());
-  ipcMain.on("open-calendar", () => openCalendar());
+  ipcMain.on("open-journal", () => windowRuntime?.openJournalWindow());
+  ipcMain.on("open-calendar", () => windowRuntime?.openCalendar());
   ipcMain.on("open-path", (_event, routePath) => {
-    if (!mainWindow) {
-      mainWindow = createWindow(routePath, "main");
-      return;
-    }
-    mainWindow.show();
-    if (isPackaged) {
-      mainWindow.loadFile(path.join(process.resourcesPath, "frontend", "dist", "index.html"), { hash: routePath.replace(/^#/, "") });
-    } else {
-      mainWindow.loadURL(`http://127.0.0.1:5173/${routePath}`);
-    }
+    windowRuntime?.openPath(routePath);
   });
   ipcMain.on("focus-completed", (_event, data) => {
     const focus_notif = new Notification({
@@ -304,30 +128,17 @@ function setupIpc() {
       silent: false,
     });
     focus_notif.on("click", () => {
-      mainWindow?.show();
-      mainWindow?.focus();
+      windowRuntime?.focusMainWindow();
     });
     focus_notif.show();
-    mainWindow?.webContents.send("focus-notification-shown", { session_id: data.session_id });
+    windowRuntime?.getMainWindow()?.webContents.send("focus-notification-shown", { session_id: data.session_id });
   });
-}
-
-function ensureMainWindow() {
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    mainWindow = createWindow("#/today", "main");
-    mainWindow.webContents.once("did-finish-load", () => {
-      pushBuildInfo();
-    });
-  }
-  return mainWindow;
 }
 
 if (singleInstance) {
   app.on("second-instance", (_event, argv) => {
     const deepLink = argv.find((value) => value.startsWith("dopaflow://"));
-    const window = ensureMainWindow();
-    window.show();
-    window.focus();
+    const window = windowRuntime?.focusMainWindow();
     if (deepLink) {
       window.webContents.send("deep-link", deepLink);
     }
@@ -337,11 +148,20 @@ if (singleInstance) {
 app.whenReady().then(() => {
   app.setAsDefaultProtocolClient("dopaflow");
   new AutoLaunch({ name: "DopaFlow" });
+  windowRuntime = new WindowRuntime({
+    BrowserWindow,
+    isPackaged,
+    assetsDir: path.join(__dirname, "assets"),
+    preloadPath: path.join(__dirname, "preload.js"),
+    frontendDistPath: path.join(process.resourcesPath, "frontend", "dist", "index.html"),
+    devServerOrigin: "http://127.0.0.1:5173",
+    onMainReady: () => pushBuildInfo(),
+  });
 
   runtime.start();
   runtime.on("ready", () => {
-    ensureMainWindow();
-    startNotificationPolling();
+    windowRuntime.ensureMainWindow();
+    notificationRuntime.start();
   });
 
   tray = new Tray(path.join(__dirname, "assets", "icon.png"));
@@ -350,10 +170,10 @@ app.whenReady().then(() => {
   setupIpc();
 
   autoUpdater.on("update-available", (info) => {
-    ensureMainWindow().webContents.send("df:update-available", { version: info.version });
+    windowRuntime.ensureMainWindow().webContents.send("df:update-available", { version: info.version });
   });
   autoUpdater.on("update-downloaded", () => {
-    ensureMainWindow().webContents.send("df:update-downloaded");
+    windowRuntime.ensureMainWindow().webContents.send("df:update-downloaded");
   });
   if (autoUpdateEnabled) {
     autoUpdater.checkForUpdatesAndNotify().catch(() => undefined);
@@ -362,11 +182,11 @@ app.whenReady().then(() => {
 
 app.on("open-url", (event, url) => {
   event.preventDefault();
-  ensureMainWindow().webContents.send("deep-link", url);
+  windowRuntime.ensureMainWindow().webContents.send("deep-link", url);
 });
 
 app.on("will-quit", () => {
-  stopNotificationPolling();
+  notificationRuntime.stop();
   globalShortcut.unregisterAll();
   runtime.stop();
 });

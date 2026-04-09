@@ -23,7 +23,8 @@ class CommandRepository:
               source TEXT DEFAULT 'text',
               error_json TEXT,
               result_json TEXT,
-              executed_at TEXT
+              executed_at TEXT,
+              undone_at TEXT
             )
             """
         )
@@ -32,6 +33,8 @@ class CommandRepository:
             conn.execute("ALTER TABLE command_logs ADD COLUMN source TEXT DEFAULT 'text'")
         if "result_json" not in columns:
             conn.execute("ALTER TABLE command_logs ADD COLUMN result_json TEXT")
+        if "undone_at" not in columns:
+            conn.execute("ALTER TABLE command_logs ADD COLUMN undone_at TEXT")
 
     @staticmethod
     def add_log(
@@ -65,7 +68,7 @@ class CommandRepository:
         with get_db(db_path) as conn:
             CommandRepository._ensure_table(conn)
             rows = conn.execute(
-                "SELECT id, text, intent, status, source, error_json, result_json, executed_at FROM command_logs ORDER BY executed_at DESC LIMIT ?",
+                "SELECT id, text, intent, status, source, error_json, result_json, executed_at, undone_at FROM command_logs ORDER BY executed_at DESC LIMIT ?",
                 (limit,),
             ).fetchall()
         result: list[dict[str, object]] = []
@@ -79,6 +82,15 @@ class CommandRepository:
                     entry["result"] = None
             result.append(entry)
         return result
+
+    @staticmethod
+    def mark_undone(db_path: str, command_id: str) -> None:
+        with tx(db_path) as conn:
+            CommandRepository._ensure_table(conn)
+            conn.execute(
+                "UPDATE command_logs SET undone_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), command_id),
+            )
 
     @staticmethod
     def clear_history(db_path: str) -> dict[str, object]:

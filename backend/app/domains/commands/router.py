@@ -21,15 +21,19 @@ async def parse_command(payload: CommandParseRequest) -> dict[str, object]:
 
 
 @router.post("/preview", dependencies=[Depends(require_scope("read:commands"))])
-async def preview_command(payload: CommandParseRequest) -> dict[str, object]:
+async def preview_command(
+    payload: CommandParseRequest,
+    settings: Settings = Depends(get_settings_dependency),
+) -> dict[str, object]:
     """Dry-run preview: show what would happen if the command were executed."""
-    return CommandService.preview(payload.text)
+    return CommandService.preview(payload.text, settings.db_path)
 
 
 @router.post("/voice-preview", response_model=VoiceCommandPreviewResponse, dependencies=[Depends(require_scope("read:commands"))])
 async def preview_voice_command(
     file: UploadFile = File(...),
     lang: str = Query(default="en-US"),
+    settings: Settings = Depends(get_settings_dependency),
 ) -> VoiceCommandPreviewResponse:
     """Transcribe a spoken command and preview the parsed action without executing it.
     No prefix required — the NLP engine handles intent classification."""
@@ -39,7 +43,7 @@ async def preview_voice_command(
         raise HTTPException(status_code=422, detail="No speech detected")
 
     parsed = CommandService.parse(transcript)
-    preview = CommandService.preview(transcript)
+    preview = CommandService.preview(transcript, settings.db_path)
     command_word = CommandService.detect_command_word(transcript)  # legacy compat
 
     return VoiceCommandPreviewResponse(

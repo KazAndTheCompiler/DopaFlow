@@ -89,6 +89,14 @@ interface VoiceCommandModalProps {
   inline?: boolean;
 }
 
+type PreviewPayload = {
+  would_execute?: boolean;
+  status?: string;
+  message?: string;
+  options?: Array<Record<string, unknown>>;
+  parts?: Array<{ text?: string; intent?: string }>;
+};
+
 export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: VoiceCommandModalProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"idle" | "listening" | "processing" | "preview" | "executing" | "done">("idle");
@@ -104,6 +112,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
   const followUpTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const transcriptText = typeof transcript === "string" ? transcript : "";
   const interimText = typeof interim === "string" ? interim : "";
+  const preview = (response?.preview ?? {}) as PreviewPayload;
 
   // -----------------------------------------------------------------------
   // Process transcript → send to Packy
@@ -259,11 +268,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
   // -----------------------------------------------------------------------
 
   const meta = response ? INTENT_META[response.intent] : null;
-  const canExecute =
-    phase === "preview" &&
-    response &&
-    !["unknown", "greeting", "help"].includes(response.intent) &&
-    response.status !== "needs_datetime";
+  const canExecute = phase === "preview" && Boolean(response) && preview.would_execute === true && response?.status === "ok";
   const canFollowUp = phase === "done" && response?.follow_ups?.length;
 
   const renderPreview = (): JSX.Element | null => {
@@ -271,6 +276,8 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
 
     const entities = response.entities ?? {};
     const showEntities = Object.entries(entities).filter(([k, v]) => shouldShowEntity(k, v));
+    const previewOptions = Array.isArray(preview.options) ? preview.options : [];
+    const compoundParts = Array.isArray(preview.parts) ? preview.parts : [];
     const compoundResults = Array.isArray((response.execution_result as { results?: unknown } | null)?.results)
       ? ((response.execution_result as { results: PackyVoiceResponse[] }).results)
       : [];
@@ -324,7 +331,32 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
           <div style={{ fontWeight: 600 }}>{transcriptText}</div>
         </div>
 
-        {/* Compound results */}
+        {/* Compound preview / results */}
+        {compoundParts.length > 0 && (
+          <div style={{ display: "grid", gap: "0.5rem" }}>
+            {compoundParts.map((part, index) => {
+              const partMeta = part.intent ? INTENT_META[part.intent] : null;
+              return (
+                <div
+                  key={`${part.text ?? "part"}-${index}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.35rem 0.5rem",
+                    borderRadius: "8px",
+                    background: "var(--surface-3)",
+                    fontSize: "var(--text-xs)",
+                  }}
+                >
+                  <span>{partMeta?.icon ?? "•"}</span>
+                  <span style={{ fontWeight: 600 }}>{part.text ?? part.intent ?? "Action"}</span>
+                  <span style={{ color: "var(--text-tertiary)", marginLeft: "auto" }}>{part.intent ?? "unknown"}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {response.intent === "compound" && compoundResults.length > 0 && (
           <div style={{ display: "grid", gap: "0.5rem" }}>
             {compoundResults.map((r, i) => {
@@ -391,6 +423,50 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
         {response.status === "needs_datetime" && (
           <div style={{ color: "var(--state-warn)", fontSize: "var(--text-sm)" }}>
             I need a date and time. Say something like &quot;tomorrow at 2pm&quot;.
+          </div>
+        )}
+        {response.status === "ambiguous" && (
+          <div style={{ color: "var(--state-warn)", fontSize: "var(--text-sm)" }}>
+            This matches more than one thing. Pick a more specific title before running it.
+          </div>
+        )}
+        {response.status === "not_found" && (
+          <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>
+            Nothing safe matched yet. Try the exact title or a simpler command.
+          </div>
+        )}
+        {response.status === "unsupported" && (
+          <div style={{ color: "var(--state-warn)", fontSize: "var(--text-sm)" }}>
+            This preview is blocked on purpose. Run one concrete action at a time.
+          </div>
+        )}
+        {response.status === "nothing_to_undo" && (
+          <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>
+            There is no pending supported action to undo.
+          </div>
+        )}
+
+        {previewOptions.length > 0 && (
+          <div style={{ display: "grid", gap: "0.4rem" }}>
+            {previewOptions.map((option, index) => (
+              <div
+                key={`${String(option.id ?? option.title ?? option.name ?? "option")}-${index}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.45rem 0.6rem",
+                  borderRadius: "8px",
+                  background: "var(--surface-3)",
+                  fontSize: "var(--text-xs)",
+                }}
+              >
+                <span style={{ color: "var(--text-tertiary)" }}>{index + 1}.</span>
+                <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                  {String(option.title ?? option.name ?? option.id ?? "Option")}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
@@ -464,7 +540,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
         ) : (
           <>
             Just speak naturally — no prefixes needed. Try &quot;buy milk every monday&quot;, &quot;start focus for 25
-            minutes&quot;, or &quot;add task meeting prep and set alarm 9am&quot;.
+            minutes&quot;, or &quot;calendar dentist tomorrow at 2pm for 45 minutes&quot;.
           </>
         )}
       </p>

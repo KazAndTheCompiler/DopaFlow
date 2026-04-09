@@ -6,6 +6,66 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ## Unreleased
 
+### 2026-04-09
+
+**Status:** shell/desktop refactor notes absorbed into the changelog and obsolete work-folder snapshots started to be retired
+
+### Shell and desktop coordinator cleanup
+
+- Split `desktop/main.js` down to orchestration instead of keeping polling, notifications, routing, and window lifecycle in one file.
+- Moved notification/alarm polling into:
+  - `desktop/notification-runtime.js`
+- Moved window/routing concerns into:
+  - `desktop/window-runtime.js`
+- Earlier validation on the desktop split passed with `node --check` against the touched desktop files.
+
+### Frontend shell godfile cleanup
+
+- Reduced `frontend/src/shell/TopBar.tsx` to a thin coordinator.
+- Split top bar responsibilities into:
+  - `frontend/src/shell/TopBarBanners.tsx`
+  - `frontend/src/shell/TopBarControls.tsx`
+- Reduced `frontend/src/shell/Sidebar.tsx` to a thin coordinator.
+- Split sidebar responsibilities into:
+  - `frontend/src/shell/SidebarSections.tsx`
+  - `frontend/src/shell/SidebarFooter.tsx`
+- Verified the frontend shell refactor with:
+  - `PATH=/home/henry/vscode/.codex-bin:/home/henry/vscode/.codex-tools/node-v20.20.2-linux-x64/bin:$PATH npm --prefix /home/henry/vscode/build/dopaflow/frontend run typecheck`
+  - result: passed
+
+### Documentation cleanup
+
+- Promoted backend/frontend session notes into the changelog so `LLM_work_folder/` no longer needs competing summary snapshots as a second record of shipped work.
+- Started deleting obsolete summary files and superseded one-off prompt artifacts from `LLM_work_folder/` instead of leaving them to drift.
+- Kept the live documentation truth set centered on:
+  - `CHANGELOG.md`
+  - `docs/CHANGELOG_2.0.0-2.0.11.md`
+  - `README.md`
+  - `LLM_work_folder/next_steps.md`
+  - `LLM_work_folder/promptpack_agents.md`
+
+### 2026-04-07
+
+**Status:** backend hardening sweep with contract-safe logging and narrower fallbacks
+
+### Backend hardening pass
+
+- Gamification Packy notification failures are now logged without preventing XP awarding.
+- Focus gamification award failures are now logged without breaking focus completion.
+- Journal gamification award failures are now logged without breaking journal entry creation.
+- Digest optional analytics reads now only fall back on missing-table cases; unexpected SQLite failures now surface and missing-table fallback emits warnings.
+- NLP quick-add fallback parser failures are now logged while intent classification still degrades to `unknown`.
+- Health memory-depth fallback now logs missing `journal_entries` instead of silently degrading to `0`.
+- Packy answer/whisper handling now logs invalid `recent_mood` payloads instead of silently swallowing malformed lorebook state.
+- Player yt-dlp subprocess and API resolution failures now emit warnings with URL context while preserving the existing response contract.
+
+### Focused verification from the backend pass
+
+- `PYTHONPATH=backend .venv/bin/python -m pytest backend/tests/test_player.py backend/tests/test_packy.py -q`
+  - `8 passed in 37.23s`
+- `PYTHONPATH=backend .venv/bin/python -m pytest backend/tests/test_player.py backend/tests/test_packy.py backend/tests/test_health.py backend/tests/test_nlp.py -q`
+  - `70 passed in 38.18s`
+
 **Date:** 2026-04-05
 **Status:** Obsidian bridge hardening plus first premium-closure slice, calendar editing pass, and Calendar Maturity Wave 2, plus NLP/Packy trust hardening (Waves 1-6)
 
