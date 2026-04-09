@@ -211,7 +211,7 @@ Related docs:
 ## Release builds
 
 Desktop release packaging is wired through GitHub Actions in
-[`/.github/workflows/release.yml`](/home/henry/vscode/build/dopaflow/.github/workflows/release.yml).
+[`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
 Recommended path:
 

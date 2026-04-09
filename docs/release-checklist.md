@@ -62,8 +62,8 @@ Required result:
 
 Supporting docs:
 
-- [frontend architecture](/home/henry/vscode/build/dopaflow/docs/frontend-architecture.md)
-- [frontend regression checklist](/home/henry/vscode/build/dopaflow/docs/frontend-regression-checklist.md)
+- [frontend architecture](./frontend-architecture.md)
+- [frontend regression checklist](./frontend-regression-checklist.md)
 
 ## Desktop Verification
 

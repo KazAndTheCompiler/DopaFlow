@@ -23,11 +23,13 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+)
 logger = logging.getLogger("dopaflow-node-mcp")
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_NODE_BIN = Path("/home/henry/vscode/.codex-bin")
+DEFAULT_NODE_BIN = ROOT / ".codex-bin"
 DEFAULT_FRONTEND_DIR = ROOT / "frontend"
 
 
@@ -44,7 +46,9 @@ def _resolve_frontend_dir() -> Path:
 def _command_env() -> dict[str, str]:
     env = os.environ.copy()
     node_bin = _resolve_node_bin()
-    env["PATH"] = f"{node_bin}:{env.get('PATH', '')}" if env.get("PATH") else str(node_bin)
+    env["PATH"] = (
+        f"{node_bin}:{env.get('PATH', '')}" if env.get("PATH") else str(node_bin)
+    )
     return env
 
 
@@ -125,11 +129,15 @@ def create_server() -> Server:
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
         if name == "frontend_build":
-            result = _run([str(node_bin / "npm"), "--prefix", str(frontend_dir), "run", "build"])
+            result = _run(
+                [str(node_bin / "npm"), "--prefix", str(frontend_dir), "run", "build"]
+            )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
         if name == "frontend_install":
-            result = _run([str(node_bin / "npm"), "--prefix", str(frontend_dir), "install"])
+            result = _run(
+                [str(node_bin / "npm"), "--prefix", str(frontend_dir), "install"]
+            )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
         if name == "frontend_script":
@@ -137,10 +145,19 @@ def create_server() -> Server:
             if script not in {"build", "dev", "preview"}:
                 result = {"ok": False, "error": f"Unsupported script: {script}"}
                 return [TextContent(type="text", text=json.dumps(result, indent=2))]
-            result = _run([str(node_bin / "npm"), "--prefix", str(frontend_dir), "run", script])
+            result = _run(
+                [str(node_bin / "npm"), "--prefix", str(frontend_dir), "run", script]
+            )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
-        return [TextContent(type="text", text=json.dumps({"ok": False, "error": f"Unknown tool: {name}"}, indent=2))]
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {"ok": False, "error": f"Unknown tool: {name}"}, indent=2
+                ),
+            )
+        ]
 
     return app
 
