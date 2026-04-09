@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from app.domains.review.schemas import ReviewSearchCard
+
 
 class CardSuspendResponse(BaseModel):
     card_id: str
@@ -15,16 +17,8 @@ class CardBuryResponse(BaseModel):
     buried_until: str
 
 
-class ReviewSearchResult(BaseModel):
-    card_id: str
-    front: str
-    back: str
-    deck_id: str
-    state: str = "new"
-
-
 class ReviewSearchResponse(BaseModel):
-    items: list[ReviewSearchResult]
+    items: list[ReviewSearchCard]
     limit: int
 
 

@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.domains.tasks.schemas import Task
 from app.domains.vault_bridge.file_names import slugify
 from app.domains.vault_bridge.frontmatter import serialize_frontmatter
 from app.domains.vault_bridge.schemas import VaultConfig
@@ -40,7 +41,7 @@ def _today_iso() -> str:
     return datetime.now(timezone.utc).date().isoformat()
 
 
-def render_task_line(task: dict[str, Any]) -> str:
+def render_task_line(task: Task) -> str:
     """Render a single task as an Obsidian-compatible checkbox line.
 
     Format: `- [x] Title <!--df:tsk_123 due:2026-04-10 p:2 #tag-->`
@@ -48,22 +49,21 @@ def render_task_line(task: dict[str, Any]) -> str:
     The HTML comment is hidden in Obsidian preview. It carries the DopaFlow
     identity and metadata needed for a lossless pull round-trip.
     """
-    check = "x" if task.get("done") or task.get("status") == "done" else " "
-    title = (task.get("title") or "").strip()
+    check = "x" if task.done or task.status == "done" else " "
+    title = (task.title or "").strip()
 
-    meta_parts: list[str] = [f"df:{task['id']}"]
+    meta_parts: list[str] = [f"df:{task.id}"]
 
-    due = task.get("due_at")
+    due = task.due_at
     if due:
-        # Extract date portion only
         due_date = due[:10] if len(due) >= 10 else due
         meta_parts.append(f"due:{due_date}")
 
-    priority = task.get("priority", 3)
+    priority = task.priority
     if priority != 3:
         meta_parts.append(f"p:{priority}")
 
-    tags = task.get("tags") or []
+    tags = task.tags or []
     if tags:
         tag_str = " ".join(f"#{t}" for t in tags)
         meta_parts.append(tag_str)
@@ -182,6 +182,8 @@ def write_task_collection(
     if abs_path.exists():
         previous = abs_path.read_text(encoding="utf-8")
 
-    content = render_task_collection(tasks, project_name, project_id=project_id, scope=scope)
+    content = render_task_collection(
+        tasks, project_name, project_id=project_id, scope=scope
+    )
     abs_path.write_text(content, encoding="utf-8")
     return rel_path, _hash(content), previous
