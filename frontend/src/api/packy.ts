@@ -3,6 +3,13 @@ import { apiClient } from "./client";
 
 export type { PackyVoiceResponse };
 
+export interface PackyLorebookResponse {
+  status: string;
+  session_id: string;
+  persisted: boolean;
+  id: string;
+}
+
 export function askPacky(payload: { text: string; context?: Record<string, unknown>; session_id?: string }): Promise<{
   intent: string;
   extracted_data: Record<string, unknown>;
@@ -37,8 +44,8 @@ export function updatePackyLorebook(payload: {
   completed_today?: number;
   habit_streak?: number;
   focus_minutes_today?: number;
-}): Promise<{ status: string }> {
-  return apiClient<{ status: string }>("/packy/lorebook", { method: "POST", body: JSON.stringify(payload) });
+}): Promise<PackyLorebookResponse> {
+  return apiClient<PackyLorebookResponse>("/packy/lorebook", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function getPackyMomentum(): Promise<MomentumScore> {

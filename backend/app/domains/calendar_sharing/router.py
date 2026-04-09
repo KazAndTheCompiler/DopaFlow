@@ -12,7 +12,18 @@ from fastapi import Header
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.calendar_sharing.repository import CalendarSharingRepository
-from app.domains.calendar_sharing.schemas import PeerFeed, PeerFeedCreate, PeerFeedUpdate, PeerFeedSyncResult, ShareToken, ShareTokenCreate, ShareTokenCreated
+from app.domains.calendar_sharing.schemas import (
+    PeerFeed,
+    PeerFeedCreate,
+    PeerFeedRemoval,
+    PeerFeedSyncResult,
+    PeerFeedUpdate,
+    ShareToken,
+    ShareTokenCreate,
+    ShareTokenCreated,
+    ShareTokenInvite,
+    ShareTokenRevocation,
+)
 from app.domains.calendar_sharing.service import CalendarSharingService
 from app.middleware.auth_scopes import require_scope
 
@@ -95,24 +106,24 @@ async def create_token(
     return svc.create_token(payload)
 
 
-@router.delete("/tokens/{token_id}", response_model=dict, dependencies=[Depends(require_scope("share:calendar"))])
+@router.delete("/tokens/{token_id}", response_model=ShareTokenRevocation, dependencies=[Depends(require_scope("share:calendar"))])
 async def revoke_token(
     token_id: str,
     svc: CalendarSharingService = Depends(_svc),
-) -> dict:
+) -> ShareTokenRevocation:
     """Revoke a share token."""
 
     if not svc.revoke_token(token_id):
         raise HTTPException(status_code=404, detail="Token not found")
-    return {"revoked": True}
+    return ShareTokenRevocation(revoked=True)
 
 
-@router.get("/tokens/{token_id}/invite", response_model=dict, dependencies=[Depends(require_scope("share:calendar"))])
+@router.get("/tokens/{token_id}/invite", response_model=ShareTokenInvite, dependencies=[Depends(require_scope("share:calendar"))])
 async def get_invite_string(
     token_id: str,
     request: Request,
     svc: CalendarSharingService = Depends(_svc),
-) -> dict:
+) -> ShareTokenInvite:
     """Get connection string for token invitation."""
 
     tokens = svc.list_tokens()
@@ -127,7 +138,7 @@ async def get_invite_string(
 
     base_url = f"{request.url.scheme}://{request.url.netloc}"
     connection_string = f"{base_url}|{token_id}"
-    return {"connection_string": connection_string, "label": token.label}
+    return ShareTokenInvite(connection_string=connection_string, label=token.label)
 
 
 @router.get("/feeds", response_model=list[PeerFeed], dependencies=[Depends(require_scope("read:calendar"))])
@@ -173,16 +184,16 @@ async def update_feed(
     return feed
 
 
-@router.delete("/feeds/{feed_id}", response_model=dict, dependencies=[Depends(require_scope("write:calendar"))])
+@router.delete("/feeds/{feed_id}", response_model=PeerFeedRemoval, dependencies=[Depends(require_scope("write:calendar"))])
 async def remove_feed(
     feed_id: str,
     svc: CalendarSharingService = Depends(_svc),
-) -> dict:
+) -> PeerFeedRemoval:
     """Remove a peer feed subscription."""
 
     if not svc.remove_feed(feed_id):
         raise HTTPException(status_code=404, detail="Feed not found")
-    return {"removed": True}
+    return PeerFeedRemoval(removed=True)
 
 
 @router.post("/feeds/{feed_id}/sync", response_model=PeerFeedSyncResult, dependencies=[Depends(require_scope("write:calendar"))])

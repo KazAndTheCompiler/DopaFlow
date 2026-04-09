@@ -11,7 +11,26 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from app.core.config import Settings, get_settings_dependency
-from app.domains.ops.schemas import MAX_OPS_IMPORT_BYTES, OpsConfigResponse, OpsImportIn, OpsStatsResponse, OpsSyncStatus, ScopeTokenCreateIn, ScopeTokenIssued, ScopeTokenRead, TursoTestIn, TursoTestResult
+from app.domains.ops.schemas import (
+    MAX_OPS_IMPORT_BYTES,
+    OpsBackupVerification,
+    OpsConfigResponse,
+    OpsExportPayload,
+    OpsExportResponse,
+    OpsImportIn,
+    OpsImportResponse,
+    OpsReconcileResponse,
+    OpsRestoreResponse,
+    OpsSeedResponse,
+    OpsStatsResponse,
+    OpsSyncStatus,
+    OpsTokenRevocation,
+    ScopeTokenCreateIn,
+    ScopeTokenIssued,
+    ScopeTokenRead,
+    TursoTestIn,
+    TursoTestResult,
+)
 from app.domains.ops.service import OpsService
 from app.middleware.auth_scopes import SCOPES, create_scope_token, list_scope_tokens, require_scope, revoke_scope_token, verify_scope_token
 from app.services.upload_security import validate_upload
@@ -103,27 +122,27 @@ async def list_issued_scope_tokens(
     return [ScopeTokenRead(**item) for item in list_scope_tokens(settings=settings)]
 
 
-@router.delete("/auth-tokens/{token_id}", response_model=dict[str, bool], dependencies=[Depends(require_scope("admin:ops"))])
+@router.delete("/auth-tokens/{token_id}", response_model=OpsTokenRevocation, dependencies=[Depends(require_scope("admin:ops"))])
 async def revoke_issued_scope_token(
     token_id: str,
     settings: Settings = Depends(get_settings_dependency),
-) -> dict[str, bool]:
+) -> OpsTokenRevocation:
     """Revoke a previously issued signed bearer token."""
     if not revoke_scope_token(token_id, settings=settings):
         raise HTTPException(status_code=404, detail="Scope token not found")
-    return {"revoked": True}
+    return OpsTokenRevocation(revoked=True)
 
 
 # ── export ────────────────────────────────────────────────────────────────────
 
-@router.get("/export", dependencies=[Depends(require_scope("admin:ops"))])
-async def export_data(svc: OpsService = Depends(_svc)) -> dict[str, object]:
+@router.get("/export", response_model=OpsExportResponse, dependencies=[Depends(require_scope("admin:ops"))])
+async def export_data(svc: OpsService = Depends(_svc)) -> OpsExportResponse:
     """Full JSON export of all app data with SHA-256 checksum."""
     import hashlib
     payload = svc.export_payload()
     blob = json.dumps(payload, sort_keys=True, default=str)
     checksum = hashlib.sha256(blob.encode("utf-8")).hexdigest()
-    return {"checksum": checksum, "payload": payload}
+    return OpsExportResponse(checksum=checksum, payload=OpsExportPayload(**payload))
 
 
 @router.get("/export/download", dependencies=[Depends(require_scope("admin:ops"))])
@@ -173,8 +192,8 @@ async def backup_db(svc: OpsService = Depends(_svc)) -> Response:
     )
 
 
-@router.post("/backup/verify", dependencies=[Depends(require_scope("admin:ops"))])
-async def verify_backup(file: UploadFile = File(...)) -> dict[str, object]:
+@router.post("/backup/verify", response_model=OpsBackupVerification, dependencies=[Depends(require_scope("admin:ops"))])
+async def verify_backup(file: UploadFile = File(...)) -> OpsBackupVerification:
     """Verify a SQLite backup file without restoring it."""
     content, _ = validate_upload(
         file,
@@ -184,11 +203,11 @@ async def verify_backup(file: UploadFile = File(...)) -> dict[str, object]:
         default_max_bytes=50 * 1024 * 1024,
     )
     svc = OpsService("")  # db_path not needed for verify
-    return svc.verify_backup(content)
+    return OpsBackupVerification(**svc.verify_backup(content))
 
 
-@router.post("/restore/db", dependencies=[Depends(require_scope("admin:ops"))])
-async def restore_db(file: UploadFile = File(...), settings: Settings = Depends(get_settings_dependency)) -> dict[str, object]:
+@router.post("/restore/db", response_model=OpsRestoreResponse, dependencies=[Depends(require_scope("admin:ops"))])
+async def restore_db(file: UploadFile = File(...), settings: Settings = Depends(get_settings_dependency)) -> OpsRestoreResponse:
     """Restore the database from a previously downloaded backup file."""
     content, _ = validate_upload(
         file,
@@ -199,36 +218,36 @@ async def restore_db(file: UploadFile = File(...), settings: Settings = Depends(
     )
     svc = OpsService(str(settings.db_path))
     try:
-        return svc.restore_db(content)
+        return OpsRestoreResponse(**svc.restore_db(content))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 # ── seed / import / reconcile ─────────────────────────────────────────────────
 
-@router.post("/seed", dependencies=[Depends(require_scope("admin:ops"))])
-async def seed_first_run(svc: OpsService = Depends(_svc)) -> dict[str, object]:
+@router.post("/seed", response_model=OpsSeedResponse, dependencies=[Depends(require_scope("admin:ops"))])
+async def seed_first_run(svc: OpsService = Depends(_svc)) -> OpsSeedResponse:
     """Seed sample data on first run (no-op if data already exists)."""
-    return svc.seed_first_run()
+    return OpsSeedResponse(**svc.seed_first_run())
 
 
-@router.post("/import", dependencies=[Depends(require_scope("admin:ops"))])
-async def import_data(payload: OpsImportIn, svc: OpsService = Depends(_svc)) -> dict[str, object]:
+@router.post("/import", response_model=OpsImportResponse, dependencies=[Depends(require_scope("admin:ops"))])
+async def import_data(payload: OpsImportIn, svc: OpsService = Depends(_svc)) -> OpsImportResponse:
     """Import a previously exported data package (checksum-verified)."""
     if len(payload.package.encode("utf-8")) > MAX_OPS_IMPORT_BYTES:
         raise HTTPException(status_code=413, detail="Import payload exceeds the 5 MB request limit")
     try:
-        return svc.import_data(payload.package, payload.checksum, dry_run=payload.dry_run)
+        return OpsImportResponse(**svc.import_data(payload.package, payload.checksum, dry_run=payload.dry_run))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/integrations/reconcile", dependencies=[Depends(require_scope("admin:ops"))])
-async def reconcile(limit: int = Query(default=100, ge=1, le=1000)) -> dict[str, object]:
+@router.post("/integrations/reconcile", response_model=OpsReconcileResponse, dependencies=[Depends(require_scope("admin:ops"))])
+async def reconcile(limit: int = Query(default=100, ge=1, le=1000)) -> OpsReconcileResponse:
     """Trigger webhook outbox reconciliation."""
     try:
         from app.domains.integrations.service import IntegrationsService
         dispatched = IntegrationsService.dispatch_outbox(limit)
-        return {"status": "ok", "dispatched": dispatched}
+        return OpsReconcileResponse(status="ok", dispatched=dispatched)
     except Exception:  # noqa: BLE001
-        return {"status": "ok", "dispatched": 0}
+        return OpsReconcileResponse(status="ok", dispatched=0)

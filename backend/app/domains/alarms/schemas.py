@@ -38,3 +38,24 @@ class AlarmSchedulerStatus(BaseModel):
     active_alarm_id: str | None = None
     next_alarm_id: str | None = None
     next_alarm_at: str | None = None
+
+
+class AlarmUrlResolution(BaseModel):
+    """Resolved audio stream URL for an alarm media source."""
+
+    stream_url: str | None = None
+    error: str | None = None
+
+
+class AlarmDeleteResponse(BaseModel):
+    """Response after deleting an alarm."""
+
+    deleted: bool
+
+
+class AlarmAudioTriggerResponse(BaseModel):
+    """Standalone alarm audio trigger result."""
+
+    stream_url: str | None = None
+    spoke: str | None = None
+    error: str | None = None

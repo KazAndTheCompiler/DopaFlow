@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { getDailyDigest, getWeeklyDigestReport, type DailyDigest, type WeeklyDigestReport } from "@api/digest";
 import Button from "@ds/primitives/Button";
 
 interface DigestInsight {
@@ -24,38 +25,25 @@ interface DigestViewModel {
   insights: DigestInsight[];
 }
 
-interface DigestResponse {
-  tasks?: { completed?: number };
-  habits?: { by_habit?: Array<{ count?: number }>; best_habit?: string };
-  focus?: { total_sessions?: number; total_minutes?: number };
-  journal?: { entries_written?: number };
-  nutrition?: { total_kcal?: number; avg_kcal?: number; days_logged?: number; protein_g?: number };
-  momentum_label?: string;
-  score?: number;
-  date?: string;
-  week_start?: string;
-  week_end?: string;
-}
+type DigestResponse = DailyDigest | WeeklyDigestReport;
 
 function toViewModel(period: "today" | "week", raw: DigestResponse | null): DigestViewModel | null {
   if (!raw) return null;
 
-  const tasks = raw.tasks ?? {};
-  const habits = raw.habits ?? {};
-  const focus = raw.focus ?? {};
-  const journal = raw.journal ?? {};
-  const nutrition = raw.nutrition ?? {};
-  const nutritionDays = Number(nutrition.days_logged ?? 0);
-  const label = raw.momentum_label ?? "steady";
-  const score = raw.score ?? 0;
-  const dateLabel = period === "today" ? raw.date : `${raw.week_start ?? ""} to ${raw.week_end ?? ""}`.trim();
-  const tasksCompleted = Number(tasks.completed ?? 0);
-  const focusSessions = Number(focus.total_sessions ?? 0);
-  const focusMinutes = Number(focus.total_minutes ?? 0);
-  const habitLogs = Array.isArray(habits.by_habit)
-    ? habits.by_habit.reduce((sum: number, item: { count?: number }) => sum + Number(item.count ?? 0), 0)
-    : 0;
-  const journalEntries = Number(journal.entries_written ?? 0);
+  const tasks = raw.tasks;
+  const habits = raw.habits;
+  const focus = raw.focus;
+  const journal = raw.journal;
+  const nutrition = raw.nutrition;
+  const nutritionDays = nutrition.days_logged;
+  const label = raw.momentum_label;
+  const score = raw.score;
+  const dateLabel = period === "today" ? ("date" in raw ? raw.date : "") : `${raw.week_start} to ${raw.week_end}`.trim();
+  const tasksCompleted = tasks.completed;
+  const focusSessions = focus.total_sessions;
+  const focusMinutes = focus.total_minutes;
+  const habitLogs = habits.by_habit.reduce((sum, item) => sum + item.done, 0);
+  const journalEntries = journal.entries_written;
 
   let headline = "A quieter day than usual.";
   if (score >= 80) {
@@ -109,7 +97,7 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
         ? [
             {
               title: "Nutrition",
-              body: `${Number(nutrition.total_kcal ?? 0).toFixed(0)} kcal logged${period === "week" ? ` over ${nutritionDays} days (avg ${Number(nutrition.avg_kcal ?? 0).toFixed(0)} kcal/day)` : ""}.${nutrition.protein_g ? ` Protein: ${Number(nutrition.protein_g).toFixed(0)}g.` : ""}`,
+              body: `${nutrition.total_kcal.toFixed(0)} kcal logged${period === "week" ? ` over ${nutritionDays} days (avg ${nutrition.avg_kcal.toFixed(0)} kcal/day)` : ""}.${nutrition.protein_g ? ` Protein: ${nutrition.protein_g.toFixed(0)}g.` : ""}`,
             },
           ]
         : []),
@@ -126,13 +114,8 @@ export default function DigestView(): JSX.Element {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/digest/${period}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Digest request failed (${response.status})`);
-        }
-        return response.json();
-      })
+    const request = period === "today" ? getDailyDigest() : getWeeklyDigestReport();
+    void request
       .then((body) => {
         setRawDigest(body);
         setLoading(false);

@@ -32,6 +32,16 @@ def test_ops_config_endpoint_returns_safe_config(client) -> None:
     assert "webhook_http_delivery" in response.json()
 
 
+def test_ops_export_endpoint_returns_typed_manifest_and_checksum(client) -> None:
+    response = client.get("/api/v2/ops/export")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["checksum"]) == 64
+    assert body["payload"]["manifest"]["schema_version"] == "v2"
+    assert "tasks" in body["payload"]
+
+
 def _sqlite_bytes(path: Path) -> bytes:
     return path.read_bytes()
 

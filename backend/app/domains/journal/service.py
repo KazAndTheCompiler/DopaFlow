@@ -20,6 +20,9 @@ from app.domains.journal.schemas import (
     JournalEntryCreate,
     JournalEntryPatch,
     JournalEntryRead,
+    JournalGraphEdge,
+    JournalGraphNode,
+    JournalGraphResponse,
     JournalPromptResponse,
     JournalSearchResult,
     JournalTemplate,
@@ -152,8 +155,12 @@ class JournalService:
     def get_backlinks(self, identifier: str) -> list[str]:
         return self.repository.get_backlinks(identifier)
 
-    def get_graph_data(self) -> dict[str, list[dict[str, object]]]:
-        return self.repository.get_graph_data()
+    def get_graph_data(self) -> JournalGraphResponse:
+        graph = self.repository.get_graph_data()
+        return JournalGraphResponse(
+            nodes=[JournalGraphNode(**node) for node in graph["nodes"]],
+            edges=[JournalGraphEdge(**edge) for edge in graph["edges"]],
+        )
 
     # ── analytics ─────────────────────────────────────────────────────────────
 

@@ -7,15 +7,11 @@ import {
   getJournalBackupStatus,
   getJournalEntry,
   getJournalGraph,
+  type JournalGraphData,
   listJournalEntries,
   saveJournalEntry,
   triggerJournalBackup,
 } from "@api/index";
-
-export interface JournalGraphData {
-  nodes: Array<{ id: string; date: string; entry_count: number }>;
-  edges: Array<{ source: string; target: string }>;
-}
 
 export interface UseJournalResult {
   entries: JournalEntry[];
@@ -53,7 +49,7 @@ export function useJournal(): UseJournalResult {
 
   const refreshGraph = useCallback(async (): Promise<void> => {
     const data = await getJournalGraph();
-    setGraph(data as JournalGraphData);
+    setGraph(data);
   }, []);
 
   useEffect(() => {

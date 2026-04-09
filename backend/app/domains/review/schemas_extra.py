@@ -23,6 +23,11 @@ class ReviewSearchResult(BaseModel):
     state: str = "new"
 
 
+class ReviewSearchResponse(BaseModel):
+    items: list[ReviewSearchResult]
+    limit: int
+
+
 class DeckStatsResponse(BaseModel):
     deck_id: str
     deck_name: str

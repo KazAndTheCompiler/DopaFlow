@@ -108,3 +108,87 @@ class MoveEventRequest(BaseModel):
 
     delta_minutes: int
     auto_adjust: bool = False
+
+
+class CalendarDeleteResponse(BaseModel):
+    """Response after deleting a calendar event."""
+
+    deleted: bool
+
+
+class CalendarMoveResponse(BaseModel):
+    """Response after moving a calendar event."""
+
+    moved: bool
+    error: str | None = None
+    event: CalendarEvent | None = None
+    adjusted: list[str] = []
+
+
+class CalendarFeedEntry(BaseModel):
+    """Event entry exposed through the shared calendar feed."""
+
+    id: str
+    source: str
+    source_type: str
+    source_id: str
+    source_version: str
+    dedupe_key: str
+    conflict_score: float
+    title: str
+    description: str | None = None
+    start_at: str
+    at: str
+    end_at: str
+    all_day: bool
+    category: str | None = None
+    created_at: str
+    updated_at: str
+    read_only: bool
+    editability_class: str
+
+
+class CalendarFeedResponse(BaseModel):
+    """Shared contract response for the calendar feed endpoint."""
+
+    from_: str
+    to: str
+    entries: list[CalendarFeedEntry]
+    owner: str
+
+
+class CalendarTodayEntry(BaseModel):
+    """Compact calendar entry used by the today schedule endpoint."""
+
+    id: str
+    title: str
+    start_at: str
+    end_at: str
+    all_day: bool
+    category: str | None = None
+
+
+class CalendarTodayResponse(BaseModel):
+    """Today schedule payload."""
+
+    entries: list[CalendarTodayEntry | CalendarFeedEntry]
+    available: bool
+    source: str
+
+
+class CalendarOAuthResponse(BaseModel):
+    """Google Calendar OAuth handoff payload."""
+
+    status: str
+    url: str | None = None
+    message: str | None = None
+
+
+class CalendarSyncStatusResponse(BaseModel):
+    """Calendar sync health summary."""
+
+    status: str
+    ok: bool | None = None
+    conflicts: int | None = None
+    imported: int | None = None
+    note: str | None = None

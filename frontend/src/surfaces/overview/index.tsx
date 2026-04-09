@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { getDailyDigest, type DailyDigest } from "@api/digest";
 import { useAppCalendar, useAppFocus, useAppHabits, useAppInsights, useAppJournal, useAppPacky, useAppTasks } from "../../app/AppContexts";
 import { APP_STORAGE_KEYS } from "../../app/appStorage";
 import DigestCard from "../../components/DigestCard";
@@ -24,33 +25,20 @@ interface OverviewDigestData {
   focus: { total_minutes: number };
 }
 
-function normalizeDigestData(value: unknown): OverviewDigestData | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const digest = value as Record<string, unknown>;
-  const tasks = digest.tasks;
-  const habits = digest.habits;
-  const focus = digest.focus;
-
-  if (!tasks || typeof tasks !== "object" || !habits || typeof habits !== "object" || !focus || typeof focus !== "object") {
-    return null;
-  }
-
+function normalizeDigestData(digest: DailyDigest): OverviewDigestData {
   return {
-    score: typeof digest.score === "number" ? digest.score : 0,
-    momentum_score: typeof digest.momentum_score === "number" ? digest.momentum_score : 0,
-    momentum_label: typeof digest.momentum_label === "string" ? digest.momentum_label : "Unknown",
+    score: digest.score,
+    momentum_score: digest.momentum_score,
+    momentum_label: digest.momentum_label,
     tasks: {
-      completed: typeof (tasks as Record<string, unknown>).completed === "number" ? (tasks as Record<string, unknown>).completed as number : 0,
-      completion_rate: typeof (tasks as Record<string, unknown>).completion_rate === "number" ? (tasks as Record<string, unknown>).completion_rate as number : 0,
+      completed: digest.tasks.completed,
+      completion_rate: digest.tasks.completion_rate,
     },
     habits: {
-      overall_rate: typeof (habits as Record<string, unknown>).overall_rate === "number" ? (habits as Record<string, unknown>).overall_rate as number : 0,
+      overall_rate: digest.habits.overall_rate,
     },
     focus: {
-      total_minutes: typeof (focus as Record<string, unknown>).total_minutes === "number" ? (focus as Record<string, unknown>).total_minutes as number : 0,
+      total_minutes: digest.focus.total_minutes,
     },
   };
 }
@@ -90,8 +78,7 @@ export default function OverviewView(): JSX.Element {
   const app = { tasks, focus, habits, packy, insights, calendar, journal };
 
   useEffect(() => {
-    void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/digest/today`)
-      .then((r) => r.json())
+    void getDailyDigest()
       .then((body) => setDigestData(normalizeDigestData(body)))
       .catch(() => setDigestData(null));
   }, []);

@@ -71,3 +71,22 @@ class PeerFeedSyncResult(BaseModel):
     conflicts: int
     status: str
     detail: str | None = None
+
+
+class ShareTokenInvite(BaseModel):
+    """Connection details for inviting a peer to a shared calendar."""
+
+    connection_string: str
+    label: str
+
+
+class ShareTokenRevocation(BaseModel):
+    """Result of revoking a share token."""
+
+    revoked: bool
+
+
+class PeerFeedRemoval(BaseModel):
+    """Result of removing a peer feed."""
+
+    removed: bool

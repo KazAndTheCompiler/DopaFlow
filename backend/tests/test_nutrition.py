@@ -59,3 +59,33 @@ def test_nutrition_recent_returns_logged_items(client) -> None:
 
     assert response.status_code == 200
     assert any(item["name"] == "Yogurt" for item in response.json())
+
+
+def test_nutrition_summary_and_monthly_routes_return_typed_shapes(client) -> None:
+    client.post(
+        "/api/v2/nutrition/log",
+        json={"name": "Salmon", "kj": 500, "protein_g": 32, "carbs_g": 0, "fat_g": 28, "meal_label": "dinner"},
+    )
+
+    today = client.get("/api/v2/nutrition/today")
+    assert today.status_code == 200
+    today_body = today.json()
+    date = today_body["date"]
+
+    log_response = client.get("/api/v2/nutrition/log", params={"date": date})
+    assert log_response.status_code == 200
+    log_body = log_response.json()
+    assert log_body["date"] == date
+    assert "by_meal" in log_body
+    assert "dinner" in log_body["by_meal"]
+
+    summary_response = client.get(f"/api/v2/nutrition/summary/{date}")
+    assert summary_response.status_code == 200
+    summary_body = summary_response.json()
+    assert set(summary_body["goal_progress"]) == {"daily_kj", "protein_g", "carbs_g", "fat_g"}
+
+    monthly_response = client.get("/api/v2/nutrition/log/monthly", params={"month": date[:7]})
+    assert monthly_response.status_code == 200
+    monthly_body = monthly_response.json()
+    assert monthly_body["month"] == date[:7]
+    assert any(day["date"] == date for day in monthly_body["days"])

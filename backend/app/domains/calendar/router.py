@@ -28,7 +28,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.config import Settings, get_settings, get_settings_dependency
 from app.domains.calendar.repository import CalendarRepository
-from app.domains.calendar.schemas import CalendarEvent, CalendarEventCreate, GoogleSyncRequest, MoveEventRequest, SyncConflict
+from app.domains.calendar.schemas import (
+    CalendarDeleteResponse,
+    CalendarEvent,
+    CalendarEventCreate,
+    CalendarFeedEntry,
+    CalendarFeedResponse,
+    CalendarMoveResponse,
+    CalendarOAuthResponse,
+    CalendarSyncStatusResponse,
+    CalendarTodayEntry,
+    CalendarTodayResponse,
+    GoogleSyncRequest,
+    MoveEventRequest,
+    SyncConflict,
+)
 from app.domains.calendar_sharing.router import require_share_token
 from app.domains.calendar.service import CalendarService
 from app.middleware.auth_scopes import require_scope
@@ -104,32 +118,32 @@ async def update_event(
     return event
 
 
-@router.delete("/events/{identifier}", response_model=dict, dependencies=[Depends(require_scope("write:calendar"))])
+@router.delete("/events/{identifier}", response_model=CalendarDeleteResponse, dependencies=[Depends(require_scope("write:calendar"))])
 async def delete_event(
     identifier: str,
     svc: CalendarService = Depends(_svc),
-) -> dict:
+) -> CalendarDeleteResponse:
     """Delete a calendar event."""
 
     if not svc.delete_event(identifier):
         raise HTTPException(status_code=404, detail="Event not found")
-    return {"deleted": True}
+    return CalendarDeleteResponse(deleted=True)
 
 
-@router.post("/events/{identifier}/move", response_model=dict[str, object], dependencies=[Depends(require_scope("write:calendar"))])
+@router.post("/events/{identifier}/move", response_model=CalendarMoveResponse, dependencies=[Depends(require_scope("write:calendar"))])
 async def move_event(
     identifier: str,
     payload: MoveEventRequest,
     svc: CalendarService = Depends(_svc),
-) -> dict[str, object]:
+) -> CalendarMoveResponse:
     """Move a calendar event by delta_minutes; auto_adjust bumps conflicting events forward."""
     result = svc.move_event(identifier, payload)
     if not result.get("moved"):
         raise HTTPException(status_code=404, detail=result.get("error", "Event not found"))
-    return result
+    return CalendarMoveResponse(**result)
 
 
-@router.get("/feed", response_model=dict[str, object])
+@router.get("/feed", response_model=CalendarFeedResponse)
 async def calendar_feed(
     from_: str = Query(..., alias="from"),
     to: str = Query(...),
@@ -137,7 +151,7 @@ async def calendar_feed(
     include_tombstones: bool = Query(default=False),
     _: object = Depends(require_share_token),
     svc: CalendarService = Depends(_svc),
-) -> dict[str, object]:
+) -> CalendarFeedResponse:
     """Shared contract feed: local events shaped for ZoesCal.
 
     Share token auth is validated by ShareTokenMiddleware — see calendar_sharing router
@@ -154,38 +168,38 @@ async def calendar_feed(
     start = _parse(from_)
     end = _parse(to)
     if not start or not end:
-        return {"from": from_, "to": to, "entries": [], "owner": "dopaflow"}
+        return CalendarFeedResponse(from_=from_, to=to, entries=[], owner="dopaflow")
 
     all_events = svc.list_events(from_dt=start.isoformat(), until_dt=end.isoformat())
     entries = []
     for ev in all_events:
         if source and ev.source_type != source:
             continue
-        entries.append({
-            "id": ev.id,
-            "source": "dopaflow",
-            "source_type": ev.source_type or "event",
-            "source_id": ev.id,
-            "source_version": "v2",
-            "dedupe_key": f"evt:{ev.id}",
-            "conflict_score": 0.0,
-            "title": ev.title,
-            "description": ev.description,
-            "start_at": ev.start_at.isoformat(),
-            "at": ev.start_at.isoformat(),
-            "end_at": ev.end_at.isoformat(),
-            "all_day": ev.all_day,
-            "category": ev.category,
-            "created_at": ev.created_at.isoformat(),
-            "updated_at": ev.updated_at.isoformat(),
-            "read_only": ev.provider_readonly,
-            "editability_class": "readonly_mirror" if ev.provider_readonly else "editable",
-        })
-    return {"from": from_, "to": to, "entries": entries, "owner": "dopaflow"}
+        entries.append(CalendarFeedEntry(
+            id=ev.id,
+            source="dopaflow",
+            source_type=ev.source_type or "event",
+            source_id=ev.id,
+            source_version="v2",
+            dedupe_key=f"evt:{ev.id}",
+            conflict_score=0.0,
+            title=ev.title,
+            description=ev.description,
+            start_at=ev.start_at.isoformat(),
+            at=ev.start_at.isoformat(),
+            end_at=ev.end_at.isoformat(),
+            all_day=ev.all_day,
+            category=ev.category,
+            created_at=ev.created_at.isoformat(),
+            updated_at=ev.updated_at.isoformat(),
+            read_only=ev.provider_readonly,
+            editability_class="readonly_mirror" if ev.provider_readonly else "editable",
+        ))
+    return CalendarFeedResponse(from_=from_, to=to, entries=entries, owner="dopaflow")
 
 
-@router.get("/today", response_model=dict[str, object], dependencies=[Depends(require_scope("read:calendar"))])
-async def today_schedule(svc: CalendarService = Depends(_svc)) -> dict[str, object]:
+@router.get("/today", response_model=CalendarTodayResponse, dependencies=[Depends(require_scope("read:calendar"))])
+async def today_schedule(svc: CalendarService = Depends(_svc)) -> CalendarTodayResponse:
     """Return today's events; falls back to querying ZoesCal if available."""
     from datetime import datetime, timezone
     today = datetime.now(timezone.utc).date().isoformat()
@@ -199,7 +213,7 @@ async def today_schedule(svc: CalendarService = Depends(_svc)) -> dict[str, obje
             resp.raise_for_status()
             payload = resp.json()
             entries = payload.get("entries", []) if isinstance(payload, dict) else []
-            return {"entries": entries, "available": True, "source": "zoescal"}
+            return CalendarTodayResponse(entries=entries, available=True, source="zoescal")
     except httpx.HTTPStatusError as exc:
         logger.warning("ZoesCal schedule request returned %s from %s", exc.response.status_code, zoescal_base)
     except httpx.RequestError as exc:
@@ -207,27 +221,37 @@ async def today_schedule(svc: CalendarService = Depends(_svc)) -> dict[str, obje
     except ValueError as exc:
         logger.warning("ZoesCal schedule returned invalid JSON from %s: %s", zoescal_base, exc)
     local_events = svc.list_events(from_dt=f"{today}T00:00:00Z", until_dt=f"{today}T23:59:59Z")
-    entries = [{"id": ev.id, "title": ev.title, "start_at": ev.start_at.isoformat(), "end_at": ev.end_at.isoformat(), "all_day": ev.all_day, "category": ev.category} for ev in local_events]
-    return {"entries": entries, "available": True, "source": "local"}
+    entries = [
+        CalendarTodayEntry(
+            id=ev.id,
+            title=ev.title,
+            start_at=ev.start_at.isoformat(),
+            end_at=ev.end_at.isoformat(),
+            all_day=ev.all_day,
+            category=ev.category,
+        )
+        for ev in local_events
+    ]
+    return CalendarTodayResponse(entries=entries, available=True, source="local")
 
 
-@router.post("/google/sync", response_model=dict[str, object], dependencies=[Depends(require_scope("write:calendar"))])
+@router.post("/google/sync", response_model=CalendarSyncStatusResponse, dependencies=[Depends(require_scope("write:calendar"))])
 async def sync_google(
     payload: GoogleSyncRequest,
     svc: CalendarService = Depends(_svc),
-) -> dict[str, object]:
+) -> CalendarSyncStatusResponse:
     """Queue a Google Calendar sync run."""
 
-    return svc.sync_google(payload)
+    return CalendarSyncStatusResponse(**svc.sync_google(payload))
 
 
-@router.get("/oauth/url", response_model=dict, dependencies=[Depends(require_scope("read:calendar"))])
+@router.get("/oauth/url", response_model=CalendarOAuthResponse, dependencies=[Depends(require_scope("read:calendar"))])
 async def google_calendar_oauth_url(
     redirect_uri: str,
     settings: Settings = Depends(get_settings_dependency),
-) -> dict[str, object]:
+) -> CalendarOAuthResponse:
     if not settings.google_client_id:
-        return {"status": "unconfigured"}
+        return CalendarOAuthResponse(status="unconfigured")
     params = {
         "client_id": settings.google_client_id,
         "redirect_uri": redirect_uri,
@@ -236,17 +260,17 @@ async def google_calendar_oauth_url(
         "access_type": "offline",
         "prompt": "consent",
     }
-    return {"status": "redirect", "url": "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)}
+    return CalendarOAuthResponse(status="redirect", url="https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params))
 
 
-@router.get("/oauth/callback", response_model=dict, dependencies=[Depends(require_scope("write:calendar"))])
+@router.get("/oauth/callback", response_model=CalendarOAuthResponse, dependencies=[Depends(require_scope("write:calendar"))])
 async def google_calendar_oauth_callback(
     code: str,
     settings: Settings = Depends(get_settings_dependency),
     repo: CalendarRepository = Depends(_repo),
-) -> dict[str, object]:
+) -> CalendarOAuthResponse:
     if not settings.google_client_id or not settings.google_client_secret:
-        return {"status": "error", "message": "Google credentials not configured"}
+        return CalendarOAuthResponse(status="error", message="Google credentials not configured")
     async with _google_oauth_client() as client:
         response = await client.post(
             "https://oauth2.googleapis.com/token",
@@ -259,13 +283,13 @@ async def google_calendar_oauth_callback(
             },
         )
     if response.status_code != 200:
-        return {"status": "error", "message": "Token exchange failed"}
+        return CalendarOAuthResponse(status="error", message="Token exchange failed")
     data = response.json()
     expires_at = (
         datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
     ).isoformat()
     repo.store_google_token(data["access_token"], data.get("refresh_token"), expires_at)
-    return {"status": "connected"}
+    return CalendarOAuthResponse(status="connected")
 
 
 @router.get("/sync/conflicts", response_model=list[SyncConflict], dependencies=[Depends(require_scope("read:calendar"))])
@@ -289,8 +313,8 @@ async def resolve_conflict(
     return conflict
 
 
-@router.get("/sync/status", response_model=dict[str, object], dependencies=[Depends(require_scope("read:calendar"))])
-async def sync_status(svc: CalendarService = Depends(_svc)) -> dict[str, object]:
+@router.get("/sync/status", response_model=CalendarSyncStatusResponse, dependencies=[Depends(require_scope("read:calendar"))])
+async def sync_status(svc: CalendarService = Depends(_svc)) -> CalendarSyncStatusResponse:
     """Return sync health summary."""
 
-    return svc.sync_status()
+    return CalendarSyncStatusResponse(**svc.sync_status())

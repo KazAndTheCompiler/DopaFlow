@@ -88,3 +88,14 @@ def test_scheduler_status_reports_upcoming_alarm(client) -> None:
     assert response.status_code == 200
     assert response.json()["running"] is True
     assert response.json()["next_alarm_id"] == alarm["id"]
+
+
+def test_trigger_alarm_audio_returns_typed_shape(client) -> None:
+    alarm = create_alarm(client, title="Audio alarm", tts_text="Wake up now")
+
+    response = client.post(f"/api/v2/alarms/{alarm['id']}/trigger-audio", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body) == {"stream_url", "spoke", "error"}
+    assert body["spoke"] == "Wake up now"

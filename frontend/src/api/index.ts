@@ -14,3 +14,4 @@ export * from "./gamification";
 export * from "./sharing";
 export * from "./commands";
 export * from "./vault";
+export * from "./digest";

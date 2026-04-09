@@ -202,6 +202,12 @@ That release slice currently covers:
 - tasks, daily loop, calendar, and focus flows
 - habits and goals flows
 
+Related docs:
+
+- `docs/frontend-architecture.md`
+- `docs/frontend-regression-checklist.md`
+- `docs/release-checklist.md`
+
 ## Release builds
 
 Desktop release packaging is wired through GitHub Actions in
@@ -212,6 +218,13 @@ Recommended path:
 - push `main` for normal CI confidence
 - push a `v*` tag to build release artifacts and publish a GitHub Release
 - use the Linux `AppImage` artifact from GitHub as the primary desktop package output
+
+Release gates now include:
+
+- repo hygiene via `.github/workflows/repo-hygiene.yml`
+- frontend release E2E coverage
+- desktop runtime tests before packaging
+- AppImage payload verification after Linux packaging
 
 Why this is the default path:
 
@@ -224,6 +237,7 @@ Local desktop build notes:
 ```bash
 cd desktop
 npm ci
+npm test
 npm run dist:stable:linux
 ```
 
@@ -243,6 +257,14 @@ LD_LIBRARY_PATH=$PWD/squashfs-root/usr/lib ldd ./squashfs-root/dopaflow-desktop
 ```
 
 If `ldd` resolves the bundled GTK/X11/Wayland dependencies from `squashfs-root/usr/lib`, the packaging side is likely healthy even if the local host cannot provide a usable GUI session.
+
+If the vendored Linux runtime bundle needs to be refreshed locally:
+
+```bash
+.venv/bin/python desktop/scripts/sync-vendor-runtime.py
+```
+
+For the full release process, see `docs/release-checklist.md`.
 
 ---
 

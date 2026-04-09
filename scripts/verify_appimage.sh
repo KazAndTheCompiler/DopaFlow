@@ -39,7 +39,7 @@ echo "Checking packaged runtime linkage"
 LDD_OUTPUT="$(LD_LIBRARY_PATH="$ROOT/usr/lib" ldd "$DESKTOP_BIN")"
 printf '%s\n' "$LDD_OUTPUT"
 
-mapfile -t UNRESOLVED_LIBS < <(grep "not found" <<<"$LDD_OUTPUT" | awk '{print $1}')
+mapfile -t UNRESOLVED_LIBS < <(grep "not found" <<<"$LDD_OUTPUT" | awk '{print $1}' || true)
 KNOWN_HOST_FALLBACK_LIBS=(
   "libXau.so.6"
   "libXdmcp.so.6"
@@ -59,6 +59,7 @@ declare -a UNEXPECTED_UNRESOLVED=()
 declare -a EXPECTED_HOST_FALLBACKS=()
 
 for lib in "${UNRESOLVED_LIBS[@]:-}"; do
+  [[ -n "$lib" ]] || continue
   if printf '%s\n' "${KNOWN_HOST_FALLBACK_LIBS[@]}" | grep -qx "$lib"; then
     EXPECTED_HOST_FALLBACKS+=("$lib")
   else

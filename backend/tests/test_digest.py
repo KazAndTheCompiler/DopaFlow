@@ -37,6 +37,8 @@ def test_digest_week_endpoint_returns_week_window(client) -> None:
     assert "week_end" in body
     assert "tasks" in body
     assert "focus" in body
+    assert "nutrition" in body
+    assert "correlations" in body
 
 
 def test_digest_optional_summaries_log_missing_tables(tmp_path: Path, caplog) -> None:
@@ -63,3 +65,25 @@ def test_digest_optional_summaries_log_missing_tables(tmp_path: Path, caplog) ->
     assert review == {}
     assert any("Digest nutrition summary unavailable" in record.message for record in caplog.records)
     assert any("Digest review summary unavailable" in record.message for record in caplog.records)
+
+
+def test_digest_today_endpoint_returns_typed_nested_shapes(client, db_path) -> None:
+    today = date.today().isoformat()
+    with tx(str(db_path)) as conn:
+        conn.execute(
+            "INSERT INTO tasks (id, title, done, updated_at, created_at, tags_json) VALUES ('dig_task_2', 'Tagged task', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '[\"deep\"]')"
+        )
+        conn.execute(
+            "INSERT INTO journal_entries (id, markdown_body, emoji, entry_date, tags_json) VALUES ('dig_entry_2', 'More digest words here', '🙂', ?, '[\"reflect\"]')",
+            (today,),
+        )
+
+    response = client.get("/api/v2/digest/today")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert isinstance(body["tasks"]["top_tags"], list)
+    assert "by_habit" in body["habits"]
+    assert "mood_distribution" in body["journal"]
+    assert "days_logged" in body["nutrition"]
+    assert isinstance(body["correlations"], list)

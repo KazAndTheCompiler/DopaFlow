@@ -117,3 +117,23 @@ def test_create_entry_logs_gamification_failure_without_failing_save(
     assert response.status_code == 201
     assert response.json()["id"].startswith("jrn_")
     assert any("Failed to award gamification for source=journal_entry" in record.message for record in caplog.records)
+
+
+def test_journal_template_apply_and_export_today_return_typed_shapes(client) -> None:
+    create_entry(client, date="2026-03-25", markdown_body="Export me")
+
+    template_response = client.post(
+        "/api/v2/journal/templates",
+        json={"name": "Morning", "body": "Prompt body", "tags": ["prompt"]},
+    )
+    assert template_response.status_code == 201
+    template_id = template_response.json()["id"]
+
+    apply_response = client.post(f"/api/v2/journal/templates/{template_id}/apply")
+    assert apply_response.status_code == 200
+    assert apply_response.json() == {"body": "Prompt body", "tags": ["prompt"]}
+
+    export_response = client.post("/api/v2/journal/export-today")
+    assert export_response.status_code == 200
+    export_body = export_response.json()
+    assert set(export_body) == {"path", "entry_count"}
