@@ -18,7 +18,7 @@ export function localDateISO(offsetDays = 0): string {
   return value.toISOString().slice(0, 10);
 }
 
-export function getCommandReply(result: Record<string, unknown>): string {
+export function getCommandReply(result: { reply?: string | null }): string {
   const reply = result.reply;
   return typeof reply === "string" ? reply.trim() : "";
 }

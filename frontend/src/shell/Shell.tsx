@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import type { PropsWithChildren } from "react";
 
 import type { AppRoute } from "../appRoutes";
-import type { PlayerLevel } from "../../../shared/types/gamification";
-import type { PackyWhisper, Project } from "../../../shared/types";
 import Sidebar, { type SidebarItem } from "./Sidebar";
 import { ShellMobileDrawer } from "./ShellMobileDrawer";
 import { ShellMobileNav } from "./ShellMobileNav";
@@ -22,18 +20,8 @@ export interface ShellProps extends PropsWithChildren {
   focusModeEnabled: boolean;
   onToggleFocusMode: () => void;
   activeTimerLabel?: string | undefined;
-  gamificationLevel?: PlayerLevel | undefined;
-  habitPips: number;
-  streakCount: number;
-  momentumScore?: number | undefined;
-  packyWhisper?: PackyWhisper | undefined;
-  alarmActive: boolean;
   syncStatus: "idle" | "syncing" | "error";
   skin: string;
-  projects?: Project[];
-  projectTaskCounts?: Record<string, number>;
-  activeProjectId?: string | null;
-  onProjectSelect?: (id: string | null) => void;
 }
 
 export function Shell({
@@ -49,18 +37,8 @@ export function Shell({
   focusModeEnabled,
   onToggleFocusMode,
   activeTimerLabel,
-  gamificationLevel,
-  habitPips,
-  streakCount,
-  momentumScore,
-  packyWhisper,
-  alarmActive,
   syncStatus,
   skin,
-  projects,
-  projectTaskCounts,
-  activeProjectId,
-  onProjectSelect,
 }: ShellProps): JSX.Element {
   const isMobile = (): boolean => (
     typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -116,13 +94,6 @@ export function Shell({
           items={navItems}
           activeRoute={route}
           collapsed={sidebarCollapsed}
-          habitPips={habitPips}
-          streakCount={streakCount}
-          momentumScore={momentumScore}
-          projects={projects ?? []}
-          projectTaskCounts={projectTaskCounts ?? {}}
-          activeProjectId={activeProjectId ?? null}
-          onProjectSelect={onProjectSelect ?? (() => {})}
           onNavigate={onNavigate}
           onToggle={() => setSidebarCollapsed((value) => !value)}
         />
@@ -136,7 +107,6 @@ export function Shell({
         focusModeEnabled={focusModeEnabled}
         onToggleFocusMode={onToggleFocusMode}
         activeTimerLabel={activeTimerLabel}
-        gamificationLevel={gamificationLevel}
       />
       <main
         data-testid="shell-main"
@@ -174,18 +144,13 @@ export function Shell({
           onCloseMenu={() => setMobileMenuOpen(false)}
         />
       ) : (
-        <StatusBar whisper={packyWhisper} activeAlarm={alarmActive} syncStatus={syncStatus} gamificationLevel={gamificationLevel} />
+        <StatusBar syncStatus={syncStatus} />
       )}
       {isMobileLayout && mobileMenuOpen ? (
         <ShellMobileDrawer
           route={route}
           navItems={navItems}
-          projects={projects ?? []}
-          projectTaskCounts={projectTaskCounts ?? {}}
-          activeProjectId={activeProjectId ?? null}
-          packyWhisper={packyWhisper}
           onNavigate={onNavigate}
-          onProjectSelect={onProjectSelect ?? (() => {})}
           onClose={() => setMobileMenuOpen(false)}
         />
       ) : null}

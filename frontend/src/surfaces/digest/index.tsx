@@ -38,7 +38,9 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
   const nutritionDays = nutrition.days_logged;
   const label = raw.momentum_label;
   const score = raw.score;
-  const dateLabel = period === "today" ? ("date" in raw ? raw.date : "") : `${raw.week_start} to ${raw.week_end}`.trim();
+  const dateLabel = period === "today"
+    ? ("date" in raw ? raw.date : "")
+    : ("week_start" in raw ? `${raw.week_start} to ${raw.week_end}` : "");
   const tasksCompleted = tasks.completed;
   const focusSessions = focus.total_sessions;
   const focusMinutes = focus.total_minutes;

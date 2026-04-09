@@ -4,8 +4,12 @@ import { showToast } from "@ds/primitives/Toast";
 import { AppProviders } from "./app/AppContexts";
 import { APP_STORAGE_KEYS } from "./app/appStorage";
 import { AppOverlays } from "./app/AppOverlays";
-import { SurfaceErrorBoundary, getCommandReply, localDateISO } from "./app/AppShared";
+import { SurfaceErrorBoundary, localDateISO } from "./app/AppShared";
 import Shell from "./shell/Shell";
+import { useOverlayController } from "./app/useOverlayController";
+import { useCommandExecutor } from "./app/useCommandExecutor";
+import { useFocusTimer, useFocusTimerController } from "./hooks/useFocusTimer";
+import { useAppBootstrap } from "./hooks/useAppBootstrap";
 import { useAlarms } from "./hooks/useAlarms";
 import { useCalendar } from "./hooks/useCalendar";
 import { useCommandBar } from "./hooks/useCommandBar";
@@ -22,10 +26,9 @@ import { useLayout } from "./hooks/useLayout";
 import { useTasks } from "./hooks/useTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-import { executeCommandText } from "./api/commands";
-import { materializeRecurringTasks } from "./api/tasks";
-import type { AppRoute, RouteIntentAction } from "./appRoutes";
-import { actionRoutes, getRouteComponent, getRouteFromHash, intentRoutes, isAppRoute, routeToHash, sidebarRoutes } from "./appRoutes";
+import { routeToHash, getRouteComponent } from "./appRoutes";
+import type { AppRoute } from "./appRoutes";
+import { getRouteFromHash, isAppRoute, sidebarRoutes } from "./appRoutes";
 
 export { AppDataContext } from "./app/AppContexts";
 
@@ -49,26 +52,36 @@ export default function App(): JSX.Element {
   const layout = useLayout();
   const commandBar = useCommandBar();
 
+  useAppBootstrap();
+
   const [route, setRoute] = useState<AppRoute>(getRouteFromHash());
   const [focusModeEnabled, setFocusModeEnabled] = useState<boolean>(false);
-  const [inboxOpen, setInboxOpen] = useState<boolean>(false);
-  const [planOpen, setPlanOpen] = useState<boolean>(false);
-  const [shutdownOpen, setShutdownOpen] = useState<boolean>(false);
-  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => !localStorage.getItem(APP_STORAGE_KEYS.onboardingComplete));
-  const [focusNow, setFocusNow] = useState<number>(() => Date.now());
-  const lastPackySyncRef = useRef<string>("");
-  const lastXpRef = useRef<number | null>(null);
-  const lastLevelRef = useRef<number | null>(null);
+
+  const { focusNow } = useFocusTimerController(focus.activeSession);
+  const { activeTimerLabel } = useFocusTimer(focus.activeSession, focusNow);
+
+  const overlay = useOverlayController();
+
+  const commandExecutor = useCommandExecutor({
+    tasks: { refresh: tasks.refresh },
+    journal: { refresh: journal.refresh },
+    calendar: { refresh: calendar.refresh },
+    focus: { refresh: focus.refresh },
+    alarms: { refresh: alarms.refresh },
+    habits: { refresh: habits.refresh },
+    review: { refresh: review.refresh },
+    packy: { refresh: packy.refresh, ask: packy.ask },
+  });
 
   const navigate = useCallback((nextRoute: string): void => {
     if (nextRoute === "plan") {
-      setShutdownOpen(false);
-      setPlanOpen(true);
+      overlay.closeShutdown();
+      overlay.openPlan();
       return;
     }
     if (nextRoute === "shutdown") {
-      setPlanOpen(false);
-      setShutdownOpen(true);
+      overlay.closePlan();
+      overlay.openShutdown();
       return;
     }
     if (!isAppRoute(nextRoute)) {
@@ -76,111 +89,31 @@ export default function App(): JSX.Element {
     }
     window.location.hash = routeToHash(nextRoute);
     setRoute(nextRoute);
-  }, []);
+  }, [overlay]);
 
   const handleCommandExecution = useCallback(async (
     text: string,
     options?: { source?: "text" | "voice"; clearOnHandled?: boolean },
   ): Promise<boolean> => {
-    const raw = text.trim();
-    if (!raw) {
-      return false;
+    const success = await commandExecutor.execute(text, options, route, navigate);
+    if (options?.clearOnHandled !== false && success) {
+      commandBar.setInput("");
     }
-
-    const source = options?.source ?? "text";
-
-    try {
-      const result = await executeCommandText(raw, true, source);
-      const intent = typeof result.intent === "string" ? result.intent : "";
-      const status = typeof result.status === "string" ? result.status : "";
-      const reply = getCommandReply(result);
-
-      const refreshers: Record<string, Array<() => Promise<void>>> = {
-        "task.create": [tasks.refresh],
-        "task.complete": [tasks.refresh],
-        "task.list": [tasks.refresh],
-        "journal.create": [journal.refresh],
-        "calendar.create": [calendar.refresh],
-        "focus.start": [focus.refresh],
-        "alarm.create": [alarms.refresh],
-        "habit.checkin": [habits.refresh],
-        "habit.list": [habits.refresh],
-        "review.start": [review.refresh],
-        "undo": [tasks.refresh, calendar.refresh],
-      };
-
-      if (status === "executed") {
-        await Promise.all((refreshers[intent] ?? []).map(async (refresh) => {
-          try {
-            await refresh();
-          } catch {
-            // Keep command success visible even if a follow-up refresh fails.
-          }
-        }));
-        void packy.refresh().catch(() => undefined);
-
-        const nextRoute = intentRoutes[intent as keyof typeof intentRoutes];
-        if (nextRoute && nextRoute !== route) {
-          navigate(nextRoute);
-        }
-
-        if (reply) {
-          showToast(reply, "success");
-        } else {
-          showToast("Command completed.", "success");
-        }
-
-        if (options?.clearOnHandled !== false) {
-          commandBar.setInput("");
-        }
-        return true;
-      }
-
-      if (reply) {
-        showToast(reply, status === "error" ? "error" : "info");
-      } else if (status === "needs_datetime") {
-        showToast("I need a date and time before I can schedule that.", "warn");
-      }
-
-      if (status === "greeting" || status === "help" || status === "unknown" || status === "ok") {
-        try {
-          const packyResult = await packy.ask(raw, { route });
-          const nextRoute = actionRoutes[packyResult.action as RouteIntentAction];
-          if (nextRoute && nextRoute !== route) {
-            navigate(nextRoute);
-          }
-          if (packyResult.reply && packyResult.reply !== reply) {
-            showToast(packyResult.reply, "info");
-          }
-          if (options?.clearOnHandled !== false) {
-            commandBar.setInput("");
-          }
-          return true;
-        } catch (error) {
-          console.error("[DopaFlow] Packy fallback failed after command response", error);
-        }
-      }
-
-      return status !== "error";
-    } catch (error) {
-      console.error("[DopaFlow] Command execution failed", error);
-      showToast("Command failed. The input is still there so you can retry or edit it.", "error");
-      return false;
-    }
-  }, [alarms.refresh, calendar.refresh, commandBar, focus.refresh, habits.refresh, journal.refresh, navigate, packy, review.refresh, route, tasks.refresh]);
+    return success;
+  }, [commandExecutor, route, navigate, commandBar]);
 
   useEffect(() => {
     const onHashChange = (): void => {
       const nextRoute = getRouteFromHash();
       if (nextRoute === "plan") {
-        setShutdownOpen(false);
-        setPlanOpen(true);
+        overlay.closeShutdown();
+        overlay.openPlan();
         window.location.hash = routeToHash(route);
         return;
       }
       if (nextRoute === "shutdown") {
-        setPlanOpen(false);
-        setShutdownOpen(true);
+        overlay.closePlan();
+        overlay.openShutdown();
         window.location.hash = routeToHash(route);
         return;
       }
@@ -188,71 +121,40 @@ export default function App(): JSX.Element {
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [route]);
+  }, [route, overlay]);
 
   useEffect(() => {
     const openShutdown = (): void => {
-      setPlanOpen(false);
-      setShutdownOpen(true);
+      overlay.openShutdown();
     };
     window.addEventListener("dopaflow:open-shutdown", openShutdown as EventListener);
     return () => window.removeEventListener("dopaflow:open-shutdown", openShutdown as EventListener);
-  }, []);
-
-  useEffect(() => {
-    void materializeRecurringTasks(168).catch(() => {}); // silent, fire-and-forget
-  }, []);
-
-  useEffect(() => {
-    if (!focus.activeSession || focus.activeSession.status !== "running") {
-      return;
-    }
-    const intervalId = window.setInterval(() => setFocusNow(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [focus.activeSession?.id, focus.activeSession?.status]);
-
-  const activeTimerLabel = useMemo(() => {
-    const session = focus.activeSession;
-    if (!session) return undefined;
-    const totalSeconds = Math.max(0, Math.round((session.duration_minutes ?? 0) * 60));
-    if (!session.started_at) {
-      return `${session.duration_minutes}m ${session.status}`;
-    }
-    const startedAt = new Date(session.started_at).getTime();
-    if (Number.isNaN(startedAt)) {
-      return `${session.duration_minutes}m ${session.status}`;
-    }
-    const pausedSeconds = Math.floor((session.paused_duration_ms ?? 0) / 1000);
-    const elapsedSeconds = Math.max(0, Math.floor((focusNow - startedAt) / 1000) - pausedSeconds);
-    const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
-    const minutes = Math.floor(remainingSeconds / 60).toString().padStart(2, "0");
-    const seconds = (remainingSeconds % 60).toString().padStart(2, "0");
-    return session.status === "paused"
-      ? `${minutes}:${seconds} paused`
-      : `${minutes}:${seconds} left`;
-  }, [focus.activeSession, focusNow]);
+  }, [overlay]);
 
   useKeyboardShortcuts({
     navigate,
-    openPlanModal: () => setPlanOpen(true),
+    openPlanModal: overlay.openPlan,
   });
 
   useEffect(() => {
     if (route !== "today") {
       return;
     }
-    if (shutdownOpen) {
+    if (overlay.shutdownOpen) {
       return;
     }
     const todayISO = localDateISO();
     const lastPlanned = localStorage.getItem(APP_STORAGE_KEYS.plannedDate);
     if (lastPlanned !== todayISO) {
-      // Small delay so the app renders first
-      const t = setTimeout(() => setPlanOpen(true), 800);
+      const t = setTimeout(() => overlay.openPlan(), 800);
       return () => clearTimeout(t);
     }
     return;
-  }, [route, shutdownOpen]);
+  }, [route, overlay.shutdownOpen, overlay]);
+
+  const lastPackySyncRef = useRef<string>("");
+  const lastXpRef = useRef<number | null>(null);
+  const lastLevelRef = useRef<number | null>(null);
 
   useEffect(() => {
     const snapshot = {
@@ -309,7 +211,7 @@ export default function App(): JSX.Element {
     lastLevelRef.current = level.level;
   }, [gamification.level]);
 
-  const SurfaceComponent = getRouteComponent(route);
+  const SurfaceComponent = useMemo(() => getRouteComponent(route), [route]);
 
   return (
     <AppProviders
@@ -333,7 +235,7 @@ export default function App(): JSX.Element {
         navItems={[...sidebarRoutes]}
         onNavigate={navigate}
         unreadCount={notifications.unread}
-        onInboxClick={() => setInboxOpen(true)}
+        onInboxClick={overlay.openInbox}
         commandValue={commandBar.input}
         onCommandChange={commandBar.setInput}
         onCommandSubmit={() => {
@@ -344,18 +246,8 @@ export default function App(): JSX.Element {
         focusModeEnabled={focusModeEnabled}
         onToggleFocusMode={() => setFocusModeEnabled((value) => !value)}
         activeTimerLabel={activeTimerLabel}
-        habitPips={Math.min(habits.habits.length, 5)}
-        streakCount={habits.habits.reduce((sum, habit) => sum + habit.current_streak, 0)}
-        momentumScore={packy.momentum?.score ?? insights.momentum?.score}
-        packyWhisper={packy.whisper}
-        alarmActive={Boolean(alarms.active_alarm_id)}
         syncStatus="idle"
         skin={skin.skin}
-        gamificationLevel={gamification.level}
-        projects={projects.projects}
-        projectTaskCounts={projects.taskCounts}
-        activeProjectId={projects.activeProjectId}
-        onProjectSelect={projects.setActiveProjectId}
       >
         <SurfaceErrorBoundary route={route}>
           <Suspense fallback={<div style={{ padding: "1rem", color: "var(--text-secondary)" }}>Loading surface…</div>}>
@@ -364,10 +256,10 @@ export default function App(): JSX.Element {
         </SurfaceErrorBoundary>
       </Shell>
       <AppOverlays
-        inboxOpen={inboxOpen}
-        planOpen={planOpen}
-        shutdownOpen={shutdownOpen}
-        onboardingOpen={onboardingOpen}
+        inboxOpen={overlay.inboxOpen}
+        planOpen={overlay.planOpen}
+        shutdownOpen={overlay.shutdownOpen}
+        onboardingOpen={overlay.onboardingOpen}
         notifications={notifications}
         gamification={gamification}
         projects={projects}
@@ -378,14 +270,15 @@ export default function App(): JSX.Element {
         onCommandExecute={async (text) => {
           await handleCommandExecution(text, { source: "text", clearOnHandled: false });
         }}
-        onCloseInbox={() => setInboxOpen(false)}
-        onClosePlan={() => setPlanOpen(false)}
-        onCloseShutdown={() => setShutdownOpen(false)}
+        onCloseInbox={overlay.closeInbox}
+        onClosePlan={overlay.closePlan}
+        onCloseShutdown={overlay.closeShutdown}
         onFinishOnboarding={() => {
-          setRoute("today");
-          window.location.hash = routeToHash("today");
+          const nextRoute = overlay.finishOnboarding();
+          window.location.hash = routeToHash(nextRoute);
+          setRoute(nextRoute);
         }}
-        onSetOnboardingOpen={setOnboardingOpen}
+        onSetOnboardingOpen={overlay.closeOnboarding}
       />
     </AppProviders>
   );
