@@ -24,7 +24,9 @@ def _build_test_apkg(notes: list[tuple[list[str], str]]) -> bytes:
         db_path = tmp / "collection.anki21"
         conn = sqlite3.connect(db_path)
         try:
-            conn.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, flds TEXT NOT NULL, tags TEXT)")
+            conn.execute(
+                "CREATE TABLE notes (id INTEGER PRIMARY KEY, flds TEXT NOT NULL, tags TEXT)"
+            )
             for idx, (fields, tags) in enumerate(notes, start=1):
                 conn.execute(
                     "INSERT INTO notes (id, flds, tags) VALUES (?, ?, ?)",
@@ -56,19 +58,22 @@ def test_import_apkg_creates_cards_from_generated_package(db_path) -> None:
     deck = repo.create_deck(DeckCreate(name="Imported SM2"))
     apkg_bytes = _build_test_apkg(
         [
-            (["What is dopamine?", "A neurotransmitter tied to motivation"], "brain chem"),
+            (
+                ["What is dopamine?", "A neurotransmitter tied to motivation"],
+                "brain chem",
+            ),
             (["{{c1::Pomodoro}} helps protect focus blocks", ""], "focus habits"),
             (["", "missing front should skip"], "broken"),
         ],
     )
 
-    result = svc.import_apkg(deck["id"], apkg_bytes, "fixture.apkg")
-    cards = repo.search_cards(deck["id"], limit=10)
+    result = svc.import_apkg(deck.id, apkg_bytes, "fixture.apkg")
+    cards = repo.search_cards(deck.id, limit=10)
 
     assert result.imported == 2
     assert result.skipped == 1
     assert result.source == "fixture.apkg"
-    assert sorted(card["front"] for card in cards) == [
+    assert sorted(card.front for card in cards) == [
         "What is dopamine?",
         "[...] helps protect focus blocks",
     ]
@@ -80,18 +85,21 @@ def test_imported_apkg_cards_enter_sm2_schedule(db_path) -> None:
     deck = repo.create_deck(DeckCreate(name="Import Scheduling"))
     apkg_bytes = _build_test_apkg(
         [
-            (["Coffee after lunch hurts sleep", "Avoid caffeine late"], "health energy"),
+            (
+                ["Coffee after lunch hurts sleep", "Avoid caffeine late"],
+                "health energy",
+            ),
         ],
     )
 
-    svc.import_apkg(deck["id"], apkg_bytes, "sm2-fixture.apkg")
-    due_cards = repo.get_due_cards(deck["id"], limit=5)
+    svc.import_apkg(deck.id, apkg_bytes, "sm2-fixture.apkg")
+    due_cards = repo.get_due_cards(deck.id, limit=5)
 
     assert len(due_cards) == 1
     assert due_cards[0].front == "Coffee after lunch hurts sleep"
     assert due_cards[0].reviews_done == 0
 
-    svc.answer_card(due_cards[0].id, "good", deck_id=deck["id"])
+    svc.answer_card(due_cards[0].id, "good", deck_id=deck.id)
     updated = repo.get_card(due_cards[0].id)
 
     assert updated.reviews_done == 1
@@ -103,7 +111,11 @@ def test_imported_apkg_cards_enter_sm2_schedule(db_path) -> None:
 def test_patch_card_updates_front_and_back(client) -> None:
     response = client.post(
         "/api/v2/review/cards",
-        json={"deck_id": "deck_default", "front": "Original front", "back": "Original back"},
+        json={
+            "deck_id": "deck_default",
+            "front": "Original front",
+            "back": "Original back",
+        },
     )
     assert response.status_code == 200
     card_id = response.json()["id"]
@@ -154,12 +166,19 @@ def test_review_search_and_session_routes_return_typed_contracts(client) -> None
 
     card_response = client.post(
         "/api/v2/review/decks/{deck_id}/cards".format(deck_id=deck_id),
-        json={"front": "Typed front", "back": "Typed back", "tags": ["ts"], "source": "manual"},
+        json={
+            "front": "Typed front",
+            "back": "Typed back",
+            "tags": ["ts"],
+            "source": "manual",
+        },
     )
     assert card_response.status_code == 200
     card_id = card_response.json()["id"]
 
-    search_response = client.get(f"/api/v2/review/decks/{deck_id}/cards/search", params={"q": "Typed"})
+    search_response = client.get(
+        f"/api/v2/review/decks/{deck_id}/cards/search", params={"q": "Typed"}
+    )
     assert search_response.status_code == 200
     search_payload = search_response.json()
     assert search_payload["limit"] == 50
@@ -188,23 +207,38 @@ def test_review_bulk_and_export_preview_routes_return_typed_contracts(client) ->
 
     first_card = client.post(
         f"/api/v2/review/decks/{deck_id}/cards",
-        json={"front": "Front one", "back": "Back one", "tags": ["alpha"], "source": "manual"},
+        json={
+            "front": "Front one",
+            "back": "Back one",
+            "tags": ["alpha"],
+            "source": "manual",
+        },
     )
     second_card = client.post(
         f"/api/v2/review/decks/{deck_id}/cards",
-        json={"front": "Front two", "back": "Back two", "tags": ["beta"], "source": "manual"},
+        json={
+            "front": "Front two",
+            "back": "Back two",
+            "tags": ["beta"],
+            "source": "manual",
+        },
     )
     assert first_card.status_code == 200
     assert second_card.status_code == 200
 
     bulk_response = client.post(
         f"/api/v2/review/decks/{deck_id}/cards/bulk",
-        json={"ids": [first_card.json()["id"], second_card.json()["id"]], "action": "suspend"},
+        json={
+            "ids": [first_card.json()["id"], second_card.json()["id"]],
+            "action": "suspend",
+        },
     )
     assert bulk_response.status_code == 200
     assert bulk_response.json()["affected"] == 2
 
-    preview_response = client.get("/api/v2/review/export-preview", params={"deck_id": deck_id, "limit": 10})
+    preview_response = client.get(
+        "/api/v2/review/export-preview", params={"deck_id": deck_id, "limit": 10}
+    )
     assert preview_response.status_code == 200
     preview_body = preview_response.json()
     assert preview_body["deck_id"] == deck_id
@@ -217,12 +251,12 @@ def test_sm2_rating_sequence_easy_increases_interval(db_path) -> None:
     svc = ReviewService(repo)
     deck = repo.create_deck(DeckCreate(name="SM2 Test"))
     apkg = _build_test_apkg([(["Capital of Denmark?", "Copenhagen"], "geo")])
-    svc.import_apkg(deck["id"], apkg, "test.apkg")
-    card = repo.get_due_cards(deck["id"])[0]
+    svc.import_apkg(deck.id, apkg, "test.apkg")
+    card = repo.get_due_cards(deck.id)[0]
 
-    svc.answer_card(card.id, "good", deck_id=deck["id"])
+    svc.answer_card(card.id, "good", deck_id=deck.id)
     after_good = repo.get_card(card.id)
-    svc.answer_card(card.id, "easy", deck_id=deck["id"])
+    svc.answer_card(card.id, "easy", deck_id=deck.id)
     after_easy = repo.get_card(card.id)
 
     assert after_easy.interval > after_good.interval
@@ -233,11 +267,11 @@ def test_sm2_rating_again_resets_interval(db_path) -> None:
     svc = ReviewService(repo)
     deck = repo.create_deck(DeckCreate(name="SM2 Lapse"))
     apkg = _build_test_apkg([(["Question", "Answer"], "")])
-    svc.import_apkg(deck["id"], apkg, "lapse.apkg")
-    card = repo.get_due_cards(deck["id"])[0]
+    svc.import_apkg(deck.id, apkg, "lapse.apkg")
+    card = repo.get_due_cards(deck.id)[0]
 
-    svc.answer_card(card.id, "good", deck_id=deck["id"])
-    svc.answer_card(card.id, "again", deck_id=deck["id"])
+    svc.answer_card(card.id, "good", deck_id=deck.id)
+    svc.answer_card(card.id, "again", deck_id=deck.id)
     lapsed = repo.get_card(card.id)
 
     assert lapsed.interval == 1
@@ -245,18 +279,28 @@ def test_sm2_rating_again_resets_interval(db_path) -> None:
 
 
 @pytest.mark.anyio
-async def test_import_apkg_route_rejects_missing_collection_database(_app, db_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+async def test_import_apkg_route_rejects_missing_collection_database(
+    _app, db_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     caplog.set_level(logging.WARNING, logger="app.domains.review.router")
     transport = ASGITransport(app=_app, client=("127.0.0.1", 12345))
 
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        create_deck = await client.post("/api/v2/review/decks", json={"name": "APKG Import Validation"})
+        create_deck = await client.post(
+            "/api/v2/review/decks", json={"name": "APKG Import Validation"}
+        )
         assert create_deck.status_code == 200
         deck_id = create_deck.json()["id"]
 
         response = await client.post(
             f"/api/v2/review/import-apkg?deck_id={deck_id}",
-            files={"file": ("broken.apkg", _build_zip_payload({"notes.txt": b"no db here"}), "application/zip")},
+            files={
+                "file": (
+                    "broken.apkg",
+                    _build_zip_payload({"notes.txt": b"no db here"}),
+                    "application/zip",
+                )
+            },
         )
 
     assert response.status_code == 422
@@ -265,18 +309,28 @@ async def test_import_apkg_route_rejects_missing_collection_database(_app, db_pa
 
 
 @pytest.mark.anyio
-async def test_import_apkg_route_rejects_invalid_collection_database(_app, db_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+async def test_import_apkg_route_rejects_invalid_collection_database(
+    _app, db_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     caplog.set_level(logging.WARNING, logger="app.domains.review.router")
     transport = ASGITransport(app=_app, client=("127.0.0.1", 12345))
 
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        create_deck = await client.post("/api/v2/review/decks", json={"name": "APKG Invalid SQLite"})
+        create_deck = await client.post(
+            "/api/v2/review/decks", json={"name": "APKG Invalid SQLite"}
+        )
         assert create_deck.status_code == 200
         deck_id = create_deck.json()["id"]
 
         response = await client.post(
             f"/api/v2/review/import-apkg?deck_id={deck_id}",
-            files={"file": ("invalid.apkg", _build_zip_payload({"collection.anki21": b"not-a-sqlite-db"}), "application/zip")},
+            files={
+                "file": (
+                    "invalid.apkg",
+                    _build_zip_payload({"collection.anki21": b"not-a-sqlite-db"}),
+                    "application/zip",
+                )
+            },
         )
 
     assert response.status_code == 422

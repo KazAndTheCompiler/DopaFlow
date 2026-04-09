@@ -17,6 +17,8 @@ from app.domains.review.repository import ReviewRepository
 from app.domains.review.schemas import (
     DeckCreate,
     DeckRead,
+    DeckRenameRequest,
+    DeleteResponse,
     NextDueResponse,
     ReviewAnswerResponse,
     ReviewAnswerSession,
@@ -24,6 +26,9 @@ from app.domains.review.schemas import (
     ReviewBulkCardsResponse,
     ReviewCardCreate,
     ReviewCardRead,
+    ReviewDeckBasic,
+    ReviewDeckStats,
+    ReviewExportCard,
     ReviewExportPreviewCard,
     ReviewExportPreviewResponse,
     ReviewHistoryItem,
@@ -31,13 +36,20 @@ from app.domains.review.schemas import (
     ReviewImportPreview,
     ReviewImportResult,
     ReviewRating,
+    ReviewSearchCard,
+    ReviewSearchResult,
     ReviewSessionEndResponse,
     ReviewSessionQueueCard,
     ReviewSessionStart,
     ReviewSessionState,
     ReviewSessionStateCard,
 )
-from app.domains.review.schemas_extra import CardBuryResponse, CardSuspendResponse, DeckStatsResponse, ReviewSearchResult, ReviewSearchResponse
+from app.domains.review.schemas_extra import (
+    CardBuryResponse,
+    CardSuspendResponse,
+    DeckStatsResponse,
+    ReviewSearchResponse,
+)
 
 MIN_EASE = 1.3
 DEFAULT_EASE = 2.5
@@ -52,7 +64,11 @@ def _award(source: str, source_id: str | None = None) -> None:
         db = get_settings().db_path
         GamificationService(GamificationRepository(db)).award(source, source_id)
     except Exception:
-        logger.exception("Failed to award gamification points for source=%s source_id=%s", source, source_id)
+        logger.exception(
+            "Failed to award gamification points for source=%s source_id=%s",
+            source,
+            source_id,
+        )
 
 
 def sm2_next(
@@ -114,7 +130,14 @@ class ReviewService:
     def create_card(self, payload: ReviewCardCreate) -> ReviewCardRead:
         return self.repository.create_card(payload)
 
-    def create_card_for_deck(self, deck_id: str, front: str, back: str, tags: list[str], source: str = "manual") -> ReviewCardRead:
+    def create_card_for_deck(
+        self,
+        deck_id: str,
+        front: str,
+        back: str,
+        tags: list[str],
+        source: str = "manual",
+    ) -> ReviewCardRead:
         return self.repository.create_card_full(deck_id, front, back, tags, source)
 
     def update_card(self, card_id: str, front: str, back: str) -> ReviewCardRead:
@@ -147,7 +170,9 @@ class ReviewService:
         _award("review_card", existing.id)
         return card
 
-    def answer_card(self, card_id: str, rating_label: str, deck_id: str | None = None) -> ReviewAnswerResponse:
+    def answer_card(
+        self, card_id: str, rating_label: str, deck_id: str | None = None
+    ) -> ReviewAnswerResponse:
         """Apply a string rating to a card. Bumps the active session if deck_id given."""
 
         int_rating = _RATING_MAP.get(rating_label.lower())
@@ -199,62 +224,69 @@ class ReviewService:
     def bury_card_today(self, card_id: str) -> CardBuryResponse:
         self.repository.get_card(card_id)
         self.repository.bury_card_today(card_id)
-        return CardBuryResponse(card_id=card_id, buried_until=(date.today() + timedelta(days=1)).isoformat())
+        return CardBuryResponse(
+            card_id=card_id, buried_until=(date.today() + timedelta(days=1)).isoformat()
+        )
 
-    def search_cards(self, deck_id: str, q: str = "", state: str | None = None, limit: int = 50) -> list[ReviewSearchResult]:
-        rows = self.repository.search_cards(deck_id, q=q, state=state, limit=limit)
-        return [ReviewSearchResult(**row) for row in rows]
+    def search_cards(
+        self, deck_id: str, q: str = "", state: str | None = None, limit: int = 50
+    ) -> list[ReviewSearchResult]:
+        return self.repository.search_cards(deck_id, q=q, state=state, limit=limit)
 
-    def bulk_cards(self, deck_id: str, ids: list[str], action: str) -> ReviewBulkCardsResponse:
+    def bulk_cards(
+        self, deck_id: str, ids: list[str], action: str
+    ) -> ReviewBulkCardsResponse:
         affected = self.repository.bulk_cards(deck_id, ids, action)
         return ReviewBulkCardsResponse(affected=affected)
 
     # ── decks ─────────────────────────────────────────────────────────────────
 
     def list_decks(self) -> list[DeckRead]:
-        return [DeckRead(**row) for row in self.repository.list_decks()]
+        return [DeckRead.model_validate(row) for row in self.repository.list_decks()]
 
     def create_deck(self, payload: DeckCreate) -> DeckRead:
-        return DeckRead(**self.repository.create_deck(payload))
+        return self.repository.create_deck(payload)
 
     def get_deck(self, deck_id: str) -> DeckRead | None:
-        deck = self.repository.get_deck(deck_id)
-        return DeckRead(**deck) if deck is not None else None
+        return self.repository.get_deck(deck_id)
 
-    def rename_deck(self, deck_id: str, name: str) -> dict[str, object] | None:
+    def rename_deck(self, deck_id: str, name: str) -> DeckRead | None:
         return self.repository.rename_deck(deck_id, name)
 
     def delete_deck(self, deck_id: str) -> bool:
         return self.repository.delete_deck(deck_id)
 
     def get_deck_stats(self, deck_id: str) -> DeckStatsResponse:
-        return DeckStatsResponse(**self.repository.get_deck_stats(deck_id))
+        return DeckStatsResponse.model_validate(self.repository.get_deck_stats(deck_id))
 
     def get_next_due(self, deck_id: str) -> NextDueResponse:
         return NextDueResponse(next_due=self.repository.get_next_due(deck_id))
 
     # ── export ────────────────────────────────────────────────────────────────
 
-    def get_all_cards_for_export(self, deck_id: str) -> list[dict[str, object]]:
+    def get_all_cards_for_export(self, deck_id: str) -> list[ReviewExportCard]:
         return self.repository.get_all_cards_for_export(deck_id)
 
-    def export_preview(self, deck_id: str, limit: int = 50) -> ReviewExportPreviewResponse:
-        preview = self.repository.export_preview(deck_id, limit)
-        return ReviewExportPreviewResponse(
-            deck_id=str(preview["deck_id"]),
-            card_count=int(preview["card_count"]),
-            cards=[ReviewExportPreviewCard(**card) for card in preview["cards"]],
-        )
+    def export_preview(
+        self, deck_id: str, limit: int = 50
+    ) -> ReviewExportPreviewResponse:
+        return self.repository.export_preview(deck_id, limit)
 
     # ── import ────────────────────────────────────────────────────────────────
 
-    def import_notes(self, deck_id: str, content: str, fmt: str = "csv") -> ReviewImportResult:
-        return ReviewImportResult(**self.repository.import_notes(deck_id, content, fmt))
+    def import_notes(
+        self, deck_id: str, content: str, fmt: str = "csv"
+    ) -> ReviewImportResult:
+        return self.repository.import_notes(deck_id, content, fmt)
 
-    def preview_import(self, deck_id: str, content: str, fmt: str = "csv") -> ReviewImportPreview:
-        return ReviewImportPreview(**self.repository.preview_import(deck_id, content, fmt))
+    def preview_import(
+        self, deck_id: str, content: str, fmt: str = "csv"
+    ) -> ReviewImportPreview:
+        return self.repository.preview_import(deck_id, content, fmt)
 
-    def import_apkg(self, deck_id: str, data: bytes, filename: str) -> ReviewApkgImportResult:
+    def import_apkg(
+        self, deck_id: str, data: bytes, filename: str
+    ) -> ReviewApkgImportResult:
         """Import an Anki .apkg file. Handles cloze deletions and HTML stripping."""
 
         def strip_html(text: str) -> str:
@@ -273,7 +305,9 @@ class ReviewService:
             front_raw = fields[0] if fields else ""
             back_raw = fields[1] if len(fields) > 1 else ""
             if "{{c" in front_raw:
-                question = re.sub(r"\{\{c\d+::(.*?)(?:::[^}]*)?\}\}", "[...]", front_raw)
+                question = re.sub(
+                    r"\{\{c\d+::(.*?)(?:::[^}]*)?\}\}", "[...]", front_raw
+                )
                 answer = re.sub(r"\{\{c\d+::(.*?)(?:::[^}]*)?\}\}", r"\1", front_raw)
                 return strip_html(question), strip_html(answer)
             f = strip_html(front_raw)
@@ -299,30 +333,46 @@ class ReviewService:
                     anki_conn.row_factory = sqlite3.Row
                     created = skipped = 0
                     try:
-                        notes = anki_conn.execute("SELECT flds, tags FROM notes").fetchall()
+                        notes = anki_conn.execute(
+                            "SELECT flds, tags FROM notes"
+                        ).fetchall()
                         for note in notes:
                             fields = note["flds"].split("\x1f")
                             front, back = convert_cloze(fields)
                             if not front or not back:
                                 skipped += 1
                                 continue
-                            tags = [t.strip() for t in (note["tags"] or "").split() if t.strip()]
-                            self.repository.create_card_full(deck_id, front, back, tags, source="apkg")
+                            tags = [
+                                t.strip()
+                                for t in (note["tags"] or "").split()
+                                if t.strip()
+                            ]
+                            self.repository.create_card_full(
+                                deck_id, front, back, tags, source="apkg"
+                            )
                             created += 1
                     finally:
                         anki_conn.close()
                 except sqlite3.DatabaseError as exc:
                     raise ValueError("APKG collection database is invalid") from exc
-            return ReviewApkgImportResult(imported=created, skipped=skipped, source=filename)
+            return ReviewApkgImportResult(
+                imported=created, skipped=skipped, source=filename
+            )
         except zipfile.BadZipFile:
             raise ValueError("File is not a valid .apkg (bad zip)")
 
     # ── sessions ──────────────────────────────────────────────────────────────
 
-    def get_session_state(self, limit: int = 20, deck_id: str | None = None) -> ReviewSessionState:
+    def get_session_state(
+        self, limit: int = 20, deck_id: str | None = None
+    ) -> ReviewSessionState:
         """Return the current session state: next card and queue size."""
 
-        queue = self.repository.get_due_cards(deck_id, limit) if deck_id else self.repository.list_cards()[:limit]
+        queue = (
+            self.repository.get_due_cards(deck_id, limit)
+            if deck_id
+            else self.repository.list_cards()[:limit]
+        )
         if queue:
             top = queue[0]
             return ReviewSessionState(
@@ -334,12 +384,18 @@ class ReviewService:
             )
         return ReviewSessionState(queue_size=0)
 
-    def start_session(self, limit: int = 20, deck_id: str | None = None) -> ReviewSessionStart:
+    def start_session(
+        self, limit: int = 20, deck_id: str | None = None
+    ) -> ReviewSessionStart:
         """Start a review session and return the initial queue."""
 
         if deck_id and self.repository.get_deck(deck_id):
             self.repository.start_session(deck_id)
-        queue = self.repository.get_due_cards(deck_id, limit) if deck_id else self.repository.list_cards()[:limit]
+        queue = (
+            self.repository.get_due_cards(deck_id, limit)
+            if deck_id
+            else self.repository.list_cards()[:limit]
+        )
         return ReviewSessionStart(
             count=len(queue),
             cards=[
@@ -359,7 +415,9 @@ class ReviewService:
 
         return self.start_session(limit=limit, deck_id=deck_id)
 
-    def answer_card_for_deck(self, deck_id: str, card_id: str, rating_label: str) -> ReviewAnswerResponse:
+    def answer_card_for_deck(
+        self, deck_id: str, card_id: str, rating_label: str
+    ) -> ReviewAnswerResponse:
         """Answer a card within a deck session. Ends session when queue empties."""
 
         result = self.answer_card(card_id, rating_label, deck_id=deck_id)
@@ -374,8 +432,14 @@ class ReviewService:
         session_id = self.repository.end_session(deck_id)
         return ReviewSessionEndResponse(ok=True, session_log_id=session_id)
 
-    def log_session(self, deck_id: str, ratings_summary: dict[str, int]) -> dict[str, object]:
+    def log_session(
+        self, deck_id: str, ratings_summary: dict[str, int]
+    ) -> dict[str, object]:
         return self.repository.log_session(deck_id, ratings_summary)
 
     def get_history(self, limit: int = 20) -> ReviewHistoryResponse:
-        return ReviewHistoryResponse(items=[ReviewHistoryItem(**item) for item in self.repository.get_history(limit)])
+        return ReviewHistoryResponse(
+            items=[
+                ReviewHistoryItem(**item) for item in self.repository.get_history(limit)
+            ]
+        )

@@ -61,10 +61,12 @@ class VaultSyncService:
     # lazy imports to avoid circular deps at module load time
     def _tasks_repo(self):  # type: ignore[return]
         from app.domains.tasks import repository as tasks_repo
+
         return tasks_repo
 
     def _projects_repo(self):  # type: ignore[return]
         from app.domains.projects import repository as proj_repo
+
         return proj_repo
 
     # ── config ────────────────────────────────────────────────────────────────
@@ -106,9 +108,16 @@ class VaultSyncService:
         """Write all journal entries to the vault as daily note files."""
         config = self.index_repo.get_config()
         if not config.vault_path:
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=["vault_path is not configured"])
+            return VaultPushResult(
+                pushed=0,
+                skipped=0,
+                conflicts=0,
+                errors=["vault_path is not configured"],
+            )
         if not Path(config.vault_path).is_dir():
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=["vault path does not exist"])
+            return VaultPushResult(
+                pushed=0, skipped=0, conflicts=0, errors=["vault path does not exist"]
+            )
 
         entries = self.journal_repo.list_entries()
         pushed = 0
@@ -133,7 +142,10 @@ class VaultSyncService:
                 if abs_path.exists() and existing_record:
                     disk_hash = _hash(abs_path.read_text(encoding="utf-8"))
                     current_app_hash = _hash(rendered_content)
-                    if disk_hash != existing_record.file_hash and current_app_hash != existing_record.file_hash:
+                    if (
+                        disk_hash != existing_record.file_hash
+                        and current_app_hash != existing_record.file_hash
+                    ):
                         self.index_repo.mark_conflict(rel_path)
                         conflicts += 1
                         skipped += 1
@@ -146,13 +158,17 @@ class VaultSyncService:
                     file_path=file_path,
                     file_hash=content_hash,
                     direction="push",
-                    snapshot_body=previous if previous is not None else rendered_content,
+                    snapshot_body=previous
+                    if previous is not None
+                    else rendered_content,
                 )
                 pushed += 1
             except Exception as exc:
                 errors.append(f"{entry.date}: {exc}")
 
-        return VaultPushResult(pushed=pushed, skipped=skipped, conflicts=conflicts, errors=errors)
+        return VaultPushResult(
+            pushed=pushed, skipped=skipped, conflicts=conflicts, errors=errors
+        )
 
     # ── pull (vault → DopaFlow) ───────────────────────────────────────────────
 
@@ -160,9 +176,16 @@ class VaultSyncService:
         """Scan vault daily notes and import/update DopaFlow journal entries."""
         config = self.index_repo.get_config()
         if not config.vault_path:
-            return VaultPullResult(imported=0, updated=0, conflicts=0, errors=["vault_path is not configured"])
+            return VaultPullResult(
+                imported=0,
+                updated=0,
+                conflicts=0,
+                errors=["vault_path is not configured"],
+            )
         if not Path(config.vault_path).is_dir():
-            return VaultPullResult(imported=0, updated=0, conflicts=0, errors=["vault path does not exist"])
+            return VaultPullResult(
+                imported=0, updated=0, conflicts=0, errors=["vault path does not exist"]
+            )
 
         candidates = scan_journal_notes(config)
         imported = 0
@@ -177,7 +200,11 @@ class VaultSyncService:
                 existing_record = self.index_repo.get_by_file_path(candidate.file_path)
 
                 existing_entry = self.journal_repo.get_entry(candidate.date)
-                if existing_record and existing_record.file_hash != candidate.file_hash and existing_entry:
+                if (
+                    existing_record
+                    and existing_record.file_hash != candidate.file_hash
+                    and existing_entry
+                ):
                     current_app_hash = _hash(render_journal_note(existing_entry))
                     if current_app_hash != existing_record.file_hash:
                         self.index_repo.mark_conflict(candidate.file_path)
@@ -216,7 +243,9 @@ class VaultSyncService:
             except Exception as exc:
                 errors.append(f"{candidate.file_path}: {exc}")
 
-        return VaultPullResult(imported=imported, updated=updated, conflicts=conflicts, errors=errors)
+        return VaultPullResult(
+            imported=imported, updated=updated, conflicts=conflicts, errors=errors
+        )
 
     # ── rollback ──────────────────────────────────────────────────────────────
 
@@ -227,7 +256,9 @@ class VaultSyncService:
         record = next((r for r in records if r.id == record_id), None)
 
         if not record:
-            return VaultRollbackResult(rolled_back=False, file_path="", message="Record not found")
+            return VaultRollbackResult(
+                rolled_back=False, file_path="", message="Record not found"
+            )
 
         snapshot = self.index_repo.get_snapshot(record_id)
         if snapshot is None:
@@ -287,9 +318,16 @@ class VaultSyncService:
         """
         config = self.index_repo.get_config()
         if not config.vault_path:
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=["vault_path is not configured"])
+            return VaultPushResult(
+                pushed=0,
+                skipped=0,
+                conflicts=0,
+                errors=["vault_path is not configured"],
+            )
         if not Path(config.vault_path).is_dir():
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=["vault path does not exist"])
+            return VaultPushResult(
+                pushed=0, skipped=0, conflicts=0, errors=["vault path does not exist"]
+            )
 
         tasks_repo = self._tasks_repo()
         projects_repo = self._projects_repo()
@@ -300,13 +338,19 @@ class VaultSyncService:
         # Group tasks: inbox (no project) + one group per project
         by_project: dict[str | None, list] = {}
         for task in all_tasks:
-            pid = task.get("project_id")
+            pid = task.project_id
             by_project.setdefault(pid, []).append(task)
 
         pushed = skipped = conflicts = 0
         errors: list[str] = []
 
-        def _write_group(slug: str, project_name: str, tasks: list, project_id: str | None, scope: str | None) -> None:
+        def _write_group(
+            slug: str,
+            project_name: str,
+            tasks: list,
+            project_id: str | None,
+            scope: str | None,
+        ) -> None:
             nonlocal pushed, skipped, conflicts
             try:
                 rel_path = f"{config.tasks_folder}/{slug}.md"
@@ -340,8 +384,12 @@ class VaultSyncService:
                         return
 
                 file_path, content_hash, previous = write_task_collection(
-                    tasks, slug, project_name, config,
-                    project_id=project_id, scope=scope,
+                    tasks,
+                    slug,
+                    project_name,
+                    config,
+                    project_id=project_id,
+                    scope=scope,
                 )
                 self.index_repo.upsert_record(
                     entity_type="task",
@@ -349,7 +397,9 @@ class VaultSyncService:
                     file_path=file_path,
                     file_hash=content_hash,
                     direction="push",
-                    snapshot_body=previous if previous is not None else rendered_content,
+                    snapshot_body=previous
+                    if previous is not None
+                    else rendered_content,
                 )
                 pushed += 1
             except Exception as exc:
@@ -369,7 +419,9 @@ class VaultSyncService:
             slug = slugify(project["name"]) or pid
             _write_group(slug, project["name"], tasks, pid, None)
 
-        return VaultPushResult(pushed=pushed, skipped=skipped, conflicts=conflicts, errors=errors)
+        return VaultPushResult(
+            pushed=pushed, skipped=skipped, conflicts=conflicts, errors=errors
+        )
 
     def pull_tasks(self) -> VaultPullResult:
         """Scan vault Tasks/ folder and sync checkbox changes back to DopaFlow.
@@ -379,9 +431,16 @@ class VaultSyncService:
         """
         config = self.index_repo.get_config()
         if not config.vault_path:
-            return VaultPullResult(imported=0, updated=0, conflicts=0, errors=["vault_path is not configured"])
+            return VaultPullResult(
+                imported=0,
+                updated=0,
+                conflicts=0,
+                errors=["vault_path is not configured"],
+            )
         if not Path(config.vault_path).is_dir():
-            return VaultPullResult(imported=0, updated=0, conflicts=0, errors=["vault path does not exist"])
+            return VaultPullResult(
+                imported=0, updated=0, conflicts=0, errors=["vault path does not exist"]
+            )
 
         vault_root = Path(config.vault_path)
         candidates = scan_task_collections(vault_root, config.tasks_folder)
@@ -399,17 +458,22 @@ class VaultSyncService:
                     continue
 
                 # Sync completion status back
-                if bool(task.get("done")) != candidate.done:
+                if bool(task.done) != candidate.done:
                     tasks_repo.update_task(
                         self.db_path,
                         candidate.dopaflow_id,
-                        {"done": candidate.done, "status": "done" if candidate.done else "todo"},
+                        {
+                            "done": candidate.done,
+                            "status": "done" if candidate.done else "todo",
+                        },
                     )
                     updated += 1
             except Exception as exc:
                 errors.append(f"{candidate.dopaflow_id}: {exc}")
 
-        return VaultPullResult(imported=imported, updated=updated, conflicts=conflicts, errors=errors)
+        return VaultPullResult(
+            imported=imported, updated=updated, conflicts=conflicts, errors=errors
+        )
 
     # ── daily note task section ───────────────────────────────────────────────
 
@@ -421,23 +485,30 @@ class VaultSyncService:
         """
         config = self.index_repo.get_config()
         if not config.vault_path:
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=["vault_path is not configured"])
+            return VaultPushResult(
+                pushed=0,
+                skipped=0,
+                conflicts=0,
+                errors=["vault_path is not configured"],
+            )
         if not Path(config.vault_path).is_dir():
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=["vault path does not exist"])
+            return VaultPushResult(
+                pushed=0, skipped=0, conflicts=0, errors=["vault path does not exist"]
+            )
 
         tasks_repo = self._tasks_repo()
         # Get tasks due on this date (or earlier, undone)
         from datetime import datetime, timezone
+
         try:
             target = datetime.strptime(date, "%Y-%m-%d")
         except ValueError:
-            return VaultPushResult(pushed=0, skipped=0, conflicts=0, errors=[f"invalid date: {date}"])
+            return VaultPushResult(
+                pushed=0, skipped=0, conflicts=0, errors=[f"invalid date: {date}"]
+            )
 
         all_tasks = tasks_repo.list_tasks(self.db_path, done=False)
-        due_tasks = [
-            t for t in all_tasks
-            if t.get("due_at") and t["due_at"][:10] <= date
-        ]
+        due_tasks = [t for t in all_tasks if t.due_at and t.due_at[:10] <= date]
 
         tasks_section_body = "## Today's Tasks\n\n" + render_tasks_section(due_tasks)
 
@@ -445,7 +516,12 @@ class VaultSyncService:
         abs_path = Path(config.vault_path) / rel_path
 
         if not abs_path.exists():
-            return VaultPushResult(pushed=0, skipped=1, conflicts=0, errors=[f"daily note not found: {rel_path}"])
+            return VaultPushResult(
+                pushed=0,
+                skipped=1,
+                conflicts=0,
+                errors=[f"daily note not found: {rel_path}"],
+            )
 
         previous = abs_path.read_text(encoding="utf-8")
         updated_content = inject_section(previous, "tasks", tasks_section_body)
@@ -475,7 +551,9 @@ class VaultSyncService:
         """
         config = self.index_repo.get_config()
         if not config.vault_path or not Path(config.vault_path).is_dir():
-            return TaskImportPreview(importable=[], known=[], skipped=0, total_scanned=0)
+            return TaskImportPreview(
+                importable=[], known=[], skipped=0, total_scanned=0
+            )
 
         vault_root = Path(config.vault_path)
         all_candidates = scan_task_files(vault_root, config.tasks_folder)
@@ -541,7 +619,9 @@ class VaultSyncService:
         for c in request.candidates:
             try:
                 source_external_id = f"{c.file_path}:{c.line_number or c.line_text}"
-                existing_task = tasks_repo.get_task_by_source_id(self.db_path, source_external_id)
+                existing_task = tasks_repo.get_task_by_source_id(
+                    self.db_path, source_external_id
+                )
                 if existing_task is not None:
                     continue
 
@@ -561,7 +641,7 @@ class VaultSyncService:
                     payload["project_id"] = c.project_id
 
                 new_task = tasks_repo.create_task(self.db_path, payload)
-                new_id = new_task["id"]
+                new_id = new_task.id
                 imported += 1
 
                 # Write the ID back into the vault file
@@ -575,11 +655,17 @@ class VaultSyncService:
                             line_number=c.line_number,
                         )
                         if not rewritten:
-                            errors.append(f"{c.title}: failed to write DopaFlow ID back to vault file")
+                            errors.append(
+                                f"{c.title}: failed to write DopaFlow ID back to vault file"
+                            )
                     else:
-                        errors.append(f"{c.title}: source vault file not found during ID write-back")
+                        errors.append(
+                            f"{c.title}: source vault file not found during ID write-back"
+                        )
                 else:
-                    errors.append(f"{c.title}: missing source line metadata for ID write-back")
+                    errors.append(
+                        f"{c.title}: missing source line metadata for ID write-back"
+                    )
 
             except Exception as exc:
                 errors.append(f"{c.title}: {exc}")

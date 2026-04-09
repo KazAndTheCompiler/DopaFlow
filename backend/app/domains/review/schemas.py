@@ -191,3 +191,65 @@ class ReviewExportPreviewResponse(BaseModel):
     deck_id: str
     card_count: int
     cards: list[ReviewExportPreviewCard]
+
+
+class ReviewSearchCard(BaseModel):
+    """Card shape returned by search."""
+
+    card_id: str
+    front: str
+    back: str
+    deck_id: str
+    state: str = "new"
+
+
+ReviewSearchResult = ReviewSearchCard
+
+
+class ReviewDeckBasic(BaseModel):
+    """Lightweight deck with card count."""
+
+    id: str
+    name: str
+    source_type: str | None = None
+    card_count: int
+
+
+class ReviewDeckStats(BaseModel):
+    """Aggregate stats for a review deck."""
+
+    deck_id: str
+    deck_name: str
+    total_cards: int
+    due_cards: int
+    suspended_count: int
+    average_interval: float
+
+
+class ReviewExportCard(BaseModel):
+    """Full card row used during CSV/JSON export."""
+
+    id: str
+    deck_id: str
+    front: str
+    back: str
+    interval: int
+    ease_factor: float
+    lapse_count: int
+    reviews_done: int
+    due: str | None = None
+    tags: list[str] = []
+
+
+class ReviewActiveSession(BaseModel):
+    """Lightweight active session reference."""
+
+    id: str
+    cards_seen: int
+
+
+class ReviewSessionLog(BaseModel):
+    """Lightweight session summary persisted after close."""
+
+    deck_id: str
+    ratings_summary: dict[str, int]
