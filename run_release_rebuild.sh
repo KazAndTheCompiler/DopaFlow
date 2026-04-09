@@ -15,7 +15,7 @@ export DOPAFLOW_GITHUB_REPO="${DOPAFLOW_GITHUB_REPO:-dopaflow}"
 NODE_BIN=""
 for candidate in \
   "${DOPAFLOW_NODE_BIN:-}" \
-  "/home/henry/.nvm/versions/node/v20.20.1/bin/node" \
+  "/usr/local/bin/node" \
   "$(command -v node 2>/dev/null || true)"
 do
   if [[ -n "${candidate:-}" && -x "$candidate" ]]; then

@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.service import GamificationService
 from app.domains.tasks import repository
+from app.domains.tasks.schemas import Task
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,12 @@ def _award(source: str, source_id: str | None = None) -> None:
         db = get_settings().db_path
         GamificationService(GamificationRepository(db)).award(source, source_id)
     except Exception:
-        logger.exception("Failed to award gamification for source=%s source_id=%s", source, source_id)
+        logger.exception(
+            "Failed to award gamification for source=%s source_id=%s", source, source_id
+        )
 
 
-def complete_task(db_path: str, task_id: str) -> dict[str, Any] | None:
+def complete_task(db_path: str, task_id: str) -> Task | None:
     """Mark a task complete and award XP."""
 
     task = repository.complete_task(db_path, task_id)
@@ -79,19 +82,43 @@ def parse_quick_add(text: str) -> dict[str, Any]:
         due_at = now.replace(hour=17, minute=0, second=0, microsecond=0).isoformat()
         working = re.sub(r"\btoday\b", "", working, flags=re.IGNORECASE).strip()
     elif "tomorrow" in lowered:
-        due_at = (now + timedelta(days=1)).replace(hour=17, minute=0, second=0, microsecond=0).isoformat()
+        due_at = (
+            (now + timedelta(days=1))
+            .replace(hour=17, minute=0, second=0, microsecond=0)
+            .isoformat()
+        )
         working = re.sub(r"\btomorrow\b", "", working, flags=re.IGNORECASE).strip()
     elif match := re.search(r"in (\d+) days", lowered):
-        due_at = (now + timedelta(days=int(match.group(1)))).replace(hour=17, minute=0, second=0, microsecond=0).isoformat()
+        due_at = (
+            (now + timedelta(days=int(match.group(1))))
+            .replace(hour=17, minute=0, second=0, microsecond=0)
+            .isoformat()
+        )
         working = re.sub(r"in \d+ days", "", working, flags=re.IGNORECASE).strip()
     elif "next week" in lowered:
-        due_at = (now + timedelta(days=7)).replace(hour=9, minute=0, second=0, microsecond=0).isoformat()
+        due_at = (
+            (now + timedelta(days=7))
+            .replace(hour=9, minute=0, second=0, microsecond=0)
+            .isoformat()
+        )
         working = re.sub(r"next week", "", working, flags=re.IGNORECASE).strip()
         ambiguity = True
     else:
-        for weekday in ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"):
+        for weekday in (
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+            "sunday",
+        ):
             if weekday in lowered:
-                due_at = _weekday_target(weekday).replace(hour=9, minute=0, second=0, microsecond=0).isoformat()
+                due_at = (
+                    _weekday_target(weekday)
+                    .replace(hour=9, minute=0, second=0, microsecond=0)
+                    .isoformat()
+                )
                 working = re.sub(weekday, "", working, flags=re.IGNORECASE).strip()
                 ambiguity = True
                 break
@@ -101,7 +128,9 @@ def parse_quick_add(text: str) -> dict[str, Any]:
         recurrence_rule = "FREQ=DAILY"
     elif any(token in lowered for token in ["every week", "weekly"]):
         recurrence_rule = "FREQ=WEEKLY"
-    elif match := re.search(r"every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)", lowered):
+    elif match := re.search(
+        r"every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)", lowered
+    ):
         recurrence_rule = f"FREQ=WEEKLY;BYDAY={match.group(1)[:2].upper()}"
 
     return {
@@ -126,7 +155,11 @@ def import_tasks_csv(content: str) -> list[dict[str, Any]]:
                 "description": row.get("Description") or row.get("description"),
                 "due_at": row.get("Date") or row.get("due_at"),
                 "priority": int(row.get("Priority") or 3),
-                "tags": [tag.strip() for tag in (row.get("Labels") or "").split(",") if tag.strip()],
+                "tags": [
+                    tag.strip()
+                    for tag in (row.get("Labels") or "").split(",")
+                    if tag.strip()
+                ],
             }
         )
     return rows

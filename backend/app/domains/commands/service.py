@@ -41,7 +41,9 @@ def _clean_task_title(text: str) -> str:
     return cleaned or "Untitled task"
 
 
-def _upcoming_weekday(base: datetime, weekday_name: str, *, next_week: bool) -> datetime:
+def _upcoming_weekday(
+    base: datetime, weekday_name: str, *, next_week: bool
+) -> datetime:
     target = WEEKDAY_TO_INDEX[weekday_name.capitalize()]
     delta = (target - base.weekday()) % 7
     if delta == 0 or next_week:
@@ -123,10 +125,16 @@ def _extract_calendar_datetimes(text: str) -> tuple[str | None, str | None, str]
 
     date_match = re.search(r"\b(today|tomorrow)\b", lowered)
     time_match = re.search(r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", lowered)
-    duration_match = re.search(r"\bfor\s+(\d+)\s*(minutes?|hours?|mins?|hrs?)\b", lowered)
+    duration_match = re.search(
+        r"\bfor\s+(\d+)\s*(minutes?|hours?|mins?|hrs?)\b", lowered
+    )
 
     if date_match:
-        base = now.date() if date_match.group(1) == "today" else (now + timedelta(days=1)).date()
+        base = (
+            now.date()
+            if date_match.group(1) == "today"
+            else (now + timedelta(days=1)).date()
+        )
     else:
         base = None
 
@@ -142,16 +150,27 @@ def _extract_calendar_datetimes(text: str) -> tuple[str | None, str | None, str]
         if duration_match:
             amount = int(duration_match.group(1))
             unit = duration_match.group(2).lower()
-            delta = timedelta(hours=amount) if unit.startswith(("hour", "hr")) else timedelta(minutes=amount)
+            delta = (
+                timedelta(hours=amount)
+                if unit.startswith(("hour", "hr"))
+                else timedelta(minutes=amount)
+            )
             end_dt = start_dt + delta
         else:
             end_dt = start_dt + timedelta(hours=1)
 
     cleaned = text
     cleaned = re.sub(r"\b(today|tomorrow)\b", " ", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"\bfor\s+\d+\s*(?:minutes?|hours?|mins?|hrs?)\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\bfor\s+\d+\s*(?:minutes?|hours?|mins?|hrs?)\b",
+        " ",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     cleaned = re.sub(r"\bat\b", " ", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b", " ", cleaned, flags=re.IGNORECASE
+    )
     cleaned = re.sub(r"\s+", " ", cleaned).strip(" ,.;:-")
 
     start = start_dt.isoformat().replace("+00:00", "Z") if start_dt else None
@@ -160,7 +179,10 @@ def _extract_calendar_datetimes(text: str) -> tuple[str | None, str | None, str]
 
 
 def _parse_journal_command(text: str) -> dict[str, object]:
-    body = _strip_command_word(text, ("journal entry", "log journal", "journal")) or "Untitled journal entry"
+    body = (
+        _strip_command_word(text, ("journal entry", "log journal", "journal"))
+        or "Untitled journal entry"
+    )
     today = datetime.now(UTC).date().isoformat()
     return {
         "intent": "journal.create",
@@ -228,23 +250,28 @@ def parse_intent(text: str) -> dict[str, object]:
     }
 
 
-def _preview_task_complete(text: str, parsed: dict[str, object], db_path: str) -> dict[str, object]:
+def _preview_task_complete(
+    text: str, parsed: dict[str, object], db_path: str
+) -> dict[str, object]:
     from app.domains.tasks import repository as task_repo
 
     query = str((parsed.get("extracted") or {}).get("query") or "").strip().lower()
     open_tasks = task_repo.list_tasks(db_path, done=False)
-    exact_matches = [task for task in open_tasks if query and query in (task.get("title") or "").lower()]
+    open_tasks_dicts = [t.model_dump() for t in open_tasks]
+    exact_matches = [
+        task for task in open_tasks if query and query in (task.title or "").lower()
+    ]
 
     if len(exact_matches) == 1:
         match = exact_matches[0]
         return {
             "would_execute": True,
             "status": "ok",
-            "result": {"id": match.get("id"), "title": match.get("title")},
-            "message": f'Will complete: "{match.get("title", "")}".',
+            "result": {"id": match.id, "title": match.title},
+            "message": f'Will complete: "{match.title}".',
         }
 
-    fuzzy = nlp.fuzzy_task_match(query, open_tasks, min_score=0.35)
+    fuzzy = nlp.fuzzy_task_match(query, open_tasks_dicts, min_score=0.35)
     if len(fuzzy) == 1:
         match = fuzzy[0]
         return {
@@ -257,7 +284,9 @@ def _preview_task_complete(text: str, parsed: dict[str, object], db_path: str) -
         return {
             "would_execute": False,
             "status": "ambiguous",
-            "options": [{"id": task.get("id"), "title": task.get("title")} for task in fuzzy[:5]],
+            "options": [
+                {"id": task.get("id"), "title": task.get("title")} for task in fuzzy[:5]
+            ],
             "message": f"I found {len(fuzzy)} matching tasks. Which one?",
         }
     return {
@@ -267,13 +296,19 @@ def _preview_task_complete(text: str, parsed: dict[str, object], db_path: str) -
     }
 
 
-def _preview_habit_checkin(text: str, parsed: dict[str, object], db_path: str) -> dict[str, object]:
+def _preview_habit_checkin(
+    text: str, parsed: dict[str, object], db_path: str
+) -> dict[str, object]:
     from app.domains.habits import repository as habit_repo
 
     del text
-    habit_name = str((parsed.get("extracted") or {}).get("habit_name") or "").strip().lower()
+    habit_name = (
+        str((parsed.get("extracted") or {}).get("habit_name") or "").strip().lower()
+    )
     habits = habit_repo.list_habits(db_path)
-    matched = [habit for habit in habits if habit_name in (habit.get("name") or "").lower()]
+    matched = [
+        habit for habit in habits if habit_name in (habit.get("name") or "").lower()
+    ]
 
     if len(matched) == 1:
         habit = matched[0]
@@ -287,7 +322,10 @@ def _preview_habit_checkin(text: str, parsed: dict[str, object], db_path: str) -
         return {
             "would_execute": False,
             "status": "ambiguous",
-            "options": [{"id": habit.get("id"), "name": habit.get("name")} for habit in matched[:5]],
+            "options": [
+                {"id": habit.get("id"), "name": habit.get("name")}
+                for habit in matched[:5]
+            ],
             "message": f"Found {len(matched)} habits matching that. Which one?",
         }
     if habits:
@@ -309,14 +347,22 @@ def _preview_undo(db_path: str) -> dict[str, object]:
     history = CommandRepository.history(db_path, limit=10)
 
     for entry in history:
-        if entry.get("status") != "executed" or entry.get("intent") == "undo" or entry.get("undone_at"):
+        if (
+            entry.get("status") != "executed"
+            or entry.get("intent") == "undo"
+            or entry.get("undone_at")
+        ):
             continue
         intent = str(entry.get("intent") or "")
         if intent in supported:
             return {
                 "would_execute": True,
                 "status": "ok",
-                "result": {"intent": intent, "entry_id": entry.get("id"), "target": entry.get("result")},
+                "result": {
+                    "intent": intent,
+                    "entry_id": entry.get("id"),
+                    "target": entry.get("result"),
+                },
                 "message": f"Will undo the last {intent} action.",
             }
         return {
@@ -358,11 +404,15 @@ class CommandService:
         if compound_parts is not None:
             preview["would_execute"] = False
             preview["status"] = "unsupported"
-            preview["message"] = "Multiple actions in one command are disabled for now. Say one concrete action at a time."
+            preview["message"] = (
+                "Multiple actions in one command are disabled for now. Say one concrete action at a time."
+            )
             preview["parts"] = compound_parts
             return preview
         if intent == "unknown":
-            preview["message"] = "I didn't catch that. Try something like 'add task buy milk' or 'start focus'."
+            preview["message"] = (
+                "I didn't catch that. Try something like 'add task buy milk' or 'start focus'."
+            )
             return preview
         if intent in {"greeting", "help"}:
             preview["message"] = parsed.get("tts_response", "")
@@ -372,7 +422,9 @@ class CommandService:
             if not extracted.get("start_at") or not extracted.get("end_at"):
                 preview["would_execute"] = False
                 preview["status"] = "needs_datetime"
-                preview["message"] = f'I got the event name: "{extracted.get("title", "")}". What date and time?'
+                preview["message"] = (
+                    f'I got the event name: "{extracted.get("title", "")}". What date and time?'
+                )
                 return preview
         if db_path and intent == "task.complete":
             preview.update(_preview_task_complete(text, parsed, db_path))
@@ -386,6 +438,8 @@ class CommandService:
         return preview
 
     @staticmethod
-    def execute(db_path: str, text: str, confirm: bool = False, *, source: str = "text") -> dict[str, object]:
+    def execute(
+        db_path: str, text: str, confirm: bool = False, *, source: str = "text"
+    ) -> dict[str, object]:
         """Execute parsed command text."""
         return execute_command(db_path, text, confirm, source, parser=parse_intent)
