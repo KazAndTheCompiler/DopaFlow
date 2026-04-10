@@ -3,7 +3,7 @@ set -euo pipefail
 
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
-ROOT="${DOPAFLOW_ROOT:-$(cd "$(dirname "$0") && pwd)}"
+ROOT="${DOPAFLOW_ROOT:-$(cd "$(dirname "$0")" && pwd)}"
 RELEASE_DIR="${DOPAFLOW_RELEASE_DIR:-/tmp/dopaflow-release}"
 BACKEND_RELEASE_DIR="$RELEASE_DIR/dopaflow-backend-v2"
 BACKEND_BUILD_DIR="$ROOT/backend/dist/dopaflow-backend"
