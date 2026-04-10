@@ -75,8 +75,8 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
     focus_minutes: focusMinutes,
     habits_logged: habitLogs,
     journal_entries: journalEntries,
-    calories_kcal: Number(nutrition.total_kcal ?? 0),
-    avg_kcal: Number(nutrition.avg_kcal ?? 0),
+    calories_kcal: Number(nutrition?.total_kcal ?? 0),
+    avg_kcal: Number(nutrition?.avg_kcal ?? 0),
     nutrition_days: nutritionDays,
     insights: [
       {
@@ -87,7 +87,7 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
       },
       {
         title: "Habits",
-        body: habits.best_habit
+        body: habits?.best_habit
           ? `Best habit this period: ${habits.best_habit}.`
           : "No standout habit yet this period.",
       },
@@ -99,7 +99,7 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
         ? [
             {
               title: "Nutrition",
-              body: `${nutrition.total_kcal.toFixed(0)} kcal logged${period === "week" ? ` over ${nutritionDays} days (avg ${nutrition.avg_kcal.toFixed(0)} kcal/day)` : ""}.${nutrition.protein_g ? ` Protein: ${nutrition.protein_g.toFixed(0)}g.` : ""}`,
+              body: `${(nutrition?.total_kcal ?? 0).toFixed(0)} kcal logged${period === "week" ? ` over ${nutritionDays} days (avg ${(nutrition?.avg_kcal ?? 0).toFixed(0)} kcal/day)` : ""}.${nutrition?.protein_g ? ` Protein: ${nutrition.protein_g.toFixed(0)}g.` : ""}`,
             },
           ]
         : []),
