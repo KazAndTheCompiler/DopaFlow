@@ -63,7 +63,7 @@ export function TopBar({
   const showChannelBanner = Boolean(buildInfo) && buildInfo?.autoUpdateEnabled !== true;
 
   return (
-    <>
+    <div style={{ position: "relative", zIndex: 10, minWidth: 0, display: "grid" }}>
       {showUpdateBanner && (
         <TopBarReleaseBanner version={updateState.version} downloaded={updateState.downloaded} />
       )}
@@ -71,47 +71,45 @@ export function TopBar({
         <TopBarChannelBanner version={buildInfo?.version} releaseChannel={buildInfo?.releaseChannel} />
       )}
       <header
-      style={{
-        minHeight: "var(--topbar-height)",
-        display: "grid",
-        gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : "auto minmax(0, 1fr) auto",
-        gap: isCompact ? "0.75rem" : "1rem",
-        alignItems: "center",
-        padding: isCompact ? "0.65rem 1rem" : "0 1.5rem",
-        borderBottom: "1px solid var(--border)",
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface) 96%, transparent))",
-        backdropFilter: "var(--topbar-glass-blur, blur(12px))",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
-        position: "relative",
-        zIndex: 10,
-        minWidth: 0,
-      }}
-    >
-      <TopBarBrand isCompact={isCompact} />
-      <TopBarCommandBar
-        isCompact={isCompact}
-        listening={listening}
-        interim={interim}
-        commandValue={commandValue}
-        onCommandChange={onCommandChange}
-        showHint={showHint}
-        setShowHint={setShowHint}
-        supported={supported}
-        start={start}
-        stop={stop}
-        sttError={sttError}
-      />
-      <TopBarActions
-        isCompact={isCompact}
-        onCommandSubmit={onCommandSubmit}
-        focusModeEnabled={focusModeEnabled}
-        onToggleFocusMode={onToggleFocusMode}
-        activeTimerLabel={activeTimerLabel}
-        onInboxClick={onInboxClick}
-        unreadCount={unreadCount}
-      />
-    </header>
-    </>
+        style={{
+          minHeight: "var(--topbar-height)",
+          display: "grid",
+          gridTemplateColumns: isCompact ? "minmax(0, 1fr)" : "auto minmax(0, 1fr) auto",
+          gap: isCompact ? "0.75rem" : "1rem",
+          alignItems: "center",
+          padding: isCompact ? "0.65rem 1rem" : "0 1.5rem",
+          borderBottom: "1px solid var(--border)",
+          background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 86%, transparent), color-mix(in srgb, var(--surface) 96%, transparent))",
+          backdropFilter: "var(--topbar-glass-blur, blur(12px))",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.04)",
+          minWidth: 0,
+        }}
+      >
+        <TopBarBrand isCompact={isCompact} />
+        <TopBarCommandBar
+          isCompact={isCompact}
+          listening={listening}
+          interim={interim}
+          commandValue={commandValue}
+          onCommandChange={onCommandChange}
+          showHint={showHint}
+          setShowHint={setShowHint}
+          supported={supported}
+          start={start}
+          stop={stop}
+          sttError={sttError}
+        />
+        <TopBarActions
+          isCompact={isCompact}
+          onCommandSubmit={onCommandSubmit}
+          focusModeEnabled={focusModeEnabled}
+          onToggleFocusMode={onToggleFocusMode}
+          activeTimerLabel={activeTimerLabel}
+          onInboxClick={onInboxClick}
+          unreadCount={unreadCount}
+        />
+      </header>
+    </div>
   );
 }
 
