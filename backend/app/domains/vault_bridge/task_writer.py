@@ -167,15 +167,19 @@ def write_task_collection(
 
     Returns (file_path_relative, content_hash, previous_content_or_None).
     Raises ValueError / FileNotFoundError on bad config.
+    Raises ValueError if the resolved path escapes the vault root.
     """
     if not config.vault_path:
         raise ValueError("vault_path is not configured")
 
-    vault_root = Path(config.vault_path)
+    vault_root = Path(config.vault_path).resolve()
     if not vault_root.exists():
         raise FileNotFoundError(f"Vault path does not exist: {config.vault_path}")
 
     rel_path, abs_path = _collection_path(config, slug)
+    abs_path = abs_path.resolve()
+    if not str(abs_path).startswith(str(vault_root)):
+        raise ValueError("task collection path escapes vault root")
     abs_path.parent.mkdir(parents=True, exist_ok=True)
 
     previous: str | None = None

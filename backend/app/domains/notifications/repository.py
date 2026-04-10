@@ -8,7 +8,9 @@ from app.core.database import get_db, tx
 from app.core.id_gen import notification_id
 
 
-def list_notifications(db_path: str, archived: bool = False, level: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
+def list_notifications(
+    db_path: str, archived: bool = False, level: str | None = None, limit: int = 50
+) -> list[dict[str, Any]]:
     """Return recent notifications from the inbox."""
 
     sql = "SELECT * FROM notifications WHERE archived = ?"
@@ -27,7 +29,9 @@ def mark_read(db_path: str, notification_identifier: str) -> bool:
     """Mark a single notification read."""
 
     with tx(db_path) as conn:
-        result = conn.execute("UPDATE notifications SET read = 1 WHERE id = ?", (notification_identifier,))
+        result = conn.execute(
+            "UPDATE notifications SET read = 1 WHERE id = ?", (notification_identifier,)
+        )
         return result.rowcount > 0
 
 
@@ -43,7 +47,10 @@ def archive(db_path: str, notification_identifier: str) -> bool:
     """Archive a notification."""
 
     with tx(db_path) as conn:
-        result = conn.execute("UPDATE notifications SET archived = 1 WHERE id = ?", (notification_identifier,))
+        result = conn.execute(
+            "UPDATE notifications SET archived = 1 WHERE id = ?",
+            (notification_identifier,),
+        )
         return result.rowcount > 0
 
 
@@ -51,7 +58,9 @@ def delete_notification(db_path: str, notification_identifier: str) -> bool:
     """Delete a notification row."""
 
     with tx(db_path) as conn:
-        result = conn.execute("DELETE FROM notifications WHERE id = ?", (notification_identifier,))
+        result = conn.execute(
+            "DELETE FROM notifications WHERE id = ?", (notification_identifier,)
+        )
         return result.rowcount > 0
 
 
@@ -59,7 +68,9 @@ def unread_count(db_path: str) -> int:
     """Return the unread-notification count."""
 
     with get_db(db_path) as conn:
-        row = conn.execute("SELECT COUNT(*) AS count FROM notifications WHERE read = 0 AND archived = 0").fetchone()
+        row = conn.execute(
+            "SELECT COUNT(*) AS count FROM notifications WHERE read = 0 AND archived = 0"
+        ).fetchone()
         return int(row["count"])
 
 
@@ -81,5 +92,12 @@ def create_notification(
             """,
             (identifier, level, title, body, action_url),
         )
-    items = list_notifications(db_path, archived=False, level=None, limit=1)
-    return next((item for item in items if item["id"] == identifier), {"id": identifier, "level": level, "title": title, "body": body, "action_url": action_url, "read": 0, "archived": 0})
+    return {
+        "id": identifier,
+        "level": level,
+        "title": title,
+        "body": body,
+        "action_url": action_url,
+        "read": 0,
+        "archived": 0,
+    }

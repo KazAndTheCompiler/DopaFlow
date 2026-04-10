@@ -71,11 +71,6 @@ Current frontend verification lanes:
 
 The Playwright runtime is wrapped through `frontend/scripts/run-playwright.sh` so browser startup works in this environment and in CI with the repo-local runtime libraries.
 
-## Build Snapshot
+## Build Notes
 
-From the current production build:
-
-- largest emitted chunk: `dist/assets/index-t-yVDC9w.js` at `265.40 kB` (`76.48 kB` gzip)
-- next largest chunks: `83.87 kB`, `54.65 kB`, `40.23 kB`
-
-This confirms route-level splitting is active instead of shipping a single large frontend bundle.
+Route-level splitting is implemented via Vite's dynamic `import()` statements per surface. Run `npm --prefix frontend run build` and inspect `frontend/dist/assets/` to get current chunk sizes. The grinder report tracks bundle hygiene separately from this doc.

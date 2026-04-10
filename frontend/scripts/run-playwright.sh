@@ -14,4 +14,4 @@ if [[ -d "$RUNTIME_LIB_DIR" ]]; then
   fi
 fi
 
-exec playwright "$@"
+exec npx --prefix "$FRONTEND_DIR" playwright "$@"

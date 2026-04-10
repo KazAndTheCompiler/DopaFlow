@@ -24,6 +24,9 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
   - goals
 - Playwright runtime setup now auto-detects a bundled `usr/lib` path from the current desktop build or unpacked release.
 - Added `scripts/verify_appimage.sh` for a non-GUI AppImage dependency audit.
+- **Security hotfix**: Fixed notification repository race condition (re-query removed after insert), review decks `GET /decks` 500 error (`model_validate` vs `.model_dump()`), speech validation order (`validate_upload()` before `_load_speech_recognition()`), path traversal guards in sync/writer/task_writer, exception info leak in alarm router, and added `DOPAFLOW_DISABLE_RATE_LIMITS` env var for rate limiter testing.
+- **CI hotfix**: Playwright now runs via `npx --prefix ...` for portability, GitHub Actions workflows now have explicit `permissions` blocks, and Python version docs clarified as 3.11–3.12 (3.13 unsupported).
+- **Dependency audit**: 8 vulnerabilities found; `serialize-javascript` fix is breaking and deferred to next major.
 
 ## 2.0.7 to 2.0.10
 

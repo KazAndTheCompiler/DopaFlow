@@ -33,13 +33,17 @@ PYTHONPATH=backend DOPAFLOW_DEV_AUTH=true .venv/bin/python -m pytest \
   backend/tests/test_boards.py \
   backend/tests/test_auth_scopes.py \
   backend/tests/test_integrations.py \
-  backend/tests/test_notifications.py -q
+  backend/tests/test_notifications.py \
+  backend/tests/test_digest.py \
+  backend/tests/test_review.py \
+  backend/tests/vault_bridge/ -q
 ```
 
 Required result:
 
 - command/NLP trust path passes
-- typed domain contracts pass for tasks, focus, habits, goals, projects, boards
+- typed domain contracts pass for tasks, focus, habits, goals, projects, boards, review, digest
+- vault bridge tests pass
 - auth/integration/notification regressions stay green
 
 ## Frontend Verification

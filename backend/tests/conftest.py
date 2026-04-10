@@ -27,20 +27,35 @@ class LiveServerClient:
     def __init__(self, app) -> None:
         self._app = app
 
-    async def _request_async(self, method: str, path: str, *, params=None, json=None, data=None, headers=None) -> httpx.Response:
+    async def _request_async(
+        self, method: str, path: str, *, params=None, json=None, data=None, headers=None
+    ) -> httpx.Response:
         transport = httpx.ASGITransport(app=self._app, client=("127.0.0.1", 12345))
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
             return await asyncio.wait_for(
-                client.request(method, path, params=params, json=json, data=data, headers=headers or {}),
+                client.request(
+                    method,
+                    path,
+                    params=params,
+                    json=json,
+                    data=data,
+                    headers=headers or {},
+                ),
                 timeout=self.REQUEST_TIMEOUT_SECONDS,
             )
 
-    def request(self, method: str, path: str, *, params=None, json=None, data=None, headers=None) -> HTTPResponse:
+    def request(
+        self, method: str, path: str, *, params=None, json=None, data=None, headers=None
+    ) -> HTTPResponse:
         from app.core.config import get_settings
 
         get_settings.cache_clear()
         response = asyncio.run(
-            self._request_async(method, path, params=params, json=json, data=data, headers=headers),
+            self._request_async(
+                method, path, params=params, json=json, data=data, headers=headers
+            ),
         )
         return HTTPResponse(response)
 
@@ -77,7 +92,9 @@ def _reset_database(path: Path) -> None:
                 continue
             conn.execute(f'DELETE FROM "{table}"')
         if "player_level" in tables:
-            conn.execute("UPDATE player_level SET total_xp = 0, level = 1, updated_at = CURRENT_TIMESTAMP WHERE id = 1")
+            conn.execute(
+                "UPDATE player_level SET total_xp = 0, level = 1, updated_at = CURRENT_TIMESTAMP WHERE id = 1"
+            )
         if "badges" in tables:
             conn.execute("UPDATE badges SET earned_at = NULL, progress = 0.0")
         conn.commit()
@@ -93,6 +110,7 @@ def _shared_db_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     os.environ["DOPAFLOW_DEV_AUTH"] = "true"
     os.environ["DOPAFLOW_DISABLE_LOCAL_AUDIO"] = "1"
     os.environ["DOPAFLOW_DISABLE_BACKGROUND_JOBS"] = "1"
+    os.environ["DOPAFLOW_DISABLE_RATE_LIMITS"] = "1"
     from app.core.database import run_migrations
 
     run_migrations(str(path))
@@ -104,6 +122,7 @@ def _app(_shared_db_path: Path):
     os.environ["DOPAFLOW_DEV_AUTH"] = "true"
     os.environ["DOPAFLOW_DISABLE_LOCAL_AUDIO"] = "1"
     os.environ["DOPAFLOW_DISABLE_BACKGROUND_JOBS"] = "1"
+    os.environ["DOPAFLOW_DISABLE_RATE_LIMITS"] = "1"
     from app.core.config import get_settings
 
     get_settings.cache_clear()
@@ -113,12 +132,15 @@ def _app(_shared_db_path: Path):
 
 
 @pytest.fixture()
-def db_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _shared_db_path: Path) -> Path:
+def db_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, _shared_db_path: Path
+) -> Path:
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("DOPAFLOW_DB_PATH", str(_shared_db_path))
     monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "true")
     monkeypatch.setenv("DOPAFLOW_DISABLE_LOCAL_AUDIO", "1")
     monkeypatch.setenv("DOPAFLOW_DISABLE_BACKGROUND_JOBS", "1")
+    monkeypatch.setenv("DOPAFLOW_DISABLE_RATE_LIMITS", "1")
     _reset_database(_shared_db_path)
 
     from app.core.config import get_settings
@@ -133,6 +155,7 @@ def client(db_path: Path, _app) -> LiveServerClient:
     os.environ["DOPAFLOW_DEV_AUTH"] = "true"
     os.environ["DOPAFLOW_DISABLE_LOCAL_AUDIO"] = "1"
     os.environ["DOPAFLOW_DISABLE_BACKGROUND_JOBS"] = "1"
+    os.environ["DOPAFLOW_DISABLE_RATE_LIMITS"] = "1"
 
     from app.core.config import get_settings
 

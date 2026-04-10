@@ -64,6 +64,10 @@ npm run dev
 
 The Skin Maker will open in your browser at `http://localhost:5173` (or the next available port).
 
+<div class="note">
+    <strong>Skin count:</strong> DopaFlow ships 24 built-in skins. The manifest at <code>frontend/src/design-system/manifest.json</code> exposes 19 of these in the picker; the remaining 5 are dark-theme variants kept in <code>frontend/public/skins/</code> for future UI expansion.
+</div>
+
 ### Interface Overview
 
 The Skin Maker interface consists of two main sections:
@@ -267,19 +271,19 @@ Quick-apply buttons for common gradients:
 
 ### Quick Presets
 
-The Skin Maker includes 16 professionally designed presets:
+The Skin Maker includes 19 built-in presets exposed via the manifest, with 24 total skins shipped in `frontend/public/skins/`:
 
 | Preset | Description | Best For |
 |--------|-------------|----------|
+| **Ink & Stone** | Neutral grays with teal accent | Default, professional |
 | **Warm Analog** | Earthy browns and creams | Cozy, natural feel |
-| **Midnight Neon** | Dark with vibrant cyan | Modern, tech aesthetic |
 | **Paper Minimal** | Clean white with subtle gray | Distraction-free focus |
 | **Aurora** | Soft teal and mint | Calming, fresh |
-| **Glassy Modern** | Dark with transparency effects | Sleek, contemporary |
 | **Soft Pastel** | Light purples and pinks | Gentle, friendly |
-| **Amber Terminal** | Monospace amber on black | Developer/terminal vibe |
 | **High Contrast** | Pure black and white | Accessibility |
-| **Ink & Stone** | Warm gray with green accent | Professional, minimal |
+| **Midnight Neon** | Dark with vibrant cyan | Modern, tech aesthetic |
+| **Amber Terminal** | Monospace amber on black | Developer/terminal vibe |
+| **Glassy Modern** | Dark with transparency effects | Sleek, contemporary |
 | **Lush Forest** | Deep greens with mint accent | Nature-inspired |
 | **Vampire Romance** | Dark reds and pinks | Dramatic, gothic |
 | **Deep Ocean** | Navy blues with cyan | Calming, deep |
@@ -287,6 +291,11 @@ The Skin Maker includes 16 professionally designed presets:
 | **Classic Noir** | Black and gold | Timeless, elegant |
 | **Cotton Candy** | Light purples and pinks | Playful, light |
 | **Neon Punk** | Dark with neon purple | Bold, edgy |
+| **Forest Gradient** | Dark green gradient | Immersive, depth |
+| **Ocean Gradient** | Navy-to-teal gradient | Immersive, depth |
+| **Amber Night** | Amber gradient on dark | Warm, focused |
+
+Additional gradient variants (champagne-studio, emerald-atelier, graphite-hifi, ember-night, nordic-glass) are bundled in `frontend/public/skins/` but not yet exposed in the picker.
 
 ### Applying a Preset
 
@@ -373,7 +382,7 @@ Generated CSS follows this structure:
 }
 ```
 
-### Step 3: Create JSON file (optional)
+### Step 3: Create JSON file
 
 For PWA and dynamic loading:
 
@@ -381,30 +390,7 @@ For PWA and dynamic loading:
 2. Copy the CSS content into the file
 3. The JSON structure wraps CSS in a `css` property
 
-### Step 4: Update shared/skins.ts
-
-If your project uses `shared/skins.ts`:
-
-```typescript
-export const SKINS = [
-  { id: "your-skin-name", label: "Your Skin Display Name" },
-  // ... other skins
-];
-```
-
-### Step 5: Update SkinPicker.tsx
-
-Add your skin to the picker component:
-
-```typescript
-// In frontend/src/components/SkinPicker.tsx
-const skins = [
-  { id: "your-skin-name", label: "Your Skin Display Name" },
-  // ... other skins
-];
-```
-
-### Step 6: Test Your Skin
+### Step 4: Test Your Skin
 
 1. Start the frontend: `npm run dev` in `frontend`
 2. Open Settings → Appearance
@@ -571,7 +557,7 @@ To share your custom skin with the community:
 ### DopaFlow Documentation
 
 - [API Reference](./api-reference.md) - Backend API docs
-- [Next Steps](../next_steps.md) - Live product roadmap
+- [LLM_work_folder/](LLM_work_folder/) - agent prompts and working notes
 
 ---
 

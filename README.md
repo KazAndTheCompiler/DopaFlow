@@ -108,7 +108,7 @@ See `docs/obsidian_bridge.md` for the current workflow and compatibility rules.
 - **Frontend:** React 18 + TypeScript + Vite + PWA
 - **Backend:** FastAPI + SQLite or Turso
 - **Desktop:** Electron
-- **Themes:** 19 built-in skins
+- **Themes:** 24 built-in skins (19 in the picker, 5 additional gradient variants)
 
 ---
 
@@ -134,7 +134,7 @@ The first version got around a thousand downloads with a voluntary donation link
 ### Requirements
 
 - Node 18+
-- Python 3.11+
+- Python 3.11–3.12 (Python 3.13 is not supported due to binary wheel/runtime constraints)
 
 ### Frontend
 
@@ -228,9 +228,9 @@ Release gates now include:
 
 Why this is the default path:
 
-- GitHub runners have a cleaner Linux packaging environment than this local Codex host
-- the local host still has FUSE/X-display limitations that make AppImage boot verification noisy even when the package itself is correct
-- the current desktop packaging path now bundles the Linux runtime closure into the AppImage, and GitHub is the most reliable place to produce that artifact
+- GitHub runners have a cleaner Linux packaging environment than local development machines
+- local hosts may have FUSE/X-display limitations that make AppImage boot verification noisy even when the package itself is correct
+- the current desktop packaging path bundles the Linux runtime closure into the AppImage, and CI is the most reliable place to produce that artifact
 
 Local desktop build notes:
 
@@ -302,7 +302,7 @@ The frontend still previews the action first, then asks for confirmation before 
 - Nutrition starter presets are back, but the next pass should add better editing/search around the food library instead of stopping at seed recovery
 - Review import trust is improving, but APKG coverage should keep moving toward real generated-package tests instead of placeholder-only confidence
 
-See `CHANGELOG.md` and `next_steps.md` for the live direction.
+See `CHANGELOG.md` and `LLM_work_folder/CODEBASE_MAP.md` for the current direction and priorities.
 
 ---
 
@@ -310,7 +310,7 @@ See `CHANGELOG.md` and `next_steps.md` for the live direction.
 
 Built by **Henry (KazAndTheCompiler)** — ex-navigator, AuDHD, Jutland, Denmark.
 
-Co-authored with **[Claude](https://claude.ai)** (Anthropic) — pair-programmed across the full stack: FastAPI backend, React frontend, Electron packaging, design system, and skin engine.
+Co-authored with **[Claude](https://claude.ai)** (Anthropic) and **[MiniMax](https://www.minimax.io/)** M2.7 (MiniMax) — pair-programmed across the full stack: FastAPI backend, React frontend, Electron packaging, design system, and skin engine.
 
 ---
 

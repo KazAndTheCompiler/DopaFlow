@@ -242,7 +242,10 @@ class ReviewService:
     # ── decks ─────────────────────────────────────────────────────────────────
 
     def list_decks(self) -> list[DeckRead]:
-        return [DeckRead.model_validate(row) for row in self.repository.list_decks()]
+        return [
+            DeckRead.model_validate(row.model_dump())
+            for row in self.repository.list_decks()
+        ]
 
     def create_deck(self, payload: DeckCreate) -> DeckRead:
         return self.repository.create_deck(payload)

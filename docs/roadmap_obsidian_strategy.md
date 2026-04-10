@@ -1,6 +1,6 @@
 # DopaFlow Roadmap Audit And Obsidian Strategy
 
-Audited on 2026-04-05 against the working tree in `/home/henry/vscode/build/dopaflow`.
+Audited on 2026-04-05 against the working tree.
 
 ## Positioning
 
