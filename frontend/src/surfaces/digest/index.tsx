@@ -35,7 +35,7 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
   const focus = raw.focus;
   const journal = raw.journal;
   const nutrition = raw.nutrition;
-  const nutritionDays = nutrition.days_logged;
+  const nutritionDays = nutrition?.days_logged ?? 0;
   const label = raw.momentum_label;
   const score = raw.score;
   const dateLabel = period === "today"

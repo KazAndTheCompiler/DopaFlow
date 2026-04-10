@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import type { PlayerLevel } from "../../../shared/types/gamification";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useUpdateBanner } from "../hooks/useUpdateBanner";
 import { TopBarChannelBanner, TopBarReleaseBanner } from "./TopBarBanners";
@@ -19,7 +18,6 @@ export interface TopBarProps {
   focusModeEnabled: boolean;
   onToggleFocusMode: () => void;
   activeTimerLabel?: string | undefined;
-  gamificationLevel?: PlayerLevel | undefined;
 }
 
 export function TopBar({
@@ -31,7 +29,6 @@ export function TopBar({
   focusModeEnabled,
   onToggleFocusMode,
   activeTimerLabel,
-  gamificationLevel,
 }: TopBarProps): JSX.Element {
   const [showHint, setShowHint] = useState<boolean>(false);
   const [isCompact, setIsCompact] = useState<boolean>(() => (
@@ -110,7 +107,6 @@ export function TopBar({
         focusModeEnabled={focusModeEnabled}
         onToggleFocusMode={onToggleFocusMode}
         activeTimerLabel={activeTimerLabel}
-        gamificationLevel={gamificationLevel}
         onInboxClick={onInboxClick}
         unreadCount={unreadCount}
       />
