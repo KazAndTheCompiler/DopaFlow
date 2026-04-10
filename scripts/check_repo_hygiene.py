@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-"""Fail fast on forbidden secret-like repo contents."""
+#!usr/bin/env python3
+"""Fail fast on forbidden secret-like repo contents and machine-specific paths."""
 
 from __future__ import annotations
 
@@ -24,9 +24,25 @@ IGNORED_SCAN_ROOTS = {
 IGNORED_PATTERN_FILES = {
     REPO_ROOT / "scripts" / "check_repo_hygiene.py",
 }
+MACHINE_PATH_IGNORED_FILES = {
+    REPO_ROOT / "CHANGELOG.md",
+}
+IGNORED_PATH_PREFIXES = (
+    REPO_ROOT / "desktop" / "vendor-runtime",
+    REPO_ROOT / "docs",
+    REPO_ROOT / "frontend" / "tests",
+)
 PRIVATE_KEY_PATTERNS = (
     re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"),
     re.compile(r"-----BEGIN OPENSSH PRIVATE KEY-----"),
+)
+MACHINE_PATH_PATTERNS = (
+    re.compile(r"/home/\w+"),
+    re.compile(r"/Users/\w+"),
+    re.compile(r"C:\\Users\\"),
+    re.compile(r"/mnt/"),
+    re.compile(r"/Volumes/"),
+    re.compile(r"/root/"),
 )
 
 
@@ -68,7 +84,11 @@ def main() -> int:
         except ValueError:
             continue
 
-        if rel.parts and rel.parts[0] == ".deploy-keys" and path not in ALLOWED_DEPLOY_KEYS:
+        if (
+            rel.parts
+            and rel.parts[0] == ".deploy-keys"
+            and path not in ALLOWED_DEPLOY_KEYS
+        ):
             failures.append(f"forbidden tracked file under .deploy-keys: {rel}")
             continue
 
@@ -87,6 +107,15 @@ def main() -> int:
         for pattern in PRIVATE_KEY_PATTERNS:
             if pattern.search(text):
                 failures.append(f"private key material detected in {rel}")
+                break
+
+        if path in MACHINE_PATH_IGNORED_FILES:
+            continue
+        if any(str(path).startswith(str(prefix)) for prefix in IGNORED_PATH_PREFIXES):
+            continue
+        for pattern in MACHINE_PATH_PATTERNS:
+            if pattern.search(text):
+                failures.append(f"machine-specific absolute path detected in {rel}")
                 break
 
     if failures:

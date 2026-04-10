@@ -44,7 +44,7 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
     } else {
       setElapsed(0);
     }
-  }, [session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session?.id, session?.status, session?.started_at, session?.paused_duration_ms]);
 
   // Use Date.now() comparisons on each tick to avoid drift under tab throttling.
   useEffect(() => {

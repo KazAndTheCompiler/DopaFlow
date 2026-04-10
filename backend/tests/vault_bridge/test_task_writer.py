@@ -1,6 +1,7 @@
 """Tests for the task writer and task reader round-trip."""
 
 import pytest
+from app.domains.tasks.schemas import Task
 from app.domains.vault_bridge.task_writer import (
     render_task_line,
     render_task_collection,
@@ -11,51 +12,90 @@ from pathlib import Path
 import tempfile
 import os
 
+_NOW = "2026-01-01T00:00:00+00:00"
+
+
+def _t(**fields):
+    base = {"created_at": _NOW, "updated_at": _NOW, "sort_order": 0}
+    base.update(fields)
+    return Task.model_validate(base)
+
 
 # ── render_task_line ──────────────────────────────────────────────────────────
 
+
 class TestRenderTaskLine:
     def test_unchecked_todo(self):
-        task = {"id": "tsk_abc", "title": "Buy groceries", "done": False, "status": "todo", "priority": 3, "tags": []}
+        task = _t(
+            id="tsk_abc",
+            title="Buy groceries",
+            done=False,
+            status="todo",
+            priority=3,
+            tags=[],
+        )
         line = render_task_line(task)
         assert line.startswith("- [ ]")
         assert "Buy groceries" in line
         assert "df:tsk_abc" in line
 
     def test_checked_done(self):
-        task = {"id": "tsk_xyz", "title": "Done task", "done": True, "status": "done", "priority": 3, "tags": []}
+        task = _t(
+            id="tsk_xyz",
+            title="Done task",
+            done=True,
+            status="done",
+            priority=3,
+            tags=[],
+        )
         line = render_task_line(task)
         assert line.startswith("- [x]")
 
     def test_due_date_included(self):
-        task = {"id": "tsk_1", "title": "With due", "done": False, "status": "todo", "priority": 3, "tags": [], "due_at": "2026-04-10T17:00:00+00:00"}
+        task = _t(
+            id="tsk_1",
+            title="With due",
+            done=False,
+            status="todo",
+            priority=3,
+            tags=[],
+            due_at="2026-04-10T17:00:00+00:00",
+        )
         line = render_task_line(task)
         assert "due:2026-04-10" in line
 
     def test_priority_omitted_when_default(self):
-        task = {"id": "tsk_1", "title": "T", "done": False, "status": "todo", "priority": 3, "tags": []}
+        task = _t(id="tsk_1", title="T", done=False, status="todo", priority=3, tags=[])
         line = render_task_line(task)
         assert "p:" not in line
 
     def test_priority_included_when_not_default(self):
-        task = {"id": "tsk_1", "title": "T", "done": False, "status": "todo", "priority": 1, "tags": []}
+        task = _t(id="tsk_1", title="T", done=False, status="todo", priority=1, tags=[])
         line = render_task_line(task)
         assert "p:1" in line
 
     def test_tags_included(self):
-        task = {"id": "tsk_2", "title": "T", "done": False, "status": "todo", "priority": 3, "tags": ["work", "deep"]}
+        task = _t(
+            id="tsk_2",
+            title="T",
+            done=False,
+            status="todo",
+            priority=3,
+            tags=["work", "deep"],
+        )
         line = render_task_line(task)
         assert "#work" in line
         assert "#deep" in line
 
     def test_comment_is_html(self):
-        task = {"id": "tsk_3", "title": "T", "done": False, "status": "todo", "priority": 3, "tags": []}
+        task = _t(id="tsk_3", title="T", done=False, status="todo", priority=3, tags=[])
         line = render_task_line(task)
         assert "<!--" in line
         assert "-->" in line
 
 
 # ── parse_task_line ───────────────────────────────────────────────────────────
+
 
 class TestParseTaskLine:
     def test_parse_unchecked(self):
@@ -111,17 +151,18 @@ class TestParseTaskLine:
 
 # ── round-trip ────────────────────────────────────────────────────────────────
 
+
 class TestRoundTrip:
     def test_render_parse_round_trip(self):
-        task = {
-            "id": "tsk_rt",
-            "title": "Round trip task",
-            "done": False,
-            "status": "todo",
-            "priority": 2,
-            "tags": ["work"],
-            "due_at": "2026-04-15T09:00:00+00:00",
-        }
+        task = _t(
+            id="tsk_rt",
+            title="Round trip task",
+            done=False,
+            status="todo",
+            priority=2,
+            tags=["work"],
+            due_at="2026-04-15T09:00:00+00:00",
+        )
         line = render_task_line(task)
         candidate = parse_task_line(line)
         assert candidate is not None
@@ -133,7 +174,9 @@ class TestRoundTrip:
         assert candidate.due_str == "2026-04-15"
 
     def test_done_round_trip(self):
-        task = {"id": "tsk_done", "title": "Done", "done": True, "status": "done", "priority": 3, "tags": []}
+        task = _t(
+            id="tsk_done", title="Done", done=True, status="done", priority=3, tags=[]
+        )
         line = render_task_line(task)
         c = parse_task_line(line)
         assert c is not None
@@ -142,9 +185,12 @@ class TestRoundTrip:
 
 # ── render_task_collection ────────────────────────────────────────────────────
 
+
 class TestRenderTaskCollection:
     def test_contains_frontmatter(self):
-        tasks = [{"id": "tsk_1", "title": "T1", "done": False, "status": "todo", "priority": 3, "tags": []}]
+        tasks = [
+            _t(id="tsk_1", title="T1", done=False, status="todo", priority=3, tags=[])
+        ]
         content = render_task_collection(tasks, "My Project", project_id="prj_abc")
         assert "---" in content
         assert "dopaflow_type: task_collection" in content
@@ -165,6 +211,7 @@ class TestRenderTaskCollection:
 
 # ── parse_task_collection (file-level) ───────────────────────────────────────
 
+
 class TestParseTaskCollection:
     def _write_file(self, tmp_path: Path, filename: str, content: str) -> Path:
         f = tmp_path / filename
@@ -173,8 +220,22 @@ class TestParseTaskCollection:
 
     def test_parses_task_collection_file(self, tmp_path):
         tasks = [
-            {"id": "tsk_1", "title": "Task one", "done": False, "status": "todo", "priority": 3, "tags": []},
-            {"id": "tsk_2", "title": "Task two", "done": True, "status": "done", "priority": 2, "tags": ["work"]},
+            _t(
+                id="tsk_1",
+                title="Task one",
+                done=False,
+                status="todo",
+                priority=3,
+                tags=[],
+            ),
+            _t(
+                id="tsk_2",
+                title="Task two",
+                done=True,
+                status="done",
+                priority=2,
+                tags=["work"],
+            ),
         ]
         content = render_task_collection(tasks, "Inbox", scope="inbox")
         f = self._write_file(tmp_path, "Inbox.md", content)
@@ -191,7 +252,16 @@ class TestParseTaskCollection:
         assert candidates == []
 
     def test_completion_status_preserved(self, tmp_path):
-        tasks = [{"id": "tsk_done", "title": "Done", "done": True, "status": "done", "priority": 3, "tags": []}]
+        tasks = [
+            _t(
+                id="tsk_done",
+                title="Done",
+                done=True,
+                status="done",
+                priority=3,
+                tags=[],
+            )
+        ]
         content = render_task_collection(tasks, "Project")
         f = self._write_file(tmp_path, "Project.md", content)
         candidates = parse_task_collection(f, tmp_path)

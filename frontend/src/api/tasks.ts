@@ -1,4 +1,4 @@
-import type { Task, TaskQuickAddPreview } from "../../../shared/types";
+import type { Task, TaskQuickAddPreview, TaskTimeLog } from "../../../shared/types";
 import { apiClient } from "./client";
 
 export interface TaskQuickAddInput {
@@ -58,10 +58,10 @@ export function removeTaskDependency(id: string, depId: string): Promise<{ ok: b
   return apiClient(`/tasks/${id}/deps/${depId}`, { method: "DELETE" });
 }
 
-export function startTaskTimer(id: string): Promise<Record<string, unknown>> {
+export function startTaskTimer(id: string): Promise<TaskTimeLog> {
   return apiClient(`/tasks/${id}/time/start`, { method: "POST" });
 }
 
-export function stopTaskTimer(id: string): Promise<Record<string, unknown>> {
+export function stopTaskTimer(id: string): Promise<TaskTimeLog> {
   return apiClient(`/tasks/${id}/time/stop`, { method: "POST" });
 }
