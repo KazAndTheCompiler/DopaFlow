@@ -23,23 +23,37 @@ from app.domains.vault_bridge.sync_service import VaultSyncService
 router = APIRouter(tags=["vault"])
 
 
-async def _svc(settings: Settings = Depends(get_settings_dependency)) -> VaultSyncService:
+async def _svc(
+    settings: Settings = Depends(get_settings_dependency),
+) -> VaultSyncService:
     return VaultSyncService(settings.db_path)
 
 
-@router.get("/vault/status", response_model=VaultStatus, dependencies=[Depends(require_scope("read:journal"))])
+@router.get(
+    "/vault/status",
+    response_model=VaultStatus,
+    dependencies=[Depends(require_scope("read:journal"))],
+)
 async def get_vault_status(svc: VaultSyncService = Depends(_svc)) -> VaultStatus:
     """Return current vault configuration and sync health."""
     return svc.get_status()
 
 
-@router.get("/vault/config", response_model=VaultConfig, dependencies=[Depends(require_scope("read:journal"))])
+@router.get(
+    "/vault/config",
+    response_model=VaultConfig,
+    dependencies=[Depends(require_scope("read:journal"))],
+)
 async def get_vault_config(svc: VaultSyncService = Depends(_svc)) -> VaultConfig:
     """Return vault configuration."""
     return svc.get_config()
 
 
-@router.patch("/vault/config", response_model=VaultConfig, dependencies=[Depends(require_scope("write:journal"))])
+@router.patch(
+    "/vault/config",
+    response_model=VaultConfig,
+    dependencies=[Depends(require_scope("write:journal"))],
+)
 async def update_vault_config(
     payload: VaultConfigUpdate,
     svc: VaultSyncService = Depends(_svc),
@@ -57,19 +71,31 @@ async def update_vault_config(
     return svc.update_config(updates)
 
 
-@router.post("/vault/push/journal", response_model=VaultPushResult, dependencies=[Depends(require_scope("write:journal"))])
+@router.post(
+    "/vault/push/journal",
+    response_model=VaultPushResult,
+    dependencies=[Depends(require_scope("write:journal"))],
+)
 async def push_journal(svc: VaultSyncService = Depends(_svc)) -> VaultPushResult:
     """Push all DopaFlow journal entries to vault as Markdown daily notes."""
     return svc.push_journal()
 
 
-@router.post("/vault/pull/journal", response_model=VaultPullResult, dependencies=[Depends(require_scope("write:journal"))])
+@router.post(
+    "/vault/pull/journal",
+    response_model=VaultPullResult,
+    dependencies=[Depends(require_scope("write:journal"))],
+)
 async def pull_journal(svc: VaultSyncService = Depends(_svc)) -> VaultPullResult:
     """Scan vault daily notes folder and import/update DopaFlow journal entries."""
     return svc.pull_journal()
 
 
-@router.get("/vault/index", response_model=list[VaultFileRecord], dependencies=[Depends(require_scope("read:journal"))])
+@router.get(
+    "/vault/index",
+    response_model=list[VaultFileRecord],
+    dependencies=[Depends(require_scope("read:journal"))],
+)
 async def list_index(
     entity_type: str | None = None,
     svc: VaultSyncService = Depends(_svc),
@@ -78,13 +104,23 @@ async def list_index(
     return svc.index_repo.list_records(entity_type=entity_type)
 
 
-@router.get("/vault/conflicts", response_model=list[VaultFileRecord], dependencies=[Depends(require_scope("read:journal"))])
-async def list_conflicts(svc: VaultSyncService = Depends(_svc)) -> list[VaultFileRecord]:
+@router.get(
+    "/vault/conflicts",
+    response_model=list[VaultFileRecord],
+    dependencies=[Depends(require_scope("read:journal"))],
+)
+async def list_conflicts(
+    svc: VaultSyncService = Depends(_svc),
+) -> list[VaultFileRecord]:
     """List all files currently in conflict state."""
     return svc.index_repo.list_conflicts()
 
 
-@router.get("/vault/conflicts/{record_id}/preview", response_model=VaultConflictPreview, dependencies=[Depends(require_scope("read:journal"))])
+@router.get(
+    "/vault/conflicts/{record_id}/preview",
+    response_model=VaultConflictPreview,
+    dependencies=[Depends(require_scope("read:journal"))],
+)
 async def get_conflict_preview(
     record_id: int,
     svc: VaultSyncService = Depends(_svc),
@@ -93,10 +129,16 @@ async def get_conflict_preview(
     try:
         return svc.get_conflict_preview(record_id)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=404, detail=f"File not found: {type(exc).__name__}"
+        ) from exc
 
 
-@router.post("/vault/rollback/{record_id}", response_model=VaultRollbackResult, dependencies=[Depends(require_scope("write:journal"))])
+@router.post(
+    "/vault/rollback/{record_id}",
+    response_model=VaultRollbackResult,
+    dependencies=[Depends(require_scope("write:journal"))],
+)
 async def rollback_file(
     record_id: int,
     svc: VaultSyncService = Depends(_svc),
@@ -108,7 +150,10 @@ async def rollback_file(
     return result
 
 
-@router.post("/vault/resolve/{file_path:path}", dependencies=[Depends(require_scope("write:journal"))])
+@router.post(
+    "/vault/resolve/{file_path:path}",
+    dependencies=[Depends(require_scope("write:journal"))],
+)
 async def resolve_conflict(
     file_path: str,
     svc: VaultSyncService = Depends(_svc),
@@ -118,20 +163,34 @@ async def resolve_conflict(
     return {"resolved": True, "file_path": file_path}
 
 
-@router.post("/vault/push/tasks", response_model=VaultPushResult, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post(
+    "/vault/push/tasks",
+    response_model=VaultPushResult,
+    dependencies=[Depends(require_scope("write:tasks"))],
+)
 async def push_tasks(svc: VaultSyncService = Depends(_svc)) -> VaultPushResult:
     """Push DopaFlow tasks to vault as Obsidian-compatible Markdown task files."""
     return svc.push_tasks()
 
 
-@router.post("/vault/pull/tasks", response_model=VaultPullResult, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post(
+    "/vault/pull/tasks",
+    response_model=VaultPullResult,
+    dependencies=[Depends(require_scope("write:tasks"))],
+)
 async def pull_tasks(svc: VaultSyncService = Depends(_svc)) -> VaultPullResult:
     """Scan vault Tasks/ folder and sync completion status back to DopaFlow."""
     return svc.pull_tasks()
 
 
-@router.post("/vault/push/daily-tasks/{date}", response_model=VaultPushResult, dependencies=[Depends(require_scope("write:tasks"))])
-async def push_daily_tasks_section(date: str, svc: VaultSyncService = Depends(_svc)) -> VaultPushResult:
+@router.post(
+    "/vault/push/daily-tasks/{date}",
+    response_model=VaultPushResult,
+    dependencies=[Depends(require_scope("write:tasks"))],
+)
+async def push_daily_tasks_section(
+    date: str, svc: VaultSyncService = Depends(_svc)
+) -> VaultPushResult:
     """Append or update the managed tasks section inside an existing daily note.
 
     Only modifies content between the dopaflow:tasks markers. All other content is untouched.
@@ -139,8 +198,14 @@ async def push_daily_tasks_section(date: str, svc: VaultSyncService = Depends(_s
     return svc.push_daily_tasks_section(date)
 
 
-@router.get("/vault/tasks/import-preview", response_model=TaskImportPreview, dependencies=[Depends(require_scope("read:tasks"))])
-async def preview_task_import(svc: VaultSyncService = Depends(_svc)) -> TaskImportPreview:
+@router.get(
+    "/vault/tasks/import-preview",
+    response_model=TaskImportPreview,
+    dependencies=[Depends(require_scope("read:tasks"))],
+)
+async def preview_task_import(
+    svc: VaultSyncService = Depends(_svc),
+) -> TaskImportPreview:
     """Dry-run scan of vault task files.
 
     Returns importable (no DopaFlow ID), known (already mapped), and skipped counts.
@@ -149,7 +214,11 @@ async def preview_task_import(svc: VaultSyncService = Depends(_svc)) -> TaskImpo
     return svc.preview_task_import()
 
 
-@router.post("/vault/tasks/import-confirm", response_model=VaultPullResult, dependencies=[Depends(require_scope("write:tasks"))])
+@router.post(
+    "/vault/tasks/import-confirm",
+    response_model=VaultPullResult,
+    dependencies=[Depends(require_scope("write:tasks"))],
+)
 async def confirm_task_import(
     payload: TaskImportConfirmRequest,
     svc: VaultSyncService = Depends(_svc),

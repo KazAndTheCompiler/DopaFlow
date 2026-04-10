@@ -10,7 +10,15 @@ import urllib.request
 from urllib.parse import urlencode, urljoin
 
 from app.domains.calendar_sharing.repository import CalendarSharingRepository
-from app.domains.calendar_sharing.schemas import PeerFeed, PeerFeedCreate, PeerFeedUpdate, PeerFeedSyncResult, ShareToken, ShareTokenCreate, ShareTokenCreated
+from app.domains.calendar_sharing.schemas import (
+    PeerFeed,
+    PeerFeedCreate,
+    PeerFeedUpdate,
+    PeerFeedSyncResult,
+    ShareToken,
+    ShareTokenCreate,
+    ShareTokenCreated,
+)
 
 logger = logging.getLogger(__name__)
 MAX_FEED_ENTRIES_PER_SYNC = 5000
@@ -48,7 +56,9 @@ class CalendarSharingService:
         if revoked:
             logger.info("Revoked calendar share token %s", token_id)
         else:
-            logger.warning("Attempted to revoke missing calendar share token %s", token_id)
+            logger.warning(
+                "Attempted to revoke missing calendar share token %s", token_id
+            )
         return revoked
 
     def validate_token(self, raw: str) -> ShareToken | None:
@@ -65,7 +75,12 @@ class CalendarSharingService:
         """Add a peer feed subscription."""
 
         feed = self.repository.add_feed(payload)
-        logger.info("Added peer calendar feed %s (%s) for %s", feed.id, feed.label, feed.base_url)
+        logger.info(
+            "Added peer calendar feed %s (%s) for %s",
+            feed.id,
+            feed.label,
+            feed.base_url,
+        )
         return feed
 
     def update_feed(self, feed_id: str, patch: PeerFeedUpdate) -> PeerFeed | None:
@@ -83,7 +98,9 @@ class CalendarSharingService:
 
         removed = self.repository.remove_feed(feed_id)
         if removed:
-            logger.info("Removed peer calendar feed %s and its mirrored events", feed_id)
+            logger.info(
+                "Removed peer calendar feed %s and its mirrored events", feed_id
+            )
         else:
             logger.warning("Attempted to remove missing peer calendar feed %s", feed_id)
         return removed
@@ -99,7 +116,10 @@ class CalendarSharingService:
             last_synced = feed.last_synced_at.astimezone(timezone.utc)
             start = min(start, last_synced - timedelta(days=7))
 
-        return (start.isoformat().replace("+00:00", "Z"), end.isoformat().replace("+00:00", "Z"))
+        return (
+            start.isoformat().replace("+00:00", "Z"),
+            end.isoformat().replace("+00:00", "Z"),
+        )
 
     @staticmethod
     def _normalize_entry(entry: dict[str, object]) -> dict[str, object]:
@@ -114,7 +134,9 @@ class CalendarSharingService:
             normalized["end_at"] = normalized.get("start_at")
         return normalized
 
-    def _fetch_feed_payload(self, feed: PeerFeed, raw_token: str, from_dt: str, to_dt: str) -> dict[str, object]:
+    def _fetch_feed_payload(
+        self, feed: PeerFeed, raw_token: str, from_dt: str, to_dt: str
+    ) -> dict[str, object]:
         """Fetch a peer feed payload without following redirects."""
 
         feed_url = urljoin(feed.base_url.rstrip("/") + "/", "calendar/feed")
@@ -152,7 +174,13 @@ class CalendarSharingService:
 
         feed_record = self.repository.get_feed_credentials(feed_id)
         if feed_record is None:
-            return PeerFeedSyncResult(feed_id=feed_id, events_imported=0, conflicts=0, status="error", detail="feed_not_found")
+            return PeerFeedSyncResult(
+                feed_id=feed_id,
+                events_imported=0,
+                conflicts=0,
+                status="error",
+                detail="feed_not_found",
+            )
         feed_row, raw_token = feed_record
 
         try:
@@ -161,35 +189,75 @@ class CalendarSharingService:
             data = self._fetch_feed_payload(feed_row, raw_token, from_dt, to_dt)
         except urllib.error.HTTPError as e:
             if e.code in (401, 403):
-                self.repository.update_feed_status(feed_id, "error", "token_invalid_or_revoked")
-                logger.warning("Peer feed %s sync failed: token invalid or revoked", feed_id)
-                return PeerFeedSyncResult(feed_id=feed_id, events_imported=0, conflicts=0, status="error", detail="token_invalid_or_revoked")
+                self.repository.update_feed_status(
+                    feed_id, "error", "token_invalid_or_revoked"
+                )
+                logger.warning(
+                    "Peer feed %s sync failed: token invalid or revoked", feed_id
+                )
+                return PeerFeedSyncResult(
+                    feed_id=feed_id,
+                    events_imported=0,
+                    conflicts=0,
+                    status="error",
+                    detail="token_invalid_or_revoked",
+                )
             if 300 <= e.code < 400:
-                self.repository.update_feed_status(feed_id, "error", "redirect_not_allowed")
-                logger.warning("Peer feed %s sync rejected redirect (HTTP %s)", feed_id, e.code)
-                return PeerFeedSyncResult(feed_id=feed_id, events_imported=0, conflicts=0, status="error", detail="redirect_not_allowed")
+                self.repository.update_feed_status(
+                    feed_id, "error", "redirect_not_allowed"
+                )
+                logger.warning(
+                    "Peer feed %s sync rejected redirect (HTTP %s)", feed_id, e.code
+                )
+                return PeerFeedSyncResult(
+                    feed_id=feed_id,
+                    events_imported=0,
+                    conflicts=0,
+                    status="error",
+                    detail="redirect_not_allowed",
+                )
             else:
                 self.repository.update_feed_status(feed_id, "error", f"HTTP {e.code}")
                 logger.warning("Peer feed %s sync failed with HTTP %s", feed_id, e.code)
-                return PeerFeedSyncResult(feed_id=feed_id, events_imported=0, conflicts=0, status="error", detail=f"HTTP {e.code}")
+                return PeerFeedSyncResult(
+                    feed_id=feed_id,
+                    events_imported=0,
+                    conflicts=0,
+                    status="error",
+                    detail=f"HTTP {e.code}",
+                )
         except Exception as e:
             error_message = str(e)
             self.repository.update_feed_status(feed_id, "error", error_message)
             logger.exception("Failed to sync peer feed %s", feed_id)
-            return PeerFeedSyncResult(feed_id=feed_id, events_imported=0, conflicts=0, status="error", detail=error_message)
+            return PeerFeedSyncResult(
+                feed_id=feed_id,
+                events_imported=0,
+                conflicts=0,
+                status="error",
+                detail=error_message,
+            )
 
         try:
             entries = self._extract_entries(data)
         except ValueError as exc:
             self.repository.update_feed_status(feed_id, "error", str(exc))
             logger.warning("Peer feed %s returned invalid payload: %s", feed_id, exc)
-            return PeerFeedSyncResult(feed_id=feed_id, events_imported=0, conflicts=0, status="error", detail=str(exc))
+            return PeerFeedSyncResult(
+                feed_id=feed_id,
+                events_imported=0,
+                conflicts=0,
+                status="error",
+                detail=f"Invalid payload: {type(exc).__name__}",
+            )
         imported = 0
         conflicts = 0
 
         for entry in entries:
             try:
-                result = self.repository.upsert_peer_event(feed_id, self._normalize_entry(entry))
+                result = self.repository.upsert_peer_event(
+                    feed_id, self._normalize_entry(entry)
+                )
                 if result == "inserted" or result == "updated":
                     imported += 1
                 elif result == "conflict":
@@ -204,7 +272,9 @@ class CalendarSharingService:
             imported,
             conflicts,
         )
-        return PeerFeedSyncResult(feed_id=feed_id, events_imported=imported, conflicts=conflicts, status="ok")
+        return PeerFeedSyncResult(
+            feed_id=feed_id, events_imported=imported, conflicts=conflicts, status="ok"
+        )
 
     def sync_all_feeds(self) -> dict[str, object]:
         """Sync all peer feeds."""

@@ -65,7 +65,12 @@ def resolve_alarm_url(
     from app.domains.player.service import PlayerService
 
     target = youtube_url or url
-    return PlayerService().resolve_url(target)
+    try:
+        return PlayerService().resolve_url(target)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Failed to resolve URL: {type(exc).__name__}"
+        )
 
 
 @router.get(

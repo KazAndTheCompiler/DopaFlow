@@ -4,6 +4,7 @@ function buildBackendEnv(baseEnv = {}, options = {}) {
 
   if (isPackaged) {
     delete env.DOPAFLOW_DEV_AUTH;
+    env.DOPAFLOW_TRUST_LOCAL_CLIENTS = "1";
     return env;
   }
 

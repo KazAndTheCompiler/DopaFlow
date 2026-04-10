@@ -533,7 +533,16 @@ class VaultSyncService:
         tasks_section_body = "## Today's Tasks\n\n" + render_tasks_section(due_tasks)
 
         rel_path = f"{config.daily_note_folder}/{date}.md"
-        abs_path = Path(config.vault_path) / rel_path
+        vault_root = Path(config.vault_path).resolve()
+        abs_path = (vault_root / rel_path).resolve()
+
+        if not str(abs_path).startswith(str(vault_root) + "/"):
+            return VaultPushResult(
+                pushed=0,
+                skipped=0,
+                conflicts=0,
+                errors=[f"path traversal attempt detected: {rel_path}"],
+            )
 
         if not abs_path.exists():
             return VaultPushResult(
