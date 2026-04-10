@@ -1107,7 +1107,7 @@ npm run dev</code></pre>
             </ul>
 
             <div class="note">
-                <strong>For Production:</strong> Keep operational guidance in <code>CHANGELOG.md</code> and <code>next_steps.md</code> aligned with the live backend configuration before widening network exposure.
+                <strong>For Production:</strong> Keep operational guidance in <code>CHANGELOG.md</code> and <code>LLM_work_folder/</code> aligned with the live backend configuration before widening network exposure.
             </div>
         </section>
 
@@ -1299,7 +1299,7 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
         <!-- Development -->
         <section id="development">
             <h2>🛠️ Development</h2>
-            <p>DopaFlow uses an LLM-powered development workflow with model-specific roles for efficient iteration.</p>
+            <p>DopaFlow uses a multi-agent development workflow with model-specific roles for efficient iteration. Agent coordination guides live in <code>LLM_work_folder/</code>.</p>
 
             <h3>LLM Agent Roles</h3>
             <p>Each agent has a dedicated folder under <code>LLM_work_folder/</code> with a <code>RULES.md</code> defining their role and scope. Start every session by reading <code>LLM_work_folder/CODEBASE_MAP.md</code>.</p>
@@ -1348,7 +1348,7 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
                 <li><code>frontend/src/App.tsx</code> - nav surfaces, shared app state, and route wiring</li>
                 <li><code>frontend/tests/e2e/</code> - current Playwright regression coverage</li>
                 <li><code>CHANGELOG.md</code> - version history and active hardening notes</li>
-                <li><code>next_steps.md</code> - current 6 immediate priorities</li>
+                <li><code>LLM_work_folder/</code> - agent prompts, rules, and working notes (see <code>CODEBASE_MAP.md</code> for current priorities)</li>
             </ul>
         </section>
 
@@ -1358,7 +1358,7 @@ hab_abc123,Morning Exercise,5,week,#4f46e5,3,7,2024-03-29</code></pre>
 
             <h3>Backend won't start</h3>
             <ul>
-                <li>Ensure Python 3.10+ is installed</li>
+                <li>Ensure Python 3.11–3.12 is installed (Python 3.13 is not supported)</li>
                 <li>Run <code>pip install -r requirements.txt</code></li>
                 <li>Check that port 8000 is not in use</li>
                 <li>Verify <code>DOPAFLOW_DB_PATH</code> is writable (defaults to <code>backend/dopaflow.sqlite3</code>)</li>

@@ -18,6 +18,8 @@ jobs:
   build-backend-linux:
     name: Backend (Linux)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -48,6 +50,8 @@ jobs:
   build-backend-windows:
     name: Backend (Windows)
     runs-on: windows-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +83,9 @@ jobs:
     name: AppImage (Linux x64)
     needs: build-backend-linux
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
 
@@ -160,6 +167,9 @@ jobs:
     name: NSIS Installer (Windows x64)
     needs: build-backend-windows
     runs-on: windows-latest
+    permissions:
+      contents: read
+      actions: write
     steps:
       - uses: actions/checkout@v4
 

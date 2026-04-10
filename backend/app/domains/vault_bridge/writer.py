@@ -41,16 +41,19 @@ def write_journal_entry(
     Returns (file_path_relative, content_hash, previous_content_or_None).
     Raises FileNotFoundError if vault root does not exist.
     Raises ValueError if vault_path is not configured.
+    Raises ValueError if the resolved path escapes the vault root.
     """
     if not config.vault_path:
         raise ValueError("vault_path is not configured")
 
-    vault_root = Path(config.vault_path)
+    vault_root = Path(config.vault_path).resolve()
     if not vault_root.exists():
         raise FileNotFoundError(f"Vault path does not exist: {config.vault_path}")
 
     rel_path = f"{config.daily_note_folder}/{Path(journal_note_path(entry.date)).name}"
-    abs_path = vault_root / rel_path
+    abs_path = (vault_root / rel_path).resolve()
+    if not str(abs_path).startswith(str(vault_root)):
+        raise ValueError("journal entry path escapes vault root")
     abs_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Snapshot existing content for rollback

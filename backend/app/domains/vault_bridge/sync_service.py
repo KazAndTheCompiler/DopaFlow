@@ -270,6 +270,20 @@ class VaultSyncService:
 
         abs_path = Path(config.vault_path) / record.file_path
         try:
+            abs_path = abs_path.resolve()
+        except (OSError, RuntimeError):
+            return VaultRollbackResult(
+                rolled_back=False,
+                file_path=record.file_path,
+                message="invalid file path",
+            )
+        if not str(abs_path).startswith(str(Path(config.vault_path).resolve())):
+            return VaultRollbackResult(
+                rolled_back=False,
+                file_path=record.file_path,
+                message="path outside vault rejected",
+            )
+        try:
             abs_path.write_text(snapshot, encoding="utf-8")
             self.index_repo.resolve_conflict(record.file_path)
             return VaultRollbackResult(
@@ -296,9 +310,15 @@ class VaultSyncService:
         current_exists = False
         if config.vault_path:
             abs_path = Path(config.vault_path) / record.file_path
-            if abs_path.exists():
-                current_body = abs_path.read_text(encoding="utf-8")
-                current_exists = True
+            try:
+                abs_path = abs_path.resolve()
+            except (OSError, RuntimeError):
+                pass
+            else:
+                if str(abs_path).startswith(str(Path(config.vault_path).resolve())):
+                    if abs_path.exists():
+                        current_body = abs_path.read_text(encoding="utf-8")
+                        current_exists = True
 
         return VaultConflictPreview(
             record=record,
@@ -647,6 +667,14 @@ class VaultSyncService:
                 # Write the ID back into the vault file
                 if vault_root and c.line_text and c.file_path:
                     abs_path = vault_root / c.file_path
+                    try:
+                        abs_path = abs_path.resolve()
+                    except (OSError, RuntimeError):
+                        errors.append(f"{c.title}: invalid file path")
+                        continue
+                    if not str(abs_path).startswith(str(vault_root.resolve())):
+                        errors.append(f"{c.title}: path outside vault rejected")
+                        continue
                     if abs_path.exists():
                         rewritten = rewrite_task_id_in_file(
                             abs_path,

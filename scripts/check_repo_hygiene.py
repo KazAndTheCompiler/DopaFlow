@@ -26,6 +26,7 @@ IGNORED_PATTERN_FILES = {
 }
 MACHINE_PATH_IGNORED_FILES = {
     REPO_ROOT / "CHANGELOG.md",
+    REPO_ROOT / "summary_minimax_the_goat.md",
 }
 IGNORED_PATH_PREFIXES = (
     REPO_ROOT / "desktop" / "vendor-runtime",
