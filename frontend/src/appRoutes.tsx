@@ -140,7 +140,7 @@ export const actionRoutes: Record<RouteIntentAction, AppRoute> = {
   "open-review": "review",
   "open-journal": "journal",
   "open-today": "today",
-  "open-search": "tasks",
+  "open-search": "search",
   "open-command-bar": "today",
   "open-nutrition": "nutrition",
   "open-overview": "overview",
@@ -161,7 +161,7 @@ export const intentRoutes: Record<CommandIntent, AppRoute> = {
   "habit.checkin": "habits",
   "habit.list": "habits",
   "review.start": "review",
-  search: "tasks",
+  search: "search",
   "nutrition.log": "nutrition",
   undo: "tasks",
 };

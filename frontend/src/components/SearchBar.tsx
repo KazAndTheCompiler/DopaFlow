@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "../api/client";
 
 interface SearchResult { id: string; type: string; title: string; snippet: string; date?: string | null }
 interface SearchBarProps { onResults: (results: SearchResult[]) => void }
@@ -9,7 +10,7 @@ export function SearchBar({ onResults }: SearchBarProps): JSX.Element {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (!query.trim()) return void (onResults([]), setCount(null));
-      fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/search?q=${encodeURIComponent(query)}`)
+      fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`)
         .then((response) => response.json())
         .then((body: { results: SearchResult[]; total: number }) => { onResults(body.results); setCount(body.total); })
         .catch(() => { onResults([]); setCount(0); });

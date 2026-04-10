@@ -4,8 +4,9 @@ import Button from "@ds/primitives/Button";
 import Input from "@ds/primitives/Input";
 import VoiceButton from "@ds/primitives/VoiceButton";
 import { useSpeechRecognition } from "../../hooks/useSpeechRecognition";
+import { API_BASE_URL } from "../../api/client";
 
-const API = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2";
+const NUTRITION_REFRESH_EVENT = "dopaflow:nutrition-logged";
 
 interface LogEntry {
   id: string;
@@ -84,9 +85,9 @@ export default function NutritionView(): JSX.Element {
 
   const load = async (): Promise<void> => {
     const [todayData, goalsData, foodsData] = await Promise.all([
-      fetch(`${API}/nutrition/today`).then((r) => r.json()).catch(() => null),
-      fetch(`${API}/nutrition/goals`).then((r) => r.json()).catch(() => null),
-      fetch(`${API}/nutrition/foods`).then((r) => r.json()).catch(() => []),
+      fetch(`${API_BASE_URL}/nutrition/today`).then((r) => r.json()).catch(() => null),
+      fetch(`${API_BASE_URL}/nutrition/goals`).then((r) => r.json()).catch(() => null),
+      fetch(`${API_BASE_URL}/nutrition/foods`).then((r) => r.json()).catch(() => []),
     ]);
     if (todayData) setToday(todayData as DailyTotals);
     if (goalsData) {
@@ -102,6 +103,12 @@ export default function NutritionView(): JSX.Element {
   useEffect(() => { void load(); }, []);
 
   useEffect(() => {
+    const handler = (): void => { void load(); };
+    window.addEventListener(NUTRITION_REFRESH_EVENT, handler);
+    return () => window.removeEventListener(NUTRITION_REFRESH_EVENT, handler);
+  }, []);
+
+  useEffect(() => {
     if (transcript) { setName(transcript); reset(); }
   }, [transcript]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -109,7 +116,7 @@ export default function NutritionView(): JSX.Element {
     if (!name.trim() || !kj) return;
     setSaving(true);
     try {
-      await fetch(`${API}/nutrition/log`, {
+      await fetch(`${API_BASE_URL}/nutrition/log`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -123,18 +130,19 @@ export default function NutritionView(): JSX.Element {
       });
       setName(""); setKj(""); setProtein(""); setCarbs(""); setFat("");
       await load();
+      window.dispatchEvent(new CustomEvent(NUTRITION_REFRESH_EVENT));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string): Promise<void> => {
-    await fetch(`${API}/nutrition/${id}`, { method: "DELETE" });
+    await fetch(`${API_BASE_URL}/nutrition/${id}`, { method: "DELETE" });
     await load();
   };
 
   const handleSaveGoals = async (): Promise<void> => {
-    await fetch(`${API}/nutrition/goals`, {
+    await fetch(`${API_BASE_URL}/nutrition/goals`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -150,7 +158,7 @@ export default function NutritionView(): JSX.Element {
   const handleLogPreset = async (food: FoodLibraryItem): Promise<void> => {
     setLoggingPresetId(food.id);
     try {
-      await fetch(`${API}/nutrition/log/from-food`, {
+      await fetch(`${API_BASE_URL}/nutrition/log/from-food`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

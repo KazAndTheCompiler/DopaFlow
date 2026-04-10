@@ -33,10 +33,6 @@ export function createGoal(payload: CreateGoalPayload): Promise<Goal> {
   return apiClient<Goal>("/goals/", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export function updateGoal(goalId: string, updates: Partial<Goal>): Promise<Goal> {
-  return apiClient<Goal>(`/goals/${goalId}`, { method: "PATCH", body: JSON.stringify(updates) });
-}
-
 export function deleteGoal(goalId: string): Promise<{ ok: boolean }> {
   return apiClient<{ ok: boolean }>(`/goals/${goalId}`, { method: "DELETE" });
 }

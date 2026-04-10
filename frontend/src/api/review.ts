@@ -1,5 +1,5 @@
 import type { ReviewCard } from "../../../shared/types";
-import { apiClient } from "./client";
+import { apiClient, API_BASE_URL } from "./client";
 
 export interface ReviewDeck {
   id: string;
@@ -68,7 +68,7 @@ export function updateReviewCard(cardId: string, patch: { front: string; back: s
 export async function importApkg(deckId: string, file: File): Promise<ImportApkgResponse> {
   const form = new FormData();
   form.append("file", file);
-  const url = new URL(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/review/import-apkg`);
+  const url = new URL(`${API_BASE_URL}/review/import-apkg`);
   url.searchParams.set("deck_id", deckId);
   const res = await fetch(url.toString(), { method: "POST", body: form });
   if (!res.ok) throw new Error(await res.text());

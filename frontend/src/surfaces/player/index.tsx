@@ -56,7 +56,7 @@ export default function PlayerView(): JSX.Element {
         }
         streamUrl = res.stream_url;
       } catch {
-        setResolveError("Resolution failed");
+        setResolveError("URL resolution failed. Check the stream is accessible.");
         setResolving(false);
         return;
       }

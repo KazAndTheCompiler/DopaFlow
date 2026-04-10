@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Button from "@ds/primitives/Button";
+import { API_BASE_URL } from "../api/client";
 
 interface Template { id: string; name: string }
 interface TemplatesPickerProps { onApply: (body: string, tags: string[]) => void }
@@ -7,7 +8,7 @@ interface TemplatesPickerProps { onApply: (body: string, tags: string[]) => void
 export function TemplatesPicker({ onApply }: TemplatesPickerProps): JSX.Element {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [open, setOpen] = useState(false);
-  useEffect(() => { void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/journal/templates`).then((response) => response.json()).then((rows: Template[]) => setTemplates(rows)).catch(() => setTemplates([])); }, []);
+  useEffect(() => { void fetch(`${API_BASE_URL}/journal/templates`).then((response) => response.json()).then((rows: Template[]) => setTemplates(rows)).catch(() => setTemplates([])); }, []);
   return (
     <div style={{ position: "relative", width: "fit-content" }}>
       <Button

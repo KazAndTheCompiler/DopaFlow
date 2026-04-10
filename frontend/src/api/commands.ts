@@ -1,4 +1,3 @@
-import type { VoiceCommandPreview } from "../../../shared/types";
 import { apiClient } from "./client";
 
 export interface CommandExecuteResponse {
@@ -20,15 +19,6 @@ export interface CommandListItem {
 
 export interface CommandListResponse {
   commands: CommandListItem[];
-}
-
-export function previewVoiceCommand(file: Blob, filename = "voice.webm", lang = "en-US"): Promise<VoiceCommandPreview> {
-  const form = new FormData();
-  form.append("file", file, filename);
-  return apiClient<VoiceCommandPreview>(`/commands/voice-preview?lang=${encodeURIComponent(lang)}`, {
-    method: "POST",
-    body: form,
-  });
 }
 
 export function executeCommandText(text: string, confirm = true, source: "text" | "voice" = "text"): Promise<CommandExecuteResponse> {

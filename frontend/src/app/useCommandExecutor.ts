@@ -24,6 +24,8 @@ interface RefreshMap {
   "habit.checkin": () => Promise<void>;
   "habit.list": () => Promise<void>;
   "review.start": () => Promise<void>;
+  search: () => Promise<void>;
+  "nutrition.log": () => Promise<void>;
   undo: () => Promise<void>;
 }
 
@@ -61,6 +63,10 @@ export function useCommandExecutor(deps: CommandExecutorDeps): UseCommandExecuto
     "habit.checkin": habits.refresh,
     "habit.list": habits.refresh,
     "review.start": review.refresh,
+    search: async () => {},
+    "nutrition.log": async () => {
+      window.dispatchEvent(new CustomEvent("dopaflow:nutrition-logged"));
+    },
     undo: tasks.refresh,
   };
 
