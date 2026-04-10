@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 import Button from "@ds/primitives/Button";
 import Input from "@ds/primitives/Input";
 import VoiceButton from "@ds/primitives/VoiceButton";
-import type { PlayerLevel } from "../../../shared/types/gamification";
+import { useAppGamification } from "../app/AppContexts";
 
 export function TopBarActions({
   isCompact,
@@ -11,7 +11,6 @@ export function TopBarActions({
   focusModeEnabled,
   onToggleFocusMode,
   activeTimerLabel,
-  gamificationLevel,
   onInboxClick,
   unreadCount,
 }: {
@@ -20,10 +19,10 @@ export function TopBarActions({
   focusModeEnabled: boolean;
   onToggleFocusMode: () => void;
   activeTimerLabel?: string | undefined;
-  gamificationLevel?: PlayerLevel | undefined;
   onInboxClick: () => void;
   unreadCount: number;
 }): JSX.Element {
+  const gamification = useAppGamification();
   return (
     <div
       style={{
@@ -75,7 +74,7 @@ export function TopBarActions({
         }}
         title="Progress to next level"
       >
-        {`LV ${gamificationLevel?.level ?? 1} · ${gamificationLevel?.xp_to_next ?? 100} XP to next`}
+        {`LV ${gamification.level?.level ?? 1} · ${gamification.level?.xp_to_next ?? 100} XP to next`}
       </span>
       <button
         onClick={onInboxClick}
