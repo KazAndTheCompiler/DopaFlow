@@ -41,11 +41,11 @@ function toViewModel(period: "today" | "week", raw: DigestResponse | null): Dige
   const dateLabel = period === "today"
     ? ("date" in raw ? raw.date : "")
     : ("week_start" in raw ? `${raw.week_start} to ${raw.week_end}` : "");
-  const tasksCompleted = tasks.completed;
-  const focusSessions = focus.total_sessions;
-  const focusMinutes = focus.total_minutes;
-  const habitLogs = habits.by_habit.reduce((sum, item) => sum + item.done, 0);
-  const journalEntries = journal.entries_written;
+  const tasksCompleted = tasks?.completed ?? 0;
+  const focusSessions = focus?.total_sessions ?? 0;
+  const focusMinutes = focus?.total_minutes ?? 0;
+  const habitLogs = habits?.by_habit?.reduce((sum, item) => sum + (item.done ?? 0), 0) ?? 0;
+  const journalEntries = journal?.entries_written ?? 0;
 
   let headline = "A quieter day than usual.";
   if (score >= 80) {
