@@ -22,7 +22,7 @@ export function MomentumCard({ momentum, packyLine }: MomentumCardProps): JSX.El
         alignItems: "center",
         padding: "1rem",
         borderRadius: "20px",
-        background: "color-mix(in srgb, var(--surface-2) 92%, transparent)",
+        background: "var(--card-gradient, color-mix(in srgb, var(--surface-2) 92%, transparent))",
         backdropFilter: "var(--surface-glass-blur, blur(14px))",
         border: "1px solid var(--border-subtle)",
         boxShadow: "var(--shadow-soft)",

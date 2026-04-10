@@ -94,7 +94,7 @@ export function TimeBlocks({ sessions, events, onRescheduleEvent }: TimeBlocksPr
   };
 
   return (
-    <section style={{ padding: "1.1rem 1.15rem", borderRadius: "20px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", position: "relative" }}>
+    <section style={{ padding: "1.1rem 1.15rem", borderRadius: "20px", background: "var(--card-gradient, color-mix(in srgb, var(--surface) 92%, transparent))", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", position: "relative" }}>
       <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
       <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />

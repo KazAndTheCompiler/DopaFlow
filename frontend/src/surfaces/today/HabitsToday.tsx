@@ -26,7 +26,7 @@ export function HabitsToday({ habits, onCheckIn }: HabitsTodayProps): JSX.Elemen
         gap: "0.85rem",
         padding: "1.1rem 1.15rem",
         borderRadius: "20px",
-        background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+        background: "var(--card-gradient, color-mix(in srgb, var(--surface) 92%, transparent))",
         backdropFilter: "var(--surface-glass-blur, blur(14px))",
         border: "1px solid var(--border-subtle)",
         position: "relative",

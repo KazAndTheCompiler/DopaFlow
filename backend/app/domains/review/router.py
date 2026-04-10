@@ -33,7 +33,16 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.review.apkg_export import create_apkg
@@ -81,18 +90,35 @@ async def _svc(settings: Settings = Depends(get_settings_dependency)) -> ReviewS
 
 # ── cards ─────────────────────────────────────────────────────────────────────
 
-@router.get("/cards", response_model=list[ReviewCardRead], dependencies=[Depends(require_scope("read:review"))])
+
+@router.get(
+    "/cards",
+    response_model=list[ReviewCardRead],
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def list_cards(svc: ReviewService = Depends(_svc)) -> list[ReviewCardRead]:
     return svc.list_cards()
 
 
-@router.post("/cards", response_model=ReviewCardRead, dependencies=[Depends(require_scope("write:review"))])
-async def create_card(payload: ReviewCardCreate, svc: ReviewService = Depends(_svc)) -> ReviewCardRead:
+@router.post(
+    "/cards",
+    response_model=ReviewCardRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def create_card(
+    payload: ReviewCardCreate, svc: ReviewService = Depends(_svc)
+) -> ReviewCardRead:
     return svc.create_card(payload)
 
 
-@router.patch("/cards/{card_id}", response_model=ReviewCardRead, dependencies=[Depends(require_scope("write:review"))])
-async def update_card(card_id: str, payload: dict[str, str], svc: ReviewService = Depends(_svc)) -> ReviewCardRead:
+@router.patch(
+    "/cards/{card_id}",
+    response_model=ReviewCardRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def update_card(
+    card_id: str, payload: dict[str, str], svc: ReviewService = Depends(_svc)
+) -> ReviewCardRead:
     front = payload.get("front", "").strip()
     back = payload.get("back", "").strip()
     if not front:
@@ -103,32 +129,56 @@ async def update_card(card_id: str, payload: dict[str, str], svc: ReviewService 
         raise HTTPException(status_code=404, detail="Card not found")
 
 
-@router.post("/cards/{card_id}/suspend", response_model=CardSuspendResponse, dependencies=[Depends(require_scope("write:review"))])
-async def suspend_card(card_id: str, svc: ReviewService = Depends(_svc)) -> CardSuspendResponse:
+@router.post(
+    "/cards/{card_id}/suspend",
+    response_model=CardSuspendResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def suspend_card(
+    card_id: str, svc: ReviewService = Depends(_svc)
+) -> CardSuspendResponse:
     try:
         return svc.suspend_card(card_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Card not found")
 
 
-@router.post("/cards/{card_id}/unsuspend", response_model=CardSuspendResponse, dependencies=[Depends(require_scope("write:review"))])
-async def unsuspend_card(card_id: str, svc: ReviewService = Depends(_svc)) -> CardSuspendResponse:
+@router.post(
+    "/cards/{card_id}/unsuspend",
+    response_model=CardSuspendResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def unsuspend_card(
+    card_id: str, svc: ReviewService = Depends(_svc)
+) -> CardSuspendResponse:
     try:
         return svc.unsuspend_card(card_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Card not found")
 
 
-@router.post("/cards/{card_id}/bury-today", response_model=CardBuryResponse, dependencies=[Depends(require_scope("write:review"))])
-async def bury_card_today(card_id: str, svc: ReviewService = Depends(_svc)) -> CardBuryResponse:
+@router.post(
+    "/cards/{card_id}/bury-today",
+    response_model=CardBuryResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def bury_card_today(
+    card_id: str, svc: ReviewService = Depends(_svc)
+) -> CardBuryResponse:
     try:
         return svc.bury_card_today(card_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Card not found")
 
 
-@router.post("/cards/{card_id}/reset", response_model=ReviewCardRead, dependencies=[Depends(require_scope("write:review"))])
-async def reset_card(card_id: str, svc: ReviewService = Depends(_svc)) -> ReviewCardRead:
+@router.post(
+    "/cards/{card_id}/reset",
+    response_model=ReviewCardRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def reset_card(
+    card_id: str, svc: ReviewService = Depends(_svc)
+) -> ReviewCardRead:
     try:
         return svc.reset_card(card_id)
     except ValueError:
@@ -137,41 +187,76 @@ async def reset_card(card_id: str, svc: ReviewService = Depends(_svc)) -> Review
 
 # ── decks ─────────────────────────────────────────────────────────────────────
 
-@router.get("/decks", response_model=list[DeckRead], dependencies=[Depends(require_scope("read:review"))])
+
+@router.get(
+    "/decks",
+    response_model=list[DeckRead],
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def list_decks(svc: ReviewService = Depends(_svc)) -> list[DeckRead]:
     return svc.list_decks()
 
 
-@router.post("/decks", response_model=DeckRead, dependencies=[Depends(require_scope("write:review"))])
-async def create_deck(payload: DeckCreate, svc: ReviewService = Depends(_svc)) -> DeckRead:
+@router.post(
+    "/decks",
+    response_model=DeckRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def create_deck(
+    payload: DeckCreate, svc: ReviewService = Depends(_svc)
+) -> DeckRead:
     return svc.create_deck(payload)
 
 
-@router.patch("/decks/{deck_id}", response_model=DeckRead, dependencies=[Depends(require_scope("write:review"))])
-async def rename_deck(deck_id: str, payload: DeckRenameRequest, svc: ReviewService = Depends(_svc)) -> DeckRead:
+@router.patch(
+    "/decks/{deck_id}",
+    response_model=DeckRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def rename_deck(
+    deck_id: str, payload: DeckRenameRequest, svc: ReviewService = Depends(_svc)
+) -> DeckRead:
     deck = svc.rename_deck(deck_id, payload.name.strip())
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     return DeckRead(**deck)
 
 
-@router.delete("/decks/{deck_id}", response_model=DeleteResponse, dependencies=[Depends(require_scope("write:review"))])
-async def delete_deck(deck_id: str, svc: ReviewService = Depends(_svc)) -> DeleteResponse:
+@router.delete(
+    "/decks/{deck_id}",
+    response_model=DeleteResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def delete_deck(
+    deck_id: str, svc: ReviewService = Depends(_svc)
+) -> DeleteResponse:
     deleted = svc.delete_deck(deck_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Deck not found")
     return DeleteResponse(deleted=True)
 
 
-@router.post("/decks/{deck_id}/cards", response_model=ReviewCardRead, dependencies=[Depends(require_scope("write:review"))])
-async def create_card_for_deck(deck_id: str, payload: DeckCardCreate, svc: ReviewService = Depends(_svc)) -> ReviewCardRead:
+@router.post(
+    "/decks/{deck_id}/cards",
+    response_model=ReviewCardRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def create_card_for_deck(
+    deck_id: str, payload: DeckCardCreate, svc: ReviewService = Depends(_svc)
+) -> ReviewCardRead:
     deck = svc.get_deck(deck_id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    return svc.create_card_for_deck(deck_id, payload.front, payload.back, payload.tags, payload.source)
+    return svc.create_card_for_deck(
+        deck_id, payload.front, payload.back, payload.tags, payload.source
+    )
 
 
-@router.get("/decks/{deck_id}/cards/search", response_model=ReviewSearchResponse, dependencies=[Depends(require_scope("read:review"))])
+@router.get(
+    "/decks/{deck_id}/cards/search",
+    response_model=ReviewSearchResponse,
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def search_cards(
     deck_id: str,
     q: str = Query(default=""),
@@ -182,25 +267,49 @@ async def search_cards(
     deck = svc.get_deck(deck_id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
-    valid_states = {None, "", "new", "review", "learning", "relearn", "suspended", "buried"}
+    valid_states = {
+        None,
+        "",
+        "new",
+        "review",
+        "learning",
+        "relearn",
+        "suspended",
+        "buried",
+    }
     if state not in valid_states:
-        raise HTTPException(status_code=422, detail="state must be one of: new, review, learning, relearn, suspended, buried")
+        raise HTTPException(
+            status_code=422,
+            detail="state must be one of: new, review, learning, relearn, suspended, buried",
+        )
     items = svc.search_cards(deck_id, q=q, state=state or None, limit=limit)
     return ReviewSearchResponse(items=items, limit=limit)
 
 
-@router.post("/decks/{deck_id}/cards/bulk", response_model=ReviewBulkCardsResponse, dependencies=[Depends(require_scope("write:review"))])
-async def bulk_cards(deck_id: str, body: BulkCardsBody, svc: ReviewService = Depends(_svc)) -> ReviewBulkCardsResponse:
+@router.post(
+    "/decks/{deck_id}/cards/bulk",
+    response_model=ReviewBulkCardsResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def bulk_cards(
+    deck_id: str, body: BulkCardsBody, svc: ReviewService = Depends(_svc)
+) -> ReviewBulkCardsResponse:
     deck = svc.get_deck(deck_id)
     if not deck:
         raise HTTPException(status_code=404, detail="Deck not found")
     try:
         return svc.bulk_cards(deck_id, body.ids, body.action)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(
+            status_code=422, detail=f"Operation failed: {type(exc).__name__}"
+        )
 
 
-@router.get("/decks/{deck_id}/next-due", response_model=NextDueResponse, dependencies=[Depends(require_scope("read:review"))])
+@router.get(
+    "/decks/{deck_id}/next-due",
+    response_model=NextDueResponse,
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def next_due(deck_id: str, svc: ReviewService = Depends(_svc)) -> NextDueResponse:
     deck = svc.get_deck(deck_id)
     if not deck:
@@ -208,15 +317,25 @@ async def next_due(deck_id: str, svc: ReviewService = Depends(_svc)) -> NextDueR
     return svc.get_next_due(deck_id)
 
 
-@router.get("/decks/{deck_id}/stats", response_model=DeckStatsResponse, dependencies=[Depends(require_scope("read:review"))])
-async def deck_stats(deck_id: str, svc: ReviewService = Depends(_svc)) -> DeckStatsResponse:
+@router.get(
+    "/decks/{deck_id}/stats",
+    response_model=DeckStatsResponse,
+    dependencies=[Depends(require_scope("read:review"))],
+)
+async def deck_stats(
+    deck_id: str, svc: ReviewService = Depends(_svc)
+) -> DeckStatsResponse:
     try:
         return svc.get_deck_stats(deck_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Deck not found")
 
 
-@router.post("/decks/{deck_id}/import/preview", response_model=ReviewImportPreview, dependencies=[Depends(require_scope("write:review"))])
+@router.post(
+    "/decks/{deck_id}/import/preview",
+    response_model=ReviewImportPreview,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def import_preview(
     deck_id: str,
     body: ImportBody,
@@ -233,7 +352,12 @@ async def import_preview(
 
 # ── due ───────────────────────────────────────────────────────────────────────
 
-@router.get("/due", response_model=list[ReviewCardRead], dependencies=[Depends(require_scope("read:review"))])
+
+@router.get(
+    "/due",
+    response_model=list[ReviewCardRead],
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def due_cards(
     deck_id: str = Query(...),
     limit: int = Query(default=20, ge=1, le=200),
@@ -244,17 +368,29 @@ async def due_cards(
 
 # ── rate ──────────────────────────────────────────────────────────────────────
 
-@router.post("/rate", response_model=ReviewCardRead, dependencies=[Depends(require_scope("write:review"))])
-async def rate_card(payload: ReviewRating, svc: ReviewService = Depends(_svc)) -> ReviewCardRead:
+
+@router.post(
+    "/rate",
+    response_model=ReviewCardRead,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def rate_card(
+    payload: ReviewRating, svc: ReviewService = Depends(_svc)
+) -> ReviewCardRead:
     try:
         return svc.rate_card(payload)
     except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=f"Not found: {type(exc).__name__}")
 
 
 # ── session ───────────────────────────────────────────────────────────────────
 
-@router.get("/session", response_model=ReviewSessionState, dependencies=[Depends(require_scope("read:review"))])
+
+@router.get(
+    "/session",
+    response_model=ReviewSessionState,
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def session_state(
     limit: int = Query(default=20, ge=1, le=200),
     deck_id: str | None = Query(default=None),
@@ -263,7 +399,11 @@ async def session_state(
     return svc.get_session_state(limit=limit, deck_id=deck_id)
 
 
-@router.post("/session/start", response_model=ReviewSessionStart, dependencies=[Depends(require_scope("write:review"))])
+@router.post(
+    "/session/start",
+    response_model=ReviewSessionStart,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def start_session(
     limit: int = Query(default=20, ge=1, le=200),
     deck_id: str | None = Query(default=None),
@@ -272,7 +412,11 @@ async def start_session(
     return svc.start_session(limit=limit, deck_id=deck_id)
 
 
-@router.post("/session/{deck_id}/start", response_model=ReviewSessionStart, dependencies=[Depends(require_scope("write:review"))])
+@router.post(
+    "/session/{deck_id}/start",
+    response_model=ReviewSessionStart,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def start_deck_session(
     deck_id: str,
     limit: int = Query(default=20, ge=1, le=200),
@@ -283,7 +427,11 @@ async def start_deck_session(
     return svc.start_deck_session(deck_id, limit=limit)
 
 
-@router.post("/answer", response_model=ReviewAnswerResponse, dependencies=[Depends(require_scope("write:review"))])
+@router.post(
+    "/answer",
+    response_model=ReviewAnswerResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def answer(
     rating: str = Query(...),
     card_id: str = Query(...),
@@ -292,10 +440,16 @@ async def answer(
     try:
         return svc.answer_card(card_id, rating)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(
+            status_code=422, detail=f"Operation failed: {type(exc).__name__}"
+        )
 
 
-@router.post("/session/{deck_id}/answer", response_model=ReviewAnswerResponse, dependencies=[Depends(require_scope("write:review"))])
+@router.post(
+    "/session/{deck_id}/answer",
+    response_model=ReviewAnswerResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def answer_for_deck(
     deck_id: str,
     rating: str = Query(...),
@@ -305,17 +459,30 @@ async def answer_for_deck(
     try:
         return svc.answer_card_for_deck(deck_id, card_id, rating)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(
+            status_code=422, detail=f"Operation failed: {type(exc).__name__}"
+        )
 
 
-@router.post("/session/{deck_id}/end", response_model=ReviewSessionEndResponse, dependencies=[Depends(require_scope("write:review"))])
-async def end_session(deck_id: str, svc: ReviewService = Depends(_svc)) -> ReviewSessionEndResponse:
+@router.post(
+    "/session/{deck_id}/end",
+    response_model=ReviewSessionEndResponse,
+    dependencies=[Depends(require_scope("write:review"))],
+)
+async def end_session(
+    deck_id: str, svc: ReviewService = Depends(_svc)
+) -> ReviewSessionEndResponse:
     return svc.end_session(deck_id)
 
 
 # ── history ───────────────────────────────────────────────────────────────────
 
-@router.get("/history", response_model=ReviewHistoryResponse, dependencies=[Depends(require_scope("read:review"))])
+
+@router.get(
+    "/history",
+    response_model=ReviewHistoryResponse,
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def review_history(
     limit: int = Query(default=20, ge=1, le=100),
     svc: ReviewService = Depends(_svc),
@@ -325,7 +492,12 @@ async def review_history(
 
 # ── export ────────────────────────────────────────────────────────────────────
 
-@router.get("/export-preview", response_model=ReviewExportPreviewResponse, dependencies=[Depends(require_scope("read:review"))])
+
+@router.get(
+    "/export-preview",
+    response_model=ReviewExportPreviewResponse,
+    dependencies=[Depends(require_scope("read:review"))],
+)
 async def export_preview(
     deck_id: str = Query(...),
     limit: int = Query(default=50, ge=1, le=200),
@@ -337,7 +509,9 @@ async def export_preview(
     return svc.export_preview(deck_id, limit)
 
 
-@router.get("/export/apkg/{deck_id}", dependencies=[Depends(require_scope("read:review"))])
+@router.get(
+    "/export/apkg/{deck_id}", dependencies=[Depends(require_scope("read:review"))]
+)
 async def export_apkg(deck_id: str, svc: ReviewService = Depends(_svc)) -> Response:
     deck = svc.get_deck(deck_id)
     if not deck:
@@ -352,7 +526,12 @@ async def export_apkg(deck_id: str, svc: ReviewService = Depends(_svc)) -> Respo
 
 # ── import ────────────────────────────────────────────────────────────────────
 
-@router.post("/import", response_model=ReviewImportResult, dependencies=[Depends(require_scope("write:review"))])
+
+@router.post(
+    "/import",
+    response_model=ReviewImportResult,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def import_notes(
     deck_id: str = Query(...),
     fmt: str = Query(default="csv"),
@@ -369,7 +548,11 @@ async def import_notes(
     return svc.import_notes(deck_id, source_text, fmt)
 
 
-@router.post("/import-apkg", response_model=ReviewApkgImportResult, dependencies=[Depends(require_scope("write:review"))])
+@router.post(
+    "/import-apkg",
+    response_model=ReviewApkgImportResult,
+    dependencies=[Depends(require_scope("write:review"))],
+)
 async def import_apkg(
     deck_id: str = Query(...),
     file: UploadFile = File(...),
@@ -382,7 +565,11 @@ async def import_apkg(
         file,
         kind="apkg",
         allowed_suffixes={".apkg"},
-        allowed_content_types={"application/octet-stream", "application/zip", "application/x-zip-compressed"},
+        allowed_content_types={
+            "application/octet-stream",
+            "application/zip",
+            "application/x-zip-compressed",
+        },
         default_max_bytes=25 * 1024 * 1024,
     )
     try:
@@ -394,4 +581,6 @@ async def import_apkg(
             file.filename or "deck.apkg",
             exc,
         )
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(
+            status_code=422, detail=f"Operation failed: {type(exc).__name__}"
+        )

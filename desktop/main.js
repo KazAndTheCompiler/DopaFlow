@@ -21,7 +21,7 @@ const isPackaged = app.isPackaged;
 const backendCommand = isPackaged
   ? path.join(process.resourcesPath, "dopaflow-backend", "dopaflow-backend")
   : path.join(__dirname, "..", ".venv", "bin", "python3");
-const backendArgs = isPackaged ? [] : ["-m", "app.main"];
+const backendArgs = isPackaged ? ["run_packaged"] : ["-m", "app.main"];
 const backendCwd = isPackaged
   ? path.join(process.resourcesPath, "dopaflow-backend")
   : path.join(__dirname, "..", "backend");
