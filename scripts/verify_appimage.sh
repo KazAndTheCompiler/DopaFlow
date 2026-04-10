@@ -6,7 +6,7 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
-APPIMAGE_PATH="$1"
+APPIMAGE_PATH="$(realpath "$1")"
 
 if [[ ! -f "$APPIMAGE_PATH" ]]; then
   echo "AppImage not found: $APPIMAGE_PATH" >&2
