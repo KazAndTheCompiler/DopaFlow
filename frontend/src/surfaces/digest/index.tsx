@@ -122,9 +122,9 @@ export default function DigestView(): JSX.Element {
         setRawDigest(body);
         setLoading(false);
       })
-      .catch((fetchError: unknown) => {
+      .catch(() => {
         setRawDigest(null);
-        setError(fetchError instanceof Error ? fetchError.message : "Unable to load digest");
+        setError("Could not load digest. Check the server is running.");
         setLoading(false);
       });
   }, [period]);

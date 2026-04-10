@@ -125,7 +125,7 @@ export default function OnboardingModal({ onCreateHabits, onCreateTask, onFinish
                   await onCreateTask(trimmed);
                   setStep(3);
                 } catch {
-                  showToast("Could not create the onboarding task.", "error");
+                  showToast("Could not create the onboarding task. Check the server is running.", "error");
                 } finally {
                   setLoading(false);
                 }
@@ -146,7 +146,7 @@ export default function OnboardingModal({ onCreateHabits, onCreateTask, onFinish
                 await onCreateTask(trimmed);
                 setStep(3);
               } catch {
-                showToast("Could not create the onboarding task.", "error");
+                showToast("Could not create the onboarding task. Check the server is running.", "error");
               } finally {
                 setLoading(false);
               }
@@ -175,7 +175,7 @@ export default function OnboardingModal({ onCreateHabits, onCreateTask, onFinish
           try {
             await onCreateHabits(names);
           } catch {
-            showToast("Could not create the starter habits.", "error");
+            showToast("Could not create the starter habits. Check the server is running.", "error");
           }
         }} disabled={loading} variant="primary" style={{ width: "100%", fontSize: "var(--text-sm)" }}>
           {loading ? "Opening..." : "Open today"}

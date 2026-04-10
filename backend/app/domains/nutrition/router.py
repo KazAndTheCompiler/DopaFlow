@@ -5,6 +5,7 @@
 #   GET    /nutrition/log
 #   GET    /nutrition/log/monthly
 #   POST   /nutrition/log
+#   POST   /nutrition/log/from-food
 #   DELETE /nutrition/log/{entry_id}
 #   GET    /nutrition/summary/{date}
 #   GET    /nutrition/goals
@@ -13,7 +14,7 @@
 #   GET    /nutrition/today
 #   GET    /nutrition/history
 #   GET    /nutrition/recent
-#   DELETE /nutrition/{identifier}
+#   DELETE /nutrition/{entry_id}
 
 """API router for nutrition logging."""
 

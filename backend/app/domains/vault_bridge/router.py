@@ -1,4 +1,19 @@
-"""FastAPI router for the vault bridge domain."""
+# ENDPOINTS
+#   GET    /vault/status
+#   GET    /vault/config
+#   PATCH  /vault/config
+#   POST   /vault/push/journal
+#   POST   /vault/pull/journal
+#   GET    /vault/index
+#   GET    /vault/conflicts
+#   GET    /vault/conflicts/{record_id}/preview
+#   POST   /vault/rollback/{record_id}
+#   POST   /vault/resolve/{record_id}
+#   POST   /vault/push/tasks
+#   POST   /vault/pull/tasks
+#   POST   /vault/push/daily-tasks/{date}
+#   GET    /vault/tasks/import-preview
+#   POST   /vault/tasks/import-confirm
 
 from __future__ import annotations
 

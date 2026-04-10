@@ -69,9 +69,16 @@ export interface Task {
   tags: string[];
   source_type?: string | null;
   source_external_id?: string | null;
+  source_instance_id?: string | null;
   project_id?: ProjectId | null;
+  dependencies: TaskDependency[];
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskDependency {
+  id: string;
+  title: string;
 }
 
 export interface TaskTimeLog {
@@ -99,6 +106,7 @@ export interface Habit {
   target_freq: number;
   target_period: string;
   color: string;
+  description?: string | null;
   freeze_until?: string | null;
   current_streak: number;
   best_streak: number;
@@ -106,6 +114,9 @@ export interface Habit {
   completion_pct?: number;
   completion_count?: number;
   today_count?: number;
+  created_at?: string;
+  deleted_at?: string | null;
+  progress?: number;
   /** @deprecated use current_streak */
   streak_days?: number;
 }
@@ -118,6 +129,7 @@ export interface FocusSession {
   duration_minutes: number;
   status: string;
   paused_duration_ms?: number;
+  task_title?: string | null;
 }
 
 export interface ReviewCard {
@@ -141,6 +153,9 @@ export interface JournalEntry {
   tags: string[];
   version: number;
   locked?: boolean;
+  auto_tags?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface SyncConflict {

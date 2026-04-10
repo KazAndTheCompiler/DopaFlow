@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { PeerFeed, ShareToken, ShareTokenCreated } from "../../../../shared/types";
-import { addPeerFeed, createShareToken, listPeerFeeds, listShareTokens, removePeerFeed, revokeShareToken, syncPeerFeed } from "../../api/sharing";
+import { addPeerFeed, createShareToken, listPeerFeeds, listShareTokens, removePeerFeed, revokeShareToken, syncPeerFeed, updatePeerFeed } from "../../api/sharing";
 import { API_BASE_URL } from "../../api/client";
 import Button from "../../design-system/primitives/Button";
 import Modal from "../../design-system/primitives/Modal";
@@ -28,6 +28,9 @@ export default function CalendarSharingSettings(): JSX.Element {
   const [newTokenExpiryDays, setNewTokenExpiryDays] = useState<string>("30");
   const [createdToken, setCreatedToken] = useState<ShareTokenCreated | null>(null);
   const [showAddFeed, setShowAddFeed] = useState(false);
+  const [editingFeedId, setEditingFeedId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState("");
+  const [editingColor, setEditingColor] = useState("");
   const [setupCode, setSetupCode] = useState("");
   const [newFeed, setNewFeed] = useState({
     label: "",
@@ -214,6 +217,24 @@ export default function CalendarSharingSettings(): JSX.Element {
     }
   };
 
+  const handleEditFeed = async (id: string): Promise<void> => {
+    if (!editingLabel.trim()) {
+      showToast("Label cannot be empty.", "warn");
+      return;
+    }
+    setLoading(true);
+    try {
+      await updatePeerFeed(id, { label: editingLabel.trim(), color: editingColor });
+      setEditingFeedId(null);
+      await loadData();
+      showToast("Feed updated.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to update feed", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const copyToClipboard = async (text: string): Promise<void> => {
     await navigator.clipboard.writeText(text);
     showToast("Copied to clipboard.", "success");
@@ -270,6 +291,9 @@ export default function CalendarSharingSettings(): JSX.Element {
         parsedSetupCode={parsedSetupCode}
         newFeed={newFeed}
         localApiBaseUrl={localApiBaseUrl}
+        editingFeedId={editingFeedId}
+        editingLabel={editingLabel}
+        editingColor={editingColor}
         onToggleAddFeed={() => setShowAddFeed((value) => !value)}
         onSetSetupCode={setSetupCode}
         onApplySetupCode={applySetupCode}
@@ -277,6 +301,15 @@ export default function CalendarSharingSettings(): JSX.Element {
         onAddFeed={() => void handleAddFeed()}
         onSyncFeed={(id) => void handleSyncFeed(id)}
         onRemoveFeed={(id) => void handleRemoveFeed(id)}
+        onStartEditFeed={(id, label, color) => {
+          setEditingFeedId(id);
+          setEditingLabel(label);
+          setEditingColor(color);
+        }}
+        onSetEditingLabel={setEditingLabel}
+        onSetEditingColor={setEditingColor}
+        onEditFeed={(id) => void handleEditFeed(id)}
+        onCancelEditFeed={() => setEditingFeedId(null)}
         relativeSyncAge={relativeSyncAge}
       />
 

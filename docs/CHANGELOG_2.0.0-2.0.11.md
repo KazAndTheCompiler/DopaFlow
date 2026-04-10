@@ -6,6 +6,105 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ## Unreleased
 
+### 2026-04-11
+
+**Status:** v2.0.11 release repair — critical bugs, security fixes, dead code deletion, and GitNexus audit sweep
+
+#### Critical functional fixes
+
+- `desktop/main.js` — `backendArgs = ["run_packaged"]` so PyInstaller binary actually runs the backend entry point (was running bare Python, all API features silently broken in packaged builds)
+- `desktop/runtime-auth.js` — sets `DOPAFLOW_TRUST_LOCAL_CLIENTS=1` so auth scope checks pass in packaged mode
+
+#### Skin/UX fixes
+
+- Gradient skins now apply on Today surface cards — `--card-gradient` CSS token wired into 6 card components: `MomentumCard`, `HabitsToday`, `FocusQueue`, `BacklogColumn`, `ContextCard`, `TimeBlocks`
+- `SkinPicker.tsx` — complete rewrite: single-click instant apply, gradient preview strips, flash confirmation, DK/LT badges, Reset button (was broken: double-click required, no preview, no confirmation)
+
+#### Security fixes (exception leak sanitization)
+
+- `sync_service.py:539-545` — path traversal guard added before file access
+- `alarms/router.py`, `player/router.py`, `vault_bridge/router.py`, `nutrition/router.py`, `review/router.py`, `ops/router.py`, `calendar_sharing/service.py` — all `str(exc)` leak sites replaced with `f"{type(exc).__name__}"` safe messages
+
+#### Dead code deleted
+
+- `backend/app/domains/review/anki_router.py` — duplicate APKG router, never registered
+- `backend/app/domains/alarms/player_router.py` — duplicate alarm URL router, never registered
+- `backend/app/domains/journal/templates_router.py` — duplicate template router, never registered
+- `backend/app/domains/journal/transcribe_router.py` — duplicate transcribe router, never registered
+- `frontend/src/api/commands.ts` — `previewVoiceCommand` had zero callers
+
+#### Route/navigation fixes
+
+- `appRoutes.tsx` — `open-search` and `search` intents now route to `"search"` surface (were routing to `"tasks"`)
+- `goals.ts` — deleted `updateGoal` helper (no callers, no backend PATCH handler)
+
+#### API centralization fixes
+
+- `nutrition/index.tsx`, `SearchBar.tsx`, `TemplatesPicker.tsx`, `WebhookPanel.tsx`, `review.ts` — all hardcoded `http://127.0.0.1:8000/api/v2` now use centralized `API_BASE_URL` from `client.ts`
+
+#### Calendar sharing wiring
+
+- `CalendarSharingSettings.tsx` + `CalendarPeerFeedsSection.tsx` — wired `updatePeerFeed` API: added editing state, `handleEditFeed` handler, edit-mode UI with label/color fields and save/cancel buttons
+
+#### Bootstrap effect race condition
+
+- `App.tsx:105-124` — hashchange handler captured stale `route` from closure when navigating plan↔shutdown overlays; fixed by reading `getRouteFromHash()` fresh instead of relying on captured `route` state
+
+#### Audit findings (documented, no action needed)
+
+- `Tooltip`, `ContextMenu`, `Badge` design-system primitives are unused (zero imports)
+- All exported hooks (`useSpeechRecognition`, `useTTS`, `useUpdateBanner`, `useFocusTimer`, `useKeyboardShortcuts`, etc.) confirmed live with active callers
+
+#### Docs cleanup
+
+- `docs/userguide.html` — removed stale agent role rows (Mimo, Nematron, OpenClaw — don't exist)
+- `CODEBASE_MAP.md` — removed all non-existent agent directory entries
+- `vault_bridge/router.py` — added full 15-route ENDPOINTS comment block
+- `nutrition/router.py` — corrected ENDPOINTS comment (wrong paths: `/nutrition/{identifier}` → `/nutrition/log/{entry_id}`, added missing `/log/from-food`)
+
+#### Shared type parity (Task 21)
+
+- `shared/types/index.ts` — added missing fields to match backend schemas:
+  - `Task`: added `dependencies[]`, `source_instance_id`
+  - `FocusSession`: added `task_title`
+  - `JournalEntry`: added `auto_tags`, `created_at`, `updated_at`
+  - `Habit`: added `description`, `created_at`, `deleted_at`, `progress`
+
+#### Nutrition log refresh wiring (Task 25)
+
+- `useCommandExecutor.ts` — `"nutrition.log"` refresh callback now dispatches `dopaflow:nutrition-logged` event instead of no-op
+- `nutrition/index.tsx` — NutritionView listens for `dopaflow:nutrition-logged` and calls `load()` to refresh; also fires the event after successful log POST
+
+#### Migration-to-repository parity (Task 41)
+
+- No mismatches found — all repository queries use only columns defined in migration schemas
+- `Task.dependencies` correctly sourced from `task_dependencies` join table (migration `001b_task_time_log.sql`)
+- `HabitRead` computed fields computed at read time, not stored columns
+- `JournalEntry.auto_tags` correctly mapped from `auto_tags_json` column
+
+#### Toast accuracy fixes (Task 43)
+
+- `habits/index.tsx` — replaced raw error message exposure with `"Could not create the habit. Check the server is running."`
+- `digest/index.tsx` — replaced raw error with actionable guidance
+- `onboarding/OnboardingModal.tsx` (3 sites) — added actionable guidance to all three create-failure toasts
+- `player/index.tsx` — replaced uninformative "Resolution failed" with `"URL resolution failed. Check the stream is accessible."`
+
+#### Audit findings — Tasks 35, 36, 45 (documented, no code changes needed)
+
+- Task 35: All 19 lazy surface imports resolve correctly — no stale routes, no alias mismatches
+- Task 36: Test coverage gaps correspond to intentionally unimplemented features (goals PATCH) or dead code — not critical
+- Task 45: All backend ENDPOINTS comment blocks match actual decorators — no stale comments found
+
+#### Audit findings — Tasks 33, 38, 39, 46, 47, 48, 49
+
+- Task 33: RefreshMap complete — all 14 command intents mapped to refreshers; `search` and `nutrition.log` wired
+- Task 38: `Tooltip`, `ContextMenu`, `Badge` design-system primitives are unused (zero imports)
+- Task 39: All exported hooks have active callers — no stale abstractions
+- Task 46: Nutrition legacy `/today`, `/history`, `/recent` kept for backward compat; no stale alternative implementations found
+- Task 47: All 31 domain/auxiliary routers confirmed registered in `main.py` — no dead endpoints
+- Task 48: Only dead deletion candidates are unused primitives (`Tooltip`, `ContextMenu`, `Badge`)
+- Task 49: Mixed `@ds/primitives` vs relative import paths throughout — cosmetic debt, no functional impact
+
 ### 2026-04-09
 
 **Status:** shell/desktop refactor notes absorbed into the changelog and obsolete work-folder snapshots started to be retired

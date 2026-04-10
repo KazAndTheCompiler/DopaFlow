@@ -19,6 +19,9 @@ export function CalendarPeerFeedsSection({
   parsedSetupCode,
   newFeed,
   localApiBaseUrl,
+  editingFeedId,
+  editingLabel,
+  editingColor,
   onToggleAddFeed,
   onSetSetupCode,
   onApplySetupCode,
@@ -26,6 +29,11 @@ export function CalendarPeerFeedsSection({
   onAddFeed,
   onSyncFeed,
   onRemoveFeed,
+  onStartEditFeed,
+  onSetEditingLabel,
+  onSetEditingColor,
+  onEditFeed,
+  onCancelEditFeed,
   relativeSyncAge,
 }: {
   loading: boolean;
@@ -37,6 +45,9 @@ export function CalendarPeerFeedsSection({
   parsedSetupCode: ParsedSetupCode;
   newFeed: { label: string; base_url: string; token: string; color: string };
   localApiBaseUrl: string;
+  editingFeedId: string | null;
+  editingLabel: string;
+  editingColor: string;
   onToggleAddFeed: () => void;
   onSetSetupCode: (value: string) => void;
   onApplySetupCode: () => void;
@@ -44,6 +55,11 @@ export function CalendarPeerFeedsSection({
   onAddFeed: () => void;
   onSyncFeed: (id: string) => void;
   onRemoveFeed: (id: string) => void;
+  onStartEditFeed: (id: string, label: string, color: string) => void;
+  onSetEditingLabel: (label: string) => void;
+  onSetEditingColor: (color: string) => void;
+  onEditFeed: (id: string) => void;
+  onCancelEditFeed: () => void;
   relativeSyncAge: (iso: string | null) => string;
 }): JSX.Element {
   return (
@@ -278,6 +294,16 @@ export function CalendarPeerFeedsSection({
                   >
                     {feed.sync_status === "error" ? "Reconnect feed" : isStale ? "Retry sync" : "Sync now"}
                   </Button>
+                  {editingFeedId !== feed.id && (
+                    <Button
+                      onClick={() => onStartEditFeed(feed.id, feed.label, feed.color)}
+                      disabled={loading}
+                      variant="ghost"
+                      style={{ opacity: loading ? 0.55 : 1, borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+                    >
+                      Edit
+                    </Button>
+                  )}
                   <Button
                     onClick={() => onRemoveFeed(feed.id)}
                     disabled={loading}
@@ -287,6 +313,34 @@ export function CalendarPeerFeedsSection({
                     Remove
                   </Button>
                 </div>
+                {editingFeedId === feed.id && (
+                  <div style={{ display: "grid", gap: "0.6rem", padding: "0.75rem 0.85rem", borderRadius: "13px", background: "color-mix(in srgb, var(--surface) 74%, white 26%)", border: "1px solid var(--border-subtle)" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "0.55rem", alignItems: "end" }}>
+                      <label style={{ display: "grid", gap: "0.3rem" }}>
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Label</span>
+                        <input
+                          type="text"
+                          value={editingLabel}
+                          onChange={(e) => onSetEditingLabel(e.target.value)}
+                          disabled={loading}
+                          style={{ ...inputStyle, fontSize: "var(--text-sm)" }}
+                        />
+                      </label>
+                      <label style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Color</span>
+                        <input type="color" value={editingColor} onChange={(e) => onSetEditingColor(e.target.value)} disabled={loading} />
+                      </label>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <Button onClick={() => onEditFeed(feed.id)} disabled={loading} variant="primary" style={{ opacity: loading ? 0.6 : 1, fontSize: "var(--text-xs)" }}>
+                        Save
+                      </Button>
+                      <Button onClick={onCancelEditFeed} disabled={loading} variant="ghost" style={{ opacity: loading ? 0.55 : 1, fontSize: "var(--text-xs)", borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

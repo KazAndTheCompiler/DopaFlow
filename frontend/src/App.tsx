@@ -108,20 +108,20 @@ export default function App(): JSX.Element {
       if (nextRoute === "plan") {
         overlay.closeShutdown();
         overlay.openPlan();
-        window.location.hash = routeToHash(route);
+        window.location.hash = routeToHash(getRouteFromHash());
         return;
       }
       if (nextRoute === "shutdown") {
         overlay.closePlan();
         overlay.openShutdown();
-        window.location.hash = routeToHash(route);
+        window.location.hash = routeToHash(getRouteFromHash());
         return;
       }
       setRoute(nextRoute);
     };
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [route, overlay]);
+  }, [overlay]);
 
   useEffect(() => {
     const openShutdown = (): void => {

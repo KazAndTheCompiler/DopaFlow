@@ -1,8 +1,9 @@
 import { useState } from "react";
 
 import Button from "@ds/primitives/Button";
+import { API_BASE_URL } from "../../api/client";
 
-const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://127.0.0.1:8000/api/v2";
+const BASE = API_BASE_URL;
 
 export default function WebhookPanel(): JSX.Element {
   const [copied, setCopied] = useState(false);

@@ -48,8 +48,7 @@ export default function HabitsView(): JSX.Element {
       setFreq(1);
       setPeriod("day");
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to create habit";
-      showToast(`Habit creation failed. ${message}`, "error");
+      showToast("Could not create the habit. Check the server is running.", "error");
     } finally {
       setBusy(false);
     }
