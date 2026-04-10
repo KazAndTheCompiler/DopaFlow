@@ -38,6 +38,9 @@
     "files": [
       "main.js",
       "backend-runtime.js",
+      "notification-runtime.js",
+      "window-runtime.js",
+      "runtime-auth.js",
       "preload.js",
       "assets/**"
     ],
