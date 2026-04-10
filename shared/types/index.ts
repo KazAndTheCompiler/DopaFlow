@@ -74,6 +74,14 @@ export interface Task {
   updated_at: string;
 }
 
+export interface TaskTimeLog {
+  id: string;
+  task_id: string;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_m: number | null;
+}
+
 export interface TaskQuickAddPreview {
   title?: string;
   due_at?: string | null;

@@ -7,17 +7,34 @@ from pathlib import Path
 
 import pytest
 from app.domains.tasks import repository as tasks_repo
+from app.domains.tasks.schemas import Task
 from app.domains.vault_bridge.sync_service import VaultSyncService
-from app.domains.vault_bridge.task_writer import render_task_collection, rewrite_task_id_in_file
-from app.domains.vault_bridge.task_reader import parse_task_line, parse_task_collection, parse_task_file
+from app.domains.vault_bridge.task_writer import (
+    render_task_collection,
+    rewrite_task_id_in_file,
+)
+from app.domains.vault_bridge.task_reader import (
+    parse_task_line,
+    parse_task_collection,
+    parse_task_file,
+)
 from app.domains.vault_bridge.schemas import (
     TaskImportCandidate,
     TaskImportConfirmRequest,
     TaskImportPreview,
 )
 
+_NOW = "2026-01-01T00:00:00+00:00"
+
+
+def _t(**fields):
+    base = {"created_at": _NOW, "updated_at": _NOW, "sort_order": 0}
+    base.update(fields)
+    return Task.model_validate(base)
+
 
 # ── rewrite_task_id_in_file ──────────────────────���────────────────────────────
+
 
 class TestRewriteTaskId:
     def _make_file(self, tmp_path: Path, content: str) -> Path:
@@ -37,7 +54,9 @@ class TestRewriteTaskId:
     def test_injects_id_into_existing_comment(self, tmp_path):
         content = "- [ ] Task <!--due:2026-04-10-->\n"
         f = self._make_file(tmp_path, content)
-        result = rewrite_task_id_in_file(f, "- [ ] Task <!--due:2026-04-10-->", "tsk_abc")
+        result = rewrite_task_id_in_file(
+            f, "- [ ] Task <!--due:2026-04-10-->", "tsk_abc"
+        )
         assert result is True
         updated = f.read_text()
         assert "df:tsk_abc" in updated
@@ -97,6 +116,7 @@ class TestRewriteTaskId:
 
 # ── TaskImportCandidate schema ────────────────────────────────���───────────────
 
+
 class TestTaskImportCandidateSchema:
     def test_defaults(self):
         c = TaskImportCandidate(
@@ -123,6 +143,7 @@ class TestTaskImportCandidateSchema:
 
 # ── TaskImportPreview schema ──────────────────────────���───────────────────────
 
+
 class TestTaskImportPreview:
     def test_empty(self):
         p = TaskImportPreview(importable=[], known=[], skipped=0, total_scanned=0)
@@ -134,9 +155,17 @@ class TestTaskImportPreview:
             TaskImportCandidate(title="B", file_path="f", line_text="- [ ] B"),
         ]
         known = [
-            TaskImportCandidate(title="C", file_path="f", line_text="- [ ] C <!--df:tsk_1-->", status="known", known_task_id="tsk_1"),
+            TaskImportCandidate(
+                title="C",
+                file_path="f",
+                line_text="- [ ] C <!--df:tsk_1-->",
+                status="known",
+                known_task_id="tsk_1",
+            ),
         ]
-        p = TaskImportPreview(importable=importable, known=known, skipped=2, total_scanned=5)
+        p = TaskImportPreview(
+            importable=importable, known=known, skipped=2, total_scanned=5
+        )
         assert len(p.importable) == 2
         assert len(p.known) == 1
         assert p.skipped == 2
@@ -145,13 +174,16 @@ class TestTaskImportPreview:
 
 # ── TaskImportConfirmRequest ─────────────────────────────���────────────────────
 
+
 class TestTaskImportConfirmRequest:
     def test_empty_candidates(self):
         req = TaskImportConfirmRequest(candidates=[])
         assert req.candidates == []
 
     def test_with_candidates(self):
-        c = TaskImportCandidate(title="T", file_path="Tasks/Inbox.md", line_text="- [ ] T")
+        c = TaskImportCandidate(
+            title="T", file_path="Tasks/Inbox.md", line_text="- [ ] T"
+        )
         req = TaskImportConfirmRequest(candidates=[c])
         assert len(req.candidates) == 1
         assert req.candidates[0].title == "T"
@@ -159,11 +191,19 @@ class TestTaskImportConfirmRequest:
 
 # ── Integration: render → parse → classify ────────────────────��──────────────
 
+
 class TestImportRoundTrip:
     def test_rendered_tasks_are_known_after_push(self, tmp_path):
         """Tasks with df: IDs should classify as 'known', not 'importable'."""
         tasks = [
-            {"id": "tsk_101", "title": "Known task", "done": False, "status": "todo", "priority": 3, "tags": []},
+            _t(
+                id="tsk_101",
+                title="Known task",
+                done=False,
+                status="todo",
+                priority=3,
+                tags=[],
+            ),
         ]
         content = render_task_collection(tasks, "My Project", project_id="prj_1")
         f = tmp_path / "MyProject.md"
@@ -239,8 +279,12 @@ class TestImportService:
         preview = service.preview_task_import()
         assert len(preview.importable) == 1
 
-        first = service.confirm_task_import(TaskImportConfirmRequest(candidates=preview.importable))
-        second = service.confirm_task_import(TaskImportConfirmRequest(candidates=preview.importable))
+        first = service.confirm_task_import(
+            TaskImportConfirmRequest(candidates=preview.importable)
+        )
+        second = service.confirm_task_import(
+            TaskImportConfirmRequest(candidates=preview.importable)
+        )
 
         assert first.imported == 1
         assert second.imported == 0
@@ -258,7 +302,9 @@ class TestImportService:
             line_number=1,
         )
 
-        result = service.confirm_task_import(TaskImportConfirmRequest(candidates=[candidate]))
+        result = service.confirm_task_import(
+            TaskImportConfirmRequest(candidates=[candidate])
+        )
 
         assert result.imported == 1
         assert any("source vault file not found" in error for error in result.errors)

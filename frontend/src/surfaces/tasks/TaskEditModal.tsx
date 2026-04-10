@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Button from "@ds/primitives/Button";
 import Input from "@ds/primitives/Input";
 import Modal from "@ds/primitives/Modal";
-import type { SubTask, Task } from "@shared/types";
+import type { ProjectId, SubTask, Task } from "@shared/types";
 import { askPacky, createAlarm } from "@api/index";
 import { addTaskDependency, getTaskContext, removeTaskDependency } from "@api/tasks";
 import { useAppProjects, useAppTasks } from "../../app/AppContexts";
@@ -97,8 +97,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
-      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-      const patch = {
+      const patch: Partial<Task> = {
         title: title.trim(),
         description: description.trim() || null,
         priority,
@@ -107,9 +106,13 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
         tags,
         estimated_minutes: estimatedMinutes ? parseInt(estimatedMinutes, 10) : null,
         subtasks,
-        project_id: projectId || null,
-        ...(recurrenceRule ? { recurrence_rule: recurrenceRule } : {}),
-      } as Partial<Task>;
+      };
+      if (projectId) {
+        patch.project_id = projectId as ProjectId;
+      }
+      if (recurrenceRule) {
+        patch.recurrence_rule = recurrenceRule;
+      }
       await onSave(task.id, patch);
       if (reminderEnabled && dueAt) {
         const dueDate = new Date(dueAt);

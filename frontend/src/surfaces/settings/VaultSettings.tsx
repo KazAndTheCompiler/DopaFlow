@@ -90,7 +90,7 @@ export function VaultSettings(): JSX.Element {
           style={pathInputStyle}
           type="text"
           value={pathInput}
-          placeholder="/Users/you/Documents/MyVault"
+          placeholder="~/Documents/MyVault"
           onChange={(event) => setPathInput(event.target.value)}
         />
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
