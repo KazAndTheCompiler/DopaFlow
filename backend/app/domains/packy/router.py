@@ -81,6 +81,8 @@ async def voice_command_audio(
     Voice command from raw audio upload.
 
     Server-side STT → NLP → preview/execute.  Same response as /voice-command.
+    NOTE: Currently unwired from the frontend — browser SpeechRecognition is the primary
+    STT path. This endpoint is kept for non-browser-STT environments and future audio-upload UI.
     """
     from app.services.speech_to_text import transcribe_upload
 
@@ -107,8 +109,14 @@ async def voice_command_audio(
 # -----------------------------------------------------------------------
 
 
-@router.post("/ask", response_model=PackyAnswer, dependencies=[Depends(require_scope("write:packy"))])
-async def ask_packy(payload: PackyAskRequest, svc: PackyService = Depends(_svc)) -> PackyAnswer:
+@router.post(
+    "/ask",
+    response_model=PackyAnswer,
+    dependencies=[Depends(require_scope("write:packy"))],
+)
+async def ask_packy(
+    payload: PackyAskRequest, svc: PackyService = Depends(_svc)
+) -> PackyAnswer:
     """Handle Packy's main ask endpoint."""
     return svc.ask(payload)
 
@@ -118,19 +126,33 @@ async def ask_packy(payload: PackyAskRequest, svc: PackyService = Depends(_svc))
 # -----------------------------------------------------------------------
 
 
-@router.get("/whisper", response_model=PackyWhisper, dependencies=[Depends(require_scope("read:packy"))])
+@router.get(
+    "/whisper",
+    response_model=PackyWhisper,
+    dependencies=[Depends(require_scope("read:packy"))],
+)
 async def get_whisper(svc: PackyService = Depends(_svc)) -> PackyWhisper:
     """Return a Packy proactive tip."""
     return svc.whisper()
 
 
-@router.post("/lorebook", response_model=PackyLorebookResponse, dependencies=[Depends(require_scope("write:packy"))])
-async def update_lorebook(payload: PackyLorebookRequest, svc: PackyService = Depends(_svc)) -> PackyLorebookResponse:
+@router.post(
+    "/lorebook",
+    response_model=PackyLorebookResponse,
+    dependencies=[Depends(require_scope("write:packy"))],
+)
+async def update_lorebook(
+    payload: PackyLorebookRequest, svc: PackyService = Depends(_svc)
+) -> PackyLorebookResponse:
     """Push contextual lorebook updates into Packy."""
-    return PackyLorebookResponse(**svc.lorebook(payload))
+    return svc.lorebook(payload)
 
 
-@router.get("/momentum", response_model=MomentumScore, dependencies=[Depends(require_scope("read:packy"))])
+@router.get(
+    "/momentum",
+    response_model=MomentumScore,
+    dependencies=[Depends(require_scope("read:packy"))],
+)
 async def get_momentum(svc: PackyService = Depends(_svc)) -> MomentumScore:
     """Return the Packy momentum score."""
     return svc.momentum()

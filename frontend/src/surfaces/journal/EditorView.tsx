@@ -166,6 +166,7 @@ export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDat
       <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <VoiceCommandModal
           initialCommandWord="journal"
+          route="journal"
           {...(onVoiceExecuted ? { onExecuted: onVoiceExecuted } : {})}
         />
       </div>
@@ -184,6 +185,7 @@ export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDat
         </div>
       ) : (
         <textarea
+          spellCheck={false}
           value={body}
           onChange={(e) => {
             const value = e.target.value;

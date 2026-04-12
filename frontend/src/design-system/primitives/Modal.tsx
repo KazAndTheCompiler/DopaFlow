@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { PropsWithChildren } from "react";
 
 export interface ModalProps {
@@ -12,6 +13,21 @@ export function Modal({
   title,
   onClose,
 }: PropsWithChildren<ModalProps>): JSX.Element | null {
+  const triggerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    triggerRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    return () => {
+      triggerRef.current?.focus();
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }

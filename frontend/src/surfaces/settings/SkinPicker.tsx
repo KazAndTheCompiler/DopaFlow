@@ -4,7 +4,7 @@ import { saveCustomSkin } from "../../hooks/useSkin";
 import { Skeleton } from "@ds/primitives/Skeleton";
 
 const DEFAULT_SKIN = "ink-and-stone";
-const CUSTOM_SKIN_KEY = "zoestm-custom-skin";
+const CUSTOM_SKIN_KEY = "dopaflow:custom_skin";
 
 interface SkinDefinition extends SkinMeta {
   author?: string;

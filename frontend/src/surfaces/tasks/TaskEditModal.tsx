@@ -5,7 +5,6 @@ import Input from "@ds/primitives/Input";
 import Modal from "@ds/primitives/Modal";
 import type { ProjectId, SubTask, Task } from "@shared/types";
 import { askPacky, createAlarm } from "@api/index";
-import { addTaskDependency, getTaskContext, removeTaskDependency } from "@api/tasks";
 import { useAppProjects, useAppTasks } from "../../app/AppContexts";
 
 export interface TaskEditModalProps {
@@ -30,6 +29,22 @@ const RECURRENCE_OPTIONS: Array<{ label: string; value: string }> = [
   { label: "Monthly", value: "monthly" },
 ];
 
+type TaskEditSnapshot = {
+  title: string;
+  description: string;
+  priority: number;
+  status: Task["status"];
+  dueAt: string;
+  tagsRaw: string;
+  estimatedMinutes: string;
+  subtasks: SubTask[];
+  recurrenceRule: string;
+  projectId: string;
+  dependencies: string[];
+  reminderEnabled: boolean;
+  reminderOffset: number;
+};
+
 export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskEditModalProps): JSX.Element | null {
   const projects = useAppProjects();
   const tasks = useAppTasks();
@@ -53,11 +68,20 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderOffset, setReminderOffset] = useState<number>(0);
   const [packyHint, setPackyHint] = useState<string>("");
+  const [initialSnapshot, setInitialSnapshot] = useState<TaskEditSnapshot | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     if (!task) { setDependencies([]); return; }
-    void getTaskContext(task.id)
-      .then((ctx) => setDependencies(ctx.dependencies ?? []))
+    void tasks.getContext(task.id)
+      .then((ctx) => {
+        const nextDependencies = ctx.dependencies ?? [];
+        setDependencies(nextDependencies);
+        setInitialSnapshot((prev) => {
+          if (!prev) return prev;
+          return { ...prev, dependencies: nextDependencies.map((dep) => dep.id) };
+        });
+      })
       .catch(() => setDependencies([]));
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -71,6 +95,21 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
 
   useEffect(() => {
     if (!task) return;
+    const nextSnapshot: TaskEditSnapshot = {
+      title: task.title,
+      description: task.description ?? "",
+      priority: task.priority,
+      status: task.status,
+      dueAt: task.due_at ? task.due_at.slice(0, 10) : "",
+      tagsRaw: task.tags.join(", "),
+      estimatedMinutes: task.estimated_minutes != null ? String(task.estimated_minutes) : "",
+      subtasks: task.subtasks ?? [],
+      recurrenceRule: task.recurrence_rule ?? "",
+      projectId: task.project_id ?? "",
+      dependencies: [],
+      reminderEnabled: false,
+      reminderOffset: 0,
+    };
     setTitle(task.title);
     setDescription(task.description ?? "");
     setPriority(task.priority);
@@ -85,9 +124,62 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
     setConfirmDelete(false);
     setReminderEnabled(false);
     setReminderOffset(0);
+    setInitialSnapshot(nextSnapshot);
+    setIsDirty(false);
   }, [task]);
 
+  useEffect(() => {
+    if (!task || !initialSnapshot) return;
+    const nextSnapshot: TaskEditSnapshot = {
+      title,
+      description,
+      priority,
+      status,
+      dueAt,
+      tagsRaw,
+      estimatedMinutes,
+      subtasks,
+      recurrenceRule,
+      projectId,
+      dependencies: dependencies.map((dep) => dep.id),
+      reminderEnabled,
+      reminderOffset,
+    };
+    setIsDirty(JSON.stringify(nextSnapshot) !== JSON.stringify(initialSnapshot));
+  }, [
+    dependencies,
+    description,
+    dueAt,
+    estimatedMinutes,
+    initialSnapshot,
+    priority,
+    projectId,
+    recurrenceRule,
+    reminderEnabled,
+    reminderOffset,
+    status,
+    subtasks,
+    tagsRaw,
+    task,
+    title,
+  ]);
+
   if (!task) return null;
+
+  const handleRequestClose = (): void => {
+    if (isDirty && !window.confirm("Discard changes?")) return;
+    onClose();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      handleRequestClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDirty, onClose]);
 
   const handleSave = async (): Promise<void> => {
     if (!title.trim()) return;
@@ -199,7 +291,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   };
 
   return (
-    <Modal open={true} title="Edit task" onClose={onClose}>
+    <Modal open={true} title="Edit task" onClose={handleRequestClose}>
       <div style={{ display: "grid", gap: "1rem" }}>
         {packyHint && (
           <div
@@ -324,7 +416,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
                   {dep.title}
                   <button
                     type="button"
-                    onClick={() => void removeTaskDependency(task!.id, dep.id).then(() => setDependencies((ds) => ds.filter((d) => d.id !== dep.id)))}
+                    onClick={() => void tasks.removeDependency(task.id, dep.id).then(() => setDependencies((ds) => ds.filter((d) => d.id !== dep.id)))}
                     style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", padding: 0, lineHeight: 1 }}
                   >
                     X
@@ -352,7 +444,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
               onClick={() => {
                 const match = tasks.tasks.find((t) => t.title === depSearch && t.id !== task?.id);
                 if (!match || !task) return;
-                void addTaskDependency(task.id, match.id).then(() => { setDependencies((ds) => [...ds, match]); setDepSearch(""); });
+                void tasks.addDependency(task.id, match.id).then(() => { setDependencies((ds) => [...ds, match]); setDepSearch(""); });
               }}
               style={{ padding: "0.65rem 0.8rem", borderRadius: "10px", border: "none", background: "var(--accent)", color: "var(--text-inverted)", cursor: "pointer", fontWeight: 600, fontSize: "var(--text-sm)" }}
             >
@@ -493,7 +585,7 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
           </button>
 
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button variant="ghost" onClick={handleRequestClose} disabled={saving}>Cancel</Button>
             <Button onClick={() => void handleSave()} disabled={saving || !title.trim()}>
               {saving ? "Saving…" : "Save"}
             </Button>

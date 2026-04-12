@@ -149,9 +149,9 @@ jobs:
           cd desktop
           npm run dist:stable:linux
 
-      - name: Verify AppImage payload
+      - name: Verify AppImage deps
         run: |
-          bash scripts/verify_appimage.sh desktop/dist/DopaFlow-*.AppImage
+          bash scripts/verify_appimage.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

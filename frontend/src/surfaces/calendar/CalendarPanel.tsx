@@ -235,6 +235,7 @@ export function CalendarPanel({ onCreate, onVoiceExecuted }: CalendarPanelProps)
       </button>
       <VoiceCommandModal
         initialCommandWord="calendar"
+        route="calendar"
         {...(onVoiceExecuted ? { onExecuted: onVoiceExecuted } : {})}
       />
     </section>

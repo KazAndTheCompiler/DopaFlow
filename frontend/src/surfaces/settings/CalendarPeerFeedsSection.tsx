@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 
 import type { PeerFeed } from "../../../../shared/types";
 import Button from "../../design-system/primitives/Button";
@@ -62,6 +62,29 @@ export function CalendarPeerFeedsSection({
   onCancelEditFeed: () => void;
   relativeSyncAge: (iso: string | null) => string;
 }): JSX.Element {
+  const [feedUrlError, setFeedUrlError] = useState("");
+
+  function isValidFeedUrl(value: string): boolean {
+    if (!value.startsWith("http://") && !value.startsWith("https://")) {
+      return false;
+    }
+    try {
+      new URL(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function handleAddFeed(): void {
+    if (!isValidFeedUrl(newFeed.base_url)) {
+      setFeedUrlError("Must be a valid http(s) URL");
+      return;
+    }
+    setFeedUrlError("");
+    onAddFeed();
+  }
+
   return (
     <section style={panelStyle}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -187,10 +210,14 @@ export function CalendarPeerFeedsSection({
                 type="text"
                 placeholder="https://partner.example.com/api/v2"
                 value={newFeed.base_url}
-                onChange={(event) => onSetNewFeed({ ...newFeed, base_url: event.target.value })}
+                onChange={(event) => {
+                  setFeedUrlError("");
+                  onSetNewFeed({ ...newFeed, base_url: event.target.value });
+                }}
                 disabled={loading}
                 style={inputStyle}
               />
+              {feedUrlError ? <span style={{ fontSize: "var(--text-xs)", color: "var(--state-overdue)" }}>{feedUrlError}</span> : null}
             </label>
             <label style={{ display: "grid", gap: "0.4rem" }}>
               <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Token</span>
@@ -209,7 +236,7 @@ export function CalendarPeerFeedsSection({
               <input type="color" value={newFeed.color} onChange={(event) => onSetNewFeed({ ...newFeed, color: event.target.value })} disabled={loading} />
               <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>Feed color</span>
             </label>
-            <Button onClick={onAddFeed} disabled={loading} variant="primary" style={{ opacity: loading ? 0.6 : 1 }}>
+            <Button onClick={handleAddFeed} disabled={loading} variant="primary" style={{ opacity: loading ? 0.6 : 1 }}>
               {loading ? "Connecting…" : "Connect Calendar"}
             </Button>
           </div>

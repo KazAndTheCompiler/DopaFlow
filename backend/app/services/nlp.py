@@ -23,7 +23,13 @@ logger = logging.getLogger(__name__)
 _INTENT_PATTERNS: dict[str, list[tuple[re.Pattern[str], float]]] = {
     # --- task ---
     "task.create": [
-        (re.compile(r"\b(?:add|create|new|make)\s+(?:a\s+)?(?:task|todo|reminder|to-?do)\b", re.I), 1.0),
+        (
+            re.compile(
+                r"\b(?:add|create|new|make)\s+(?:a\s+)?(?:task|todo|reminder|to-?do)\b",
+                re.I,
+            ),
+            1.0,
+        ),
         (re.compile(r"\b(?:todo|to do|to-do|task)\b", re.I), 0.8),
         (re.compile(r"\bi\s+(?:need|have)\s+to\b", re.I), 0.7),
         (re.compile(r"\bremind\s+me\b", re.I), 0.7),
@@ -34,37 +40,100 @@ _INTENT_PATTERNS: dict[str, list[tuple[re.Pattern[str], float]]] = {
         (re.compile(r"\bgotta\s+", re.I), 0.5),
     ],
     "task.complete": [
-        (re.compile(r"\b(?:complete|finish|done|check\s*off|mark\s+(?:as\s+)?done|mark\s+complete)\b.*\b(?:task|todo|item)\b", re.I), 1.0),
-        (re.compile(r"\b(?:completed?|finished|done\s+with|mark\s+done|mark\s+(?:as\s+)?done)\s+", re.I), 0.9),
+        (
+            re.compile(
+                r"\b(?:complete|finish|done|check\s*off|mark\s+(?:as\s+)?done|mark\s+complete)\b.*\b(?:task|todo|item)\b",
+                re.I,
+            ),
+            1.0,
+        ),
+        (
+            re.compile(
+                r"\b(?:completed?|finished|done\s+with|mark\s+done|mark\s+(?:as\s+)?done)\s+",
+                re.I,
+            ),
+            0.9,
+        ),
         (re.compile(r"\bcheck\s+(?:it\s+)?off\b", re.I), 0.9),
         (re.compile(r"\b(?:cross|strike)\s+(?:it\s+)?off\b", re.I), 0.7),
         (re.compile(r"\b(?:just\s+)?finished\s+", re.I), 0.6),
     ],
     "task.list": [
-        (re.compile(r"\b(?:show|list|what(?:'s| is)|display|view)\s+(?:my\s+)?(?:tasks?|to-?dos?|todos?)\b", re.I), 1.0),
+        (
+            re.compile(
+                r"\b(?:show|list|what(?:'s| is)|display|view)\s+(?:my\s+)?(?:tasks?|to-?dos?|todos?)\b",
+                re.I,
+            ),
+            1.0,
+        ),
         (re.compile(r"\bwhat\s+(?:do\s+)?i\s+(?:need|have)\s+to\s+do\b", re.I), 0.9),
-        (re.compile(r"\bwhat'?s\s+(?:on\s+)?(?:my\s+)?(?:plate|agenda|schedule)\b", re.I), 0.8),
+        (
+            re.compile(
+                r"\bwhat'?s\s+(?:on\s+)?(?:my\s+)?(?:plate|agenda|schedule)\b", re.I
+            ),
+            0.8,
+        ),
         (re.compile(r"\bwhat\s+do\s+i\s+have\s+coming\s+up\b", re.I), 0.8),
     ],
     # --- journal ---
     "journal.create": [
-        (re.compile(r"\b(?:write|log|create|add|make)\s+(?:a\s+)?(?:journal|entry|note|log|diary)\b", re.I), 1.0),
+        (
+            re.compile(
+                r"\b(?:write|log|create|add|make)\s+(?:a\s+)?(?:journal|entry|note|log|diary)\b",
+                re.I,
+            ),
+            1.0,
+        ),
         (re.compile(r"\b(?:journal|diary|reflect|brain\s*dump)\b", re.I), 0.8),
         (re.compile(r"\bi\s+(?:feel|felt|am feeling|was)\b", re.I), 0.5),
         (re.compile(r"\bbrain\s*dump\b", re.I), 1.0),
-        (re.compile(r"\b(?:capture|jot\s+down|write\s+down)\s+(?:a\s+)?(?:thought|idea|note)\b", re.I), 0.7),
+        (
+            re.compile(
+                r"\b(?:capture|jot\s+down|write\s+down)\s+(?:a\s+)?(?:thought|idea|note)\b",
+                re.I,
+            ),
+            0.7,
+        ),
     ],
     # --- calendar ---
     "calendar.create": [
         (re.compile(r"\b(?:schedule|calendar|event|meeting|appointment)\b", re.I), 0.9),
-        (re.compile(r"\b(?:book|block|reserve)\s+(?:a\s+)?(?:time|slot|hour|minute)\b", re.I), 0.8),
-        (re.compile(r"\b(?:put|add)\s+(?:it|this|that)\s+(?:on|in)\s+(?:my\s+)?(?:calendar|schedule)\b", re.I), 0.9),
-        (re.compile(r"\b(?:set\s+up|plan)\s+(?:a\s+)?(?:meeting|call|event)\b", re.I), 0.9),
-        (re.compile(r"\b(?:i\s+)?have\s+(?:a\s+)?(?:meeting|call|appointment)\s+(?:at|on|with)\b", re.I), 0.7),
+        (
+            re.compile(
+                r"\b(?:book|block|reserve)\s+(?:a\s+)?(?:time|slot|hour|minute)\b", re.I
+            ),
+            0.8,
+        ),
+        (
+            re.compile(
+                r"\b(?:put|add)\s+(?:it|this|that)\s+(?:on|in)\s+(?:my\s+)?(?:calendar|schedule)\b",
+                re.I,
+            ),
+            0.9,
+        ),
+        (
+            re.compile(
+                r"\b(?:set\s+up|plan)\s+(?:a\s+)?(?:meeting|call|event)\b", re.I
+            ),
+            0.9,
+        ),
+        (
+            re.compile(
+                r"\b(?:i\s+)?have\s+(?:a\s+)?(?:meeting|call|appointment)\s+(?:at|on|with)\b",
+                re.I,
+            ),
+            0.7,
+        ),
     ],
     # --- focus ---
     "focus.start": [
-        (re.compile(r"\b(?:start|begin|launch|do|run)\s+(?:a\s+)?(?:focus|pomodoro|deep\s*work|work\s*session|timer)\b", re.I), 1.0),
+        (
+            re.compile(
+                r"\b(?:start|begin|launch|do|run)\s+(?:a\s+)?(?:focus|pomodoro|deep\s*work|work\s*session|timer)\b",
+                re.I,
+            ),
+            1.0,
+        ),
         (re.compile(r"\b(?:focus|pomodoro|deep\s*work|flow\s*state)\b", re.I), 0.7),
         (re.compile(r"\blet'?s\s+(?:focus|work|get\s+to\s+work)\b", re.I), 0.6),
         (re.compile(r"\b(?:lock\s+in|heads?\s*down|zone\s+in)\b", re.I), 0.7),
@@ -72,46 +141,128 @@ _INTENT_PATTERNS: dict[str, list[tuple[re.Pattern[str], float]]] = {
     ],
     # --- alarm ---
     "alarm.create": [
-        (re.compile(r"\b(?:set|create|add|make)\s+(?:an?\s+)?(?:alarm|reminder|wake-?up)\b", re.I), 1.0),
+        (
+            re.compile(
+                r"\b(?:set|create|add|make)\s+(?:an?\s+)?(?:alarm|reminder|wake-?up)\b",
+                re.I,
+            ),
+            1.0,
+        ),
         (re.compile(r"\bwake\s+me\s+(?:up\s+)?at\b", re.I), 0.9),
         (re.compile(r"\bremind\s+me\s+(?:at|in)\b", re.I), 0.9),
         (re.compile(r"\b(?:alarm|wake-?up)\s+(?:at|for)\b", re.I), 0.8),
     ],
     # --- habit ---
     "habit.checkin": [
-        (re.compile(r"\b(?:check\s*in|log|track|did|completed?)\s+(?:my\s+)?(?:habit|streak)\b", re.I), 1.0),
-        (re.compile(r"\b(?:check\s*in|check|tick|mark)\s+(?:off\s+)?(?:my\s+)?\w+", re.I), 0.8),
-        (re.compile(r"\b(?:check|tick|mark)\s+(?:off\s+)?(?:my\s+)?(?:habit|exercise|hydrat|read|sleep|meditat|meds?)\b", re.I), 0.9),
+        (
+            re.compile(
+                r"\b(?:check\s*in|log|track|did|completed?)\s+(?:my\s+)?(?:habit|streak)\b",
+                re.I,
+            ),
+            1.0,
+        ),
+        (
+            re.compile(
+                r"\b(?:check\s*in|check|tick|mark)\s+(?:off\s+)?(?:my\s+)?\w+", re.I
+            ),
+            0.8,
+        ),
+        (
+            re.compile(
+                r"\b(?:check|tick|mark)\s+(?:off\s+)?(?:my\s+)?(?:habit|exercise|hydrat|read|sleep|meditat|meds?)\b",
+                re.I,
+            ),
+            0.9,
+        ),
     ],
     "habit.list": [
         (re.compile(r"\b(?:show|list|view|display)\s+(?:my\s+)?habits?\b", re.I), 1.0),
-        (re.compile(r"\bwhat(?:'s| is)\s+(?:my\s+)?habit\s+(?:status|progress|streak)\b", re.I), 0.9),
+        (
+            re.compile(
+                r"\bwhat(?:'s| is)\s+(?:my\s+)?habit\s+(?:status|progress|streak)\b",
+                re.I,
+            ),
+            0.9,
+        ),
     ],
     # --- review ---
     "review.start": [
-        (re.compile(r"\b(?:start|begin|do|review|study|practice|quiz)\s+(?:a\s+)?(?:review|flashcard|deck|card|study)\b", re.I), 1.0),
-        (re.compile(r"\b(?:review|flashcard|spaced\s*repetition|study\s*session)\b", re.I), 0.7),
+        (
+            re.compile(
+                r"\b(?:start|begin|do|review|study|practice|quiz)\s+(?:a\s+)?(?:review|flashcard|deck|card|study)\b",
+                re.I,
+            ),
+            1.0,
+        ),
+        (
+            re.compile(
+                r"\b(?:review|flashcard|spaced\s*repetition|study\s*session)\b", re.I
+            ),
+            0.7,
+        ),
     ],
     # --- search ---
     "search": [
-        (re.compile(r"\b(?:search|find|look\s*(?:up|for)|where(?:'s| is)|locate|query)\s+(?:for\s+)?(.+)", re.I), 1.0),
-        (re.compile(r"\b(?:what|where)\s+(?:did\s+)?(?:i\s+)?(?:write|put|save|note|log)\b", re.I), 0.8),
+        (
+            re.compile(
+                r"\b(?:search|find|look\s*(?:up|for)|where(?:'s| is)|locate|query)\s+(?:for\s+)?(.+)",
+                re.I,
+            ),
+            1.0,
+        ),
+        (
+            re.compile(
+                r"\b(?:what|where)\s+(?:did\s+)?(?:i\s+)?(?:write|put|save|note|log)\b",
+                re.I,
+            ),
+            0.8,
+        ),
     ],
     # --- nutrition ---
     "nutrition.log": [
-        (re.compile(r"\b(?:log|add|track|ate|eaten|had|drink|drank)\s+(?:a\s+)?(?:food|meal|snack|calorie|water|coffee|tea|breakfast|lunch|dinner)\b", re.I), 0.9),
-        (re.compile(r"\b(?:log|track|add)\s+(?:a\s+)?(?:.+)\s+(?:to\s+)?(?:food|nutrition|meal|calorie)\b", re.I), 0.8),
+        (
+            re.compile(
+                r"\b(?:log|add|track|ate|eaten|had|drink|drank)\s+(?:a\s+)?(?:food|meal|snack|calorie|water|coffee|tea|breakfast|lunch|dinner)\b",
+                re.I,
+            ),
+            0.9,
+        ),
+        (
+            re.compile(
+                r"\b(?:log|track|add)\s+(?:a\s+)?(?:.+)\s+(?:to\s+)?(?:food|nutrition|meal|calorie)\b",
+                re.I,
+            ),
+            0.8,
+        ),
     ],
     # --- greeting / meta ---
     "greeting": [
-        (re.compile(r"\b(?:hi|hello|hey|good\s+(?:morning|afternoon|evening)|howdy|sup|yo)\b", re.I), 0.9),
+        (
+            re.compile(
+                r"\b(?:hi|hello|hey|good\s+(?:morning|afternoon|evening)|howdy|sup|yo)\b",
+                re.I,
+            ),
+            0.9,
+        ),
     ],
     "help": [
-        (re.compile(r"\b(?:help|what\s+can\s+(?:you|i)\s+do|commands?|options?|how\s+(?:do|does|to))\b", re.I), 0.9),
+        (
+            re.compile(
+                r"\b(?:help|what\s+can\s+(?:you|i)\s+do|commands?|options?|how\s+(?:do|does|to))\b",
+                re.I,
+            ),
+            0.9,
+        ),
     ],
     # --- undo ---
     "undo": [
-        (re.compile(r"\b(?:undo|reverse|take\s+(?:that\s+)?back|revert|cancel\s+(?:that|the\s+last))\b", re.I), 1.0),
+        (
+            re.compile(
+                r"\b(?:undo|reverse|take\s+(?:that\s+)?back|revert|cancel\s+(?:that|the\s+last))\b",
+                re.I,
+            ),
+            1.0,
+        ),
     ],
 }
 
@@ -119,6 +270,7 @@ _INTENT_PATTERNS: dict[str, list[tuple[re.Pattern[str], float]]] = {
 # ---------------------------------------------------------------------------
 # Simple word-overlap matcher for tasks when no explicit intent keyword
 # ---------------------------------------------------------------------------
+
 
 def _word_overlap_score(query: str, target: str) -> float:
     """Return 0..1 overlap between query words and target words."""
@@ -129,7 +281,9 @@ def _word_overlap_score(query: str, target: str) -> float:
     return len(q & t) / max(len(q), len(t))
 
 
-def fuzzy_task_match(query: str, tasks: list[dict[str, Any]], *, min_score: float = 0.4) -> list[dict[str, Any]]:
+def fuzzy_task_match(
+    query: str, tasks: list[dict[str, Any]], *, min_score: float = 0.4
+) -> list[dict[str, Any]]:
     """Return tasks sorted by fuzzy match score against query, best first."""
     query = (query or "").strip()
     if not query:
@@ -152,6 +306,7 @@ def fuzzy_task_match(query: str, tasks: list[dict[str, Any]], *, min_score: floa
 # ---------------------------------------------------------------------------
 # Entity extraction
 # ---------------------------------------------------------------------------
+
 
 def _extract_time(text: str) -> tuple[int, int] | None:
     """Pull HH:MM from text.  Returns (hour, minute) or None."""
@@ -196,7 +351,15 @@ def _extract_date(text: str) -> str | None:
     if "next week" in low:
         return (now + timedelta(days=7)).date().isoformat()
     # weekdays
-    weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    weekdays = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ]
     if m := re.search(r"\b(?:this\s+)?(" + "|".join(weekdays) + r")\b", low):
         target = weekdays.index(m.group(1))
         delta = (target - now.weekday()) % 7 or 7
@@ -217,11 +380,15 @@ def _extract_date(text: str) -> str | None:
 def _extract_priority(text: str) -> int:
     """Return priority 1-4 from text cues.  Default 2."""
     low = text.lower()
-    if re.search(r"\b(?:urgent|asap|critical|high\s*priority|must\s+do|right\s+now)\b", low):
+    if re.search(
+        r"\b(?:urgent|asap|critical|high\s*priority|must\s+do|right\s+now)\b", low
+    ):
         return 1
     if re.search(r"!high|!1", low):
         return 1
-    if re.search(r"\b(?:low\s*priority|no\s+rush|when\s+(?:i\s+)?get\s+(?:a\s+)?chance)\b", low):
+    if re.search(
+        r"\b(?:low\s*priority|no\s+rush|when\s+(?:i\s+)?get\s+(?:a\s+)?chance)\b", low
+    ):
         return 3
     if re.search(r"!low|!3", low):
         return 3
@@ -253,14 +420,32 @@ def _clean_task_complete_query(text: str) -> str:
 # ---------------------------------------------------------------------------
 
 _STRIP_PREFIXES = (
-    "add task", "create task", "new task", "todo", "to do", "task",
-    "journal entry", "log journal", "journal",
-    "schedule", "calendar", "event",
-    "complete task", "done task", "mark done", "finish task",
-    "focus", "pomodoro",
-    "set alarm", "create alarm", "alarm",
-    "check in habit", "log habit", "check in",
-    "show habits", "list habits",
+    "add task",
+    "create task",
+    "new task",
+    "todo",
+    "to do",
+    "task",
+    "journal entry",
+    "log journal",
+    "journal",
+    "schedule",
+    "calendar",
+    "event",
+    "complete task",
+    "done task",
+    "mark done",
+    "finish task",
+    "focus",
+    "pomodoro",
+    "set alarm",
+    "create alarm",
+    "alarm",
+    "check in habit",
+    "log habit",
+    "check in",
+    "show habits",
+    "list habits",
 )
 
 
@@ -271,7 +456,7 @@ def _strip_known_prefix(text: str) -> str:
         if low == prefix:
             return ""
         if low.startswith(f"{prefix} "):
-            return text.strip()[len(prefix):].strip()
+            return text.strip()[len(prefix) :].strip()
     return text.strip()
 
 
@@ -279,9 +464,11 @@ def _strip_known_prefix(text: str) -> str:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class NLPResult:
     """Result of NLP intent classification and entity extraction."""
+
     intent: str
     confidence: float
     entities: dict[str, Any] = field(default_factory=dict)
@@ -310,6 +497,7 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
     if not scores:
         # Fallback: try quick_add parse — if it extracts a real title + date/priority/recurrence, assume task.create
         from app.services import quick_add
+
         try:
             parsed = quick_add.parse(text)
             has_signal = (
@@ -320,7 +508,11 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
             if parsed.get("title") and has_signal:
                 title = parsed["title"]
                 recurrence_rule = parsed.get("recurrence_rule")
-                tts = f'Recurring task created: "{title}".' if recurrence_rule else f'Task added: "{title}".'
+                tts = (
+                    f'Recurring task created: "{title}".'
+                    if recurrence_rule
+                    else f'Task added: "{title}".'
+                )
                 return NLPResult(
                     intent="task.create",
                     confidence=0.6,
@@ -354,6 +546,7 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
 
     if best_intent == "task.create":
         from app.services import quick_add
+
         parsed = quick_add.parse(body or text)
         estimated = _extract_duration(text)
         entities = {
@@ -364,7 +557,11 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
             "recurrence_rule": parsed.get("recurrence_rule"),
             "estimated_minutes": estimated,
         }
-        follow_ups = ["Add another task?", "Start a focus session on this?", "Anything else?"]
+        follow_ups = [
+            "Add another task?",
+            "Start a focus session on this?",
+            "Anything else?",
+        ]
         # Build varied TTS
         title = entities["title"]
         if entities.get("recurrence_rule"):
@@ -406,8 +603,15 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
             start_datetime = datetime.fromisoformat(start_dt.replace("Z", "+00:00"))
             end_datetime = start_datetime + timedelta(minutes=dur_min)
             end_dt = end_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
-        title_clean = re.sub(r"\b(today|tomorrow|next\s+\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|for\s+\d+\s*(?:minutes?|hours?|mins?|hrs?))\b", "", body or text, flags=re.I).strip()
-        title_clean = re.sub(r"\s+", " ", title_clean).strip(" ,.;:-") or body or "Untitled event"
+        title_clean = re.sub(
+            r"\b(today|tomorrow|next\s+\w+|at\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?|for\s+\d+\s*(?:minutes?|hours?|mins?|hrs?))\b",
+            "",
+            body or text,
+            flags=re.I,
+        ).strip()
+        title_clean = (
+            re.sub(r"\s+", " ", title_clean).strip(" ,.;:-") or body or "Untitled event"
+        )
         entities = {
             "title": title_clean,
             "start_at": start_dt,
@@ -418,7 +622,7 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
         }
         follow_ups = ["Add another event?", "Block focus time before this?"]
         if start_dt:
-            tts_response = f'Booked: {title_clean}.'
+            tts_response = f"Booked: {title_clean}."
         else:
             tts_response = f"I got '{title_clean}'. When's it happening?"
 
@@ -434,11 +638,14 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
         entities = {
             "alarm_time": f"{time_str[0]:02d}:{time_str[1]:02d}" if time_str else None,
             "date": date_str,
-            "title": re.sub(r"\b(?:set|create|alarm|at|for)\b", "", text, flags=re.I).strip() or "Alarm",
+            "title": re.sub(
+                r"\b(?:set|create|alarm|at|for)\b", "", text, flags=re.I
+            ).strip()
+            or "Alarm",
         }
-        follow_ups = ["Set another alarm?"]
+        follow_ups = ["Set another alarm?", "Start a morning routine?"]
         if time_str:
-            tts_response = f'Alarm set for {time_str[0]:02d}:{time_str[1]:02d}.'
+            tts_response = f"Alarm set for {time_str[0]:02d}:{time_str[1]:02d}."
         else:
             tts_response = "What time should I set the alarm?"
 
@@ -460,7 +667,12 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
     elif best_intent == "search":
         query = body or text
         # Strip leading search words
-        query = re.sub(r"^\b(?:search|find|look\s*(?:up|for)|where(?:'s| is)|locate)\s+(?:for\s+)?", "", query, flags=re.I).strip()
+        query = re.sub(
+            r"^\b(?:search|find|look\s*(?:up|for)|where(?:'s| is)|locate)\s+(?:for\s+)?",
+            "",
+            query,
+            flags=re.I,
+        ).strip()
         entities = {"query": query}
         follow_ups = ["Open the result?"]
         tts_response = f"Looking for '{query}'."
@@ -480,15 +692,23 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
             tts_response = "Evening. Still going strong?"
         else:
             tts_response = "Hey. Wrapping up for the night?"
-        follow_ups = ["Show today's overview?", "Start a focus session?", "Check your habits?"]
+        follow_ups = [
+            "Show today's overview?",
+            "Start a focus session?",
+            "Check your habits?",
+        ]
 
     elif best_intent == "help":
         tts_response = "I can create tasks, log journals, schedule events, start focus sessions, set alarms, check habits, and more. Just say it naturally."
-        follow_ups = ["Create a task", "Start focus", "Check habits"]
+        follow_ups = [
+            "Create a task now?",
+            "Start a focus session?",
+            "Check your habits?",
+        ]
 
     elif best_intent == "undo":
         entities = {}
-        follow_ups = ["What did I do today?"]
+        follow_ups = ["What did I log today?", "Check your task list?"]
         tts_response = "Undoing your last action."
 
     else:

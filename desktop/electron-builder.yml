@@ -34,7 +34,13 @@ mac:
   target:
     - dmg
   category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: true
 
 win:
   target:
     - nsis
+  publisherName: KazAndTheCompiler
+
+nsis:
+  verifyUpdateCodeSignature: true

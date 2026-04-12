@@ -7,9 +7,7 @@ import math
 from collections import defaultdict
 from datetime import date, timedelta
 
-from app.core.config import get_settings
-from app.domains.gamification.repository import GamificationRepository
-from app.domains.gamification.service import GamificationService
+from app.core.gamification_helpers import award as award_gamification
 from app.domains.habits import repository
 from app.domains.habits.schemas import (
     HabitCorrelation,
@@ -22,26 +20,19 @@ from app.domains.habits.schemas import (
 logger = logging.getLogger(__name__)
 
 
-def _award(source: str, source_id: str | None = None) -> None:
-    try:
-        db = get_settings().db_path
-        GamificationService(GamificationRepository(db)).award(source, source_id)
-    except Exception:
-        logger.exception(
-            "Failed to award gamification for source=%s, source_id=%s",
-            source,
-            source_id,
-        )
-
-
 def checkin(db_path: str, habit_id: str, target_date: str | None = None) -> dict:
     """Record a habit check-in and award XP."""
 
     habit = repository.log_checkin(db_path, habit_id, target_date)
-    _award("habit_checkin", habit_id)
+    checkin_source_id = f"{habit_id}:{habit.get('last_checkin_date') or target_date or 'unknown'}"
+    award_gamification("habit_checkin", checkin_source_id, logger=logger)
     current_streak = int(habit.get("current_streak", 0))
     if current_streak > 0 and current_streak % 7 == 0:
-        _award("streak_milestone", habit_id)
+        award_gamification(
+            "streak_milestone",
+            f"{habit_id}:streak:{current_streak}",
+            logger=logger,
+        )
     return habit
 
 

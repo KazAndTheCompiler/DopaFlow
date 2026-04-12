@@ -10,6 +10,7 @@ class GmailConnectRequest(BaseModel):
 
     code: str | None = None
     redirect_uri: str | None = None
+    state: str | None = None
 
 
 class GmailImportResult(BaseModel):

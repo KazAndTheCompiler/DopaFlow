@@ -7,7 +7,7 @@ import os
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import PlainTextResponse, Response
 
-from app.core.config import Settings, get_settings_dependency
+from app.core.config import Settings, default_backup_dir, get_settings_dependency
 from app.domains.journal.repository import JournalRepository
 from app.domains.journal.schemas import (
     JournalBackupStatus,
@@ -32,13 +32,17 @@ from app.domains.journal.schemas import (
 )
 from app.domains.journal.service import JournalService
 from app.middleware.auth_scopes import require_scope
+from app.services.event_stream import publish_invalidation
 from app.services.speech_to_text import transcribe_upload
 
 router = APIRouter(prefix="/journal", tags=["journal"])
 
 
 async def _svc(settings: Settings = Depends(get_settings_dependency)) -> JournalService:
-    return JournalService(JournalRepository(settings.db_path))
+    return JournalService(
+        JournalRepository(settings),
+        backup_dir=settings.journal_backup_dir if settings.journal_backup_dir != settings.model_fields["journal_backup_dir"].default else default_backup_dir(),
+    )
 
 
 async def _db_path(settings: Settings = Depends(get_settings_dependency)) -> str:
@@ -58,7 +62,9 @@ async def list_entries(
 
 @router.post("/entries", response_model=JournalEntryRead, status_code=201, dependencies=[Depends(require_scope("write:journal"))])
 async def save_entry(payload: JournalEntryCreate, svc: JournalService = Depends(_svc)) -> JournalEntryRead:
-    return svc.save_entry(payload)
+    entry = svc.save_entry(payload)
+    await publish_invalidation("journal")
+    return entry
 
 
 @router.patch("/entries/{entry_id}", response_model=JournalEntryRead, dependencies=[Depends(require_scope("write:journal"))])
@@ -71,6 +77,7 @@ async def patch_entry(entry_id: str, payload: JournalEntryPatch, svc: JournalSer
         raise
     if not entry:
         raise HTTPException(status_code=404, detail="Journal entry not found")
+    await publish_invalidation("journal")
     return entry
 
 
@@ -84,7 +91,10 @@ async def get_entry(identifier: str, svc: JournalService = Depends(_svc)) -> Jou
 
 @router.delete("/entries/{identifier}", response_model=JournalDeleteResponse, dependencies=[Depends(require_scope("write:journal"))])
 async def delete_entry(identifier: str, svc: JournalService = Depends(_svc)) -> JournalDeleteResponse:
-    return svc.delete_entry(identifier)
+    result = svc.delete_entry(identifier)
+    if result.deleted:
+        await publish_invalidation("journal")
+    return result
 
 
 @router.patch("/entries/{entry_id}/lock", response_model=JournalEntryRead, dependencies=[Depends(require_scope("write:journal"))])
@@ -92,6 +102,7 @@ async def lock_entry(entry_id: str, svc: JournalService = Depends(_svc)) -> Jour
     entry = svc.lock_entry(entry_id, locked=True)
     if not entry:
         raise HTTPException(status_code=404, detail="Journal entry not found")
+    await publish_invalidation("journal")
     return entry
 
 
@@ -100,6 +111,7 @@ async def unlock_entry(entry_id: str, svc: JournalService = Depends(_svc)) -> Jo
     entry = svc.lock_entry(entry_id, locked=False)
     if not entry:
         raise HTTPException(status_code=404, detail="Journal entry not found")
+    await publish_invalidation("journal")
     return entry
 
 
@@ -224,7 +236,9 @@ async def backup_status(svc: JournalService = Depends(_svc)) -> JournalBackupSta
 
 @router.post("/backup/trigger", response_model=JournalBackupTriggerResponse, dependencies=[Depends(require_scope("write:journal"))])
 async def trigger_backup(date: str | None = Query(default=None), svc: JournalService = Depends(_svc)) -> JournalBackupTriggerResponse:
-    return svc.trigger_backup(date=date)
+    result = svc.trigger_backup(date=date)
+    await publish_invalidation("journal")
+    return result
 
 
 @router.post("/export-today", response_model=JournalExportTodayResponse, dependencies=[Depends(require_scope("write:journal"))])
@@ -241,7 +255,9 @@ async def list_templates(svc: JournalService = Depends(_svc)) -> list[JournalTem
 
 @router.post("/templates", response_model=JournalTemplate, status_code=201, dependencies=[Depends(require_scope("write:journal"))])
 async def create_template(payload: JournalTemplateCreate, svc: JournalService = Depends(_svc)) -> JournalTemplate:
-    return svc.create_template(payload)
+    template = svc.create_template(payload)
+    await publish_invalidation("journal")
+    return template
 
 
 @router.get("/templates/{template_id}", response_model=JournalTemplate, dependencies=[Depends(require_scope("read:journal"))])
@@ -257,6 +273,7 @@ async def update_template(template_id: str, payload: JournalTemplatePatch, svc: 
     tpl = svc.update_template(template_id, payload)
     if not tpl:
         raise HTTPException(status_code=404, detail="Template not found")
+    await publish_invalidation("journal")
     return tpl
 
 
@@ -265,6 +282,7 @@ async def delete_template(template_id: str, svc: JournalService = Depends(_svc))
     deleted = svc.delete_template(template_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Template not found")
+    await publish_invalidation("journal")
     return JournalTemplateDeleteResponse(deleted=True, id=template_id)
 
 

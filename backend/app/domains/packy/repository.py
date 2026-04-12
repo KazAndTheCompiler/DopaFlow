@@ -8,7 +8,14 @@ import logging
 from uuid import uuid4
 
 from app.core.database import get_db, tx
-from app.domains.packy.schemas import MomentumScore, PackyAnswer, PackyAskRequest, PackyLorebookRequest, PackyWhisper
+from app.domains.packy.schemas import PackyLorebookResponse
+from app.domains.packy.schemas import (
+    MomentumScore,
+    PackyAnswer,
+    PackyAskRequest,
+    PackyLorebookRequest,
+    PackyWhisper,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +62,14 @@ class PackyRepository:
 
         achievement = ""
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT recent_mood FROM packy_lorebook ORDER BY updated_at DESC LIMIT 1").fetchone()
+            row = conn.execute(
+                "SELECT recent_mood FROM packy_lorebook ORDER BY updated_at DESC LIMIT 1"
+            ).fetchone()
         if row and row["recent_mood"]:
             try:
                 mood = json.loads(str(row["recent_mood"]))
                 headline = str(mood.get("headline") or "")
-                if headline.startswith("Achievement"):
+                if headline.lower().startswith("achievement"):
                     achievement = f" Recent win: {headline}."
             except Exception:
                 logger.warning("Failed to parse Packy recent_mood payload")
@@ -97,14 +106,16 @@ class PackyRepository:
                 try:
                     mood = json.loads(str(r["recent_mood"]))
                     headline = str(mood.get("headline") or "")
-                    if headline.startswith("Achievement"):
+                    if headline.lower().startswith("achievement"):
                         return PackyWhisper(
                             text=f"{headline} — keep the streak alive.",
                             tone="positive",
                             suggested_action="open-habits",
                         )
                 except Exception:
-                    logger.warning("Failed to parse Packy recent_mood payload during whisper")
+                    logger.warning(
+                        "Failed to parse Packy recent_mood payload during whisper"
+                    )
 
             if morning and focus == 0 and habits == 0:
                 return PackyWhisper(
@@ -191,7 +202,7 @@ class PackyRepository:
             suggested_action="open-today",
         )
 
-    def update_lorebook(self, payload: PackyLorebookRequest) -> dict[str, object]:
+    def update_lorebook(self, payload: PackyLorebookRequest) -> PackyLorebookResponse:
         """Upsert lorebook context for a session."""
 
         session_id = payload.session_id or "default"
@@ -215,7 +226,9 @@ class PackyRepository:
                 """,
                 (
                     session_id,
-                    json.dumps({"headline": payload.headline, "body": payload.body}) if payload.headline or payload.body else None,
+                    json.dumps({"headline": payload.headline, "body": payload.body})
+                    if payload.headline or payload.body
+                    else None,
                     payload.headline,
                     payload.completed_today or 0,
                     payload.habit_streak or 0,
@@ -231,7 +244,9 @@ class PackyRepository:
                 """,
                 (snippet_id, session_id, payload.headline, payload.body),
             )
-        return {"status": "accepted", "session_id": session_id, "persisted": True, "id": snippet_id}
+        return PackyLorebookResponse(
+            status="accepted", session_id=session_id, persisted=True, id=snippet_id
+        )
 
     def momentum(self) -> MomentumScore:
         """Return the current momentum score derived from live domain data."""
@@ -254,7 +269,9 @@ class PackyRepository:
                         """
                     ).fetchone()[0]
                 )
-                habit_rows = conn.execute("SELECT id FROM habits WHERE deleted_at IS NULL").fetchall()
+                habit_rows = conn.execute(
+                    "SELECT id FROM habits WHERE deleted_at IS NULL"
+                ).fetchall()
                 for row in habit_rows:
                     checkins = conn.execute(
                         "SELECT checkin_date FROM habit_checkins WHERE habit_id = ? ORDER BY checkin_date ASC",
@@ -264,13 +281,16 @@ class PackyRepository:
                         continue
                     current = 0
                     expected_day = None
-                    for checkin in reversed([str(item["checkin_date"]) for item in checkins]):
+                    for checkin in reversed(
+                        [str(item["checkin_date"]) for item in checkins]
+                    ):
                         if expected_day is None:
                             expected_day = checkin
                         if checkin == expected_day:
                             current += 1
                             expected_day = (
-                                datetime.date.fromisoformat(expected_day) - datetime.timedelta(days=1)
+                                datetime.date.fromisoformat(expected_day)
+                                - datetime.timedelta(days=1)
                             ).isoformat()
                         else:
                             break
@@ -342,7 +362,9 @@ class PackyRepository:
                 yesterday_row = conn.execute(
                     "SELECT score FROM packy_momentum_log WHERE logged_date = date('now', '-1 day')"
                 ).fetchone()
-                delta_vs_yesterday = score - (yesterday_row[0] if yesterday_row else score)
+                delta_vs_yesterday = score - (
+                    yesterday_row[0] if yesterday_row else score
+                )
                 conn.execute(
                     "INSERT INTO packy_momentum_log (score, logged_date) VALUES (?, date('now')) "
                     "ON CONFLICT(logged_date) DO UPDATE SET score=excluded.score",

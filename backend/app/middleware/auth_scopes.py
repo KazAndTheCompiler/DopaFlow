@@ -77,6 +77,7 @@ SCOPES = {
     "write:ops": "Write ops operations (backup, restore)",
     "admin:ops": "Full ops access (export, import, reconcile)",
 }
+_SCOPE_ACTIONS = frozenset({"read", "write", "share", "admin"})
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -102,6 +103,22 @@ def _token_hash(token: str) -> str:
 
 def _now_utc() -> datetime:
     return datetime.now(UTC)
+
+
+def _normalize_scope(scope: str) -> str:
+    if scope in SCOPES:
+        return scope
+    resource, separator, action = scope.partition(":")
+    if not separator or action not in _SCOPE_ACTIONS:
+        return scope
+    normalized = f"{action}:{resource}"
+    if normalized in SCOPES:
+        return normalized
+    return scope
+
+
+def _normalize_scopes(scopes: list[str]) -> list[str]:
+    return sorted({_normalize_scope(scope) for scope in scopes})
 
 
 def _row_to_scope_token(row: object) -> dict[str, object]:
@@ -132,7 +149,7 @@ def create_scope_token(
         "iss": resolved.auth_token_issuer,
         "jti": token_id,
         "sub": subject,
-        "scopes": sorted(set(scopes)),
+        "scopes": _normalize_scopes(scopes),
         "iat": issued_at,
         "exp": issued_at + ttl_seconds,
     }
@@ -140,7 +157,7 @@ def create_scope_token(
     signature = hmac.new(_scope_secret(resolved).encode("utf-8"), payload_segment.encode("ascii"), hashlib.sha256).digest()
     token = f"dfv1.{payload_segment}.{_b64url_encode(signature)}"
     if persist:
-        with tx(resolved.db_path) as conn:
+        with tx(resolved) as conn:
             conn.execute(
                 """
                 INSERT INTO auth_scope_tokens (id, subject, scopes_json, token_hash, issued_at, expires_at)
@@ -149,7 +166,7 @@ def create_scope_token(
                 (
                     token_id,
                     subject,
-                    json.dumps(sorted(set(scopes))),
+                    json.dumps(_normalize_scopes(scopes)),
                     _token_hash(token),
                     now.isoformat(),
                     datetime.fromtimestamp(issued_at + ttl_seconds, tz=UTC).isoformat(),
@@ -160,7 +177,7 @@ def create_scope_token(
 
 def list_scope_tokens(settings: Settings | None = None) -> list[dict[str, object]]:
     resolved = settings or get_settings()
-    with get_db(resolved.db_path) as conn:
+    with get_db(resolved) as conn:
         rows = conn.execute(
             "SELECT * FROM auth_scope_tokens ORDER BY issued_at DESC"
         ).fetchall()
@@ -170,7 +187,7 @@ def list_scope_tokens(settings: Settings | None = None) -> list[dict[str, object
 def revoke_scope_token(token_id: str, settings: Settings | None = None) -> bool:
     resolved = settings or get_settings()
     revoked_at = _now_utc().isoformat()
-    with tx(resolved.db_path) as conn:
+    with tx(resolved) as conn:
         result = conn.execute(
             "UPDATE auth_scope_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL",
             (revoked_at, token_id),
@@ -203,7 +220,8 @@ def verify_scope_token(token: str, settings: Settings | None = None) -> dict[str
     scopes = payload.get("scopes")
     if not isinstance(scopes, list) or not all(isinstance(item, str) for item in scopes):
         raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token scopes are invalid"})
-    with tx(resolved.db_path) as conn:
+    payload["scopes"] = _normalize_scopes(scopes)
+    with tx(resolved) as conn:
         row = conn.execute(
             "SELECT * FROM auth_scope_tokens WHERE id = ?",
             (token_id,),

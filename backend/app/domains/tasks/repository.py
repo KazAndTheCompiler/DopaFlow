@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -18,6 +19,8 @@ from app.domains.tasks.schemas import (
     TaskTemplate,
     TaskTimeLog,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _iso_now() -> str:
@@ -606,6 +609,8 @@ def materialize_recurring(db_path: str, window_hours: int = 36) -> CreatedCountR
     """Create upcoming recurring instances inside the requested window."""
 
     created = 0
+    created_by_rule: dict[str, int] = defaultdict(int)
+    warned_rules: set[str] = set()
     window_end = datetime.now(timezone.utc) + timedelta(hours=window_hours)
     for task in list_tasks(db_path, done=True):
         rule = task.recurrence_rule
@@ -613,6 +618,14 @@ def materialize_recurring(db_path: str, window_hours: int = 36) -> CreatedCountR
             continue
         next_due = _next_due_from_rule(rule, task.due_at)
         if next_due and (_parse_dt(next_due) or window_end) <= window_end:
+            if created_by_rule[rule] >= 500:
+                if rule not in warned_rules:
+                    logger.warning(
+                        "Recurring materialization hit 500-instance cap for rule %s; stopping further expansion this run",
+                        rule,
+                    )
+                    warned_rules.add(rule)
+                continue
             with get_db(db_path) as conn:
                 if _recurring_instance_exists(conn, task.id, next_due):
                     continue
@@ -630,6 +643,7 @@ def materialize_recurring(db_path: str, window_hours: int = 36) -> CreatedCountR
                         "recurrence_parent_id": task.id,
                     },
                 )
+                created_by_rule[rule] += 1
                 created += 1
     return CreatedCountResponse(created=created)
 

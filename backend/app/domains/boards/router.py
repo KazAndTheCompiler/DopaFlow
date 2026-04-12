@@ -20,8 +20,8 @@ from app.middleware.auth_scopes import require_scope
 router = APIRouter(prefix="/boards", tags=["boards"])
 
 
-def _load_tasks(db_path: str) -> list[dict[str, object]]:
-    with get_db(db_path) as conn:
+def _load_tasks(settings: Settings) -> list[dict[str, object]]:
+    with get_db(settings) as conn:
         rows = conn.execute("SELECT * FROM tasks WHERE deleted_at IS NULL AND done = 0 ORDER BY updated_at DESC").fetchall()
     tasks: list[dict[str, object]] = []
     for row in rows:
@@ -41,10 +41,10 @@ async def kanban_columns() -> dict[str, list[str]]:
 
 @router.get("/eisenhower", response_model=EisenhowerView, dependencies=[Depends(require_scope("read:tasks"))])
 async def eisenhower_view(settings: Settings = Depends(get_settings_dependency)) -> dict[str, list[dict]]:
-    quadrants = sort_into_quadrants(_load_tasks(settings.db_path))
+    quadrants = sort_into_quadrants(_load_tasks(settings))
     return {"q1": quadrants["do"], "q2": quadrants["schedule"], "q3": quadrants["delegate"], "q4": quadrants["eliminate"]}
 
 
 @router.get("/matrix-data", response_model=MatrixData, dependencies=[Depends(require_scope("read:tasks"))])
 async def matrix_data(settings: Settings = Depends(get_settings_dependency)) -> dict[str, list[dict]]:
-    return sort_into_quadrants(_load_tasks(settings.db_path))
+    return sort_into_quadrants(_load_tasks(settings))

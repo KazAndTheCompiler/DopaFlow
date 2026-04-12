@@ -127,6 +127,7 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
       />
       <VoiceCommandModal
         initialCommandWord="task"
+        route="tasks"
         {...(onVoiceExecuted ? { onExecuted: onVoiceExecuted } : {})}
       />
       <Button onClick={handleAdd} disabled={!value.trim() && !listening}>

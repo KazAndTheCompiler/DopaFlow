@@ -45,7 +45,7 @@
   --surface-edge-light: transparent;
 }
 
-[data-skin="warm-analog"] {
+html.skin-warm-analog {
   --bg-app: #f7f0e5;
   --surface: #fff8ef;
   --surface-2: #f1e3d0;
@@ -84,7 +84,7 @@
   --shadow-floating: 0 24px 64px rgba(98, 55, 16, 0.24);
 }
 
-[data-skin="midnight-neon"] {
+html.skin-midnight-neon {
   --bg-app: #091017;
   --surface: #101c29;
   --surface-2: #132434;
@@ -123,7 +123,7 @@
   --shadow-floating: 0 28px 70px rgba(0, 0, 0, 0.6);
 }
 
-[data-skin="paper-minimal"] {
+html.skin-paper-minimal {
   --bg-app: #faf7f1;
   --surface: #fffdf9;
   --surface-2: #f1ece4;
@@ -162,7 +162,7 @@
   --shadow-floating: 0 20px 48px rgba(28, 26, 23, 0.12);
 }
 
-[data-skin="aurora"] {
+html.skin-aurora {
   --bg-app: #eef6f5;
   --surface: #ffffff;
   --surface-2: #dff0eb;
@@ -201,7 +201,7 @@
   --shadow-floating: 0 24px 56px rgba(21, 122, 110, 0.18);
 }
 
-[data-skin="high-contrast"] {
+html.skin-high-contrast {
   --bg-app: #ffffff;
   --surface: #ffffff;
   --surface-2: #f1f1f1;
@@ -240,7 +240,7 @@
   --shadow-floating: 0 0 0 rgba(0, 0, 0, 0);
 }
 
-[data-skin="amber-terminal"] {
+html.skin-amber-terminal {
   --bg-app: #1b140c;
   --surface: #251c11;
   --surface-2: #312515;
@@ -279,7 +279,7 @@
   --shadow-floating: 0 26px 62px rgba(0, 0, 0, 0.5);
 }
 
-[data-skin="soft-pastel"] {
+html.skin-soft-pastel {
   --bg-app: #f8f3fa;
   --surface: #fffafe;
   --surface-2: #efe1f2;
@@ -318,7 +318,7 @@
   --shadow-floating: 0 24px 56px rgba(102, 72, 92, 0.18);
 }
 
-[data-skin="glassy-modern"] {
+html.skin-glassy-modern {
   --bg-app: #0f1b20;
   --surface: rgba(24, 44, 52, 0.78);
   --surface-2: rgba(31, 58, 67, 0.72);
@@ -357,7 +357,7 @@
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.42);
 }
 
-[data-skin="ink-and-stone"] {
+html.skin-ink-and-stone {
   --bg-app: #f4efe4;
   --surface: #fbf8f0;
   --surface-2: #e8e0d0;
@@ -401,7 +401,7 @@
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* 🌿 LUSH FOREST - Deep organic greens with golden accents */
-[data-skin="lush-forest"] {
+html.skin-lush-forest {
   --bg-app: #0d1512;
   --surface: #141f1a;
   --surface-2: #1a2b24;
@@ -447,7 +447,7 @@
 }
 
 /* 🩸 VAMPIRE ROMANCE - Deep crimson with rose gold */
-[data-skin="vampire-romance"] {
+html.skin-vampire-romance {
   --bg-app: #1a0a0f;
   --surface: #251419;
   --surface-2: #321c25;
@@ -487,7 +487,7 @@
 }
 
 /* 🌊 DEEP OCEAN - Abyssal blues with bioluminescent teal */
-[data-skin="deep-ocean"] {
+html.skin-deep-ocean {
   --bg-app: #030810;
   --surface: #081420;
   --surface-2: #0d1e2e;
@@ -527,7 +527,7 @@
 }
 
 /* 🧡 SUNSET BLUES - Warm sunset gradient feel with cool contrast */
-[data-skin="sunset-blues"] {
+html.skin-sunset-blues {
   --bg-app: #1a1520;
   --surface: #251e2d;
   --surface-2: #322840;
@@ -567,7 +567,7 @@
 }
 
 /* 🏛️ CLASSIC NOIR - Elegant monochrome with gold accents */
-[data-skin="classic-noir"] {
+html.skin-classic-noir {
   --bg-app: #0a0a0a;
   --surface: #141414;
   --surface-2: #1e1e1e;
@@ -607,7 +607,7 @@
 }
 
 /* 🌸 COTTON CANDY - Soft pastel dream */
-[data-skin="cotton-candy"] {
+html.skin-cotton-candy {
   --bg-app: #fef6ff;
   --surface: #ffffff;
   --surface-2: #f5e6ff;
@@ -647,7 +647,7 @@
 }
 
 /* ⚡ NEON PUNK - Electric cyberpunk aesthetic */
-[data-skin="neon-punk"] {
+html.skin-neon-punk {
   --bg-app: #0a0612;
   --surface: #120c1e;
   --surface-2: #1a1230;
@@ -687,7 +687,7 @@
 }
 
 /* 🌲 FOREST GRADIENT - Flagship gradient skin with deep forest → sage */
-[data-skin="forest-gradient"] {
+html.skin-forest-gradient {
   --bg-app: #111e14;
   --surface: #1e3024;
   --surface-2: #2a3d2e;
@@ -731,7 +731,7 @@
 }
 
 /* 🌊 OCEAN GRADIENT - Deep blue → teal */
-[data-skin="ocean-gradient"] {
+html.skin-ocean-gradient {
   --bg-app: #0a1628;
   --surface: #0f1e32;
   --surface-2: #142840;
@@ -775,7 +775,7 @@
 }
 
 /* 🌙 AMBER NIGHT - Dark amber/brown → warm gold */
-[data-skin="amber-night"] {
+html.skin-amber-night {
   --bg-app: #1a1005;
   --surface: #241808;
   --surface-2: #2e200a;
@@ -823,7 +823,7 @@
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* ❄️ NORDIC GLASS — Cool blue-gray pearl, premium Scandinavian */
-[data-skin="nordic-glass"] {
+html.skin-nordic-glass {
   --bg-app: #090e14;
   --surface: rgba(16, 28, 38, 0.68);
   --surface-2: rgba(20, 34, 46, 0.76);
@@ -903,7 +903,7 @@
 }
 
 /* 🔩 GRAPHITE HI-FI — Dense dark glass, machined edges, electric cyan */
-[data-skin="graphite-hifi"] {
+html.skin-graphite-hifi {
   --bg-app: #060a0d;
   --surface: rgba(10, 18, 24, 0.76);
   --surface-2: rgba(14, 24, 32, 0.82);
@@ -983,7 +983,7 @@
 }
 
 /* 🥂 CHAMPAGNE STUDIO — Warm bone glass, satin metallic trim */
-[data-skin="champagne-studio"] {
+html.skin-champagne-studio {
   --bg-app: #f2ede3;
   --surface: rgba(255, 252, 248, 0.82);
   --surface-2: rgba(245, 238, 228, 0.8);
@@ -1063,7 +1063,7 @@
 }
 
 /* 🌿 EMERALD ATELIER — Moss green glass, smoked bronze, gold edge */
-[data-skin="emerald-atelier"] {
+html.skin-emerald-atelier {
   --bg-app: #0a120a;
   --surface: rgba(18, 26, 16, 0.74);
   --surface-2: rgba(22, 32, 20, 0.8);
@@ -1143,7 +1143,7 @@
 }
 
 /* 🔥 EMBER NIGHT — Near-black glass with warm copper signal fire */
-[data-skin="ember-night"] {
+html.skin-ember-night {
   --bg-app: #0a0606;
   --surface: rgba(18, 12, 10, 0.74);
   --surface-2: rgba(24, 16, 12, 0.8);

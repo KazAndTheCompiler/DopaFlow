@@ -8,7 +8,7 @@ import sqlite3
 from collections import Counter, defaultdict
 from datetime import date
 
-from app.core.config import get_settings
+from app.core.config import Settings
 from app.core.database import get_db
 
 _MOOD_MAP = {"😊": 5, "🙂": 4, "😐": 3, "😟": 2, "😢": 1, "😡": 2, "🤩": 5}
@@ -18,14 +18,14 @@ logger = logging.getLogger(__name__)
 class DigestRepository:
     """Query task, habit, focus, and journal summaries over a date range."""
 
-    def __init__(self, db_path: str | None = None) -> None:
-        self.db_path = db_path or get_settings().db_path
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
 
     def tasks_summary(self, start: date, end: date) -> tuple[dict, dict]:
         daily: dict[str, dict[str, int]] = defaultdict(lambda: {"completed": 0, "created": 0, "overdue": 0})
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
-                "SELECT done, due_at, created_at, updated_at, tags_json FROM tasks",
+                "SELECT done, due_at, created_at, updated_at, tags_json FROM tasks WHERE DATE(created_at) >= date('now', '-7 days')",
             ).fetchall()
         completed = created = overdue = 0
         tag_counts: Counter[str] = Counter()
@@ -59,7 +59,7 @@ class DigestRepository:
 
     def habits_summary(self, start: date, end: date) -> tuple[dict, dict]:
         daily: dict[str, dict[str, int]] = defaultdict(lambda: {"done": 0, "total": 0})
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             habits = conn.execute("SELECT id, name FROM habits WHERE deleted_at IS NULL").fetchall()
             logs = conn.execute(
                 """
@@ -103,7 +103,7 @@ class DigestRepository:
 
     def focus_summary(self, start: date, end: date) -> tuple[dict, dict]:
         daily: dict[str, dict[str, int]] = defaultdict(lambda: {"sessions": 0, "minutes": 0})
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT started_at, duration_minutes, status FROM focus_sessions WHERE DATE(started_at) BETWEEN ? AND ?",
                 (start.isoformat(), end.isoformat()),
@@ -136,7 +136,7 @@ class DigestRepository:
 
     def journal_summary(self, start: date, end: date) -> tuple[dict, dict]:
         daily: dict[str, dict[str, int]] = defaultdict(lambda: {"words": 0, "has_journal": 0})
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 """
                 SELECT markdown_body, tags_json, emoji, entry_date
@@ -178,7 +178,7 @@ class DigestRepository:
     def nutrition_summary(self, start: date, end: date) -> dict:
         """Return calorie and macro totals for a date range."""
         try:
-            with get_db(self.db_path) as conn:
+            with get_db(self.settings) as conn:
                 rows = conn.execute(
                     """
                     SELECT entry_date, SUM(calories) as kcal,
@@ -208,7 +208,7 @@ class DigestRepository:
     def review_daily(self, start: date, end: date) -> dict[str, dict[str, float]]:
         daily: dict[str, dict[str, float]] = defaultdict(lambda: {"cards_seen": 0.0, "retained": 0.0})
         try:
-            with get_db(self.db_path) as conn:
+            with get_db(self.settings) as conn:
                 rows = conn.execute(
                     "SELECT started_at, cards_seen, cards_good, cards_easy FROM review_session_log WHERE DATE(started_at) BETWEEN ? AND ?",
                     (start.isoformat(), end.isoformat()),

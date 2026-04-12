@@ -92,12 +92,5 @@ def create_notification(
             """,
             (identifier, level, title, body, action_url),
         )
-    return {
-        "id": identifier,
-        "level": level,
-        "title": title,
-        "body": body,
-        "action_url": action_url,
-        "read": 0,
-        "archived": 0,
-    }
+        row = conn.execute("SELECT * FROM notifications WHERE id = ?", (identifier,)).fetchone()
+    return dict(row)

@@ -70,12 +70,17 @@ test.describe("Focus flow regression", () => {
           duration_minutes?: number;
           started_at?: string;
         };
+        const durationMinutes = payload.duration_minutes ?? 25;
+        const startedAt =
+          durationMinutes === 1
+            ? new Date(Date.now() - 65_000).toISOString()
+            : payload.started_at ?? new Date().toISOString();
         const newSession = {
           id: `fs_${sessions.length + 1}`,
           task_id: payload.task_id ?? null,
-          started_at: payload.started_at ?? new Date().toISOString(),
+          started_at: startedAt,
           ended_at: null,
-          duration_minutes: payload.duration_minutes ?? 25,
+          duration_minutes: durationMinutes,
           status: "running",
         };
         sessions = [...sessions, newSession];
@@ -194,6 +199,27 @@ test.describe("Focus flow regression", () => {
     await expect(page.getByRole("timer")).toContainText(/\d{2}:\d{2}/, { timeout: 5_000 });
   });
 
+  test("auto-expired one-minute sessions transition to completed state", async ({ page }) => {
+    await page.goto("/#/focus");
+    const main = page.getByRole("main");
+    await expect(main.getByText("Focus Block", { exact: true })).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Link session to a task" }).click();
+    await page.getByRole("button", { name: "Write integration tests" }).click();
+    await page.getByLabel("Custom duration in minutes").fill("1");
+    await page.getByRole("button", { name: "Start Focus" }).click();
+
+    await expect(page.getByText("1m focus complete!")).toBeVisible({ timeout: 10_000 });
+    // Dismiss the completion modal before checking for state
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    // After completion, task is still selected so UI shows "Ready" state
+    await expect(main.getByText("Ready", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(main.getByText("Start a block for Write integration tests")).toBeVisible({ timeout: 5_000 });
+    // Check for session count in the stats
+    await expect(main.getByText("1", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("Session History")).toBeVisible({ timeout: 5_000 });
+  });
+
   // ── Session history ────────────────────────────────────────────────────────
 
   test("session history panel renders on the focus surface", async ({ page }) => {
@@ -207,5 +233,33 @@ test.describe("Focus flow regression", () => {
     await page.goto("/#/focus");
     // Before any session, the hero should show setup guidance
     await expect(page.getByText("Choose one task before you start the timer")).toBeVisible({ timeout: 15_000 });
+  });
+
+  // ── Auto-expire with backend time manipulation ─────────────────────────────
+
+  test("focus session auto-expires after duration elapses (backend time fake)", async ({ page }) => {
+    await page.goto("/#/focus");
+    const main = page.getByRole("main");
+    await expect(main.getByText("Focus Block", { exact: true })).toBeVisible({ timeout: 15_000 });
+
+    // Select task and start 1-minute session
+    // The beforeEach mock returns a session with started_at 65 seconds ago when duration_minutes=1
+    // This simulates the backend scheduler detecting the session has expired
+    await page.getByRole("button", { name: "Link session to a task" }).click();
+    await page.getByRole("button", { name: "Write integration tests" }).click();
+    await page.getByLabel("Custom duration in minutes").fill("1");
+    await page.getByRole("button", { name: "Start Focus" }).click();
+
+    // Wait for the frontend timer to detect the session has elapsed
+    // The timer checks every 500ms, so it should detect within a second
+    // The mock returns a session with started_at 65 seconds ago, so it's already expired
+    // Add buffer for scheduler ticks (30s interval) and UI updates
+    await expect(page.getByText("1m focus complete!")).toBeVisible({ timeout: 35_000 });
+
+    // Verify the UI returns to ready state after dismissing the modal
+    // Task is still selected, so UI shows "Ready" state
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(main.getByText("Ready", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(main.getByText("Start a block for Write integration tests")).toBeVisible({ timeout: 5_000 });
   });
 });

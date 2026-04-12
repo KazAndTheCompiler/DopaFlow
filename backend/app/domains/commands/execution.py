@@ -6,6 +6,7 @@ import re
 from datetime import UTC, datetime
 from typing import Callable
 
+from app.core.config import Settings
 from app.domains.commands.repository import CommandRepository
 from app.services import nlp
 
@@ -225,7 +226,7 @@ def execute_single(
                 emoji=extracted.get("emoji"),
                 tags=list(extracted.get("tags") or []),
             )
-            result = JournalService(JournalRepository(db_path)).save_entry(payload)
+            result = JournalService(JournalRepository(Settings(db_path=db_path))).save_entry(payload)
             result_dict = result.model_dump()
             CommandRepository.add_log(
                 db_path, text, intent, "executed", source=source, result=result_dict

@@ -11,7 +11,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "electron .",
-    "test": "node --test tests/runtime-auth.test.js tests/window-runtime.test.js",
+    "test": "node --test tests/backend-runtime.test.js tests/main.test.js tests/runtime-auth.test.js tests/window-runtime.test.js",
     "dist": "node scripts/build-desktop.js dev",
     "dist:mac": "node scripts/build-desktop.js dev --mac",
     "dist:win": "node scripts/build-desktop.js dev --win",
@@ -51,7 +51,9 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": true
     },
     "win": {
       "target": [
@@ -59,7 +61,8 @@
           "target": "nsis",
           "arch": ["x64"]
         }
-      ]
+      ],
+      "publisherName": "KazAndTheCompiler"
     },
     "extraResources": [
       {
@@ -88,13 +91,23 @@
       ],
       "category": "Office"
     },
-    "publish": null
+    "nsis": {
+      "verifyUpdateCodeSignature": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "${env.DOPAFLOW_GITHUB_OWNER}",
+        "repo": "${env.DOPAFLOW_GITHUB_REPO}"
+      }
+    ]
   },
   "devDependencies": {
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3"
+    "electron": "^39.8.5",
+    "electron-builder": "^26.8.1"
   },
   "dependencies": {
+    "electron-store": "^10.1.0",
     "electron-auto-launch": "^5.0.6",
     "electron-updater": "^6.3.9"
   }

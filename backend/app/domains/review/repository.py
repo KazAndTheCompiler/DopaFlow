@@ -95,7 +95,9 @@ class ReviewRepository:
             ).fetchall()
         return [_row_to_card(row) for row in rows]
 
-    def get_due_cards(self, deck_id: str, limit: int = 20) -> list[ReviewCardRead]:
+    def get_due_cards(
+        self, deck_id: str, limit: int = 20, offset: int = 0
+    ) -> list[ReviewCardRead]:
         """Return cards due today or earlier for a specific deck."""
 
         with get_db(self.db_path) as conn:
@@ -108,8 +110,9 @@ class ReviewRepository:
                   AND (next_review_at IS NULL OR DATE(next_review_at) <= DATE('now'))
                 ORDER BY next_review_at IS NOT NULL, next_review_at ASC
                 LIMIT ?
+                OFFSET ?
                 """,
-                (deck_id, limit),
+                (deck_id, limit, offset),
             ).fetchall()
         return [_row_to_card(row) for row in rows]
 

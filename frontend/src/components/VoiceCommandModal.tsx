@@ -4,6 +4,7 @@ import { sendVoiceCommand, type PackyVoiceResponse } from "@api/index";
 import { showToast } from "@ds/primitives/Toast";
 import { Modal } from "@ds/primitives/Modal";
 import Button from "@ds/primitives/Button";
+import { useMicrophone } from "@hooks/useMicrophone";
 import { useTTS } from "@hooks/useTTS";
 import { useSpeechRecognition } from "@hooks/useSpeechRecognition";
 import { JarvisOverlay } from "./JarvisOverlay";
@@ -36,6 +37,26 @@ const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
   2: { label: "Normal", color: "var(--text-secondary)" },
   3: { label: "Low", color: "var(--text-tertiary)" },
   4: { label: "Backlog", color: "var(--text-muted)" },
+};
+
+const ROUTE_SUGGESTIONS: Record<string, Record<string, string[]>> = {
+  tasks: {
+    "task.create": ["View today's tasks?", "Start focus?"],
+    "task.list": ["Add a new task?", "Start focus?"],
+  },
+  habits: {
+    "habit.checkin": ["Start a focus block?", "Check tomorrow's habits?"],
+    "habit.list": ["Check in a habit?", "View today's tasks?"],
+  },
+  focus: {
+    "focus.start": ["Log what you accomplished?", "Check your habits?"],
+  },
+  journal: {
+    "journal.create": ["Review your streak?", "Check today's tasks?"],
+  },
+  calendar: {
+    "calendar.create": ["Check your task list?", "Block focus time?"],
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -87,6 +108,8 @@ interface VoiceCommandModalProps {
   onExecuted?: () => void;
   /** If true, render inline without a modal wrapper. */
   inline?: boolean;
+  /** Current app route, passed as context to the voice pipeline for route-aware responses. */
+  route?: string;
 }
 
 type PreviewPayload = {
@@ -97,7 +120,7 @@ type PreviewPayload = {
   parts?: Array<{ text?: string; intent?: string }>;
 };
 
-export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: VoiceCommandModalProps): JSX.Element {
+export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, route }: VoiceCommandModalProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"idle" | "listening" | "processing" | "preview" | "executing" | "done">("idle");
   const [response, setResponse] = useState<PackyVoiceResponse | null>(null);
@@ -106,6 +129,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
   const [commandHistory, setCommandHistory] = useState<PackyVoiceResponse[]>([]);
 
   const { supported: sttSupported, listening, transcript, interim, error: sttError, start, stop, reset } = useSpeechRecognition();
+  const { start: startMicrophone, stop: stopMicrophone, error: microphoneError } = useMicrophone();
   const { speak, speaking } = useTTS();
   const processingRef = useRef(false);
   const lastTranscriptRef = useRef("");
@@ -126,7 +150,8 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
       setError(null);
 
       try {
-        const res = await sendVoiceCommand(text, undefined, false);
+        const context = route ? { route } : undefined;
+        const res = await sendVoiceCommand(text, context, false);
         setResponse(res);
         setPhase("preview");
 
@@ -144,7 +169,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
         processingRef.current = false;
       }
     },
-    [speak, continuousMode],
+    [speak, continuousMode, route],
   );
 
   // When speech recognition produces a final transcript, process it
@@ -160,6 +185,12 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
     setError(sttError);
     setPhase("idle");
   }, [sttError]);
+
+  useEffect(() => {
+    if (!microphoneError) return;
+    setError(microphoneError);
+    setPhase("idle");
+  }, [microphoneError]);
 
   // Cleanup
   useEffect(() => {
@@ -178,7 +209,8 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
     setError(null);
 
     try {
-      const res = await sendVoiceCommand(transcriptText, undefined, true);
+      const context = route ? { route } : undefined;
+      const res = await sendVoiceCommand(transcriptText, context, true);
       setResponse(res);
       setCommandHistory((prev) => [...prev, res]);
       setPhase("done");
@@ -209,12 +241,17 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
     const delay = Math.min(Math.max(replyLen * 50, 1500), 5000);
     followUpTimeoutRef.current = setTimeout(() => {
       if (continuousMode && sttSupported) {
-        reset();
-        setResponse(null);
-        setError(null);
-        setPhase("listening");
-        lastTranscriptRef.current = "";
-        start();
+        void (async () => {
+          const microphoneReady = await startMicrophone();
+          if (!microphoneReady) return;
+          stopMicrophone();
+          reset();
+          setResponse(null);
+          setError(null);
+          setPhase("listening");
+          lastTranscriptRef.current = "";
+          start();
+        })();
       }
     }, delay);
   };
@@ -236,14 +273,20 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
   const toggleListening = (): void => {
     if (listening) {
       stop();
+      stopMicrophone();
       return;
     }
-    reset();
-    setResponse(null);
-    setError(null);
-    setPhase("listening");
-    lastTranscriptRef.current = "";
-    start();
+    void (async () => {
+      const microphoneReady = await startMicrophone();
+      if (!microphoneReady) return;
+      stopMicrophone();
+      reset();
+      setResponse(null);
+      setError(null);
+      setPhase("listening");
+      lastTranscriptRef.current = "";
+      start();
+    })();
   };
 
   // -----------------------------------------------------------------------
@@ -252,6 +295,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
 
   const handleClose = (): void => {
     if (listening) stop();
+    stopMicrophone();
     if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
     reset();
     setResponse(null);
@@ -491,9 +535,11 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
 
   const renderFollowUps = (): JSX.Element | null => {
     if (!canFollowUp || !response) return null;
+    const routeSug = route ? ROUTE_SUGGESTIONS[route]?.[response.intent] : undefined;
+    const followUps: string[] = routeSug ?? response.follow_ups;
     return (
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-        {response.follow_ups.map((fu: string) => (
+        {followUps.map((fu: string) => (
           <button
             key={fu}
             onClick={() => handleFollowUp(fu)}
@@ -668,8 +714,13 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline }: Vo
               reset();
               lastTranscriptRef.current = "";
               if (continuousMode) {
-                setPhase("listening");
-                start();
+                void (async () => {
+                  const microphoneReady = await startMicrophone();
+                  if (!microphoneReady) return;
+                  stopMicrophone();
+                  setPhase("listening");
+                  start();
+                })();
               }
             }}
             variant="secondary"

@@ -361,9 +361,10 @@ async def import_preview(
 async def due_cards(
     deck_id: str = Query(...),
     limit: int = Query(default=20, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     svc: ReviewService = Depends(_svc),
 ) -> list[ReviewCardRead]:
-    return svc.get_due_cards(deck_id, limit)
+    return svc.get_due_cards(deck_id, limit, offset)
 
 
 # ── rate ──────────────────────────────────────────────────────────────────────
@@ -581,6 +582,4 @@ async def import_apkg(
             file.filename or "deck.apkg",
             exc,
         )
-        raise HTTPException(
-            status_code=422, detail=f"Operation failed: {type(exc).__name__}"
-        )
+        raise HTTPException(status_code=422, detail=str(exc))

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-
-export type ToastType = "success" | "error" | "info" | "warn";
+import { show, type ToastType } from "../../app/toastService";
 
 interface ToastEntry {
   id: number;
@@ -8,12 +7,8 @@ interface ToastEntry {
   type: ToastType;
 }
 
-let _nextId = 0;
-
 export function showToast(message: string, type: ToastType = "info"): void {
-  window.dispatchEvent(
-    new CustomEvent("dopaflow:toast", { detail: { id: ++_nextId, message, type } }),
-  );
+  show(message, type);
 }
 
 const TYPE_COLORS: Record<ToastType, string> = {
@@ -113,12 +108,14 @@ export function ToastContainer(): JSX.Element {
   }, []);
 
   const remove = (id: number): void => setToasts((prev) => prev.filter((t) => t.id !== id));
+  const liveMode = toasts[toasts.length - 1]?.type === "error" ? "assertive" : "polite";
 
   if (!toasts.length) return <></>;
 
   return (
     <div
-      aria-live="polite"
+      role="status"
+      aria-live={liveMode}
       style={{
         position: "fixed",
         bottom: "calc(var(--statusbar-height) + 1rem)",

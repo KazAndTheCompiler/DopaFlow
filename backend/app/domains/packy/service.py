@@ -8,6 +8,7 @@ executes actions, and returns a conversational reply with TTS text.
 
 from __future__ import annotations
 
+from app.core.vocabulary import INTENT_TO_ACTION
 from app.domains.commands.service import CommandService, parse_intent
 from app.domains.packy.repository import PackyRepository
 from app.domains.packy.schemas import (
@@ -15,6 +16,7 @@ from app.domains.packy.schemas import (
     PackyAnswer,
     PackyAskRequest,
     PackyLorebookRequest,
+    PackyLorebookResponse,
     PackyVoiceCommand,
     PackyVoiceResponse,
     PackyWhisper,
@@ -57,6 +59,7 @@ class PackyService:
           - reply_text (conversational)
           - tts_text (for speech synthesis)
           - follow_ups (suggested next actions)
+          - mode (preview | executed | clarification | conversational | empty)
         """
         text = (payload.text or "").strip()
         if not text:
@@ -66,6 +69,7 @@ class PackyService:
                 reply_text="I didn't hear anything. Try again?",
                 tts_text="I didn't catch that.",
                 status="empty",
+                mode="empty",
             )
 
         # 1. Classify
@@ -74,7 +78,18 @@ class PackyService:
         # 2. Preview
         preview = CommandService.preview(text, payload.db_path)
 
-        # 3. Build response
+        # 3. Determine response mode from intent
+        conversational_intents = {"greeting", "help", "unknown"}
+        if nlp_result.intent in conversational_intents:
+            initial_mode: Literal[
+                "preview", "executed", "clarification", "conversational", "empty"
+            ] = "conversational"
+        elif preview.get("status") != "ok":
+            initial_mode = "clarification"
+        else:
+            initial_mode = "preview"
+
+        # 4. Build response
         response = PackyVoiceResponse(
             intent=nlp_result.intent,
             confidence=nlp_result.confidence,
@@ -84,6 +99,7 @@ class PackyService:
             tts_text=nlp_result.tts_response,
             follow_ups=nlp_result.follow_ups,
             status=str(preview.get("status", "ok")),
+            mode=initial_mode,
         )
 
         if response.status != "ok":
@@ -92,7 +108,7 @@ class PackyService:
                 response.reply_text = preview_message
                 response.tts_text = preview_message
 
-        # 4. Execute if requested and the preview says it's actionable
+        # 5. Execute if requested and the preview says it's actionable
         if payload.auto_execute and preview.get("would_execute"):
             db_path = payload.db_path or ""
             if db_path:
@@ -101,6 +117,7 @@ class PackyService:
                 )
                 response.execution_result = result
                 response.status = str(result.get("status", "executed"))
+                response.mode = "executed"
                 # Update reply from execution result if available
                 if result.get("reply"):
                     response.reply_text = result["reply"]
@@ -108,27 +125,6 @@ class PackyService:
                 # Merge follow-ups from execution
                 if result.get("follow_ups"):
                     response.follow_ups = result["follow_ups"]
-
-        # 5. Enrich reply based on context
-        response = self._enrich_response(response, payload.context)
-
-        return response
-
-    def _enrich_response(
-        self, response: PackyVoiceResponse, context: dict[str, object] | None
-    ) -> PackyVoiceResponse:
-        """Add contextual flair to responses based on time of day, streaks, etc."""
-        if not context:
-            return response
-
-        # If the user has a high momentum score, add encouragement
-        try:
-            momentum = self.repository.momentum()
-            if momentum.score >= 70 and response.tts_text:
-                # Don't over-talk — only add encouragement occasionally
-                pass
-        except Exception:
-            pass
 
         return response
 
@@ -146,12 +142,21 @@ class PackyService:
         if intent == "unknown" and payload.context:
             route = str(payload.context.get("route", ""))
             complements: dict[str, tuple[str, str]] = {
-                "tasks": ("open-habits", "Habits pair well with tasks. Log one check-in?"),
+                "tasks": (
+                    "open-habits",
+                    "Habits pair well with tasks. Log one check-in?",
+                ),
                 "habits": ("start-focus", "Focus time locks in what habits start."),
                 "focus": ("open-review", "Post-focus review cements what you learned."),
                 "review": ("open-journal", "Write a short note on what you reviewed."),
-                "journal": ("open-today", "Good reflection. What's the next concrete action?"),
-                "calendar": ("open-tasks", "Check your task list against the schedule."),
+                "journal": (
+                    "open-today",
+                    "Good reflection. What's the next concrete action?",
+                ),
+                "calendar": (
+                    "open-tasks",
+                    "Check your task list against the schedule.",
+                ),
                 "nutrition": ("open-today", "Fuelled up — what's next on the list?"),
             }
             for surface, (action, reply) in complements.items():
@@ -180,7 +185,7 @@ class PackyService:
         }
         reply_text, suggested_action = replies.get(intent, replies["unknown"])
         whisper = self.repository.whisper()
-        if whisper.text.startswith("Achievement"):
+        if whisper.text.lower().startswith("achievement"):
             reply_text = f"{reply_text} {whisper.text}"
         return PackyAnswer(
             intent=intent,
@@ -191,21 +196,7 @@ class PackyService:
 
     @staticmethod
     def _intent_to_action(intent: str) -> str:
-        mapping = {
-            "task.create": "open-task-create",
-            "task.complete": "open-tasks",
-            "task.list": "open-tasks",
-            "journal.create": "open-journal",
-            "calendar.create": "open-calendar",
-            "focus.start": "start-focus",
-            "alarm.create": "open-alarms",
-            "habit.checkin": "open-habits",
-            "habit.list": "open-habits",
-            "review.start": "open-review",
-            "search": "open-search",
-            "nutrition.log": "open-nutrition",
-        }
-        return mapping.get(intent, "open-command-bar")
+        return INTENT_TO_ACTION.get(intent, "open-command-bar")
 
     # ------------------------------------------------------------------
     # Whisper / lorebook / momentum (unchanged)
@@ -215,7 +206,7 @@ class PackyService:
         """Return a proactive nudge from the repository (SQLite-backed lorebook)."""
         return self.repository.whisper()
 
-    def lorebook(self, payload: PackyLorebookRequest) -> dict[str, object]:
+    def lorebook(self, payload: PackyLorebookRequest) -> PackyLorebookResponse:
         """Persist lorebook context and return acknowledgement."""
         return self.repository.update_lorebook(payload)
 

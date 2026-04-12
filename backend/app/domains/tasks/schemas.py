@@ -148,6 +148,8 @@ class TaskQuickAddPreview(BaseModel):
     project_id: str | None = None
     done: bool | None = None
     status: Literal["todo", "in_progress", "done", "cancelled"] | None = None
+    ambiguity: bool | None = None
+    ambiguity_hints: list[str] = Field(default_factory=list)
 
 
 class CreatedCountResponse(BaseModel):

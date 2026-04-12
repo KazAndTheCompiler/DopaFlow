@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 
-import { connectGmail } from "@api/index";
 import { useAppJournal, useAppLayout, useAppSkin } from "../../app/AppContexts";
 import BackupStatus from "./BackupStatus";
 import CalendarSharingSettings from "./CalendarSharingSettings";
@@ -120,7 +119,7 @@ export default function SettingsView(): JSX.Element {
             Wire in outside systems without turning the app into a dashboard graveyard. Each integration should earn its place in the daily loop.
           </span>
         </div>
-        <GmailConnect onConnect={() => connectGmail({ redirect_uri: window.location.href }).then(() => undefined)} />
+        <GmailConnect />
         <GitHubIntegration />
         <WebhookPanel />
       </section>

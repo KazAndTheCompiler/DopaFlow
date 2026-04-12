@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { listDueReviewCards, rateReviewCard } from "@api/index";
 import type { ReviewCard } from "../../../../shared/types";
 
 interface CardReviewerProps {
-  card?: ReviewCard;
+  deckId: string;
   totalDue?: number;
   sessionDone?: number;
-  onRate: (rating: 1 | 2 | 3 | 4) => void;
+  onRated?: () => void;
   onEditCard?: (card: ReviewCard) => void;
 }
 
@@ -16,27 +17,87 @@ const RATINGS: Array<{ value: 1 | 2 | 3 | 4; label: string; color: string; key: 
   { value: 3, label: "Good", color: "var(--accent)", key: "3" },
   { value: 4, label: "Easy", color: "var(--state-completed)", key: "4" },
 ];
+const BATCH_SIZE = 20;
+const PREFETCH_THRESHOLD = 5;
+
+function formatNextDueInterval(interval: number): string {
+  if (interval < 1) {
+    const hours = Math.max(1, Math.ceil(interval * 24));
+    return `due in ${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+  const days = Math.round(interval);
+  return `due in ${days} day${days === 1 ? "" : "s"}`;
+}
 
 export function CardReviewer({
-  card,
+  deckId,
   totalDue = 0,
   sessionDone = 0,
-  onRate,
+  onRated,
   onEditCard,
 }: CardReviewerProps): JSX.Element {
   const [flipped, setFlipped] = useState<boolean>(false);
-  const total = totalDue + sessionDone;
+  const [queue, setQueue] = useState<ReviewCard[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [started, setStarted] = useState<boolean>(false);
+  const card = queue[0];
+  const remainingDue = Math.max(totalDue - sessionDone, queue.length);
+  const total = remainingDue + sessionDone;
   const pct = total > 0 ? Math.round((sessionDone / total) * 100) : 0;
 
-  // Reset flip state when card changes
+  const loadQueue = useCallback(
+    async (offset: number, replace: boolean) => {
+      if (replace) setLoading(true);
+      else setLoadingMore(true);
+      try {
+        const cards = await listDueReviewCards(deckId, BATCH_SIZE, offset);
+        setHasMore(cards.length === BATCH_SIZE);
+        setQueue((prev) => {
+          if (replace) return cards;
+          const seen = new Set(prev.map((item) => item.id));
+          return [...prev, ...cards.filter((item) => !seen.has(item.id))];
+        });
+      } finally {
+        if (replace) {
+          setLoading(false);
+          setStarted(true);
+        } else setLoadingMore(false);
+      }
+    },
+    [deckId],
+  );
+
+  useEffect(() => {
+    setQueue([]);
+    setHasMore(true);
+    setStarted(false);
+    setFlipped(false);
+    void loadQueue(0, true);
+  }, [deckId, loadQueue]);
+
+  useEffect(() => {
+    if (!started || loading || loadingMore || !hasMore || queue.length >= PREFETCH_THRESHOLD) return;
+    void loadQueue(queue.length, false);
+  }, [hasMore, loadQueue, loading, loadingMore, queue.length, started]);
+
   useEffect(() => {
     setFlipped(false);
   }, [card?.id]);
 
-  // Keyboard shortcuts
+  const handleRate = useCallback(
+    async (rating: 1 | 2 | 3 | 4) => {
+      if (!card) return;
+      await rateReviewCard({ cardId: card.id, rating });
+      setQueue((prev) => prev.filter((item) => item.id !== card.id));
+      onRated?.();
+    },
+    [card, onRated],
+  );
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Don't fire when focus is inside an input/textarea
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
       if (!card) return;
 
@@ -47,13 +108,13 @@ export function CardReviewer({
       }
 
       if (flipped) {
-        if (e.key === "1") { onRate(1); setFlipped(false); }
-        else if (e.key === "2") { onRate(2); setFlipped(false); }
-        else if (e.key === "3") { onRate(3); setFlipped(false); }
-        else if (e.key === "4") { onRate(4); setFlipped(false); }
+        if (e.key === "1") void handleRate(1);
+        else if (e.key === "2") void handleRate(2);
+        else if (e.key === "3") void handleRate(3);
+        else if (e.key === "4") void handleRate(4);
       }
     },
-    [card, flipped, onRate],
+    [card, flipped, handleRate],
   );
 
   useEffect(() => {
@@ -61,7 +122,23 @@ export function CardReviewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Session complete screen
+  if (loading) {
+    return (
+      <section
+        style={{
+          padding: "3rem 1.5rem",
+          background: "var(--surface)",
+          borderRadius: "20px",
+          border: "1px solid var(--border-subtle)",
+          textAlign: "center",
+          color: "var(--text-secondary)",
+        }}
+      >
+        Loading review session…
+      </section>
+    );
+  }
+
   if (!card) {
     if (sessionDone > 0) {
       return (
@@ -82,9 +159,9 @@ export function CardReviewer({
             You reviewed{" "}
             <strong style={{ color: "var(--text-primary)" }}>{sessionDone} card{sessionDone === 1 ? "" : "s"}</strong>
             {" "}this session.
-            {totalDue === 0
+            {remainingDue === 0
               ? " Nothing else is due — come back tomorrow."
-              : ` ${totalDue} card${totalDue === 1 ? " is" : "s are"} still due in other decks.`}
+              : ` ${remainingDue} card${remainingDue === 1 ? " is" : "s are"} still due in other decks.`}
           </p>
           <div
             style={{
@@ -133,7 +210,7 @@ export function CardReviewer({
         <div style={{ display: "grid", gap: "0.3rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
             <span>{sessionDone} done</span>
-            <span>{totalDue} remaining</span>
+            <span>{remainingDue} remaining</span>
           </div>
           <div style={{ height: "5px", borderRadius: "999px", background: "var(--border)", overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${pct}%`, background: "var(--accent)", borderRadius: "999px", transition: "width 300ms ease" }} />
@@ -193,7 +270,7 @@ export function CardReviewer({
 
         {card.next_review_at && !flipped && (
           <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>
-            Interval: {card.interval}d · Ease: {card.ease_factor.toFixed(2)} · {card.reviews_done} reviews
+            Next: {formatNextDueInterval(card.interval)} · Ease: {card.ease_factor.toFixed(2)} · {card.reviews_done} reviews
           </span>
         )}
       </div>
@@ -204,7 +281,7 @@ export function CardReviewer({
             {RATINGS.map(({ value, label, color, key }) => (
               <button
                 key={value}
-                onClick={() => { onRate(value); setFlipped(false); }}
+                onClick={() => { void handleRate(value); setFlipped(false); }}
                 title={`Rate: ${label} (press ${key})`}
                 style={{
                   flex: 1,

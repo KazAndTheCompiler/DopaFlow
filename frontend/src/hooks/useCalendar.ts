@@ -15,6 +15,7 @@ import {
   syncPeerFeed,
   updateCalendarEvent,
 } from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface UseCalendarResult {
   events: CalendarEvent[];
@@ -42,6 +43,10 @@ export function useCalendar(): UseCalendarResult {
   const sortEvents = useCallback((items: CalendarEvent[]): CalendarEvent[] => (
     [...items].sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())
   ), []);
+
+  const mergeServerEvent = useCallback((serverEvent: CalendarEvent): void => {
+    setEvents((prev) => sortEvents([...prev.filter((item) => item.id !== serverEvent.id), serverEvent]));
+  }, [sortEvents]);
 
   const refreshPeerFeeds = useCallback(async (): Promise<void> => {
     try {
@@ -89,6 +94,16 @@ export function useCalendar(): UseCalendarResult {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const handleInvalidate = (): void => {
+      void refresh();
+      void refreshConflicts();
+      void refreshPeerFeeds();
+    };
+    window.addEventListener(getInvalidationEventName("calendar"), handleInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName("calendar"), handleInvalidate);
+  }, [refresh, refreshConflicts, refreshPeerFeeds]);
+
   return {
     events,
     syncStatus,
@@ -103,16 +118,16 @@ export function useCalendar(): UseCalendarResult {
       await Promise.all([refresh(), refreshPeerFeeds()]);
     },
     create: async (event: Partial<CalendarEvent>) => {
-      const created = await createCalendarEvent(event);
-      setEvents((prev) => sortEvents([...prev.filter((item) => item.id !== created.id), created]));
+      const serverEvent = await createCalendarEvent(event);
+      mergeServerEvent(serverEvent);
       void refresh();
-      return created;
+      return serverEvent;
     },
     update: async (id: string, patch: Partial<CalendarEvent>) => {
-      const updated = await updateCalendarEvent(id, patch);
-      setEvents((prev) => sortEvents(prev.map((item) => (item.id === id ? updated : item))));
+      const serverEvent = await updateCalendarEvent(id, patch);
+      mergeServerEvent(serverEvent);
       void refresh();
-      return updated;
+      return serverEvent;
     },
     remove: async (id: string) => {
       await deleteCalendarEvent(id);

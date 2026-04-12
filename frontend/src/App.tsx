@@ -1,10 +1,10 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { showToast } from "@ds/primitives/Toast";
 import { AppProviders } from "./app/AppContexts";
 import { APP_STORAGE_KEYS } from "./app/appStorage";
 import { AppOverlays } from "./app/AppOverlays";
-import { SurfaceErrorBoundary, localDateISO } from "./app/AppShared";
+import { localDateISO } from "./app/AppShared";
 import Shell from "./shell/Shell";
 import { useOverlayController } from "./app/useOverlayController";
 import { useCommandExecutor } from "./app/useCommandExecutor";
@@ -26,13 +26,70 @@ import { useLayout } from "./hooks/useLayout";
 import { useTasks } from "./hooks/useTasks";
 import { useProjects } from "./hooks/useProjects";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useSSE } from "./hooks/useSSE";
 import { routeToHash, getRouteComponent } from "./appRoutes";
 import type { AppRoute } from "./appRoutes";
 import { getRouteFromHash, isAppRoute, sidebarRoutes } from "./appRoutes";
 
 export { AppDataContext } from "./app/AppContexts";
 
+function BootstrapErrorScreen(): JSX.Element {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: "2rem",
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, black 12%), var(--surface))",
+      }}
+    >
+      <div
+        style={{
+          width: "min(32rem, 100%)",
+          padding: "1.5rem",
+          borderRadius: "24px",
+          background: "var(--surface)",
+          border: "1px solid color-mix(in srgb, var(--state-overdue) 24%, var(--border-subtle))",
+          boxShadow: "var(--shadow-soft)",
+          display: "grid",
+          gap: "0.9rem",
+        }}
+      >
+        <div style={{ display: "grid", gap: "0.35rem" }}>
+          <strong style={{ fontSize: "1.3rem", lineHeight: 1.2 }}>
+            Could not connect to DopaFlow backend
+          </strong>
+          <span style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            Check that the backend is running, then retry the app.
+          </span>
+          <span style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            If you are running DopaFlow locally, make sure the FastAPI server started successfully and is reachable from the desktop app.
+          </span>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            justifySelf: "start",
+            padding: "0.7rem 1rem",
+            borderRadius: "10px",
+            border: "none",
+            background: "var(--accent)",
+            color: "var(--text-inverted)",
+            cursor: "pointer",
+            fontWeight: 700,
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App(): JSX.Element {
+  useSSE();
+  const { error } = useAppBootstrap();
   const tasks = useTasks();
   const projects = useProjects();
   const habits = useHabits();
@@ -51,8 +108,6 @@ export default function App(): JSX.Element {
   const skin = useSkin();
   const layout = useLayout();
   const commandBar = useCommandBar();
-
-  useAppBootstrap();
 
   const [route, setRoute] = useState<AppRoute>(getRouteFromHash());
   const [focusModeEnabled, setFocusModeEnabled] = useState<boolean>(false);
@@ -213,6 +268,10 @@ export default function App(): JSX.Element {
 
   const SurfaceComponent = useMemo(() => getRouteComponent(route), [route]);
 
+  if (error) {
+    return <BootstrapErrorScreen />;
+  }
+
   return (
     <AppProviders
       tasks={tasks}
@@ -249,11 +308,7 @@ export default function App(): JSX.Element {
         syncStatus="idle"
         skin={skin.skin}
       >
-        <SurfaceErrorBoundary route={route}>
-          <Suspense fallback={<div style={{ padding: "1rem", color: "var(--text-secondary)" }}>Loading surface…</div>}>
-            <SurfaceComponent />
-          </Suspense>
-        </SurfaceErrorBoundary>
+        <SurfaceComponent />
       </Shell>
       <AppOverlays
         inboxOpen={overlay.inboxOpen}

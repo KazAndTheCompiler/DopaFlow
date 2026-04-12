@@ -6,7 +6,7 @@ import asyncio
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from app.core.config import get_settings
+from app.core.config import Settings
 from app.domains.journal.repository import JournalRepository
 
 
@@ -15,13 +15,21 @@ class JournalBackupScheduler:
 
     def __init__(self) -> None:
         self.running = False
+        self.settings: Settings | None = None
+        self.backup_dir: Path | None = None
+
+    def configure(self, *, settings: Settings, backup_dir: str | Path) -> None:
+        self.settings = settings
+        self.backup_dir = Path(backup_dir)
 
     async def backup_missed_days(self) -> None:
         """Back up any missing days based on existing markdown exports."""
 
-        settings = get_settings()
-        repo = JournalRepository(settings.db_path)
-        backup_dir = Path.home() / ".local/share/ZoesTM/journal-backup"
+        if self.settings is None or self.backup_dir is None:
+            raise RuntimeError("JournalBackupScheduler is not configured")
+
+        repo = JournalRepository(self.settings)
+        backup_dir = self.backup_dir
         backup_dir.mkdir(parents=True, exist_ok=True)
 
         last_backup_date = None

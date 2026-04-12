@@ -10,6 +10,7 @@ from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+from app.core.config import Settings, default_backup_dir
 from app.core.database import get_db, tx
 from app.core.id_gen import journal_id
 from app.domains.journal.schemas import (
@@ -112,13 +113,13 @@ def _row_to_template(row: object) -> JournalTemplate:
 class JournalRepository:
     """Read and write journal entries, backlinks, backup metadata, versions, and templates."""
 
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
 
     # ── entries ───────────────────────────────────────────────────────────────
 
     def list_entries(self, tag: str | None = None, search: str | None = None) -> list[JournalEntryRead]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             query = "SELECT * FROM journal_entries WHERE deleted_at IS NULL"
             params: list[object] = []
             if tag:
@@ -132,7 +133,7 @@ class JournalRepository:
             return [_row_to_entry(row) for row in rows]
 
     def get_entry(self, identifier: str) -> JournalEntryRead | None:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             row = conn.execute(
                 "SELECT * FROM journal_entries WHERE (id = ? OR entry_date = ?) AND deleted_at IS NULL",
                 (identifier, identifier),
@@ -142,7 +143,7 @@ class JournalRepository:
     def save_entry(self, payload: JournalEntryCreate) -> JournalEntryRead:
         tags_json = json.dumps(payload.tags)
         auto_tags_json = json.dumps(_auto_tags_for_body(payload.markdown_body))
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             new_id = journal_id()
             conn.execute(
                 """
@@ -178,7 +179,7 @@ class JournalRepository:
         tags = patch.get("tags", existing.tags)
         tags_json = json.dumps(tags)
         auto_tags_json = json.dumps(_auto_tags_for_body(body))
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 """
                 UPDATE journal_entries
@@ -199,7 +200,7 @@ class JournalRepository:
         return self.get_entry(entry_id)
 
     def set_locked(self, entry_id: str, locked: bool) -> JournalEntryRead | None:
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "UPDATE journal_entries SET locked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
                 (1 if locked else 0, entry_id),
@@ -207,7 +208,7 @@ class JournalRepository:
         return self.get_entry(entry_id)
 
     def delete_entry(self, identifier: str) -> bool:
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             result = conn.execute(
                 "UPDATE journal_entries SET deleted_at = CURRENT_TIMESTAMP WHERE (id = ? OR entry_date = ?) AND deleted_at IS NULL",
                 (identifier, identifier),
@@ -218,7 +219,7 @@ class JournalRepository:
 
     def _save_version(self, entry_date: str, body: str) -> None:
         try:
-            with tx(self.db_path) as conn:
+            with tx(self.settings) as conn:
                 row = conn.execute(
                     "SELECT COALESCE(MAX(version_number), 0) AS v FROM journal_versions WHERE entry_date = ?",
                     (entry_date,),
@@ -241,7 +242,7 @@ class JournalRepository:
 
     def list_versions(self, entry_date: str) -> list[JournalVersionSummary]:
         try:
-            with get_db(self.db_path) as conn:
+            with get_db(self.settings) as conn:
                 rows = conn.execute(
                     "SELECT version_number, word_count, saved_at FROM journal_versions WHERE entry_date = ? ORDER BY version_number DESC",
                     (entry_date,),
@@ -252,7 +253,7 @@ class JournalRepository:
 
     def get_version(self, entry_date: str, version_number: int) -> JournalVersionDetail | None:
         try:
-            with get_db(self.db_path) as conn:
+            with get_db(self.settings) as conn:
                 row = conn.execute(
                     "SELECT body, saved_at FROM journal_versions WHERE entry_date = ? AND version_number = ?",
                     (entry_date, version_number),
@@ -266,7 +267,7 @@ class JournalRepository:
     # ── wikilinks ─────────────────────────────────────────────────────────────
 
     def persist_links(self, entry_id: str, target_slugs: list[str]) -> None:
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             for slug in target_slugs:
                 conn.execute(
                     "INSERT INTO journal_links (id, source_entry_id, target_slug) VALUES (?, ?, ?) ON CONFLICT(source_entry_id, target_slug) DO NOTHING",
@@ -274,7 +275,7 @@ class JournalRepository:
                 )
 
     def get_backlinks(self, identifier: str) -> list[str]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT source_entry_id FROM journal_links WHERE target_slug = ? ORDER BY source_entry_id ASC",
                 (identifier,),
@@ -282,7 +283,7 @@ class JournalRepository:
             return [str(row["source_entry_id"]) for row in rows]
 
     def get_graph_data(self) -> dict[str, list[dict[str, object]]]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             node_rows = conn.execute("SELECT target_slug, COUNT(*) AS entry_count FROM journal_links GROUP BY target_slug ORDER BY target_slug ASC").fetchall()
             edge_rows = conn.execute("SELECT source_entry_id, target_slug FROM journal_links ORDER BY source_entry_id ASC").fetchall()
             return {
@@ -294,7 +295,7 @@ class JournalRepository:
 
     def get_analytics_summary(self, days: int = 90) -> dict[str, object]:
         cutoff = (datetime.now(UTC).date() - timedelta(days=days - 1)).isoformat()
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT entry_date, markdown_body, emoji, tags_json, auto_tags_json FROM journal_entries WHERE deleted_at IS NULL AND entry_date >= ? ORDER BY entry_date ASC",
                 (cutoff,),
@@ -352,7 +353,7 @@ class JournalRepository:
         }
 
     def get_heatmap(self, year: int) -> dict[str, int]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT entry_date FROM journal_entries WHERE deleted_at IS NULL AND entry_date LIKE ?",
                 (f"{year:04d}-%",),
@@ -360,7 +361,7 @@ class JournalRepository:
         return {str(row["entry_date"]): 1 for row in rows}
 
     def get_auto_tag_stats(self) -> dict[str, int]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute("SELECT auto_tags_json FROM journal_entries WHERE deleted_at IS NULL").fetchall()
         counts: Counter[str] = Counter()
         for row in rows:
@@ -369,7 +370,7 @@ class JournalRepository:
         return dict(counts.most_common())
 
     def search_rich(self, q: str = "", mood: str | None = None, limit: int = 50) -> list[JournalSearchResult]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT id, entry_date, markdown_body, emoji FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date DESC"
             ).fetchall()
@@ -390,18 +391,18 @@ class JournalRepository:
     # ── templates ─────────────────────────────────────────────────────────────
 
     def list_templates(self) -> list[JournalTemplate]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute("SELECT * FROM journal_templates ORDER BY name ASC").fetchall()
             return [_row_to_template(row) for row in rows]
 
     def get_template(self, template_id: str) -> JournalTemplate | None:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             row = conn.execute("SELECT * FROM journal_templates WHERE id = ?", (template_id,)).fetchone()
             return _row_to_template(row) if row else None
 
     def create_template(self, name: str, body: str, tags: list[str]) -> JournalTemplate:
         tpl_id = f"tpl_{uuid.uuid4().hex[:8]}"
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "INSERT INTO journal_templates (id, name, body, tags) VALUES (?, ?, ?, ?)",
                 (tpl_id, name, body, json.dumps(tags)),
@@ -416,7 +417,7 @@ class JournalRepository:
         name = patch.get("name", existing.name)
         body = patch.get("body", existing.body)
         tags = patch.get("tags", existing.tags)
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "UPDATE journal_templates SET name = ?, body = ?, tags = ? WHERE id = ?",
                 (name, body, json.dumps(tags), template_id),
@@ -424,14 +425,14 @@ class JournalRepository:
         return self.get_template(template_id)
 
     def delete_template(self, template_id: str) -> bool:
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             result = conn.execute("DELETE FROM journal_templates WHERE id = ?", (template_id,))
             return result.rowcount > 0
 
     # ── backup ────────────────────────────────────────────────────────────────
 
     def backup_status(self) -> JournalBackupStatus:
-        backup_dir = Path.home() / ".local/share/ZoesTM/journal-backup"
+        backup_dir = Path(default_backup_dir())
         last_at: str | None = None
         if backup_dir.exists():
             files = sorted(backup_dir.glob("*.md"))

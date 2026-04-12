@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Project } from "@shared/types";
 import { showToast } from "@ds/primitives/Toast";
 import { createProject, deleteProject, getProjectTaskCounts, listProjects, updateProject } from "@api/projects";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface UseProjectsResult {
   projects: Project[];
@@ -22,7 +23,7 @@ export function useProjects(): UseProjectsResult {
   const [loading, setLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
-  const refresh = async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
       const [ps, counts] = await Promise.all([listProjects(), getProjectTaskCounts()]);
@@ -33,9 +34,17 @@ export function useProjects(): UseProjectsResult {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  useEffect(() => {
+    const handleTasksInvalidate = (): void => {
+      void refresh();
+    };
+    window.addEventListener(getInvalidationEventName("tasks"), handleTasksInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName("tasks"), handleTasksInvalidate);
+  }, [refresh]);
 
   return {
     projects,

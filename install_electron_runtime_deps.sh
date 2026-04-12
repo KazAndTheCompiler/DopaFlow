@@ -4,27 +4,27 @@ set -euo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 
 PACKAGES=(
-  binutils
-  libnss3
-  libnspr4
-  libatk1.0-0t64
-  libatk-bridge2.0-0t64
-  libgtk-3-0t64
-  libxss1
-  libgbm1
-  libasound2t64
-  libxcb-render0
-  libxcb-shm0
-  libxau6
-  libxdmcp6
-  libpixman-1-0
-  libgraphite2-3
-  libdatrie1
-  libwayland-client0
-  libwayland-cursor0
-  libwayland-egl1
-  libxcursor1
-  libxinerama1
+  binutils=2.42-4ubuntu2.10
+  libnss3=2:3.98-1ubuntu0.1
+  libnspr4=2:4.35-1.1build1
+  libatk1.0-0t64=2.52.0-1build1
+  libatk-bridge2.0-0t64=2.52.0-1build1
+  libgtk-3-0t64=3.24.41-4ubuntu1.3
+  libxss1=1:1.2.3-1build3
+  libgbm1=25.2.8-0ubuntu0.24.04.1
+  libasound2t64=1.2.11-1ubuntu0.2
+  libxcb-render0=1.15-1ubuntu2
+  libxcb-shm0=1.15-1ubuntu2
+  libxau6=1:1.0.9-1build6
+  libxdmcp6=1:1.1.3-0ubuntu6
+  libpixman-1-0=0.42.2-1build1
+  libgraphite2-3=1.3.14-2build1
+  libdatrie1=0.2.13-3build1
+  libwayland-client0=1.22.0-2.1build1
+  libwayland-cursor0=1.22.0-2.1build1
+  libwayland-egl1=1.22.0-2.1build1
+  libxcursor1=1:1.2.1-1build1
+  libxinerama1=2:1.1.4-3build1
 )
 
 APT_BIN="$(command -v apt-get || true)"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from calendar import monthrange
 from datetime import UTC, datetime, datetime as real_datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 PRIORITY_MAP = {"!high": 1, "!1": 1, "!med": 2, "!2": 2, "!low": 3, "!3": 3, "!4": 4}
 MAX_LEN = 280
@@ -104,6 +105,15 @@ def _parse_recurrence(text: str) -> tuple[str | None, list[str]]:
 
 
 def _parse_time_expr(text: str) -> tuple[int, int] | None:
+    if match := re.search(r"\b(\d{1,2}):(\d{2})\s*(am|pm)\b", text, flags=re.IGNORECASE):
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        ampm = match.group(3).lower()
+        if ampm == "pm" and hour != 12:
+            hour += 12
+        elif ampm == "am" and hour == 12:
+            hour = 0
+        return (hour, minute)
     if match := re.search(r"\b(\d{1,2}):(\d{2})\b", text, flags=re.IGNORECASE):
         return (int(match.group(1)), int(match.group(2)))
     if match := re.search(r"\b(\d{1,2})\s*(am|pm)\b", text, flags=re.IGNORECASE):
@@ -182,30 +192,34 @@ def _unique_datetimes(values: list[datetime]) -> list[datetime]:
 
 def _parse_priority(text: str) -> tuple[int, list[str]]:
     low = text.lower()
+    low_without_tags = re.sub(r"#\w+", " ", low)
     strip_patterns = [r"!high", r"!med", r"!low", r"![1234]"]
     for token, priority in PRIORITY_MAP.items():
         if token in low:
             return priority, strip_patterns
     for pattern, priority in PRIORITY_PATTERNS:
-        if pattern.search(text):
+        if pattern.search(low_without_tags):
             strip_patterns.append(pattern.pattern)
             return priority, strip_patterns
     return 2, strip_patterns
 
 
-def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str]]:
+def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str], list[str]]:
     low = text.lower()
     explicit_time = _parse_time_expr(text)
     candidates: list[datetime] = []
     strip_patterns: list[str] = []
+    ambiguity_hints: list[str] = []
 
     def add_candidate(value: datetime, pattern: str) -> None:
-        candidates.append(value.astimezone(UTC))
+        candidates.append(value)
         strip_patterns.append(pattern)
 
     for keyword, delta in (("tomorrow", timedelta(days=1)), ("tmrw", timedelta(days=1)), ("next week", timedelta(days=7))):
         if keyword in low:
-            add_candidate(_apply_time(now + delta, explicit_time), re.escape(keyword))
+            add_candidate(_apply_time(now + delta, explicit_time, (0, 0)), re.escape(keyword))
+            if keyword == "next week":
+                ambiguity_hints.append("due date unclear: 'next week' defaulted to next week's local midnight")
     if re.search(r"\b(?:tonight|this evening)\b", low):
         base = now if now.hour < 18 else now + timedelta(days=1)
         add_candidate(_apply_time(base, explicit_time, (EVENING_HOUR, 0)), r"\b(?:tonight|this evening)\b")
@@ -231,7 +245,10 @@ def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str]]:
         qualifier = (match.group(1) or "").strip()
         weekday_name = match.group(2)
         resolved = _resolve_this_weekday(now, weekday_name) if qualifier == "this" else _resolve_next_weekday(now, weekday_name)
-        add_candidate(_apply_time(resolved, explicit_time), re.escape(match.group(0)))
+        add_candidate(_apply_time(resolved, explicit_time, (0, 0)), re.escape(match.group(0)))
+        ambiguity_hints.append(
+            f"due date inferred from weekday '{weekday_name}' and defaulted to local midnight"
+        )
     for match in re.finditer(r"\b(\d{4}-\d{2}-\d{2})\b", text):
         try:
             add_candidate(_apply_time(real_datetime.strptime(match.group(1), "%Y-%m-%d").replace(tzinfo=UTC), explicit_time), re.escape(match.group(0)))
@@ -244,7 +261,7 @@ def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str]]:
     for match in re.finditer(r"\b\d{1,2}(?:st|nd|rd|th)\b", low):
         if parsed := _parse_ordinal_day(match.group(0), now, explicit_time):
             add_candidate(parsed, re.escape(match.group(0)))
-    return _unique_datetimes(candidates), strip_patterns
+    return _unique_datetimes(candidates), strip_patterns, ambiguity_hints
 
 
 def _clean_title(text: str, strip_patterns: list[str]) -> str:
@@ -266,14 +283,18 @@ def _clean_title(text: str, strip_patterns: list[str]) -> str:
         title = next_title
 
 
-def parse(text: str) -> dict[str, object]:
+def parse(text: str, user_tz: str = "UTC") -> dict[str, object]:
     text = (text or "").strip()[:MAX_LEN]
     tags = re.findall(r"#(\w+)", text)
     priority, priority_strip_patterns = _parse_priority(text)
     recurrence_rule, recurrence_strip_patterns = _parse_recurrence(text)
-    now = datetime.now(UTC)
-    due_candidates, due_strip_patterns = _parse_due(text, now)
-    due = due_candidates[0].isoformat().replace("+00:00", "Z") if due_candidates else None
+    try:
+        tz = ZoneInfo(user_tz)
+    except ZoneInfoNotFoundError:
+        tz = UTC
+    now = datetime.now(tz)
+    due_candidates, due_strip_patterns, ambiguity_hints = _parse_due(text, now)
+    due = due_candidates[0].isoformat() if due_candidates else None
     title = _clean_title(text, priority_strip_patterns + due_strip_patterns + recurrence_strip_patterns)
     return {
         "title": title or text,
@@ -282,4 +303,6 @@ def parse(text: str) -> dict[str, object]:
         "due_at": due,
         "recurrence_rule": recurrence_rule,
         "estimated_minutes": None,
+        "ambiguity": bool(ambiguity_hints),
+        "ambiguity_hints": ambiguity_hints,
     }

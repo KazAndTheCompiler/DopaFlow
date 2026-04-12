@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
 import Button from "@ds/primitives/Button";
-import { API_BASE_URL } from "../api/client";
+import { useAppJournal } from "../app/AppContexts";
 
 interface Template { id: string; name: string }
 interface TemplatesPickerProps { onApply: (body: string, tags: string[]) => void }
 
 export function TemplatesPicker({ onApply }: TemplatesPickerProps): JSX.Element {
+  const journal = useAppJournal();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [open, setOpen] = useState(false);
-  useEffect(() => { void fetch(`${API_BASE_URL}/journal/templates`).then((response) => response.json()).then((rows: Template[]) => setTemplates(rows)).catch(() => setTemplates([])); }, []);
+  useEffect(() => { setTemplates(journal.templates); }, [journal.templates]);
   return (
     <div style={{ position: "relative", width: "fit-content" }}>
       <Button
@@ -24,9 +25,7 @@ export function TemplatesPicker({ onApply }: TemplatesPickerProps): JSX.Element 
             <button
               key={template.id}
               onClick={() => {
-                void fetch(`${import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api/v2"}/journal/templates/${template.id}/apply`, { method: "POST" })
-                  .then((response) => response.json())
-                  .then((body: { body: string; tags: string[] }) => onApply(body.body, body.tags));
+                void journal.applyTemplate(template.id).then((body) => onApply(body.body, body.tags));
                 setOpen(false);
               }}
               style={{ textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "0.5rem 0.75rem", borderRadius: "6px", color: "var(--text)", fontSize: "var(--text-sm)" }}

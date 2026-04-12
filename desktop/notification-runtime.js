@@ -112,6 +112,7 @@ class NotificationRuntime {
           if (!this.firedAlarms.has(alarm.id)) {
             this.firedAlarms.set(alarm.id, { id: alarm.id, firedAt: Date.now() });
             this.showNotification(alarm.label ?? "Alarm", alarm.time_str ?? "");
+            this.onAlarmFired(alarm);
           }
         });
         this.cleanupFiredAlarms();

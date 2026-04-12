@@ -1,12 +1,13 @@
 import type { Alarm } from "../../../shared/types";
 import { apiClient } from "./client";
+import { alarmRecordSchema, alarmRecordsSchema, parseApiSchema } from "./schemas";
 
-export function listAlarms(): Promise<Alarm[]> {
-  return apiClient<Alarm[]>("/alarms");
+export async function listAlarms(): Promise<Alarm[]> {
+  return parseApiSchema<Alarm[]>(alarmRecordsSchema, await apiClient<unknown>("/alarms"));
 }
 
-export function createAlarm(payload: Partial<Alarm>): Promise<Alarm> {
-  return apiClient<Alarm>("/alarms", { method: "POST", body: JSON.stringify(payload) });
+export async function createAlarm(payload: Partial<Alarm>): Promise<Alarm> {
+  return parseApiSchema<Alarm>(alarmRecordSchema, await apiClient<unknown>("/alarms", { method: "POST", body: JSON.stringify(payload) }));
 }
 
 export function deleteAlarm(id: string): Promise<void> {

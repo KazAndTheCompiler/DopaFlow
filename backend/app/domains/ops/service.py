@@ -13,6 +13,7 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.core.config import Settings
 from app.core.database import get_db, tx
 from app.core.id_gen import habit_id, task_id
 from app.core.version import APP_VERSION, SCHEMA_VERSION
@@ -23,8 +24,8 @@ logger = logging.getLogger(__name__)
 class OpsService:
     REQUIRED_RESTORE_TABLES = frozenset({"_migrations", "tasks", "habits", "journal_entries"})
 
-    def __init__(self, db_path: str):
-        self.db_path = db_path
+    def __init__(self, settings: Settings):
+        self.settings = settings
 
     def _inspect_backup(self, content: bytes) -> dict[str, object]:
         if content[:16] != b"SQLite format 3\x00":
@@ -75,7 +76,7 @@ class OpsService:
     # ── metadata helpers ──────────────────────────────────────────────────────
 
     def _set_metadata(self, key: str, value: str) -> None:
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 """
                 INSERT INTO ops_metadata(key, value, updated_at)
@@ -87,7 +88,7 @@ class OpsService:
 
     def _get_metadata(self, key: str) -> str | None:
         try:
-            with get_db(self.db_path) as conn:
+            with get_db(self.settings) as conn:
                 row = conn.execute("SELECT value FROM ops_metadata WHERE key=?", (key,)).fetchone()
             return row["value"] if row else None
         except Exception:  # noqa: BLE001
@@ -112,21 +113,21 @@ class OpsService:
     # ── diagnostics ───────────────────────────────────────────────────────────
 
     def get_stats(self) -> dict[str, int]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             tasks = int(conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0])
             habits = int(conn.execute("SELECT COUNT(*) FROM habits").fetchone()[0])
             journal_entries = int(conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0])
         return {"tasks": tasks, "habits": habits, "journal_entries": journal_entries}
 
     def get_sync_status(self) -> dict[str, object]:
-        db_file = Path(self.db_path)
+        db_file = Path(self.settings.db_path)
         try:
             db_size = db_file.stat().st_size
         except FileNotFoundError:
             db_size = 0
         entry_count = 0
         try:
-            with get_db(self.db_path) as conn:
+            with get_db(self.settings) as conn:
                 entry_count = int(conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0])
         except sqlite3.OperationalError as exc:
             if "no such table" not in str(exc).lower():
@@ -148,14 +149,14 @@ class OpsService:
             "dev_auth": dev_auth,
             "enforce_auth": enforce_auth,
             "trust_local_clients": trust_local,
-            "db_path": self.db_path,
+            "db_path": self.settings.db_path,
             "webhook_http_delivery": webhook_http_delivery,
         }
 
     # ── export ────────────────────────────────────────────────────────────────
 
     def export_payload(self) -> dict[str, object]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             tasks = [dict(r) for r in conn.execute("SELECT * FROM tasks ORDER BY created_at").fetchall()]
             habits = [dict(r) for r in conn.execute("SELECT * FROM habit_checkins ORDER BY checkin_date").fetchall()]
             journal = [dict(r) for r in conn.execute("SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date").fetchall()]
@@ -179,7 +180,7 @@ class OpsService:
         }
 
     def export_all_zip(self) -> bytes:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             tasks = [dict(r) for r in conn.execute("SELECT * FROM tasks ORDER BY created_at").fetchall()]
             habits = [dict(r) for r in conn.execute("SELECT * FROM habit_checkins ORDER BY checkin_date").fetchall()]
             journal = [dict(r) for r in conn.execute("SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date").fetchall()]
@@ -202,7 +203,7 @@ class OpsService:
         today = datetime.now(UTC).date().isoformat()
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         tmp.close()
-        db_path = Path(self.db_path)
+        db_path = Path(self.settings.db_path)
         if db_path.exists():
             source = sqlite3.connect(str(db_path))
             try:
@@ -228,7 +229,7 @@ class OpsService:
         if not inspected["valid"]:
             raise ValueError(str(inspected["error"]))
 
-        db_path = Path(self.db_path)
+        db_path = Path(self.settings.db_path)
         tmp = tempfile.NamedTemporaryFile(dir=str(db_path.parent), prefix=f"{db_path.stem}-restore-", suffix=".db", delete=False)
         try:
             tmp.write(content)
@@ -255,13 +256,13 @@ class OpsService:
     # ── seed ──────────────────────────────────────────────────────────────────
 
     def seed_first_run(self) -> dict[str, object]:
-        with get_db(self.db_path) as conn:
+        with get_db(self.settings) as conn:
             task_count = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
             habit_count = conn.execute("SELECT COUNT(*) FROM habits").fetchone()[0]
         if task_count or habit_count:
             return {"seeded": False, "message": "Sample data only seeds on first run"}
         today = datetime.now(UTC).date().isoformat()
-        with tx(self.db_path) as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "INSERT INTO tasks(id, title, due_at, priority) VALUES(?,?,?,?)",
                 (task_id(), "Try the task list", f"{today}T12:00:00Z", 2),
@@ -287,7 +288,7 @@ class OpsService:
         habits = parsed.get("habits", [])
         if not dry_run:
             import uuid
-            with tx(self.db_path) as conn:
+            with tx(self.settings) as conn:
                 for t in tasks:
                     title = (t.get("title") or "").strip()
                     if not title:

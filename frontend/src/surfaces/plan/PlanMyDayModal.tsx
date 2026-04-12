@@ -21,6 +21,8 @@ import { StepDots } from "./PlanMyDayStepDots";
 
 // ── Main modal ─────────────────────────────────────────────────────────────────
 
+const PLAN_MY_DAY_SESSION_KEY = "dopaflow:planmyday";
+
 interface PlanMyDayModalProps {
   onClose: () => void;
   onNavigate: (route: string) => void;
@@ -36,6 +38,7 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
   const [energy, setEnergy] = useState<number | null>(null);
   const [decisions, setDecisions] = useState<Record<string, "keep" | "postpone" | "drop">>({});
   const [picks, setPicks] = useState<Set<string>>(new Set());
+  const today = todayISO();
 
   const tasks = tasksState.tasks;
   const overdue = tasks.filter(
@@ -44,14 +47,57 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
 
   // Pre-select top 3 by priority when entering step 2
   useEffect(() => {
-    if (step === 2) {
+    if (step === 2 && picks.size === 0) {
       const pre = tasks
         .filter((t) => !t.done && t.status !== "cancelled" && t.status !== "done" && !isOverdue(t))
         .sort((a, b) => a.priority - b.priority)
         .slice(0, MAX_PICKS);
       setPicks(new Set(pre.map((t) => t.id)));
     }
-  }, [step, tasks]);
+  }, [picks.size, step, tasks]);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem(PLAN_MY_DAY_SESSION_KEY);
+    if (!raw) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as {
+        date?: string;
+        step?: number;
+        selected?: {
+          energy?: number | null;
+          decisions?: Record<string, "keep" | "postpone" | "drop">;
+          picks?: string[];
+        };
+      };
+      if (parsed.date !== today) {
+        sessionStorage.removeItem(PLAN_MY_DAY_SESSION_KEY);
+        return;
+      }
+      setStep(typeof parsed.step === "number" ? Math.max(0, Math.min(parsed.step, TOTAL_STEPS - 1)) : 0);
+      setEnergy(typeof parsed.selected?.energy === "number" ? parsed.selected.energy : null);
+      setDecisions(parsed.selected?.decisions ?? {});
+      setPicks(new Set(parsed.selected?.picks ?? []));
+    } catch {
+      sessionStorage.removeItem(PLAN_MY_DAY_SESSION_KEY);
+    }
+  }, [today]);
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      PLAN_MY_DAY_SESSION_KEY,
+      JSON.stringify({
+        date: today,
+        step,
+        selected: {
+          energy,
+          decisions,
+          picks: Array.from(picks),
+        },
+      }),
+    );
+  }, [decisions, energy, picks, step, today]);
 
   // Yesterday's stats
   const yISO = yesterdayISO();
@@ -67,7 +113,7 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
 
   // Today's events
   const todayEvents = calendar.events
-    .filter((e) => e.start_at?.slice(0, 10) === todayISO())
+    .filter((e) => e.start_at?.slice(0, 10) === today)
     .sort((a, b) => a.start_at.localeCompare(b.start_at));
 
   const pending = tasks
@@ -112,7 +158,8 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
         `Morning energy logged as ${level.label} (${level.value}/4)`,
       );
     }
-    localStorage.setItem(TODAY_KEY, todayISO());
+    localStorage.setItem(TODAY_KEY, today);
+    sessionStorage.removeItem(PLAN_MY_DAY_SESSION_KEY);
     if (dest === "focus" && focusTitle) {
       localStorage.setItem(APP_STORAGE_KEYS.focusPrefill, focusTitle);
     }

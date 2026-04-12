@@ -4,6 +4,8 @@ import logging
 import sqlite3
 from pathlib import Path
 
+from app.core.config import Settings, get_settings
+from app.domains.health import service as health_service_module
 from app.domains.health.service import HealthService
 from app.domains.ops.service import OpsService
 
@@ -13,6 +15,13 @@ def test_healthcheck_returns_ok(client) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_health_live_returns_ok(client) -> None:
+    response = client.get("/health/live")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
 
 
 def test_docs_are_available(client) -> None:
@@ -26,7 +35,7 @@ def test_health_payload_defaults_trust_local_clients_to_false(monkeypatch) -> No
     monkeypatch.delenv("ZOESTM_TRUST_LOCAL_CLIENTS", raising=False)
     monkeypatch.delenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", raising=False)
 
-    payload = HealthService.get_status()
+    payload = HealthService.get_status(get_settings().db_path)
 
     assert payload["features"]["trust_local_clients"] is False
     assert all("TRUST_LOCAL_CLIENTS" not in warning for warning in payload["warnings"])
@@ -36,7 +45,7 @@ def test_ops_config_defaults_trust_local_clients_to_false(monkeypatch, db_path) 
     monkeypatch.delenv("ZOESTM_TRUST_LOCAL_CLIENTS", raising=False)
     monkeypatch.delenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", raising=False)
 
-    payload = OpsService(str(db_path)).get_config()
+    payload = OpsService(Settings(db_path=str(db_path))).get_config()
 
     assert payload["trust_local_clients"] is False
 
@@ -49,7 +58,7 @@ def test_ops_config_prefers_dopaflow_env_flags_over_legacy(monkeypatch, db_path)
     monkeypatch.setenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "false")
     monkeypatch.setenv("ZOESTM_TRUST_LOCAL_CLIENTS", "true")
 
-    payload = OpsService(str(db_path)).get_config()
+    payload = OpsService(Settings(db_path=str(db_path))).get_config()
 
     assert payload["dev_auth"] is False
     assert payload["enforce_auth"] is True
@@ -68,7 +77,7 @@ def test_health_payload_prefers_dopaflow_env_flags_over_legacy(monkeypatch) -> N
     monkeypatch.setenv("DOPAFLOW_ALLOW_LOCAL_WEBHOOK_TARGETS", "true")
     monkeypatch.setenv("ZOESTM_ALLOW_LOCAL_WEBHOOK_TARGETS", "false")
 
-    payload = HealthService.get_status()
+    payload = HealthService.get_status(get_settings().db_path)
 
     assert payload["features"]["dev_auth"] is False
     assert payload["features"]["trust_local_clients"] is False
@@ -92,8 +101,39 @@ def test_health_logs_missing_journal_table_for_memory_depth(monkeypatch, tmp_pat
     get_settings.cache_clear()
     caplog.set_level(logging.WARNING, logger="app.domains.health.service")
 
-    payload = HealthService.get_status()
+    payload = HealthService.get_status(str(db_path))
 
     assert payload["db"] == "ok"
     assert payload["memory_depth_days"] == 0
     assert any("Health memory depth unavailable" in record.message for record in caplog.records)
+
+
+def test_health_ready_returns_ready(client) -> None:
+    response = client.get("/health/ready")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready", "reason": None}
+
+
+def test_health_ready_returns_503_when_migration_is_pending(monkeypatch, tmp_path: Path) -> None:
+    db_path = tmp_path / "health-pending.sqlite"
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute("CREATE TABLE _migrations (filename TEXT PRIMARY KEY, checksum TEXT NOT NULL DEFAULT '')")
+        conn.commit()
+    finally:
+        conn.close()
+
+    migrations_dir = tmp_path / "migrations"
+    migrations_dir.mkdir()
+    migration = migrations_dir / "001_pending.sql"
+    migration.write_text("CREATE TABLE sample (id INTEGER PRIMARY KEY);\n", encoding="utf-8")
+    original = health_service_module._migrations_dir
+    health_service_module._migrations_dir = lambda: migrations_dir
+    try:
+        payload = HealthService.get_ready(str(db_path))
+    finally:
+        health_service_module._migrations_dir = original
+
+    assert payload["status"] == "not_ready"
+    assert payload["reason"] == f"pending migration: {migration.name}"

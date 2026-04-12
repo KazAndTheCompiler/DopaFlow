@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
+from app.core.config import Settings
 from app.core.database import tx
 from app.domains.digest.repository import DigestRepository
+
+
+def _assert_digest_score_bounds(body: dict[str, object]) -> None:
+    assert 0 <= body["score"] <= 100
+    assert 0 <= body["momentum_score"] <= 100
+    assert isinstance(body["momentum_label"], str)
+    assert body["momentum_label"].strip()
 
 
 def test_digest_today_endpoint_returns_expected_shape(client, db_path) -> None:
@@ -54,7 +62,7 @@ def test_digest_optional_summaries_log_missing_tables(tmp_path: Path, caplog) ->
     finally:
         conn.close()
 
-    repo = DigestRepository(str(db_path))
+    repo = DigestRepository(Settings(db_path=str(db_path)))
     today = date.today()
     caplog.set_level(logging.WARNING, logger="app.domains.digest.repository")
 
@@ -87,3 +95,103 @@ def test_digest_today_endpoint_returns_typed_nested_shapes(client, db_path) -> N
     assert "mood_distribution" in body["journal"]
     assert "days_logged" in body["nutrition"]
     assert isinstance(body["correlations"], list)
+
+
+def test_digest_today_ignores_tasks_created_before_last_7_days(client, db_path) -> None:
+    with tx(str(db_path)) as conn:
+        conn.execute(
+            """
+            INSERT INTO tasks (id, title, done, updated_at, created_at)
+            VALUES ('dig_old_task', 'Old task', 1, CURRENT_TIMESTAMP, datetime('now', '-30 days'))
+            """
+        )
+
+    response = client.get("/api/v2/digest/today")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["tasks"]["completed"] == 0
+    assert body["tasks"]["created"] == 0
+    assert body["momentum_score"] == 0.0
+
+
+def test_digest_today_score_stays_non_negative_with_zero_tasks(client) -> None:
+    response = client.get("/api/v2/digest/today")
+
+    assert response.status_code == 200
+    body = response.json()
+    _assert_digest_score_bounds(body)
+    assert body["score"] >= 0
+
+
+def test_digest_today_score_caps_at_100_when_all_tasks_are_completed(client, db_path) -> None:
+    with tx(str(db_path)) as conn:
+        for index in range(5):
+            conn.execute(
+                """
+                INSERT INTO tasks (id, title, done, due_at, updated_at, created_at, tags_json)
+                VALUES (?, ?, 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '[]')
+                """,
+                (
+                    f"dig_done_task_{index}",
+                    f"Completed task {index}",
+                    date.today().isoformat(),
+                ),
+            )
+
+    response = client.get("/api/v2/digest/today")
+
+    assert response.status_code == 200
+    body = response.json()
+    _assert_digest_score_bounds(body)
+    assert body["score"] <= 100
+
+
+def test_digest_today_score_stays_bounded_with_mixed_overdue_and_completed_tasks(client, db_path) -> None:
+    with tx(str(db_path)) as conn:
+        conn.execute(
+            """
+            INSERT INTO tasks (id, title, done, due_at, updated_at, created_at, tags_json)
+            VALUES ('dig_mix_done', 'Completed task', 1, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '[]')
+            """,
+            (date.today().isoformat(),),
+        )
+        conn.execute(
+            """
+            INSERT INTO tasks (id, title, done, due_at, updated_at, created_at, tags_json)
+            VALUES ('dig_mix_overdue', 'Overdue task', 0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '[]')
+            """,
+            (date.today().isoformat(),),
+        )
+
+    response = client.get("/api/v2/digest/today")
+
+    assert response.status_code == 200
+    body = response.json()
+    _assert_digest_score_bounds(body)
+    assert body["tasks"]["overdue"] >= 1
+
+
+def test_digest_week_score_stays_bounded_with_zero_journal_entries(client, db_path) -> None:
+    week_start = date.today() - timedelta(days=date.today().weekday())
+    with tx(str(db_path)) as conn:
+        for index in range(3):
+            conn.execute(
+                """
+                INSERT INTO tasks (id, title, done, due_at, updated_at, created_at, tags_json)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '[]')
+                """,
+                (
+                    f"dig_week_task_{index}",
+                    f"Week task {index}",
+                    int(index % 2 == 0),
+                    week_start.isoformat(),
+                ),
+            )
+
+    response = client.get("/api/v2/digest/week", params={"week_start": week_start.isoformat()})
+
+    assert response.status_code == 200
+    body = response.json()
+    _assert_digest_score_bounds(body)
+    assert body["journal"]["entries_written"] == 0

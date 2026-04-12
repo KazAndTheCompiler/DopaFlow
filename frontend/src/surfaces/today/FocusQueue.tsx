@@ -1,4 +1,8 @@
+import { useEffect, useMemo, useState } from "react";
+import type { DragEvent } from "react";
+
 import type { FocusSession, Task } from "../../../../shared/types";
+import { localDateISO } from "../../app/AppShared";
 
 export interface FocusQueueProps {
   tasks: Task[];
@@ -7,8 +11,74 @@ export interface FocusQueueProps {
   onComplete: (taskId: string) => void;
 }
 
+type TaskId = Task["id"];
+
 const QUEUE_SOFT_LIMIT = 5;
 const QUEUE_WARN_AT = 6;
+const FOCUS_QUEUE_ORDER_PREFIX = "dopaflow:focus_queue_order_";
+const FOCUS_QUEUE_REORDER_TYPE = "application/x-dopaflow-focus-queue-id";
+const FOCUS_QUEUE_RETENTION_DAYS = 2;
+
+function defaultTaskSort(left: Task, right: Task): number {
+  if (left.priority !== right.priority) return left.priority - right.priority;
+  const leftDue = left.due_at ? new Date(left.due_at).getTime() : Number.POSITIVE_INFINITY;
+  const rightDue = right.due_at ? new Date(right.due_at).getTime() : Number.POSITIVE_INFINITY;
+  return leftDue - rightDue;
+}
+
+function arraysEqual(left: TaskId[], right: TaskId[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function moveItem(ids: TaskId[], sourceId: TaskId, targetId: TaskId): TaskId[] {
+  if (sourceId === targetId) {
+    return ids;
+  }
+  const sourceIndex = ids.indexOf(sourceId);
+  const targetIndex = ids.indexOf(targetId);
+  if (sourceIndex === -1 || targetIndex === -1) {
+    return ids;
+  }
+  const next = [...ids];
+  const [moved] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return next;
+}
+
+function pruneStoredQueueOrders(todayISO: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const cutoff = localDateISO(-FOCUS_QUEUE_RETENTION_DAYS);
+  for (const key of Object.keys(window.localStorage)) {
+    if (!key.startsWith(FOCUS_QUEUE_ORDER_PREFIX)) {
+      continue;
+    }
+    const dateText = key.slice(FOCUS_QUEUE_ORDER_PREFIX.length);
+    if (!dateText || dateText < cutoff || dateText > todayISO) {
+      window.localStorage.removeItem(key);
+    }
+  }
+}
+
+function readStoredQueueOrder(storageKey: string): TaskId[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const storedOrder = window.localStorage.getItem(storageKey);
+  if (!storedOrder) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(storedOrder) as unknown;
+    if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
+      return parsed as TaskId[];
+    }
+  } catch {
+    window.localStorage.removeItem(storageKey);
+  }
+  return [];
+}
 
 function priorityDot(priority: number): JSX.Element {
   const color =
@@ -32,19 +102,67 @@ function priorityDot(priority: number): JSX.Element {
 }
 
 export function FocusQueue({ tasks, activeSession, onStartFocus, onComplete }: FocusQueueProps): JSX.Element {
+  const todayISO = localDateISO();
+  const storageKey = `${FOCUS_QUEUE_ORDER_PREFIX}${todayISO}`;
   const pending = tasks.filter((t) => !t.done);
-  const queue = [...pending]
-    .sort((left, right) => {
-      if (left.priority !== right.priority) return left.priority - right.priority;
-      const leftDue = left.due_at ? new Date(left.due_at).getTime() : Number.POSITIVE_INFINITY;
-      const rightDue = right.due_at ? new Date(right.due_at).getTime() : Number.POSITIVE_INFINITY;
-      return leftDue - rightDue;
-    })
-    .slice(0, QUEUE_SOFT_LIMIT);
+  const [orderedTaskIds, setOrderedTaskIds] = useState<TaskId[]>([]);
+
+  useEffect(() => {
+    pruneStoredQueueOrders(todayISO);
+    setOrderedTaskIds(readStoredQueueOrder(storageKey));
+  }, [storageKey, todayISO]);
+
+  useEffect(() => {
+    const pendingIds = new Set(pending.map((task) => task.id));
+    setOrderedTaskIds((current) => {
+      const next = current.filter((id) => pendingIds.has(id));
+      if (typeof window !== "undefined" && !arraysEqual(current, next)) {
+        window.localStorage.setItem(storageKey, JSON.stringify(next));
+      }
+      return arraysEqual(current, next) ? current : next;
+    });
+  }, [pending, storageKey]);
+
+  const orderedPending = useMemo(() => {
+    const orderIndex = new Map(orderedTaskIds.map((id, index) => [id, index]));
+    return [...pending].sort((left, right) => {
+      const leftIndex = orderIndex.get(left.id);
+      const rightIndex = orderIndex.get(right.id);
+      if (leftIndex != null || rightIndex != null) {
+        if (leftIndex == null) return 1;
+        if (rightIndex == null) return -1;
+        return leftIndex - rightIndex;
+      }
+      return defaultTaskSort(left, right);
+    });
+  }, [orderedTaskIds, pending]);
+
+  const queue = orderedPending.slice(0, QUEUE_SOFT_LIMIT);
 
   const hiddenCount = Math.max(0, pending.length - QUEUE_SOFT_LIMIT);
   const isOverfull = pending.length >= QUEUE_WARN_AT;
   const hasActiveSession = Boolean(activeSession);
+
+  const saveOrder = (ids: TaskId[]): void => {
+    setOrderedTaskIds(ids);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(storageKey, JSON.stringify(ids));
+    }
+  };
+
+  const onQueueDrop = (event: DragEvent<HTMLDivElement>, targetId: TaskId): void => {
+    const sourceId = event.dataTransfer.getData(FOCUS_QUEUE_REORDER_TYPE) as TaskId;
+    if (!sourceId) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const queueIds = orderedPending.map((task) => task.id);
+    const nextIds = moveItem(queueIds, sourceId, targetId);
+    if (!arraysEqual(nextIds, queueIds)) {
+      saveOrder(nextIds);
+    }
+  };
 
   return (
     <section
@@ -173,6 +291,18 @@ export function FocusQueue({ tasks, activeSession, onStartFocus, onComplete }: F
             return (
               <div
                 key={task.id}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = "move";
+                  event.dataTransfer.setData(FOCUS_QUEUE_REORDER_TYPE, task.id);
+                }}
+                onDragOver={(event) => {
+                  if (event.dataTransfer.types.includes(FOCUS_QUEUE_REORDER_TYPE)) {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }
+                }}
+                onDrop={(event) => onQueueDrop(event, task.id)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -188,6 +318,7 @@ export function FocusQueue({ tasks, activeSession, onStartFocus, onComplete }: F
                     ? "1px solid color-mix(in srgb, var(--accent) 22%, transparent)"
                     : "1px solid transparent",
                   transition: "background 150ms ease",
+                  cursor: "grab",
                 }}
               >
                 {priorityDot(task.priority)}

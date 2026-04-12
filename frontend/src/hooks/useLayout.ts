@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export type LayoutMode = "comfortable" | "compact" | "expanded";
 
-const LAYOUT_KEY = "dopaflow-layout";
+const LAYOUT_KEY = "dopaflow:layout";
 const DEFAULT_LAYOUT: LayoutMode = "comfortable";
 
 function resolveStoredLayout(): LayoutMode {

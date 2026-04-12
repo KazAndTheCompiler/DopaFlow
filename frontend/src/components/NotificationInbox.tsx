@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
+
 import type { Notification } from "../../../shared/types";
+import { showToast } from "../design-system/primitives/Toast";
 import EmptyState from "../design-system/primitives/EmptyState";
 
 export interface NotificationInboxProps {
@@ -6,7 +9,7 @@ export interface NotificationInboxProps {
   onClose: () => void;
   notifications: Notification[];
   onRead: (id: string) => void;
-  onReadAll: () => void;
+  onReadAll: () => Promise<void>;
 }
 
 const LEVEL_COLORS: Record<Notification["level"], string> = {
@@ -50,9 +53,26 @@ export function NotificationInbox({
   onRead,
   onReadAll,
 }: NotificationInboxProps): JSX.Element {
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
-  const unread = notifications.filter((notification) => !notification.read);
-  const recentRead = notifications.filter((notification) => notification.read).slice(0, 5);
+  const [localNotifications, setLocalNotifications] = useState<Notification[]>(notifications);
+
+  useEffect(() => {
+    setLocalNotifications(notifications);
+  }, [notifications]);
+
+  const unreadCount = localNotifications.filter((notification) => !notification.read).length;
+  const unread = localNotifications.filter((notification) => !notification.read);
+  const recentRead = localNotifications.filter((notification) => notification.read).slice(0, 5);
+
+  const handleReadAll = async (): Promise<void> => {
+    const previousNotifications = localNotifications;
+    setLocalNotifications([]);
+    try {
+      await onReadAll();
+    } catch {
+      setLocalNotifications(previousNotifications);
+      showToast("Failed to clear notifications.", "error");
+    }
+  };
 
   return (
     <>
@@ -100,15 +120,15 @@ export function NotificationInbox({
         <div style={{ display: "grid", gap: "0.15rem", marginRight: "auto" }}>
           <strong>Inbox</strong>
           <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-            {notifications.length === 0
+            {localNotifications.length === 0
               ? "Reminders, sync updates, and system alerts in one place."
               : unreadCount > 0
                 ? `${unreadCount} item${unreadCount === 1 ? "" : "s"} still need attention.`
-                : `All caught up. ${notifications.length} item${notifications.length === 1 ? "" : "s"} reviewed.`}
+                : `All caught up. ${localNotifications.length} item${localNotifications.length === 1 ? "" : "s"} reviewed.`}
           </span>
         </div>
         <button
-          onClick={onReadAll}
+          onClick={() => void handleReadAll()}
           style={{
             border: "1px solid var(--border-subtle)",
             background: "var(--surface-2)",
@@ -143,7 +163,7 @@ export function NotificationInbox({
       </div>
 
       <div style={{ overflowY: "auto", padding: "0.9rem", display: "grid", gap: "0.75rem" }}>
-        {notifications.length === 0 ? (
+        {localNotifications.length === 0 ? (
           <EmptyState icon="IN" title="Inbox clear" subtitle="Nothing needs action right now. New reminders and sync updates will land here." />
         ) : (
           <>

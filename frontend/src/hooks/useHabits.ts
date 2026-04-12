@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Habit } from "../../../shared/types";
 import { showToast } from "@ds/primitives/Toast";
-import { checkInHabit, createHabit, listHabits } from "@api/index";
+import { checkInHabit, createHabit, freezeHabit, getHabitLogs, listHabits, unfreezeHabit } from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface UseHabitsResult {
   habits: Habit[];
@@ -11,6 +12,9 @@ export interface UseHabitsResult {
   refresh: () => Promise<void>;
   create: (habit: Partial<Habit>) => Promise<Habit>;
   checkIn: (habitId: string, moodScore?: number) => Promise<void>;
+  freeze: (habitId: string, days: number) => Promise<void>;
+  unfreeze: (habitId: string) => Promise<void>;
+  getLogs: (habitId: string) => Promise<{ habit_id: string; checkin_date: string }[]>;
 }
 
 export function useHabits(): UseHabitsResult {
@@ -18,7 +22,7 @@ export function useHabits(): UseHabitsResult {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -30,11 +34,33 @@ export function useHabits(): UseHabitsResult {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void refresh();
-  }, []);
+  }, [refresh]);
+
+  useEffect(() => {
+    const handleInvalidate = (): void => {
+      void refresh();
+    };
+    window.addEventListener(getInvalidationEventName("habits"), handleInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName("habits"), handleInvalidate);
+  }, [refresh]);
+
+  const freeze = useCallback(async (habitId: string, days: number): Promise<void> => {
+    await freezeHabit(habitId, days);
+    await refresh();
+  }, [refresh]);
+
+  const unfreeze = useCallback(async (habitId: string): Promise<void> => {
+    await unfreezeHabit(habitId);
+    await refresh();
+  }, [refresh]);
+
+  const getLogs = useCallback((habitId: string): Promise<{ habit_id: string; checkin_date: string }[]> => (
+    getHabitLogs(habitId)
+  ), []);
 
   return {
     habits,
@@ -63,5 +89,8 @@ export function useHabits(): UseHabitsResult {
         showToast("Check-in failed.", "error");
       }
     },
+    freeze,
+    unfreeze,
+    getLogs,
   };
 }

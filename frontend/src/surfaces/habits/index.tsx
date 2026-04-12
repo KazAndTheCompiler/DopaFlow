@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import { useAppHabits, useAppInsights } from "../../app/AppContexts";
-import { getHabitLogs } from "@api/habits";
 import { showToast } from "@ds/primitives/Toast";
 import CorrelationChart from "./CorrelationChart";
 import HabitsPanel from "./HabitsPanel";
@@ -20,14 +19,14 @@ export default function HabitsView(): JSX.Element {
     if (habits.habits.length === 0) return;
     void Promise.all(
       habits.habits.map((h) =>
-        getHabitLogs(h.id).then((logs) => ({ id: h.id, dates: logs.map((l) => l.checkin_date) }))
+        habits.getLogs(h.id).then((logs) => ({ id: h.id, dates: logs.map((l) => l.checkin_date) }))
       )
     ).then((results) => {
       const map: Record<string, string[]> = {};
       for (const r of results) map[r.id] = r.dates;
       setCheckins(map);
     });
-  }, [habits.habits]);
+  }, [habits.habits, habits.getLogs]);
 
   const totalHabits = habits.habits.length;
   const checkedInHabits = habits.habits.filter((habit) => (habit.completion_pct ?? 0) >= 100).length;

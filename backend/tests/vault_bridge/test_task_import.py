@@ -246,6 +246,157 @@ class TestImportRoundTrip:
         assert candidates[0].dopaflow_id is None
         assert candidates[0].line_number == 3
 
+    @pytest.mark.parametrize(
+        ("frontmatter", "expected_project"),
+        [
+            (
+                "---\ndopaflow_type: task_collection\nproject: Manual Inbox\ntags: inbox\n---\n\n- [ ] Missing due stays importable\n",
+                "Manual Inbox",
+            ),
+            (
+                "---\ndopaflow_type: task_collection\nproject: Sprint Board\ndue: 2026-04-10\ntags:\n  - work\n  - sprint\n---\n\n- [ ] ISO due frontmatter does not break parsing\n",
+                "Sprint Board",
+            ),
+            (
+                "---\ndopaflow_type: task_collection\nproject: Someday\ndue: tomorrow\ntags: maybe\n---\n\n- [ ] Relative due frontmatter does not crash import\n",
+                "Someday",
+            ),
+        ],
+    )
+    def test_task_import_handles_edge_case_frontmatter_variants(self, tmp_path, frontmatter, expected_project):
+        f = tmp_path / "Tasks.md"
+        f.write_text(frontmatter, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 1
+        assert candidates[0].project_name == expected_project
+        assert candidates[0].dopaflow_id is None
+        assert candidates[0].title
+
+    def test_task_import_keeps_parsing_after_fenced_code_block_contains_frontmatter_delimiter(self, tmp_path):
+        content = (
+            "---\n"
+            "dopaflow_type: task_collection\n"
+            "project: Deep Work\n"
+            "tags:\n"
+            "  - focus\n"
+            "---\n\n"
+            "```md\n"
+            "---\n"
+            "not frontmatter\n"
+            "---\n"
+            "```\n\n"
+            "- [ ] Parse the real task after the code block\n"
+        )
+        f = tmp_path / "DeepWork.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 1
+        assert candidates[0].project_name == "Deep Work"
+        assert candidates[0].title == "Parse the real task after the code block"
+
+    def test_missing_due_field_imports_without_due_date(self, tmp_path):
+        content = (
+            "---\n"
+            "dopaflow_type: task_collection\n"
+            "project: No Due\n"
+            "---\n\n"
+            "- [ ] Task with no due field\n"
+        )
+        f = tmp_path / "NoDue.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 1
+        assert candidates[0].title == "Task with no due field"
+        assert candidates[0].due_str is None
+
+    def test_tags_bare_string_imports_correctly(self, tmp_path):
+        content = (
+            "---\n"
+            "dopaflow_type: task_collection\n"
+            "project: Bare Tags\n"
+            "tags: inbox\n"
+            "---\n\n"
+            "- [ ] Task with bare string tag\n"
+        )
+        f = tmp_path / "BareTags.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 1
+        assert candidates[0].title == "Task with bare string tag"
+        assert candidates[0].tags == []
+
+    def test_tags_yaml_list_imports_correctly(self, tmp_path):
+        content = (
+            "---\n"
+            "dopaflow_type: task_collection\n"
+            "project: List Tags\n"
+            "tags:\n"
+            "  - work\n"
+            "  - sprint\n"
+            "---\n\n"
+            "- [ ] Task with YAML list tags\n"
+        )
+        f = tmp_path / "ListTags.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 1
+        assert candidates[0].title == "Task with YAML list tags"
+        assert candidates[0].tags == []
+
+    def test_frontmatter_with_tags_and_no_due_imports_task(self, tmp_path):
+        content = (
+            "---\n"
+            "dopaflow_type: task_collection\n"
+            "project: Combined\n"
+            "tags: work\n"
+            "---\n\n"
+            "- [ ] Task with tags but no due\n"
+        )
+        f = tmp_path / "Combined.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 1
+        assert candidates[0].title == "Task with tags but no due"
+        assert candidates[0].due_str is None
+        assert candidates[0].tags == []
+
+    def test_frontmatter_inside_fenced_code_block_not_parsed(self, tmp_path):
+        content = (
+            "---\n"
+            "dopaflow_type: task_collection\n"
+            "project: Code Block\n"
+            "tags:\n"
+            "  - focus\n"
+            "---\n\n"
+            "```yaml\n"
+            "---\n"
+            "fake_key: fake_value\n"
+            "---\n"
+            "```\n\n"
+            "- [ ] Task after code block with frontmatter delimiter\n"
+            "- [ ] Second task also visible\n"
+        )
+        f = tmp_path / "CodeBlock.md"
+        f.write_text(content, encoding="utf-8")
+
+        candidates = parse_task_file(f, tmp_path, require_dopaflow=False)
+
+        assert len(candidates) == 2
+        assert candidates[0].title == "Task after code block with frontmatter delimiter"
+        assert candidates[1].title == "Second task also visible"
+
 
 def _configure_vault(service: VaultSyncService, vault_root: Path) -> None:
     service.index_repo.update_config(

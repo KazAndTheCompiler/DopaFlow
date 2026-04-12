@@ -29,6 +29,7 @@ from app.domains.alarms.schemas import (
 )
 from app.domains.alarms.service import AlarmsService
 from app.middleware.auth_scopes import require_scope
+from app.services.event_stream import publish_invalidation
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +68,8 @@ def resolve_alarm_url(
     target = youtube_url or url
     try:
         return PlayerService().resolve_url(target)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=422, detail=f"Failed to resolve URL: {type(exc).__name__}"
-        )
+    except Exception:
+        raise HTTPException(status_code=422, detail="Failed to resolve URL")
 
 
 @router.get(
@@ -95,7 +94,9 @@ async def create_alarm(
 ) -> AlarmRead:
     """Schedule a new alarm."""
 
-    return svc.create_alarm(payload)
+    alarm = svc.create_alarm(payload)
+    await publish_invalidation("alarms")
+    return alarm
 
 
 @router.get(
@@ -125,6 +126,7 @@ async def update_alarm(
     alarm = svc.update_alarm(identifier, patch)
     if alarm is None:
         raise HTTPException(status_code=404, detail="Alarm not found")
+    await publish_invalidation("alarms")
     return alarm
 
 
@@ -140,6 +142,7 @@ async def delete_alarm(
 
     if not svc.delete_alarm(identifier):
         raise HTTPException(status_code=404, detail="Alarm not found")
+    await publish_invalidation("alarms")
     return AlarmDeleteResponse(deleted=True)
 
 
@@ -154,7 +157,9 @@ async def trigger_alarm(
     """Manually fire an alarm (runs TTS, records last_fired_at)."""
 
     try:
-        return svc.trigger_alarm(identifier)
+        result = svc.trigger_alarm(identifier)
+        await publish_invalidation("alarms")
+        return result
     except Exception as exc:  # noqa: BLE001
         logger.exception("trigger_alarm failed for identifier=%s", identifier)
         raise HTTPException(status_code=500, detail="Alarm trigger failed") from exc

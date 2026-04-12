@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import asyncio
+import tempfile
 from pathlib import Path
 
 import httpx
@@ -117,6 +118,23 @@ def _shared_db_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return path
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _assert_test_db_is_sandboxed(_shared_db_path: Path) -> None:
+    from app.core.config import default_db_path, get_settings, user_data_dir
+
+    get_settings.cache_clear()
+    configured = get_settings().db_path
+    resolved = Path(configured).resolve() if configured != ":memory:" else configured
+    default_resolved = Path(default_db_path()).resolve()
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    real_data_dir = user_data_dir().resolve()
+
+    assert configured == ":memory:" or str(resolved).startswith(str(temp_root))
+    assert configured == ":memory:" or resolved == _shared_db_path.resolve()
+    assert configured == ":memory:" or resolved != default_resolved
+    assert configured == ":memory:" or not str(resolved).startswith(str(real_data_dir))
+
+
 @pytest.fixture(scope="session")
 def _app(_shared_db_path: Path):
     os.environ["DOPAFLOW_DEV_AUTH"] = "true"
@@ -142,9 +160,11 @@ def db_path(
     monkeypatch.setenv("DOPAFLOW_DISABLE_BACKGROUND_JOBS", "1")
     monkeypatch.setenv("DOPAFLOW_DISABLE_RATE_LIMITS", "1")
     _reset_database(_shared_db_path)
+    from app.domains.gamification.service import pop_award_counters
 
     from app.core.config import get_settings
 
+    pop_award_counters()
     get_settings.cache_clear()
     return _shared_db_path
 

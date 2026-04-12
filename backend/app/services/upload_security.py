@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -40,11 +41,18 @@ def validate_upload(
     if not file.filename:
         raise HTTPException(status_code=400, detail="Missing filename")
 
+    raw_name = file.filename.replace("\\", "/")
+    path = Path(raw_name)
+    if path.is_absolute() or raw_name.startswith("/") or any(part == ".." for part in path.parts):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if os.path.basename(raw_name) != raw_name:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
     content = _read_limited_content(file, default_max_bytes)
     if len(content) > default_max_bytes:
         raise HTTPException(status_code=400, detail=f"File too large (max {default_max_bytes} bytes)")
 
-    suffix = Path(file.filename).suffix.lower()
+    suffix = path.suffix.lower()
     if allowed_suffixes and suffix not in allowed_suffixes:
         raise HTTPException(status_code=400, detail=f"Invalid file type: {suffix}")
 

@@ -51,10 +51,6 @@ export function Shell({
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-skin", skin);
-  }, [skin]);
-
-  useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return undefined;
     }
@@ -73,6 +69,7 @@ export function Shell({
   return (
     <div
       data-testid="shell-root"
+      data-skin-class={skin}
       style={{
         minHeight: "100vh",
         display: "grid",
