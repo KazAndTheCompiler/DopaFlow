@@ -76,3 +76,14 @@ raw.md
 # --- LLM Work Folders ---
 LLM_work_folder/
 .gitnexus
+
+# --- Tool / AI config (never commit — may contain keys, prompts, session data) ---
+.claude/
+.codex/
+.cursor/
+.continue/
+.aider/
+.opencode/
+
+# --- Lock files (resolved at install time) ---
+desktop/package-lock.json

@@ -43,4 +43,10 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    // Vite defaults build.minify to "esbuild" in production, so minification stays enabled.
+    rollupOptions: {
+      treeshake: true,
+    },
+  },
 });

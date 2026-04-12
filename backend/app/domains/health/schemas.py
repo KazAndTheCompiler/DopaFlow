@@ -24,3 +24,12 @@ class HealthResponse(BaseModel):
     uptime_seconds: int
     warnings: list[str]
     checked_at: str
+
+
+class HealthLiveResponse(BaseModel):
+    status: str
+
+
+class HealthReadinessResponse(BaseModel):
+    status: str
+    reason: str | None = None

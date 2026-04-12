@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
-import io
 import logging
+import os
 import re
+import tempfile
 import zipfile
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
-from app.core.config import get_settings
-from app.domains.gamification.repository import GamificationRepository
-from app.domains.gamification.service import GamificationService
+from app.core.config import default_backup_dir
+from app.core.database import get_db
+from app.core.gamification_helpers import award as award_gamification
 from app.domains.journal.repository import JournalRepository
 from app.domains.journal.schemas import (
     JournalBackupStatus,
@@ -67,16 +68,6 @@ _PROMPT_BANK = [
     "What deserves follow-up?",
     "What felt true today?",
 ]
-
-
-def _award(source: str, source_id: str | None = None) -> None:
-    try:
-        db = get_settings().db_path
-        GamificationService(GamificationRepository(db)).award(source, source_id)
-    except Exception:
-        logger.exception("Failed to award gamification for source=%s source_id=%s", source, source_id)
-
-
 def extract_wikilinks(body: str) -> list[str]:
     return WIKILINK_PATTERN.findall(body)
 
@@ -89,19 +80,31 @@ def _as_markdown_export(entries: list[JournalEntryRead]) -> str:
 
 
 def _as_zip(entries: list[JournalEntryRead]) -> bytes:
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for entry in sorted(entries, key=lambda e: e.date):
-            front = f"---\ndate: {entry.date}\ntags: {', '.join(entry.tags)}\nmood: {entry.emoji or ''}\n---\n\n"
-            zf.writestr(f"{entry.date}.md", front + entry.markdown_body)
-    return buf.getvalue()
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+    final_backup_path = tmp_path.with_name(f"{tmp_path.stem}-final.zip")
+    renamed = False
+    try:
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for entry in sorted(entries, key=lambda e: e.date):
+                front = f"---\ndate: {entry.date}\ntags: {', '.join(entry.tags)}\nmood: {entry.emoji or ''}\n---\n\n"
+                zf.writestr(f"{entry.date}.md", front + entry.markdown_body)
+        os.replace(tmp_path, final_backup_path)
+        renamed = True
+        return final_backup_path.read_bytes()
+    finally:
+        if not renamed and tmp_path.exists():
+            tmp_path.unlink()
+        if renamed and final_backup_path.exists():
+            final_backup_path.unlink()
 
 
 class JournalService:
     """Coordinate journaling, wikilinks, tagging, analytics, and backup."""
 
-    def __init__(self, repository: JournalRepository) -> None:
+    def __init__(self, repository: JournalRepository, backup_dir: str | Path | None = None) -> None:
         self.repository = repository
+        self.backup_dir = Path(backup_dir) if backup_dir is not None else Path(default_backup_dir())
 
     # ── entry CRUD ────────────────────────────────────────────────────────────
 
@@ -116,7 +119,7 @@ class JournalService:
         wikilinks = extract_wikilinks(payload.markdown_body)
         if wikilinks:
             self.repository.persist_links(entry.id, wikilinks)
-        _award("journal_entry", entry.id)
+        award_gamification("journal_entry", entry.id, logger=logger)
         return entry
 
     def patch_entry(self, entry_id: str, payload: JournalEntryPatch) -> JournalEntryRead | None:
@@ -256,27 +259,36 @@ class JournalService:
     def get_backup_status(self) -> JournalBackupStatus:
         return self.repository.backup_status()
 
+    def _database_integrity_ok(self) -> bool:
+        with get_db(self.repository.settings) as conn:
+            row = conn.execute("PRAGMA integrity_check").fetchone()
+        return bool(row) and row[0] == "ok"
+
     def trigger_backup(self, date: str | None = None) -> JournalBackupTriggerResponse:
         target_date = date or datetime.now(UTC).date().isoformat()
         entry = self.repository.get_entry(target_date)
         if not entry:
             return JournalBackupTriggerResponse(message=f"No entry for {target_date} — backup skipped", backed_up_date=None)
-        backup_dir = Path.home() / ".local/share/ZoesTM/journal-backup"
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        backup_file = backup_dir / f"{target_date}.md"
+        if not self._database_integrity_ok():
+            logger.warning("Journal backup skipped because database integrity_check failed")
+            return JournalBackupTriggerResponse(
+                message="Database integrity check failed — backup skipped",
+                backed_up_date=None,
+                status="skipped_integrity_fail",
+            )
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_file = self.backup_dir / f"{target_date}.md"
         front_matter = f"---\ndate: {target_date}\ntags: {', '.join(entry.tags)}\nversion: {entry.version}\n---\n\n"
         backup_file.write_text(front_matter + entry.markdown_body, encoding="utf-8")
         return JournalBackupTriggerResponse(message=f"Backed up {target_date}", backed_up_date=target_date)
 
     def export_today(self) -> dict:
-        from app.core.config import get_settings
         today = datetime.now(UTC).date().isoformat()
         entry = self.repository.get_entry(today)
         if not entry:
             return {"path": "", "entry_count": 0}
-        backup_dir = Path(get_settings().journal_backup_dir)
-        backup_dir.mkdir(parents=True, exist_ok=True)
-        backup_file = backup_dir / f"{today}.md"
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+        backup_file = self.backup_dir / f"{today}.md"
         front_matter = f"---\ndate: {today}\nmood: {entry.emoji or ''}\ntags: {', '.join(entry.tags)}\n---\n\n"
         backup_file.write_text(front_matter + entry.markdown_body, encoding="utf-8")
         return {"path": str(backup_file), "entry_count": 1}

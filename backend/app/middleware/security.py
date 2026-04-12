@@ -7,13 +7,12 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 CSP = (
-    "default-src 'none'; "
+    "default-src 'self'; "
+    "connect-src 'self'; "
     "script-src 'self'; "
     "style-src 'self' 'unsafe-inline'; "
-    "font-src 'self'; "
     "img-src 'self' data:; "
-    "connect-src 'self'; "
-    "frame-ancestors 'none'"
+    "object-src 'none'"
 )
 
 

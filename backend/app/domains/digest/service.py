@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
 
+from app.core.config import Settings
 from app.core.database import get_db
 from app.domains.digest.repository import DigestRepository
 from app.domains.digest.schemas import (
@@ -68,7 +69,7 @@ def _compute_correlations(
     focus_minutes = [float(focus_daily.get(day, {}).get("minutes", 0)) for day in days]
 
     try:
-        with get_db(repo.db_path) as conn:
+        with get_db(repo.settings) as conn:
             habits = conn.execute(
                 "SELECT name FROM habits WHERE deleted_at IS NULL"
             ).fetchall()
@@ -232,10 +233,10 @@ def _build_nutrition_summary(nutrition: dict) -> DigestNutritionSummary:
 
 class DigestService:
     @staticmethod
-    def daily_digest(target_date: date | None = None) -> DailyDigestResponse:
+    def daily_digest(target_date: date | None = None, *, settings: Settings) -> DailyDigestResponse:
         """Build daily digest for a single day."""
         target_date = target_date or datetime.now(UTC).date()
-        repo = DigestRepository()
+        repo = DigestRepository(settings)
         tasks, _task_daily = repo.tasks_summary(target_date, target_date)
         habits, _habit_daily = repo.habits_summary(target_date, target_date)
         focus, _focus_daily = repo.focus_summary(target_date, target_date)
@@ -285,14 +286,14 @@ class DigestService:
         )
 
     @staticmethod
-    def weekly_digest(week_start: date | None = None) -> WeeklyDigestResponse:
+    def weekly_digest(week_start: date | None = None, *, settings: Settings) -> WeeklyDigestResponse:
         """Build weekly digest with Pearson correlation analysis."""
         if not week_start:
             today = datetime.now(UTC).date()
             week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
 
-        repo = DigestRepository()
+        repo = DigestRepository(settings)
         tasks, task_daily = repo.tasks_summary(week_start, week_end)
         habits, habit_daily = repo.habits_summary(week_start, week_end)
         focus, focus_daily = repo.focus_summary(week_start, week_end)

@@ -10,6 +10,13 @@ from app.domains.gamification.schemas import BadgeRead, PlayerLevelRead
 from app.domains.gamification.xp_engine import level_for, xp_for
 
 logger = logging.getLogger(__name__)
+_award_counters: dict[str, int] = {}
+
+
+def pop_award_counters() -> dict[str, int]:
+    counts = dict(_award_counters)
+    _award_counters.clear()
+    return counts
 
 
 class GamificationService:
@@ -38,6 +45,13 @@ class GamificationService:
             logger.exception("Failed to notify Packy about earned badge=%s", badge.id)
 
     def award(self, source: str, source_id: str | None = None) -> PlayerLevelRead:
+        if self.repo.has_award_event_today(source, source_id):
+            logger.debug(
+                "Skipping duplicate gamification award for source=%s source_id=%s",
+                source,
+                source_id,
+            )
+            return self.repo.get_level()
         xp = xp_for(source)
         new_total = self.repo.award_xp(source, source_id, xp)
         self.repo.set_level(level_for(new_total))
@@ -52,6 +66,7 @@ class GamificationService:
                 self.repo.update_badge_progress(badge.id, new_progress, earned)
                 if earned:
                     self._notify_packy(BadgeRead(**{**badge.model_dump(), "progress": round(new_progress, 4), "earned_at": "earned"}))
+        _award_counters[source] = _award_counters.get(source, 0) + 1
         return self.repo.get_level()
 
     def get_badges(self) -> list[BadgeRead]:

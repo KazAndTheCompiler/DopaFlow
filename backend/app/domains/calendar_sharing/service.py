@@ -22,6 +22,7 @@ from app.domains.calendar_sharing.schemas import (
 
 logger = logging.getLogger(__name__)
 MAX_FEED_ENTRIES_PER_SYNC = 5000
+MAX_FEED_BACKOFF_SECONDS = 2 * 60 * 60
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -36,6 +37,7 @@ class CalendarSharingService:
 
     def __init__(self, repository: CalendarSharingRepository) -> None:
         self.repository = repository
+        self._feed_backoff: dict[str, tuple[datetime, int]] = {}
 
     def list_tokens(self) -> list[ShareToken]:
         """Return non-revoked share tokens."""
@@ -150,6 +152,28 @@ class CalendarSharingService:
         opener = urllib.request.build_opener(_NoRedirectHandler())
         with opener.open(request, timeout=10) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    def _current_backoff(self, feed_id: str) -> tuple[datetime, int] | None:
+        record = self._feed_backoff.get(feed_id)
+        if record is None:
+            return None
+        retry_after, cooldown_seconds = record
+        if retry_after <= datetime.now(timezone.utc):
+            self._feed_backoff.pop(feed_id, None)
+            return None
+        return record
+
+    def _record_feed_failure(self, feed_id: str) -> None:
+        now = datetime.now(timezone.utc)
+        current = self._feed_backoff.get(feed_id)
+        next_cooldown = 15 * 60 if current is None else min(
+            current[1] * 2,
+            MAX_FEED_BACKOFF_SECONDS,
+        )
+        self._feed_backoff[feed_id] = (now + timedelta(seconds=next_cooldown), next_cooldown)
+
+    def _clear_feed_failure(self, feed_id: str) -> None:
+        self._feed_backoff.pop(feed_id, None)
 
     @staticmethod
     def _extract_entries(payload: object) -> list[dict[str, object]]:
@@ -285,14 +309,25 @@ class CalendarSharingService:
         total_imported = 0
 
         for feed in feeds:
+            if backoff := self._current_backoff(feed.id):
+                logger.warning(
+                    "Skipping peer feed %s due to backoff until %s",
+                    feed.id,
+                    backoff[0].isoformat(),
+                )
+                errors += 1
+                continue
             try:
                 result = self.sync_feed(feed.id)
                 if result.status == "ok":
+                    self._clear_feed_failure(feed.id)
                     synced += 1
                     total_imported += result.events_imported
                 else:
+                    self._record_feed_failure(feed.id)
                     errors += 1
             except Exception:
+                self._record_feed_failure(feed.id)
                 logger.exception("Failed to sync feed %s", feed.id)
                 errors += 1
 

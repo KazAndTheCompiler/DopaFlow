@@ -50,6 +50,7 @@ class JournalBackupTriggerResponse(BaseModel):
 
     message: str
     backed_up_date: str | None = None
+    status: str | None = None
 
 
 class JournalVersionSummary(BaseModel):

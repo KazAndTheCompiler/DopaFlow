@@ -8,6 +8,7 @@ import {
   listAlarms,
   triggerAlarm,
 } from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 import { useTTS } from "./useTTS";
 
 export interface UseAlarmsResult {
@@ -20,8 +21,6 @@ export interface UseAlarmsResult {
   remove: (id: string) => Promise<void>;
   trigger: (id: string) => Promise<void>;
 }
-
-const POLL_INTERVAL_MS = 30_000;
 
 export function useAlarms(): UseAlarmsResult {
   const [alarms, setAlarms] = useState<Alarm[]>([]);
@@ -126,9 +125,12 @@ export function useAlarms(): UseAlarmsResult {
 
   useEffect(() => {
     void refresh();
-    const id = setInterval(() => { void refresh(); }, POLL_INTERVAL_MS);
+    const handleInvalidate = (): void => {
+      void refresh();
+    };
+    window.addEventListener(getInvalidationEventName("alarms"), handleInvalidate);
     return () => {
-      clearInterval(id);
+      window.removeEventListener(getInvalidationEventName("alarms"), handleInvalidate);
       clearScheduledTimeouts();
     };
   }, [refresh]);

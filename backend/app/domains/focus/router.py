@@ -61,11 +61,11 @@ async def list_sessions(
 )
 async def start_session(
     payload: FocusSessionCreate,
-    _db_path: str = Depends(_db_path),
+    db_path: str = Depends(_db_path),
 ) -> FocusStatus:
     """Start a new Pomodoro or deep-focus session."""
 
-    return service.start(payload.duration_minutes, payload.task_id)
+    return service.start(db_path, payload.duration_minutes, payload.task_id)
 
 
 @router.post(
@@ -73,16 +73,19 @@ async def start_session(
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def control_session(payload: FocusControlRequest) -> FocusStatus:
+async def control_session(
+    payload: FocusControlRequest,
+    db_path: str = Depends(_db_path),
+) -> FocusStatus:
     """Pause, resume, or complete the active session."""
 
     action = payload.action
     if action == "paused":
-        return service.pause()
+        return service.pause(db_path)
     if action == "running":
-        return service.resume()
+        return service.resume(db_path)
     if action in {"completed", "stopped"}:
-        return service.complete() if action == "completed" else service.stop()
+        return service.complete(db_path) if action == "completed" else service.stop(db_path)
     return service.get_status()
 
 
@@ -94,9 +97,10 @@ async def control_session(payload: FocusControlRequest) -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def start_focus(payload: dict | None = None) -> FocusStatus:
+async def start_focus(payload: dict | None = None, db_path: str = Depends(_db_path)) -> FocusStatus:
     payload = payload or {}
     return service.start(
+        db_path,
         int(payload.get("duration_minutes", 25)), payload.get("task_id")
     )
 
@@ -106,8 +110,8 @@ async def start_focus(payload: dict | None = None) -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def pause_focus() -> FocusStatus:
-    return service.pause()
+async def pause_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.pause(db_path)
 
 
 @router.post(
@@ -115,8 +119,8 @@ async def pause_focus() -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def resume_focus() -> FocusStatus:
-    return service.resume()
+async def resume_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.resume(db_path)
 
 
 @router.post(
@@ -124,8 +128,8 @@ async def resume_focus() -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def stop_focus() -> FocusStatus:
-    return service.stop()
+async def stop_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.stop(db_path)
 
 
 @router.post(
@@ -133,8 +137,8 @@ async def stop_focus() -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def complete_focus() -> FocusStatus:
-    return service.complete()
+async def complete_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.complete(db_path)
 
 
 @router.get(

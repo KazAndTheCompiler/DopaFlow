@@ -4,8 +4,8 @@ import { importGitHubIssues } from "@api/integrations";
 import Button from "@ds/primitives/Button";
 import Input from "@ds/primitives/Input";
 
-const STORAGE_KEY_TOKEN = "dopaflow_github_token";
-const STORAGE_KEY_REPO = "dopaflow_github_repo";
+const STORAGE_KEY_TOKEN = "dopaflow:github_token";
+const STORAGE_KEY_REPO = "dopaflow:github_repo";
 
 const card: React.CSSProperties = {
   padding: "1rem 1.05rem",

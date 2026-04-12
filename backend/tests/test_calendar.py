@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 from datetime import datetime
+from time import perf_counter
 import urllib.error
 import httpx
 from unittest.mock import AsyncMock, patch
@@ -398,9 +399,100 @@ def test_peer_feed_sync_rejects_invalid_payload_shape(monkeypatch, db_path) -> N
     stored_feed = repo.list_feeds()[0]
 
     assert result.status == "error"
-    assert result.detail == "invalid_feed_payload"
+    assert result.detail == "Invalid payload: ValueError"
     assert stored_feed.sync_status == "error"
     assert stored_feed.last_error == "invalid_feed_payload"
+
+
+def test_sync_all_feeds_applies_backoff_after_failures(monkeypatch, db_path, caplog) -> None:
+    repo = CalendarSharingRepository(str(db_path))
+    service = CalendarSharingService(repo)
+    feed = repo.add_feed(
+        SimpleNamespace(**{
+            "label": "Remote partner",
+            "base_url": "https://partner.example.com/api/v2",
+            "token": "secret-token",
+            "color": "#5b8def",
+        })
+    )
+
+    def fail_sync(_feed_id: str):
+        return SimpleNamespace(status="error", events_imported=0)
+
+    monkeypatch.setattr(service, "sync_feed", fail_sync)
+    caplog.set_level("WARNING", logger="app.domains.calendar_sharing.service")
+
+    first = service.sync_all_feeds()
+    second = service.sync_all_feeds()
+
+    assert first == {"synced": 0, "errors": 1, "events_imported": 0}
+    assert second == {"synced": 0, "errors": 1, "events_imported": 0}
+    assert feed.id in service._feed_backoff
+    assert any("Skipping peer feed" in record.message for record in caplog.records)
+
+
+def test_sync_all_feeds_processes_50_peer_feeds_with_partial_failures(monkeypatch, db_path) -> None:
+    repo = CalendarSharingRepository(str(db_path))
+    service = CalendarSharingService(repo)
+    invalid_feed_count = 0
+    valid_feed_count = 0
+
+    for index in range(50):
+        is_valid = index % 4 != 0
+        if is_valid:
+            valid_feed_count += 1
+            base_url = f"https://peer-{index}.example.com/api/v2"
+        else:
+            invalid_feed_count += 1
+            base_url = f"invalid-peer-{index}"
+        repo.add_feed(
+            SimpleNamespace(**{
+                "label": f"Remote partner {index}",
+                "base_url": base_url,
+                "token": f"secret-token-{index}",
+                "color": "#5b8def",
+            })
+        )
+
+    def fake_fetch(feed, _raw_token: str, _from_dt: str, _to_dt: str) -> dict[str, object]:
+        if not feed.base_url.startswith("https://peer-"):
+            raise ValueError("invalid_url")
+        feed_suffix = feed.base_url.split("https://peer-", 1)[1].split(".", 1)[0]
+        return {
+            "entries": [{
+                "id": f"evt_remote_{feed_suffix}",
+                "title": f"Peer planning {feed_suffix}",
+                "description": "Shared from another install",
+                "start_at": "2026-03-26T09:00:00+00:00",
+                "end_at": "2026-03-26T10:00:00+00:00",
+                "all_day": False,
+                "category": "work",
+                "updated_at": "2026-03-25T12:00:00+00:00",
+                "source": "remote-dopaflow",
+            }],
+        }
+
+    monkeypatch.setattr(service, "_fetch_feed_payload", fake_fetch)
+
+    started_at = perf_counter()
+    result = service.sync_all_feeds()
+    elapsed = perf_counter() - started_at
+
+    stored_feeds = repo.list_feeds()
+    successful_feeds = [feed for feed in stored_feeds if feed.sync_status == "ok"]
+    failed_feeds = [feed for feed in stored_feeds if feed.sync_status == "error"]
+    events = CalendarRepository(str(db_path)).list_events()
+
+    assert elapsed < 30
+    assert result == {
+        "synced": valid_feed_count,
+        "errors": invalid_feed_count,
+        "events_imported": valid_feed_count,
+    }
+    assert len(successful_feeds) == valid_feed_count
+    assert len(failed_feeds) == invalid_feed_count
+    assert all(feed.last_error == "invalid_url" for feed in failed_feeds)
+    assert len(events) == valid_feed_count
 
 
 def test_calendar_sharing_routes_mount_under_calendar_prefix(client) -> None:

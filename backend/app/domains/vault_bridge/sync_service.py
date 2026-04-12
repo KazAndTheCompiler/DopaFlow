@@ -6,6 +6,7 @@ import difflib
 import hashlib
 from pathlib import Path
 
+from app.core.config import Settings
 from app.domains.journal.repository import JournalRepository
 from app.domains.journal.schemas import JournalEntryCreate
 from app.domains.vault_bridge.index_repository import VaultIndexRepository
@@ -56,7 +57,7 @@ class VaultSyncService:
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
         self.index_repo = VaultIndexRepository(db_path)
-        self.journal_repo = JournalRepository(db_path)
+        self.journal_repo = JournalRepository(Settings(db_path=db_path))
 
     # lazy imports to avoid circular deps at module load time
     def _tasks_repo(self):  # type: ignore[return]

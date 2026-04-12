@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 
 import pytest
@@ -61,14 +61,14 @@ def test_complete_task_marks_it_done(client) -> None:
 
 
 def test_complete_task_logs_gamification_failures_without_failing_request(client, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
-    from app.domains.tasks import service as task_service
+    from app.core import gamification_helpers
 
     task = create_task(client, title="Complete with logging")
 
     def explode_award(self, source: str, source_id: str | None = None) -> None:
         raise RuntimeError(f"boom:{source}:{source_id}")
 
-    monkeypatch.setattr(task_service.GamificationService, "award", explode_award)
+    monkeypatch.setattr(gamification_helpers.GamificationService, "award", explode_award)
     caplog.set_level(logging.ERROR, logger="app.domains.tasks.service")
 
     response = client.patch(f"/api/v2/tasks/{task['id']}/complete")
@@ -109,6 +109,71 @@ def test_quick_add_normalizes_recurrence_rule_field(client) -> None:
     parsed = response.json()
     assert parsed["recurrence_rule"] == "FREQ=WEEKLY;BYDAY=MO"
     assert "rrule" not in parsed
+
+
+def test_quick_add_returns_ambiguity_hints(client) -> None:
+    response = client.post("/api/v2/tasks/quick-add", json={"text": "Plan sprint next week"})
+
+    assert response.status_code == 200
+    parsed = response.json()
+    assert parsed["ambiguity"] is True
+    assert parsed["ambiguity_hints"] == [
+        "due date unclear: 'next week' defaulted to next week's local midnight"
+    ]
+
+
+def test_quick_add_accepts_user_timezone_for_relative_dates(client) -> None:
+    response = client.post(
+        "/api/v2/tasks/quick-add",
+        json={"text": "Plan sprint tomorrow", "user_tz": "Europe/Copenhagen"},
+    )
+
+    assert response.status_code == 200
+    parsed = response.json()
+    assert parsed["due_at"].endswith("+02:00") or parsed["due_at"].endswith("+01:00")
+
+
+def test_quick_add_uses_local_day_boundary_near_midnight(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services import quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 3, 25, 23, 30, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr(quick_add, "datetime", FrozenDateTime)
+
+    parsed = quick_add.parse("Pay rent tomorrow 12:30am", user_tz="Europe/Copenhagen")
+
+    assert parsed["due_at"] == "2026-03-27T00:30:00+01:00"
+
+
+def test_quick_add_preserves_non_utc_timezone_offsets(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.services import quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr(quick_add, "datetime", FrozenDateTime)
+
+    parsed = quick_add.parse("Send report in 2 days 9pm", user_tz="America/Los_Angeles")
+
+    assert parsed["due_at"] == "2026-07-03T21:00:00-07:00"
+
+
+def test_quick_add_does_not_treat_priority_keywords_inside_tags_as_priority(client) -> None:
+    tagged = client.post("/api/v2/tasks/quick-add", json={"text": "Review notes #urgent"})
+    bare = client.post("/api/v2/tasks/quick-add", json={"text": "Review notes urgent"})
+
+    assert tagged.status_code == 200
+    assert bare.status_code == 200
+    assert tagged.json()["priority"] == 2
+    assert tagged.json()["tags"] == ["urgent"]
+    assert bare.json()["priority"] == 1
 
 
 def test_bulk_complete_returns_updated_count(client) -> None:
@@ -181,6 +246,141 @@ def test_materialize_recurring_avoids_duplicate_child_when_title_collides(client
     children = [item for item in tasks_response.json() if item.get("recurrence_parent_id") == parent["id"]]
     assert len(children) == 1
     assert children[0]["due_at"] == "2026-01-08T09:00:00+00:00"
+
+
+def test_materialize_recurring_only_creates_completed_tasks_within_window(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domains.tasks import repository as tasks_repository
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 1, 2, 0, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr(tasks_repository, "datetime", FrozenDateTime)
+
+    within_window = create_task(
+        client,
+        title="Daily within window",
+        done=True,
+        recurrence_rule="FREQ=DAILY",
+        due_at="2026-01-02T09:00:00+00:00",
+    )
+    create_task(
+        client,
+        title="Weekly outside window",
+        done=True,
+        recurrence_rule="FREQ=WEEKLY",
+        due_at="2026-01-02T09:00:00+00:00",
+    )
+    create_task(
+        client,
+        title="Incomplete recurring",
+        done=False,
+        recurrence_rule="FREQ=DAILY",
+        due_at="2026-01-02T09:00:00+00:00",
+    )
+
+    response = client.post("/api/v2/tasks/materialize-recurring", json={"window_hours": 36})
+
+    assert response.status_code == 200
+    assert response.json() == {"created": 1}
+
+    tasks_response = client.get("/api/v2/tasks/")
+    assert tasks_response.status_code == 200
+    children = [item for item in tasks_response.json() if item.get("recurrence_parent_id") == within_window["id"]]
+    assert len(children) == 1
+    assert children[0]["title"] == "Daily within window"
+    assert children[0]["due_at"] == "2026-01-03T09:00:00+00:00"
+
+
+def test_materialize_recurring_caps_instances_per_rule_per_run(
+    db_path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app.domains.tasks import repository as tasks_repository
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr(tasks_repository, "datetime", FrozenDateTime)
+    caplog.set_level(logging.WARNING, logger="app.domains.tasks.repository")
+
+    base_due = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
+    for offset in range(501):
+        tasks_repository.create_task(
+            str(db_path),
+            {
+                "title": f"Hourly {offset}",
+                "done": True,
+                "status": "done",
+                "recurrence_rule": "FREQ=HOURLY",
+                "due_at": (base_due + timedelta(hours=offset)).isoformat(),
+            },
+        )
+
+    result = tasks_repository.materialize_recurring(str(db_path), window_hours=24 * 365)
+
+    assert result.created == 500
+
+    tasks = tasks_repository.list_tasks(str(db_path))
+    children = [task for task in tasks if task.recurrence_parent_id is not None]
+    assert len(children) == 500
+    assert any(
+        "Recurring materialization hit 500-instance cap" in record.message
+        and "FREQ=HOURLY" in record.message
+        for record in caplog.records
+    )
+
+
+def test_materialize_recurring_daily_advances_25_hours_no_duplicates(
+    db_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domains.tasks import repository as tasks_repository
+
+    base_time = datetime(2026, 1, 1, 9, 0, tzinfo=timezone.utc)
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = base_time + timedelta(hours=25)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr(tasks_repository, "datetime", FrozenDateTime)
+
+    tasks_repository.create_task(
+        str(db_path),
+        {
+            "title": "Daily recurring",
+            "done": True,
+            "status": "done",
+            "recurrence_rule": "FREQ=DAILY",
+            "due_at": base_time.isoformat(),
+        },
+    )
+
+    result = tasks_repository.materialize_recurring(str(db_path), window_hours=36)
+    assert result.created == 1
+
+    tasks = tasks_repository.list_tasks(str(db_path))
+    children = [task for task in tasks if task.recurrence_parent_id is not None]
+    assert len(children) == 1
+    assert children[0].due_at == (base_time + timedelta(days=1)).isoformat()
+
+    result2 = tasks_repository.materialize_recurring(str(db_path), window_hours=36)
+    assert result2.created == 0
+
+    tasks = tasks_repository.list_tasks(str(db_path))
+    children = [task for task in tasks if task.recurrence_parent_id is not None]
+    assert len(children) == 1
 
 
 def test_complete_task_does_not_create_duplicate_recurring_child(client) -> None:
@@ -256,3 +456,154 @@ def test_search_endpoint_filters_by_tag(client) -> None:
 
     assert response.status_code == 200
     assert [task["id"] for task in response.json()] == [tagged["id"]]
+
+
+def test_parse_quick_add_today_converts_to_utc(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 6, 15, 10, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Buy groceries today", user_tz="America/New_York")
+
+    assert parsed["due_at"] is not None
+    assert parsed["due_at"].endswith("+00:00")
+    assert "2026-06-15" in parsed["due_at"]
+
+
+def test_parse_quick_add_tomorrow_converts_to_utc(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 6, 15, 10, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Call dentist tomorrow", user_tz="Europe/Berlin")
+
+    assert parsed["due_at"] is not None
+    assert parsed["due_at"].endswith("+00:00")
+
+
+def test_parse_quick_add_relative_dates_use_local_midnight(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 6, 15, 22, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Submit report tomorrow", user_tz="Asia/Tokyo")
+
+    assert parsed["due_at"] is not None
+    assert parsed["due_at"].endswith("+00:00")
+    # Jun 15 22:00 UTC = Jun 16 07:00 Tokyo (UTC+9)
+    # "tomorrow" in Tokyo = Jun 17 local midnight = Jun 16 15:00 UTC
+    assert parsed["due_at"] == "2026-06-16T15:00:00+00:00"
+
+
+def test_parse_quick_add_weekday_resolves_in_user_tz(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            # Wednesday Jun 17 2026
+            moment = datetime(2026, 6, 17, 5, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Meeting monday", user_tz="US/Pacific")
+
+    assert parsed["due_at"] is not None
+    assert parsed["due_at"].endswith("+00:00")
+
+
+def test_parse_quick_add_invalid_tz_defaults_to_utc(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 6, 15, 10, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Task today", user_tz="Invalid/Timezone")
+
+    assert parsed["due_at"] is not None
+    assert parsed["due_at"].endswith("+00:00")
+
+
+def test_parse_quick_add_2359_utc_vs_utc2_midnight_boundary(monkeypatch: pytest.MonkeyPatch) -> None:
+    """At 23:59 UTC it is already 01:59 the next day in UTC+2."""
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            # 23:59 UTC Jun 15 → 01:59 Jun 16 in Europe/Berlin (UTC+2)
+            moment = datetime(2026, 6, 15, 23, 59, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Review PR today", user_tz="Europe/Berlin")
+
+    assert parsed["due_at"] is not None
+    assert parsed["due_at"].endswith("+00:00")
+    # "today" in Berlin = Jun 16 local midnight = Jun 15 22:00 UTC
+    assert parsed["due_at"] == "2026-06-15T22:00:00+00:00"
+
+
+def test_parse_quick_add_urgent_tag_does_not_set_priority(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#urgent is a tag; only bare 'urgent' sets priority=1."""
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            moment = datetime(2026, 6, 15, 10, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    tagged = parse_quick_add("Fix build #urgent", user_tz="UTC")
+    assert tagged["priority"] == 3
+    assert "urgent" in tagged["tags"]
+
+    bare = parse_quick_add("Fix build urgent", user_tz="UTC")
+    assert bare["priority"] == 1
+
+
+def test_parse_quick_add_next_week_weekday_is_ambiguous(monkeypatch: pytest.MonkeyPatch) -> None:
+    """"next week Monday" should flag ambiguity since 'next week' matches first."""
+    from app.domains.tasks.service import parse_quick_add
+
+    class FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            # Wednesday Jun 17 2026
+            moment = datetime(2026, 6, 17, 12, 0, tzinfo=timezone.utc)
+            return moment.astimezone(tz) if tz is not None else moment
+
+    monkeypatch.setattr("app.domains.tasks.service.datetime", FrozenDateTime)
+
+    parsed = parse_quick_add("Call client next week monday", user_tz="UTC")
+
+    assert parsed["due_at"] is not None
+    assert parsed["ambiguity"] is True
+    assert any("next week" in h for h in parsed["ambiguity_hints"])

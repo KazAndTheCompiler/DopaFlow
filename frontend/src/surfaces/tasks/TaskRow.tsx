@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import type { Task } from "../../../../shared/types";
-import { useAppProjects } from "../../app/AppContexts";
-import { startTaskTimer, stopTaskTimer } from "../../api/tasks";
+import { useAppProjects, useAppTasks } from "../../app/AppContexts";
 import { showToast } from "../../design-system/primitives/Toast";
+import { Tooltip } from "../../design-system/primitives/Tooltip";
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string; bg: string }> = {
   1: { label: "P1", color: "var(--state-overdue)", bg: "var(--state-overdue)14" },
@@ -33,6 +33,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
 
 export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSelect }: TaskRowProps): JSX.Element {
   const projects = useAppProjects();
+  const tasks = useAppTasks();
   const project = task.project_id ? projects.projects.find((p) => p.id === task.project_id) : null;
   const prio = PRIORITY_LABELS[task.priority] ?? { label: "P?", color: "var(--border-subtle)", bg: "var(--surface-2)" };
   const opacity = STATUS_OPACITY[task.status] ?? 1;
@@ -64,10 +65,10 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
     e.stopPropagation();
     try {
       if (tracking) {
-        await stopTaskTimer(task.id);
+        await tasks.stopTimer(task.id);
         setTracking(false);
       } else {
-        await startTaskTimer(task.id);
+        await tasks.startTimer(task.id);
         setTracking(true);
       }
     } catch {
@@ -224,18 +225,21 @@ export function TaskRow({ task, onComplete, onEdit, selected = false, onToggleSe
           }}
           aria-label={onEdit ? `Edit task: ${task.title}` : undefined}
         >
-          <span
-            style={{
-              display: "block",
-              fontWeight: 700,
-              textDecoration: isDone ? "line-through" : "none",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {task.title}
-          </span>
+          <Tooltip text={task.title}>
+            <span
+              className="truncate max-w-[60ch]"
+              style={{
+                display: "block",
+                fontWeight: 700,
+                textDecoration: isDone ? "line-through" : "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {task.title}
+            </span>
+          </Tooltip>
           {(task.tags.length > 0 || dueTone || task.description || project) && (
             <div style={{ display: "flex", gap: "0.35rem", marginTop: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
               {project && (

@@ -1,5 +1,6 @@
 import type { JournalEntry } from "../../../shared/types";
 import { apiClient } from "./client";
+import { journalEntriesSchema, journalEntrySchema, parseApiSchema } from "./schemas";
 
 export interface JournalGraphNode {
   id: string;
@@ -17,20 +18,23 @@ export interface JournalGraphData {
   edges: JournalGraphEdge[];
 }
 
-export function listJournalEntries(params?: { tag?: string; search?: string }): Promise<JournalEntry[]> {
+export async function listJournalEntries(params?: { tag?: string; search?: string }): Promise<JournalEntry[]> {
   const qs = new URLSearchParams();
   if (params?.tag) qs.set("tag", params.tag);
   if (params?.search) qs.set("search", params.search);
   const query = qs.toString() ? `?${qs.toString()}` : "";
-  return apiClient<JournalEntry[]>(`/journal/entries${query}`);
+  return parseApiSchema<JournalEntry[]>(journalEntriesSchema, await apiClient<unknown>(`/journal/entries${query}`));
 }
 
-export function getJournalEntry(identifier: string): Promise<JournalEntry> {
-  return apiClient<JournalEntry>(`/journal/entries/${identifier}`);
+export async function getJournalEntry(identifier: string): Promise<JournalEntry> {
+  return parseApiSchema<JournalEntry>(journalEntrySchema, await apiClient<unknown>(`/journal/entries/${identifier}`));
 }
 
-export function saveJournalEntry(payload: Partial<JournalEntry>): Promise<JournalEntry> {
-  return apiClient<JournalEntry>("/journal/entries", { method: "POST", body: JSON.stringify(payload) });
+export async function saveJournalEntry(payload: Partial<JournalEntry>): Promise<JournalEntry> {
+  return parseApiSchema<JournalEntry>(journalEntrySchema, await apiClient<unknown>("/journal/entries", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }));
 }
 
 export function deleteJournalEntry(identifier: string): Promise<{ deleted: boolean; identifier: string }> {
@@ -56,4 +60,12 @@ export function getJournalBacklinks(identifier: string): Promise<string[]> {
 
 export function exportJournalToday(): Promise<{ path: string; entry_count: number }> {
   return apiClient<{ path: string; entry_count: number }>("/journal/export-today", { method: "POST" });
+}
+
+export function listJournalTemplates(): Promise<Array<{ id: string; name: string }>> {
+  return apiClient<Array<{ id: string; name: string }>>("/journal/templates");
+}
+
+export function applyJournalTemplate(templateId: string): Promise<{ body: string; tags: string[] }> {
+  return apiClient<{ body: string; tags: string[] }>(`/journal/templates/${templateId}/apply`, { method: "POST" });
 }

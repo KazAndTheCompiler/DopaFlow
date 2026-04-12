@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 
-const SKIN_KEY = "zoestm-skin";
+const SKIN_KEY = "dopaflow:skin";
 const DEFAULT_SKIN = "ink-and-stone";
-const CUSTOM_SKIN_KEY = "zoestm-custom-skin";
-// In packaged Electron the frontend is loaded via file://, so absolute paths
-// resolve to the filesystem root instead of the app bundle. Use a relative
-// path in that context so fetch resolves relative to index.html in dist/.
+const CUSTOM_SKIN_KEY = "dopaflow:custom_skin";
 const SKINS_BASE = window.location.protocol === "file:" ? "./skins" : "/skins";
 
 export interface SkinMeta {
@@ -27,6 +24,8 @@ interface SkinDefinition extends SkinMeta {
   author?: string;
   vars: Record<string, string>;
 }
+
+const CUSTOM_SKIN_STYLE_ID = "dopaflow-custom-skin-vars";
 
 function readCustomSkin(): SkinDefinition | null {
   try {
@@ -91,30 +90,42 @@ function resolveStoredSkin(): string {
   return window.localStorage.getItem(SKIN_KEY) ?? DEFAULT_SKIN;
 }
 
-function applyVars(vars: Record<string, string>): void {
-  const root = document.documentElement;
-  for (const [key, value] of Object.entries(vars)) {
-    root.style.setProperty(key, value);
-  }
-  root.removeAttribute("data-skin");
+function getSkinClassName(id: string): string {
+  return `skin-${id}`;
 }
 
-async function loadSkin(id: string): Promise<void> {
-  // Apply CSS attribute immediately so the skin is visible before the JSON fetch resolves
-  document.documentElement.setAttribute("data-skin", id);
+function applySkinClass(id: string): void {
+  const root = document.documentElement;
+  const nextClassName = getSkinClassName(id);
+  const preservedClasses = Array.from(root.classList).filter((name) => !name.startsWith("skin-"));
+  root.className = [...preservedClasses, nextClassName].join(" ");
+}
+
+function applyCustomSkinVars(id: string, vars: Record<string, string>): void {
+  let styleEl = document.getElementById(CUSTOM_SKIN_STYLE_ID) as HTMLStyleElement | null;
+  if (!styleEl) {
+    styleEl = document.createElement("style");
+    styleEl.id = CUSTOM_SKIN_STYLE_ID;
+    document.head.appendChild(styleEl);
+  }
+  const declarations = Object.entries(vars)
+    .map(([key, value]) => `  ${key}: ${value};`)
+    .join("\n");
+  styleEl.textContent = `html.${getSkinClassName(id)} {\n${declarations}\n}`;
+}
+
+function clearCustomSkinVars(): void {
+  document.getElementById(CUSTOM_SKIN_STYLE_ID)?.remove();
+}
+
+function loadSkin(id: string): void {
+  applySkinClass(id);
   const customSkin = readCustomSkin();
   if (customSkin && customSkin.id === id) {
-    applyVars(customSkin.vars);
+    applyCustomSkinVars(customSkin.id, customSkin.vars);
     return;
   }
-  try {
-    const res = await fetch(`${SKINS_BASE}/${id}.json`);
-    if (!res.ok) throw new Error(`not found`);
-    const def: SkinDefinition = await res.json();
-    applyVars(def.vars);
-  } catch {
-    // CSS attribute-based fallback already applied above
-  }
+  clearCustomSkinVars();
 }
 
 async function loadManifest(): Promise<SkinMeta[]> {
@@ -153,7 +164,7 @@ export function useSkin(): {
   }, []);
 
   useEffect(() => {
-    void loadSkin(skin);
+    loadSkin(skin);
     window.localStorage.setItem(SKIN_KEY, skin);
   }, [skin]);
 

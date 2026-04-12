@@ -8,7 +8,7 @@ import sqlite3
 import time
 from datetime import datetime, timezone
 
-from app.core.config import get_settings
+from app.core.database import _migration_checksum, _migrations_dir, get_db
 from app.core.version import APP_VERSION
 
 _START_TIME = time.time()
@@ -45,15 +45,14 @@ def _startup_security_warnings() -> list[str]:
 
 class HealthService:
     @staticmethod
-    def _build_payload() -> dict[str, object]:
-        settings = get_settings()
+    def _build_payload(db_path: str) -> dict[str, object]:
         now = time.time()
         uptime_seconds = now - _START_TIME
 
         db_status = "error"
         memory_depth_days = 0
         try:
-            conn = sqlite3.connect(settings.db_path)
+            conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
             conn.execute("SELECT 1")
             db_status = "ok"
@@ -96,11 +95,53 @@ class HealthService:
         }
 
     @staticmethod
-    def get_status() -> dict[str, object]:
+    def get_status(db_path: str) -> dict[str, object]:
         """Return system health status, database connectivity, and version."""
-        return HealthService._build_payload()
+        return HealthService._build_payload(db_path)
 
     @staticmethod
-    def get_detail() -> dict[str, object]:
+    def get_detail(db_path: str) -> dict[str, object]:
         """Return detailed health payload — identical to get_status."""
-        return HealthService._build_payload()
+        return HealthService._build_payload(db_path)
+
+    @staticmethod
+    def get_ready(db_path: str) -> dict[str, object]:
+        try:
+            with get_db(db_path) as conn:
+                row = conn.execute("PRAGMA user_version").fetchone()
+                user_version = int((row[0] if row else 0) or 0)
+                applied = {
+                    row[0]: row[1]
+                    for row in conn.execute("SELECT filename, checksum FROM _migrations").fetchall()
+                }
+        except sqlite3.Error as exc:
+            return {"status": "not_ready", "reason": f"database unavailable: {exc}"}
+        except RuntimeError as exc:
+            return {"status": "not_ready", "reason": str(exc)}
+
+        migration_files = sorted(_migrations_dir().glob("*.sql"))
+        latest_version = 0
+        if migration_files:
+            latest_version = int(migration_files[-1].name.split("_", 1)[0])
+
+        if user_version not in {0, latest_version}:
+            return {
+                "status": "not_ready",
+                "reason": f"database user_version {user_version} does not match {latest_version}",
+            }
+
+        for migration_file in migration_files:
+            applied_checksum = applied.get(migration_file.name)
+            if applied_checksum is None:
+                return {
+                    "status": "not_ready",
+                    "reason": f"pending migration: {migration_file.name}",
+                }
+            checksum = _migration_checksum(migration_file.read_text(encoding="utf-8"))
+            if applied_checksum and applied_checksum != checksum:
+                return {
+                    "status": "not_ready",
+                    "reason": f"migration checksum mismatch: {migration_file.name}",
+                }
+
+        return {"status": "ready", "reason": None}

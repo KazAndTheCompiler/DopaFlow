@@ -32,6 +32,8 @@ class IntegrationsRepository:
             "access_type": "offline",
             "prompt": "consent",
         }
+        if payload.state:
+            params["state"] = payload.state
         return {"status": "redirect", "url": f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"}
 
     def import_gmail_tasks(self) -> GmailImportResult:

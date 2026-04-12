@@ -8,24 +8,13 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.core.config import get_settings
-from app.domains.gamification.repository import GamificationRepository
-from app.domains.gamification.service import GamificationService
+from app.core.gamification_helpers import award as award_gamification
 from app.domains.tasks import repository
 from app.domains.tasks.schemas import Task
 
 logger = logging.getLogger(__name__)
-
-
-def _award(source: str, source_id: str | None = None) -> None:
-    try:
-        db = get_settings().db_path
-        GamificationService(GamificationRepository(db)).award(source, source_id)
-    except Exception:
-        logger.exception(
-            "Failed to award gamification for source=%s source_id=%s", source, source_id
-        )
 
 
 def complete_task(db_path: str, task_id: str) -> Task | None:
@@ -33,11 +22,11 @@ def complete_task(db_path: str, task_id: str) -> Task | None:
 
     task = repository.complete_task(db_path, task_id)
     if task is not None:
-        _award("task_complete", task_id)
+        award_gamification("task_complete", task_id, logger=logger)
     return task
 
 
-def _weekday_target(name: str) -> datetime:
+def _weekday_target(name: str, now: datetime) -> datetime:
     """Return the next occurrence of the requested weekday."""
 
     weekdays = {
@@ -49,14 +38,13 @@ def _weekday_target(name: str) -> datetime:
         "saturday": 5,
         "sunday": 6,
     }
-    now = datetime.now(timezone.utc)
     target = weekdays[name]
     delta = (target - now.weekday()) % 7
     delta = 7 if delta == 0 else delta
     return now + timedelta(days=delta)
 
 
-def parse_quick_add(text: str) -> dict[str, Any]:
+def parse_quick_add(text: str, user_tz: str = "UTC") -> dict[str, Any]:
     """
     Parse natural language task input.
 
@@ -68,41 +56,49 @@ def parse_quick_add(text: str) -> dict[str, Any]:
     lowered = original.lower()
     priority = 3
     ambiguity = False
+    ambiguity_hints: list[str] = []
     tags = re.findall(r"#([\w-]+)", working)
     working = re.sub(r"#([\w-]+)", "", working).strip()
+    lowered_no_tags = re.sub(r"#([\w-]+)", "", lowered).strip()
 
-    if any(token in lowered for token in ["urgent", "!!", " p1"]):
+    if any(token in lowered_no_tags for token in ["urgent", "!!", " p1"]):
         priority = 1
-    elif any(token in lowered for token in ["high", "!", " p2"]):
+    elif any(token in lowered_no_tags for token in ["high", "!", " p2"]):
         priority = 2
 
     due_at: str | None = None
-    now = datetime.now(timezone.utc)
-    if "today" in lowered:
-        due_at = now.replace(hour=17, minute=0, second=0, microsecond=0).isoformat()
+    try:
+        tz = ZoneInfo(user_tz)
+    except ZoneInfoNotFoundError:
+        tz = timezone.utc
+    now = datetime.now(tz)
+
+    def _to_utc_iso(local_dt: datetime) -> str:
+        return local_dt.astimezone(timezone.utc).isoformat()
+
+    if "today" in lowered_no_tags:
+        due_at = _to_utc_iso(now.replace(hour=0, minute=0, second=0, microsecond=0))
         working = re.sub(r"\btoday\b", "", working, flags=re.IGNORECASE).strip()
-    elif "tomorrow" in lowered:
-        due_at = (
+    elif "tomorrow" in lowered_no_tags:
+        due_at = _to_utc_iso(
             (now + timedelta(days=1))
-            .replace(hour=17, minute=0, second=0, microsecond=0)
-            .isoformat()
+            .replace(hour=0, minute=0, second=0, microsecond=0)
         )
         working = re.sub(r"\btomorrow\b", "", working, flags=re.IGNORECASE).strip()
-    elif match := re.search(r"in (\d+) days", lowered):
-        due_at = (
+    elif match := re.search(r"in (\d+) days", lowered_no_tags):
+        due_at = _to_utc_iso(
             (now + timedelta(days=int(match.group(1))))
-            .replace(hour=17, minute=0, second=0, microsecond=0)
-            .isoformat()
+            .replace(hour=0, minute=0, second=0, microsecond=0)
         )
         working = re.sub(r"in \d+ days", "", working, flags=re.IGNORECASE).strip()
-    elif "next week" in lowered:
-        due_at = (
+    elif "next week" in lowered_no_tags:
+        due_at = _to_utc_iso(
             (now + timedelta(days=7))
-            .replace(hour=9, minute=0, second=0, microsecond=0)
-            .isoformat()
+            .replace(hour=0, minute=0, second=0, microsecond=0)
         )
         working = re.sub(r"next week", "", working, flags=re.IGNORECASE).strip()
         ambiguity = True
+        ambiguity_hints.append("due date unclear: 'next week' defaulted to next week's local midnight")
     else:
         for weekday in (
             "monday",
@@ -113,23 +109,25 @@ def parse_quick_add(text: str) -> dict[str, Any]:
             "saturday",
             "sunday",
         ):
-            if weekday in lowered:
-                due_at = (
-                    _weekday_target(weekday)
-                    .replace(hour=9, minute=0, second=0, microsecond=0)
-                    .isoformat()
+            if weekday in lowered_no_tags:
+                due_at = _to_utc_iso(
+                    _weekday_target(weekday, now)
+                    .replace(hour=0, minute=0, second=0, microsecond=0)
                 )
                 working = re.sub(weekday, "", working, flags=re.IGNORECASE).strip()
                 ambiguity = True
+                ambiguity_hints.append(
+                    f"due date inferred from weekday '{weekday}' and defaulted to local midnight"
+                )
                 break
 
     recurrence_rule = None
-    if any(token in lowered for token in ["every day", "daily"]):
+    if any(token in lowered_no_tags for token in ["every day", "daily"]):
         recurrence_rule = "FREQ=DAILY"
-    elif any(token in lowered for token in ["every week", "weekly"]):
+    elif any(token in lowered_no_tags for token in ["every week", "weekly"]):
         recurrence_rule = "FREQ=WEEKLY"
     elif match := re.search(
-        r"every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)", lowered
+        r"every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)", lowered_no_tags
     ):
         recurrence_rule = f"FREQ=WEEKLY;BYDAY={match.group(1)[:2].upper()}"
 
@@ -140,6 +138,7 @@ def parse_quick_add(text: str) -> dict[str, Any]:
         "tags": tags,
         "recurrence_rule": recurrence_rule,
         "ambiguity": ambiguity,
+        "ambiguity_hints": ambiguity_hints,
     }
 
 

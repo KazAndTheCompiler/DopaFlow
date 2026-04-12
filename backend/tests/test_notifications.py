@@ -27,6 +27,17 @@ def test_create_notification_returns_record(client) -> None:
     assert notification["archived"] is False
 
 
+def test_create_notification_is_immediately_visible_without_duplicates(client) -> None:
+    created = create_notification(client, title="Race guard", body="Inserted once")
+
+    listed = client.get("/api/v2/notifications/", headers=AUTH_HEADERS)
+
+    assert listed.status_code == 200
+    matching = [item for item in listed.json() if item["id"] == created["id"]]
+    assert len(matching) == 1
+    assert matching[0] == created
+
+
 def test_mark_read_updates_unread_count(client) -> None:
     notification = create_notification(client)
 
@@ -64,3 +75,20 @@ def test_delete_notification_removes_item(client) -> None:
     assert delete_response.status_code == 200
     assert delete_response.json() == {"deleted": True}
     assert list_response.json() == []
+
+
+def test_insert_then_query_no_race_duplicates(client) -> None:
+    """Regression guard for re-query-after-insert race condition."""
+    created = create_notification(client, title="Race condition test", body="Should appear exactly once")
+
+    listed = client.get("/api/v2/notifications/", headers=AUTH_HEADERS)
+
+    assert listed.status_code == 200
+    items = listed.json()
+    matching = [item for item in items if item["id"] == created["id"]]
+    assert len(matching) == 1
+    assert matching[0]["title"] == "Race condition test"
+    assert matching[0]["body"] == "Should appear exactly once"
+    assert matching[0]["level"] == "info"
+    assert matching[0]["read"] is False
+    assert matching[0]["archived"] is False

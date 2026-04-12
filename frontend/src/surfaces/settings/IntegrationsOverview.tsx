@@ -22,11 +22,11 @@ function inferTursoStatus(): { tone: OverviewTone; detail: string } {
 }
 
 function inferGitHubStatus(): { tone: OverviewTone; detail: string } {
-  const hasRepo = Boolean(localStorage.getItem("dopaflow_github_repo")?.trim());
+  const hasRepo = Boolean(localStorage.getItem("dopaflow:github_repo")?.trim());
   if (hasRepo) {
     return {
       tone: "Local-only",
-      detail: `Repo preset saved for ${localStorage.getItem("dopaflow_github_repo")}. Paste a token when importing.`,
+      detail: `Repo preset saved for ${localStorage.getItem("dopaflow:github_repo")}. Paste a token when importing.`,
     };
   }
   return { tone: "Disabled", detail: "No GitHub repo preset saved in this browser." };

@@ -1,6 +1,7 @@
 const path = require("node:path");
 
 const SAFE_HASH_ROUTE = /^#\/[a-z0-9/_-]*$/i;
+const WINDOW_BOUNDS_KEY = "windowBounds";
 
 function normalizeRoutePath(routePath) {
   if (typeof routePath !== "string") {
@@ -64,10 +65,32 @@ function isTrustedNavigationUrl(rawUrl, options = {}) {
   }
 }
 
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function hasValidWindowBounds(bounds) {
+  return Boolean(
+    bounds
+    && isFiniteNumber(bounds.x)
+    && isFiniteNumber(bounds.y)
+    && isFiniteNumber(bounds.width)
+    && isFiniteNumber(bounds.height)
+    && bounds.width > 0
+    && bounds.height > 0,
+  );
+}
+
+function isPointWithinBounds(x, y, bounds) {
+  return x >= bounds.x && y >= bounds.y && x < bounds.x + bounds.width && y < bounds.y + bounds.height;
+}
+
 class WindowRuntime {
   /** Manage Electron window creation, route loading, and auxiliary window helpers. */
   constructor(options = {}) {
     this.BrowserWindow = options.BrowserWindow;
+    this.screen = options.screen;
+    this.configStore = options.configStore;
     this.isPackaged = options.isPackaged ?? false;
     this.assetsDir = options.assetsDir;
     this.preloadPath = options.preloadPath;
@@ -80,6 +103,41 @@ class WindowRuntime {
     this.journalWindow = null;
   }
 
+  getStoredWindowBounds() {
+    const bounds = this.configStore?.get?.(WINDOW_BOUNDS_KEY);
+    if (!hasValidWindowBounds(bounds)) {
+      return null;
+    }
+
+    const displays = this.screen?.getAllDisplays?.() ?? [];
+    const isVisible = displays.some((display) => isPointWithinBounds(bounds.x, bounds.y, display.bounds));
+    if (!isVisible) {
+      return null;
+    }
+
+    return bounds;
+  }
+
+  persistWindowBounds(window) {
+    if (!this.configStore?.set || !window || window.isDestroyed()) {
+      return;
+    }
+
+    const isMaximised = window.isMaximized();
+    const bounds = isMaximised ? window.getNormalBounds() : window.getBounds();
+    if (!hasValidWindowBounds(bounds)) {
+      return;
+    }
+
+    this.configStore.set(WINDOW_BOUNDS_KEY, {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximised,
+    });
+  }
+
   loadRoute(window, routePath) {
     const safeRoute = normalizeRoutePath(routePath);
     if (this.isPackaged) {
@@ -90,18 +148,28 @@ class WindowRuntime {
   }
 
   createWindow(route = "#/today", key = "main") {
+    const storedBounds = key === "main" ? this.getStoredWindowBounds() : null;
+    const shouldMaximise = storedBounds?.isMaximised === true;
     const window = new this.BrowserWindow({
-      width: key === "journal" ? 980 : 1440,
-      height: key === "journal" ? 860 : 880,
+      width: storedBounds?.width ?? (key === "journal" ? 980 : 1440),
+      height: storedBounds?.height ?? (key === "journal" ? 860 : 880),
+      ...(storedBounds ? { x: storedBounds.x, y: storedBounds.y } : {}),
       show: false,
       icon: path.join(this.assetsDir, "icon.png"),
       webPreferences: {
         preload: this.preloadPath,
+        // Security critical: keep renderers isolated from Node/Electron primitives so app content, deep links, and opened routes cannot escalate into desktop-level access.
         contextIsolation: true,
         sandbox: true,
         nodeIntegration: false,
       },
     });
+
+    if (key === "main") {
+      window.on("close", () => {
+        this.persistWindowBounds(window);
+      });
+    }
 
     window.webContents.setWindowOpenHandler(({ url }) => {
       if (isTrustedNavigationUrl(url, {
@@ -128,6 +196,9 @@ class WindowRuntime {
     });
 
     window.once("ready-to-show", () => {
+      if (shouldMaximise) {
+        window.maximize();
+      }
       window.show();
       if (!this.isPackaged) {
         window.webContents.openDevTools();

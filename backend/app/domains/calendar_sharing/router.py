@@ -26,6 +26,7 @@ from app.domains.calendar_sharing.schemas import (
 )
 from app.domains.calendar_sharing.service import CalendarSharingService
 from app.middleware.auth_scopes import require_scope
+from app.services.event_stream import publish_invalidation
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sharing", tags=["calendar_sharing"])
@@ -103,7 +104,9 @@ async def create_token(
 ) -> ShareTokenCreated:
     """Create a new share token."""
 
-    return svc.create_token(payload)
+    token = svc.create_token(payload)
+    await publish_invalidation("calendar")
+    return token
 
 
 @router.delete("/tokens/{token_id}", response_model=ShareTokenRevocation, dependencies=[Depends(require_scope("share:calendar"))])
@@ -115,6 +118,7 @@ async def revoke_token(
 
     if not svc.revoke_token(token_id):
         raise HTTPException(status_code=404, detail="Token not found")
+    await publish_invalidation("calendar")
     return ShareTokenRevocation(revoked=True)
 
 
@@ -167,6 +171,7 @@ async def add_feed(
         svc.remove_feed(feed.id)
         raise HTTPException(status_code=422, detail=f"Initial sync failed: {result.detail or result.status}")
 
+    await publish_invalidation("calendar")
     return feed
 
 
@@ -181,6 +186,7 @@ async def update_feed(
     feed = svc.update_feed(feed_id, patch)
     if feed is None:
         raise HTTPException(status_code=404, detail="Feed not found")
+    await publish_invalidation("calendar")
     return feed
 
 
@@ -193,6 +199,7 @@ async def remove_feed(
 
     if not svc.remove_feed(feed_id):
         raise HTTPException(status_code=404, detail="Feed not found")
+    await publish_invalidation("calendar")
     return PeerFeedRemoval(removed=True)
 
 
@@ -203,4 +210,6 @@ async def sync_feed(
 ) -> PeerFeedSyncResult:
     """Sync a peer feed."""
 
-    return svc.sync_feed(feed_id)
+    result = svc.sync_feed(feed_id)
+    await publish_invalidation("calendar")
+    return result

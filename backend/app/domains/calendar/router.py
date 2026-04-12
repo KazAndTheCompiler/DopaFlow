@@ -46,6 +46,7 @@ from app.domains.calendar.schemas import (
 from app.domains.calendar_sharing.router import require_share_token
 from app.domains.calendar.service import CalendarService
 from app.middleware.auth_scopes import require_scope
+from app.services.event_stream import publish_invalidation
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/calendar", tags=["calendar"])
@@ -88,7 +89,9 @@ async def create_event(
 ) -> CalendarEvent:
     """Create a new calendar event."""
 
-    return svc.create_event(payload)
+    event = svc.create_event(payload)
+    await publish_invalidation("calendar")
+    return event
 
 
 @router.get("/events/{identifier}", response_model=CalendarEvent, dependencies=[Depends(require_scope("read:calendar"))])
@@ -115,6 +118,7 @@ async def update_event(
     event = svc.update_event(identifier, patch)
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
+    await publish_invalidation("calendar")
     return event
 
 
@@ -127,6 +131,7 @@ async def delete_event(
 
     if not svc.delete_event(identifier):
         raise HTTPException(status_code=404, detail="Event not found")
+    await publish_invalidation("calendar")
     return CalendarDeleteResponse(deleted=True)
 
 
@@ -140,6 +145,7 @@ async def move_event(
     result = svc.move_event(identifier, payload)
     if not result.get("moved"):
         raise HTTPException(status_code=404, detail=result.get("error", "Event not found"))
+    await publish_invalidation("calendar")
     return CalendarMoveResponse(**result)
 
 
@@ -242,7 +248,9 @@ async def sync_google(
 ) -> CalendarSyncStatusResponse:
     """Queue a Google Calendar sync run."""
 
-    return CalendarSyncStatusResponse(**svc.sync_google(payload))
+    result = CalendarSyncStatusResponse(**svc.sync_google(payload))
+    await publish_invalidation("calendar")
+    return result
 
 
 @router.get("/oauth/url", response_model=CalendarOAuthResponse, dependencies=[Depends(require_scope("read:calendar"))])
@@ -289,6 +297,7 @@ async def google_calendar_oauth_callback(
         datetime.datetime.now(datetime.UTC) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
     ).isoformat()
     repo.store_google_token(data["access_token"], data.get("refresh_token"), expires_at)
+    await publish_invalidation("calendar")
     return CalendarOAuthResponse(status="connected")
 
 
@@ -310,6 +319,7 @@ async def resolve_conflict(
     conflict = svc.resolve_conflict(identifier, payload.get("repair_hint", "manual"))
     if conflict is None:
         raise HTTPException(status_code=404, detail="Conflict not found")
+    await publish_invalidation("calendar")
     return conflict
 
 

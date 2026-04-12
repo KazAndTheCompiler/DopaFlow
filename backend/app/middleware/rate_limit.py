@@ -20,6 +20,7 @@ COMMAND_PATHS = {
     "/api/v2/commands/execute",
 }
 TRUSTED_PROXY_HOSTS = {"127.0.0.1", "localhost", "::1"}
+HEALTH_PATHS = {"/health", "/health/live", "/health/ready"}
 logger = logging.getLogger(__name__)
 
 
@@ -38,6 +39,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         db_path: str | None = None,
         default_limit_per_minute: int | None = None,
         command_limit_per_minute: int | None = None,
+        packaged: bool = False,
     ) -> None:
         super().__init__(app)
         self.calls_per_minute = (
@@ -48,6 +50,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.command_limit = command_limit_per_minute
         self.window_seconds = 60
         self.db_path = _resolve_storage_path(db_path)
+        self.packaged = packaged
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=1.0)
@@ -66,11 +69,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return conn
 
     async def dispatch(self, request: Request, call_next):
-        if request.url.path == "/health":
+        if request.url.path in HEALTH_PATHS:
             return await call_next(request)
-        if os.getenv("DOPAFLOW_DISABLE_RATE_LIMITS", "0") == "1":
-            return await call_next(request)
-        if os.getenv("ZOESTM_DISABLE_RATE_LIMITS", "0") == "1":
+        disable_var_set = (
+            os.getenv("DOPAFLOW_DISABLE_RATE_LIMITS", "0") == "1"
+            or os.getenv("ZOESTM_DISABLE_RATE_LIMITS", "0") == "1"
+        )
+        if self.packaged and disable_var_set:
+            logger.warning(
+                "DOPAFLOW_DISABLE_RATE_LIMITS is set but ignored in packaged build"
+            )
+        if not self.packaged and disable_var_set:
             return await call_next(request)
 
         now = time.time()

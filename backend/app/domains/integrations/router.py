@@ -42,6 +42,31 @@ async def _repo(settings: Settings = Depends(get_settings_dependency)) -> Integr
 
 @router.post("/gmail/connect", response_model=GmailConnectResult, dependencies=[Depends(require_scope("write:integrations"))])
 async def connect_gmail(payload: GmailConnectRequest, repo: IntegrationsRepository = Depends(_repo)) -> GmailConnectResult:
+    if payload.code:
+        settings = repo.settings
+        if settings is None or not settings.google_client_id or not settings.google_client_secret:
+            return GmailConnectResult(status="error", message="Google credentials not configured")
+        if not payload.redirect_uri:
+            return GmailConnectResult(status="error", message="Redirect URI is required")
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "code": payload.code,
+                    "client_id": settings.google_client_id,
+                    "client_secret": settings.google_client_secret,
+                    "redirect_uri": payload.redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+            )
+        if response.status_code != 200:
+            return GmailConnectResult(status="error", message="Token exchange failed")
+        data = response.json()
+        expires_at = (
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
+        ).isoformat()
+        repo.store_token("gmail", data["access_token"], data.get("refresh_token"), expires_at, data.get("scope", ""))
+        return GmailConnectResult(status="connected")
     return repo.connect_gmail(payload)
 
 
@@ -73,7 +98,7 @@ async def gmail_oauth_callback(
         return GmailConnectResult(status="error", message="Token exchange failed")
     data = response.json()
     expires_at = (
-        datetime.datetime.utcnow() + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
+        datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
     ).isoformat()
     repo.store_token("gmail", data["access_token"], data.get("refresh_token"), expires_at, data.get("scope", ""))
     return GmailConnectResult(status="connected")
@@ -141,9 +166,9 @@ async def enqueue_webhook(payload: WebhookDispatch, repo: IntegrationsRepository
 
 @router.get("/outbox/metrics", response_model=OutboxMetrics, dependencies=[Depends(require_scope("read:integrations"))])
 async def outbox_metrics(settings: Settings = Depends(get_settings_dependency)) -> OutboxMetrics:
-    return snapshot_metrics(settings.db_path)
+    return snapshot_metrics(settings)
 
 
 @router.post("/outbox/dispatch", response_model=OutboxDispatchResult, dependencies=[Depends(require_scope("write:integrations"))])
 async def outbox_dispatch(settings: Settings = Depends(get_settings_dependency)) -> OutboxDispatchResult:
-    return dispatch_once(settings.db_path)
+    return dispatch_once(settings)

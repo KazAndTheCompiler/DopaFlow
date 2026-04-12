@@ -1,13 +1,23 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { sanitizeOpenPathPayload } = require("./ipc-validation");
 
 const sendChannels = new Set(["df:install-update", "open-path", "open-journal", "open-calendar", "focus-completed"]);
-const onChannels = new Set(["df:update-available", "df:update-downloaded", "df:build-info", "notification-count", "deep-link", "alarm-fired", "focus-notification-shown"]);
+const onChannels = new Set(["df:update-available", "df:update-downloaded", "df:build-info", "notification-count", "deep-link", "alarm:due", "focus-notification-shown"]);
 
 contextBridge.exposeInMainWorld("dopaflow", {
   send(channel, payload) {
-    if (sendChannels.has(channel)) {
-      ipcRenderer.send(channel, payload);
+    if (!sendChannels.has(channel)) {
+      return;
     }
+    if (channel === "open-path") {
+      const safePayload = sanitizeOpenPathPayload(payload);
+      if (!safePayload) {
+        return;
+      }
+      ipcRenderer.send(channel, safePayload);
+      return;
+    }
+    ipcRenderer.send(channel, payload);
   },
   on(channel, callback) {
     if (!onChannels.has(channel)) {

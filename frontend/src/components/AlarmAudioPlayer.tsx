@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { resolveUrl } from "@api/player";
 import { Skeleton } from "@ds/primitives/Skeleton";
+import { showToast } from "@ds/primitives/Toast";
 
 interface AlarmAudioPlayerProps {
   youtubeUrl: string;
@@ -8,31 +10,94 @@ interface AlarmAudioPlayerProps {
 }
 
 export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPlayerProps): JSX.Element | null {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const queueExhaustedRef = useRef(false);
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sourceQueue, setSourceQueue] = useState<string[]>([]);
+  const [sourceIndex, setSourceIndex] = useState(0);
+
+  const skipToNext = useCallback((): void => {
+    setSourceIndex((prev) => Math.min(prev + 1, sourceQueue.length));
+  }, [sourceQueue]);
 
   useEffect(() => {
     if (!youtubeUrl) return;
-    setLoading(true);
-    setEmbedUrl(null);
-    try {
-      const parsed = new URL(youtubeUrl);
-      const videoId = parsed.hostname.includes("youtu.be")
-        ? parsed.pathname.slice(1)
-        : (parsed.searchParams.get("v") ?? "");
-      if (!videoId) {
-        setEmbedUrl(null);
-        setLoading(false);
-        return;
-      }
-      const autoplayParam = autoPlay ? "1" : "0";
-      setEmbedUrl(`https://www.youtube.com/embed/${videoId}?autoplay=${autoplayParam}&rel=0`);
-    } catch {
+
+    let cancelled = false;
+
+    const loadSources = async (): Promise<void> => {
+      setLoading(true);
       setEmbedUrl(null);
-    } finally {
-      setLoading(false);
-    }
+      setSourceQueue([]);
+      setSourceIndex(0);
+
+      try {
+        const parsed = new URL(youtubeUrl);
+        const videoId = parsed.hostname.includes("youtu.be")
+          ? parsed.pathname.slice(1)
+          : (parsed.searchParams.get("v") ?? "");
+        if (!videoId) {
+          if (!cancelled) {
+            setEmbedUrl(null);
+            setSourceQueue([youtubeUrl]);
+          }
+          return;
+        }
+
+        const autoplayParam = autoPlay ? "1" : "0";
+        const nextEmbedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=${autoplayParam}&rel=0`;
+        const resolved = await resolveUrl(youtubeUrl).catch(() => ({ stream_url: null, error: "resolve_failed" }));
+        const nextQueue = [resolved.stream_url, youtubeUrl].filter(
+          (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
+        );
+
+        if (!cancelled) {
+          setEmbedUrl(nextEmbedUrl);
+          setSourceQueue(nextQueue);
+        }
+      } catch {
+        if (!cancelled) {
+          setEmbedUrl(null);
+          setSourceQueue([youtubeUrl]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadSources();
+
+    return () => {
+      cancelled = true;
+    };
   }, [youtubeUrl, autoPlay]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    const activeSource = sourceQueue[sourceIndex];
+    if (!audio) return;
+    if (!activeSource) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      if (sourceQueue.length > 0 && sourceIndex >= sourceQueue.length && !queueExhaustedRef.current) {
+        queueExhaustedRef.current = true;
+        showToast("Audio source unavailable — queue exhausted.", "warn");
+      }
+      return;
+    }
+    queueExhaustedRef.current = false;
+    if (audio.src !== activeSource) {
+      audio.src = activeSource;
+      audio.load();
+    }
+    if (autoPlay) {
+      void audio.play().catch(() => {});
+    }
+  }, [autoPlay, sourceIndex, sourceQueue]);
 
   if (!youtubeUrl) return null;
   if (loading) {
@@ -72,6 +137,11 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
   }
   return (
     <div style={{ marginTop: "0.5rem", display: "grid", gap: "0.35rem" }}>
+      <audio
+        ref={audioRef}
+        onError={skipToNext}
+        style={{ display: "none" }}
+      />
       <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
         <iframe
           src={embedUrl}

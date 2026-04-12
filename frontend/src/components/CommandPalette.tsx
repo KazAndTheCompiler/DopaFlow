@@ -60,6 +60,9 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
     suggestions.unshift({ label: "Clear project filter", icon: "CL", action: () => { onProjectSelect(null); setOpen(false); setInput(""); } });
   }
 
+  const visibleSuggestions = suggestions.slice(0, 8);
+  const activeDescendantId = visibleSuggestions[selectedIdx] ? `command-palette-option-${selectedIdx}` : undefined;
+
   // When a final transcript comes in, fill input and let user confirm
   useEffect(() => {
     if (transcript && open) {
@@ -86,8 +89,8 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
     if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
   const handleExecute = async (): Promise<void> => {
-    if (suggestions.length > 0 && !input.startsWith("/")) {
-      suggestions[Math.min(selectedIdx, suggestions.length - 1)]?.action();
+    if (visibleSuggestions.length > 0 && !input.startsWith("/")) {
+      visibleSuggestions[Math.min(selectedIdx, visibleSuggestions.length - 1)]?.action();
       return;
     }
     if (input.trim()) {
@@ -98,8 +101,14 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
   };
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setSelectedIdx((i) => Math.min(i + 1, suggestions.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setSelectedIdx((i) => Math.max(i - 1, 0)); }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (visibleSuggestions.length > 0) setSelectedIdx((i) => (i + 1) % visibleSuggestions.length);
+    }
+    else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (visibleSuggestions.length > 0) setSelectedIdx((i) => (i - 1 + visibleSuggestions.length) % visibleSuggestions.length);
+    }
     else if (e.key === "Enter") { void handleExecute(); }
     else if (e.key === "Escape") { setOpen(false); }
   };
@@ -163,10 +172,15 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
           <Input
             ref={inputRef}
             type="text"
+            spellCheck={false}
             placeholder={listening ? "Listening…" : "Type a command... (add task, focus, list habits)"}
             value={listening ? interim || input : input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={handleKeyDown}
+            role="combobox"
+            aria-expanded={visibleSuggestions.length > 0}
+            aria-controls="command-palette-listbox"
+            aria-activedescendant={activeDescendantId}
             style={{ flex: 1, fontSize: "1rem" }}
           />
           <VoiceButton
@@ -182,11 +196,19 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
             {sttError}
           </div>
         ) : null}
-        {suggestions.length > 0 && (
-          <div style={{ marginTop: "0.85rem", display: "grid", gap: "0.35rem", maxHeight: "280px", overflowY: "auto" }}>
-            {suggestions.slice(0, 8).map((s, i) => (
+        {visibleSuggestions.length > 0 && (
+          <div
+            id="command-palette-listbox"
+            role="listbox"
+            aria-activedescendant={activeDescendantId}
+            style={{ marginTop: "0.85rem", display: "grid", gap: "0.35rem", maxHeight: "280px", overflowY: "auto" }}
+          >
+            {visibleSuggestions.map((s, i) => (
               <button
+                id={`command-palette-option-${i}`}
                 key={i}
+                role="option"
+                aria-selected={i === selectedIdx}
                 onClick={s.action}
                 style={{
                   display: "flex",

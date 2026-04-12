@@ -1,8 +1,23 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { Task } from "../../../shared/types";
 import { showToast } from "@ds/primitives/Toast";
-import { bulkCompleteTask, bulkDeleteTask, completeTask, createTask, deleteTask, listTasks, quickAddTask, updateTask } from "@api/index";
+import {
+  addTaskDependency,
+  bulkCompleteTask,
+  bulkDeleteTask,
+  completeTask,
+  createTask,
+  deleteTask,
+  getTaskContext,
+  listTasks,
+  quickAddTask,
+  removeTaskDependency,
+  startTaskTimer,
+  stopTaskTimer,
+  updateTask,
+} from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface TaskFilters {
   done: boolean | null;
@@ -29,6 +44,11 @@ export interface UseTasksResult {
   remove: (id: string) => Promise<void>;
   bulkComplete: (ids: string[]) => Promise<void>;
   bulkDelete: (ids: string[]) => Promise<void>;
+  getContext: (id: string) => Promise<{ task: Task; dependencies: Task[]; dependents: Task[] }>;
+  addDependency: (id: string, depId: string) => Promise<void>;
+  removeDependency: (id: string, depId: string) => Promise<void>;
+  startTimer: (id: string) => Promise<void>;
+  stopTimer: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -40,7 +60,7 @@ export function useTasks(): UseTasksResult {
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const refresh = async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -54,11 +74,19 @@ export function useTasks(): UseTasksResult {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sortBy]);
 
   useEffect(() => {
     void refresh();
-  }, [sortBy]);
+  }, [refresh]);
+
+  useEffect(() => {
+    const handleInvalidate = (): void => {
+      void refresh();
+    };
+    window.addEventListener(getInvalidationEventName("tasks"), handleInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName("tasks"), handleInvalidate);
+  }, [refresh]);
 
   const toggleSelect = (id: string): void => {
     setSelectedIds((prev) => {
@@ -167,6 +195,23 @@ export function useTasks(): UseTasksResult {
         setTasks(snapshot);
         showToast("Bulk delete failed.", "error");
       }
+    },
+    getContext: (id: string) => getTaskContext(id),
+    addDependency: async (id: string, depId: string) => {
+      await addTaskDependency(id, depId);
+      await refresh();
+    },
+    removeDependency: async (id: string, depId: string) => {
+      await removeTaskDependency(id, depId);
+      await refresh();
+    },
+    startTimer: async (id: string) => {
+      await startTaskTimer(id);
+      await refresh();
+    },
+    stopTimer: async (id: string) => {
+      await stopTaskTimer(id);
+      await refresh();
     },
     refresh,
   };

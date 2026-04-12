@@ -1,5 +1,8 @@
-import { lazy } from "react";
+import React, { lazy } from "react";
 import type { ComponentType, LazyExoticComponent } from "react";
+
+import SurfaceErrorBoundary from "./components/SurfaceErrorBoundary";
+import SurfaceSkeleton from "./components/SurfaceSkeleton";
 
 const TodayView = lazy(() => import("@surfaces/today"));
 const TasksView = lazy(() => import("@surfaces/tasks"));
@@ -25,12 +28,48 @@ const GoalsView = lazy(() => import("@surfaces/goals"));
 const CommandsView = lazy(() => import("@surfaces/commands"));
 const SettingsView = lazy(() => import("@surfaces/settings"));
 
+function wrapSurface(
+  Surface: LazyExoticComponent<ComponentType>,
+): ComponentType {
+  return function WrappedSurface(): JSX.Element {
+    return (
+      <SurfaceErrorBoundary>
+        <React.Suspense fallback={<SurfaceSkeleton />}>
+          <Surface />
+        </React.Suspense>
+      </SurfaceErrorBoundary>
+    );
+  };
+}
+
+const TodaySurface = wrapSurface(TodayView);
+const TasksSurface = wrapSurface(TasksView);
+const BoardSurface = wrapSurface(BoardView);
+const SearchSurface = wrapSurface(SearchView);
+const HabitsSurface = wrapSurface(HabitsView);
+const FocusSurface = wrapSurface(FocusView);
+const ReviewSurface = wrapSurface(ReviewView);
+const JournalSurface = wrapSurface(JournalView);
+const CalendarSurface = wrapSurface(CalendarView);
+const AlarmsSurface = wrapSurface(AlarmsView);
+const NutritionSurface = wrapSurface(NutritionView);
+const DigestSurface = wrapSurface(DigestView);
+const PlayerSurface = wrapSurface(PlayerView);
+const OverviewSurface = wrapSurface(OverviewView);
+const GamificationSurface = wrapSurface(GamificationView);
+const InsightsSurface = wrapSurface(InsightsView);
+const GoalsSurface = wrapSurface(GoalsView);
+const CommandsSurface = wrapSurface(CommandsView);
+const SettingsSurface = wrapSurface(SettingsView);
+
 export type RouteIntentAction =
   | "open-task-create"
+  | "open-tasks"
   | "open-habits"
   | "start-focus"
   | "open-review"
   | "open-journal"
+  | "open-calendar"
   | "open-today"
   | "open-search"
   | "open-command-bar"
@@ -39,7 +78,8 @@ export type RouteIntentAction =
   | "open-insights"
   | "open-player"
   | "open-gamification"
-  | "open-digest";
+  | "open-digest"
+  | "open-alarms";
 
 export type CommandIntent =
   | "task.create"
@@ -88,31 +128,31 @@ export interface AppRouteMeta {
   icon: string;
   showInSidebar?: boolean;
   showInMobileNav?: boolean;
-  surface: LazyExoticComponent<ComponentType>;
+  surface: ComponentType;
 }
 
 export const routeRegistry = [
-  { id: "plan", label: "Plan day", icon: "PD", surface: TodayView, showInSidebar: true },
-  { id: "today", label: "Today", icon: "TD", surface: TodayView, showInSidebar: true, showInMobileNav: true },
-  { id: "tasks", label: "Tasks", icon: "TS", surface: TasksView, showInSidebar: true, showInMobileNav: true },
-  { id: "board", label: "Board", icon: "BD", surface: BoardView, showInSidebar: true },
-  { id: "search", label: "Search", icon: "SR", surface: SearchView, showInSidebar: true },
-  { id: "habits", label: "Habits", icon: "HB", surface: HabitsView, showInSidebar: true, showInMobileNav: true },
-  { id: "focus", label: "Focus", icon: "FC", surface: FocusView, showInSidebar: true, showInMobileNav: true },
-  { id: "review", label: "Review", icon: "RV", surface: ReviewView, showInSidebar: true },
-  { id: "journal", label: "Journal", icon: "JR", surface: JournalView, showInSidebar: true },
-  { id: "calendar", label: "Calendar", icon: "CL", surface: CalendarView, showInSidebar: true },
-  { id: "alarms", label: "Alarms", icon: "AL", surface: AlarmsView, showInSidebar: true },
-  { id: "nutrition", label: "Nutrition", icon: "NT", surface: NutritionView, showInSidebar: true },
-  { id: "digest", label: "Digest", icon: "DG", surface: DigestView, showInSidebar: true },
-  { id: "player", label: "Player", icon: "PL", surface: PlayerView, showInSidebar: true },
-  { id: "overview", label: "Overview", icon: "OV", surface: OverviewView, showInSidebar: true },
-  { id: "gamification", label: "Gamify", icon: "GM", surface: GamificationView, showInSidebar: true },
-  { id: "insights", label: "Insights", icon: "IN", surface: InsightsView, showInSidebar: true },
-  { id: "goals", label: "Goals", icon: "GL", surface: GoalsView, showInSidebar: true },
-  { id: "commands", label: "Commands", icon: "CM", surface: CommandsView, showInSidebar: true },
-  { id: "shutdown", label: "Shutdown", icon: "SD", surface: TodayView, showInSidebar: true },
-  { id: "settings", label: "Settings", icon: "ST", surface: SettingsView, showInSidebar: true },
+  { id: "plan", label: "Plan day", icon: "PD", surface: TodaySurface, showInSidebar: true },
+  { id: "today", label: "Today", icon: "TD", surface: TodaySurface, showInSidebar: true, showInMobileNav: true },
+  { id: "tasks", label: "Tasks", icon: "TS", surface: TasksSurface, showInSidebar: true, showInMobileNav: true },
+  { id: "board", label: "Board", icon: "BD", surface: BoardSurface, showInSidebar: true },
+  { id: "search", label: "Search", icon: "SR", surface: SearchSurface, showInSidebar: true },
+  { id: "habits", label: "Habits", icon: "HB", surface: HabitsSurface, showInSidebar: true, showInMobileNav: true },
+  { id: "focus", label: "Focus", icon: "FC", surface: FocusSurface, showInSidebar: true, showInMobileNav: true },
+  { id: "review", label: "Review", icon: "RV", surface: ReviewSurface, showInSidebar: true },
+  { id: "journal", label: "Journal", icon: "JR", surface: JournalSurface, showInSidebar: true },
+  { id: "calendar", label: "Calendar", icon: "CL", surface: CalendarSurface, showInSidebar: true },
+  { id: "alarms", label: "Alarms", icon: "AL", surface: AlarmsSurface, showInSidebar: true },
+  { id: "nutrition", label: "Nutrition", icon: "NT", surface: NutritionSurface, showInSidebar: true },
+  { id: "digest", label: "Digest", icon: "DG", surface: DigestSurface, showInSidebar: true },
+  { id: "player", label: "Player", icon: "PL", surface: PlayerSurface, showInSidebar: true },
+  { id: "overview", label: "Overview", icon: "OV", surface: OverviewSurface, showInSidebar: true },
+  { id: "gamification", label: "Gamify", icon: "GM", surface: GamificationSurface, showInSidebar: true },
+  { id: "insights", label: "Insights", icon: "IN", surface: InsightsSurface, showInSidebar: true },
+  { id: "goals", label: "Goals", icon: "GL", surface: GoalsSurface, showInSidebar: true },
+  { id: "commands", label: "Commands", icon: "CM", surface: CommandsSurface, showInSidebar: true },
+  { id: "shutdown", label: "Shutdown", icon: "SD", surface: TodaySurface, showInSidebar: true },
+  { id: "settings", label: "Settings", icon: "ST", surface: SettingsSurface, showInSidebar: true },
 ] as const satisfies readonly AppRouteMeta[];
 
 const routeIds = new Set<AppRoute>(routeRegistry.map((route) => route.id));
@@ -135,10 +175,12 @@ export const mobileNavRoutes = routeRegistry.filter((route) => "showInMobileNav"
 
 export const actionRoutes: Record<RouteIntentAction, AppRoute> = {
   "open-task-create": "tasks",
+  "open-tasks": "tasks",
   "open-habits": "habits",
   "start-focus": "focus",
   "open-review": "review",
   "open-journal": "journal",
+  "open-calendar": "calendar",
   "open-today": "today",
   "open-search": "search",
   "open-command-bar": "today",
@@ -148,6 +190,7 @@ export const actionRoutes: Record<RouteIntentAction, AppRoute> = {
   "open-player": "player",
   "open-gamification": "gamification",
   "open-digest": "digest",
+  "open-alarms": "alarms",
 };
 
 export const intentRoutes: Record<CommandIntent, AppRoute> = {
@@ -166,6 +209,6 @@ export const intentRoutes: Record<CommandIntent, AppRoute> = {
   undo: "tasks",
 };
 
-export function getRouteComponent(route: AppRoute): LazyExoticComponent<ComponentType> {
-  return routeRegistry.find((entry) => entry.id === route)?.surface ?? TodayView;
+export function getRouteComponent(route: AppRoute): ComponentType {
+  return routeRegistry.find((entry) => entry.id === route)?.surface ?? TodaySurface;
 }

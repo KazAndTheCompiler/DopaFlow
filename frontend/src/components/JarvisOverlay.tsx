@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 /**
  * JARVIS-style concentric circle wave animation.
  * Shows as a floating overlay while Packy speaks (TTS).
@@ -8,6 +10,27 @@ interface JarvisOverlayProps {
 }
 
 export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | null {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!visible || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setError(null);
+      return;
+    }
+    setError(null);
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        stream.getTracks().forEach((track) => track.stop());
+      })
+      .catch((err: unknown) => {
+        const name = err && typeof err === "object" && "name" in err ? String((err as { name?: unknown }).name ?? "") : "";
+        if (name === "NotAllowedError") {
+          setError("Microphone access denied — check browser permissions.");
+        }
+      });
+  }, [visible]);
+
   if (!visible) return null;
 
   const rings = [0, 1, 2, 3, 4];
@@ -26,36 +49,57 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
       }}
     >
       <div style={{ position: "relative", width: 200, height: 200 }}>
-        {rings.map((i) => (
+        {error ? (
           <div
-            key={i}
+            style={{
+              display: "grid",
+              placeItems: "center",
+              width: "100%",
+              height: "100%",
+              padding: "1rem",
+              borderRadius: "24px",
+              background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+              border: "1px solid var(--border-subtle)",
+              color: "var(--state-overdue)",
+              textAlign: "center",
+              lineHeight: 1.5,
+            }}
+          >
+            {error}
+          </div>
+        ) : (
+          rings.map((i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "50%",
+                border: "1.5px solid var(--accent-primary)",
+                opacity: 0,
+                animation: `jarvisRing 2.4s ease-out ${i * 0.35}s infinite`,
+              }}
+            />
+          ))
+        )}
+
+        {!error && (
+          <div
             style={{
               position: "absolute",
-              inset: 0,
+              top: "50%",
+              left: "50%",
+              width: 12,
+              height: 12,
+              marginLeft: -6,
+              marginTop: -6,
               borderRadius: "50%",
-              border: "1.5px solid var(--accent-primary)",
-              opacity: 0,
-              animation: `jarvisRing 2.4s ease-out ${i * 0.35}s infinite`,
+              background: "var(--accent-primary)",
+              boxShadow: "0 0 20px 6px var(--accent-primary)",
+              animation: "jarvisPulse 1.2s ease-in-out infinite",
             }}
           />
-        ))}
-
-        {/* Center glow */}
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: 12,
-            height: 12,
-            marginLeft: -6,
-            marginTop: -6,
-            borderRadius: "50%",
-            background: "var(--accent-primary)",
-            boxShadow: "0 0 20px 6px var(--accent-primary)",
-            animation: "jarvisPulse 1.2s ease-in-out infinite",
-          }}
-        />
+        )}
       </div>
 
       <style>{`

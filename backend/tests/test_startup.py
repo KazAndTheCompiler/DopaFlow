@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import json
+import logging
 import os
 from pathlib import Path
 from unittest.mock import patch
@@ -20,11 +22,77 @@ def _create_app():
     return app_main.create_app()
 
 
+def _restore_root_logger(handlers: list[logging.Handler], level: int) -> None:
+    root_logger = logging.getLogger()
+    root_logger.handlers = handlers
+    root_logger.setLevel(level)
+
+
 def test_app_creates_without_error(db_path) -> None:
     app = _create_app()
 
     assert app.title == "DopaFlow API"
     assert app.version == APP_VERSION
+
+
+def test_configure_logging_uses_json_formatter_for_packaged_builds() -> None:
+    from app.logging_config import configure_logging
+
+    root_logger = logging.getLogger()
+    original_handlers = root_logger.handlers[:]
+    original_level = root_logger.level
+
+    try:
+        root_logger.handlers = []
+        configure_logging(packaged=True)
+
+        record = logging.makeLogRecord(
+            {
+                "name": "dopaflow.test",
+                "levelno": logging.WARNING,
+                "levelname": "WARNING",
+                "msg": "hello %s",
+                "args": ("world",),
+                "request_id": "req-123",
+            }
+        )
+        formatted = root_logger.handlers[0].formatter.format(record)
+        payload = json.loads(formatted)
+
+        assert payload["level"] == "WARNING"
+        assert payload["logger"] == "dopaflow.test"
+        assert payload["message"] == "hello world"
+        assert payload["request_id"] == "req-123"
+        assert payload["timestamp"]
+    finally:
+        _restore_root_logger(original_handlers, original_level)
+
+
+def test_configure_logging_keeps_human_readable_formatter_for_dev_builds() -> None:
+    from app.logging_config import configure_logging
+
+    root_logger = logging.getLogger()
+    original_handlers = root_logger.handlers[:]
+    original_level = root_logger.level
+
+    try:
+        root_logger.handlers = []
+        configure_logging(packaged=False)
+
+        record = logging.makeLogRecord(
+            {
+                "name": "dopaflow.test",
+                "levelno": logging.WARNING,
+                "levelname": "WARNING",
+                "msg": "hello %s",
+                "args": ("world",),
+            }
+        )
+        formatted = root_logger.handlers[0].formatter.format(record)
+
+        assert formatted.endswith("WARNING [dopaflow.test] hello world")
+    finally:
+        _restore_root_logger(original_handlers, original_level)
 
 
 def test_all_routers_mounted(db_path) -> None:
@@ -44,6 +112,8 @@ def test_all_routers_mounted(db_path) -> None:
         "/api/v2/insights",
         "/api/v2/notifications",
         "/health",
+        "/health/live",
+        "/health/ready",
     ]
     for prefix in required:
         assert any(path.startswith(prefix) for path in routes), prefix
@@ -88,6 +158,26 @@ def test_health_returns_ok(client) -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["version"] == APP_VERSION
+
+
+def test_health_live_returns_ok(client) -> None:
+    response = client.get("/health/live")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_root_sets_content_security_policy_header(client) -> None:
+    response = client.get("/")
+
+    assert response._response.headers["Content-Security-Policy"] == (
+        "default-src 'self'; "
+        "connect-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "object-src 'none'"
+    )
 
 
 def test_openapi_schema_valid(db_path) -> None:

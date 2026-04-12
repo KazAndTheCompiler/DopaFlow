@@ -1,6 +1,7 @@
 import type { CSSProperties, RefObject } from "react";
 
 import type { Goal } from "@api/goals";
+import { fire } from "../../app/toastService";
 
 export const GOAL_STYLES = `
   .goal-input:focus {
@@ -37,7 +38,7 @@ export function ensureGoalStyles(): void {
 }
 
 export function showGoalToast(message: string, type: "error" | "warn"): void {
-  window.dispatchEvent(new CustomEvent("dopaflow:toast", { detail: { id: Date.now(), message, type } }));
+  fire(message, type);
 }
 
 export const goalInputStyle: CSSProperties = {

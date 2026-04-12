@@ -61,7 +61,7 @@ export function AppOverlays({
         onClose={onCloseInbox}
         notifications={notifications.notifications}
         onRead={(id) => void notifications.markRead(id)}
-        onReadAll={() => void notifications.markAllRead()}
+        onReadAll={() => notifications.markAllRead()}
       />
       <AchievementToast badge={gamification.newBadge} onDismiss={gamification.dismissNewBadge} />
       <ToastContainer />

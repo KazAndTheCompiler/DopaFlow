@@ -1,21 +1,22 @@
 import type { CalendarEvent, SyncConflict } from "../../../shared/types";
 import { apiClient } from "./client";
+import { calendarEventSchema, calendarEventsSchema, parseApiSchema } from "./schemas";
 
-export function listCalendarEvents(params?: { from?: string; until?: string; category?: string }): Promise<CalendarEvent[]> {
+export async function listCalendarEvents(params?: { from?: string; until?: string; category?: string }): Promise<CalendarEvent[]> {
   const qs = new URLSearchParams();
   if (params?.from) qs.set("from", params.from);
   if (params?.until) qs.set("until", params.until);
   if (params?.category) qs.set("category", params.category);
   const query = qs.toString() ? `?${qs.toString()}` : "";
-  return apiClient<CalendarEvent[]>(`/calendar/events${query}`);
+  return parseApiSchema<CalendarEvent[]>(calendarEventsSchema, await apiClient<unknown>(`/calendar/events${query}`));
 }
 
-export function createCalendarEvent(payload: Partial<CalendarEvent>): Promise<CalendarEvent> {
-  return apiClient<CalendarEvent>("/calendar/events", { method: "POST", body: JSON.stringify(payload) });
+export async function createCalendarEvent(payload: Partial<CalendarEvent>): Promise<CalendarEvent> {
+  return parseApiSchema<CalendarEvent>(calendarEventSchema, await apiClient<unknown>("/calendar/events", { method: "POST", body: JSON.stringify(payload) }));
 }
 
-export function updateCalendarEvent(id: string, patch: Partial<CalendarEvent>): Promise<CalendarEvent> {
-  return apiClient<CalendarEvent>(`/calendar/events/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+export async function updateCalendarEvent(id: string, patch: Partial<CalendarEvent>): Promise<CalendarEvent> {
+  return parseApiSchema<CalendarEvent>(calendarEventSchema, await apiClient<unknown>(`/calendar/events/${id}`, { method: "PATCH", body: JSON.stringify(patch) }));
 }
 
 export function deleteCalendarEvent(id: string): Promise<{ deleted: boolean }> {

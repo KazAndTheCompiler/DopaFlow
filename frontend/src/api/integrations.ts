@@ -1,8 +1,8 @@
 import type { IntegrationsStatus } from "../../../shared/types";
 import { apiClient } from "./client";
 
-export function connectGmail(payload: { code?: string; redirect_uri?: string }): Promise<{ status: string }> {
-  return apiClient<{ status: string }>("/integrations/gmail/connect", {
+export function connectGmail(payload: { code?: string; redirect_uri?: string; state?: string }): Promise<{ status: string; message?: string; url?: string }> {
+  return apiClient<{ status: string; message?: string; url?: string }>("/integrations/gmail/connect", {
     method: "POST",
     body: JSON.stringify(payload),
   });

@@ -1,12 +1,26 @@
+import { fire } from "../app/toastService";
+
 const defaultApiBaseUrl =
   typeof window !== "undefined" && /^https?:\/\//.test(window.location.origin)
     ? `${window.location.origin}/api/v2`
-    : "http://127.0.0.1:8000/api/v2";
+    : `${window.location.protocol}//127.0.0.1:8000/api/v2`;
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? defaultApiBaseUrl;
 
+let lastToast: { message: string; time: number } | null = null;
+
 function fireToast(message: string, type: "error" | "warn"): void {
-  window.dispatchEvent(new CustomEvent("dopaflow:toast", { detail: { id: Date.now(), message, type } }));
+  const now = Date.now();
+  if (lastToast?.message === message && now - lastToast.time < 3000) {
+    return;
+  }
+  lastToast = { message, time: now };
+  setTimeout(() => {
+    if (lastToast?.message === message && lastToast.time === now) {
+      lastToast = null;
+    }
+  }, 3000);
+  fire(message, type);
 }
 
 async function parseApiResponse<T>(response: Response): Promise<T> {
@@ -37,23 +51,34 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
 
 export async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
-  let response: Response;
+  const request = async (): Promise<Response> => fetch(`${API_BASE_URL}${path}`, {
+    headers: isFormData
+      ? { ...(init?.headers ?? {}) }
+      : {
+          "Content-Type": "application/json",
+          ...(init?.headers ?? {}),
+        },
+    ...init,
+  });
+  let response: Response | undefined;
 
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: isFormData
-        ? { ...(init?.headers ?? {}) }
-        : {
-            "Content-Type": "application/json",
-            ...(init?.headers ?? {}),
-          },
-      ...init,
-    });
+    response = await request();
   } catch (error) {
-    fireToast("Network error — the local release backend is unreachable.", "error");
-    throw new Error(
-      error instanceof Error ? `network_error:${error.message}` : "network_error:unknown",
-    );
+    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      response = await request();
+    } catch (retryError) {
+      fireToast("Network error — the local release backend is unreachable.", "error");
+      throw new Error(
+        retryError instanceof Error ? `network_error:${retryError.message}` : "network_error:unknown",
+      );
+    }
+  }
+
+  if (response.status === 503) {
+    await new Promise((r) => setTimeout(r, 1000));
+    response = await request();
   }
 
   if (response.status === 429) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAppReview } from "../../app/AppContexts";
 import { showToast } from "@ds/primitives/Toast";
@@ -24,7 +24,10 @@ export default function ReviewView(): JSX.Element {
     () => visibleCards.filter((card) => !card.next_review_at || new Date(card.next_review_at) <= new Date()),
     [visibleCards],
   );
-  const currentCard = dueCards[0];
+
+  useEffect(() => {
+    setSessionDone(0);
+  }, [selectedDeckId]);
 
   if (review.loading) {
     return <ReviewSurfaceSkeleton />;
@@ -35,13 +38,10 @@ export default function ReviewView(): JSX.Element {
       <div style={{ display: "grid", gap: "1rem", alignContent: "start" }}>
         <ReviewStats cards={visibleCards} />
         <CardReviewer
-          card={currentCard}
+          deckId={selectedDeckId}
           totalDue={dueCards.length}
           sessionDone={sessionDone}
-          onRate={(rating) => {
-            if (!currentCard) return;
-            void review.rate(currentCard.id, rating).then(() => setSessionDone((n) => n + 1));
-          }}
+          onRated={() => setSessionDone((n) => n + 1)}
           onEditCard={setEditingCard}
         />
         <CardEditModal

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+import time
+from datetime import UTC, date, datetime, timedelta
 
 from app.core.database import get_db, tx
 from app.domains.gamification.schemas import BadgeRead, PlayerLevelRead
 from app.domains.gamification.xp_engine import level_for, level_progress, xp_to_next_level
+
+_stats_cache: dict[str, tuple[float, dict]] = {}
 
 
 def _consecutive_streak(dates: list[str]) -> int:
@@ -49,7 +52,26 @@ class GamificationRepository:
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
 
+    def has_award_event_today(self, source: str, source_id: str | None) -> bool:
+        if source_id is None:
+            return False
+        start_of_day = datetime.now(UTC).date().isoformat()
+        with get_db(self.db_path) as conn:
+            row = conn.execute(
+                """
+                SELECT 1
+                FROM xp_ledger
+                WHERE source = ?
+                  AND source_id = ?
+                  AND awarded_at >= ?
+                LIMIT 1
+                """,
+                (source, source_id, start_of_day),
+            ).fetchone()
+        return row is not None
+
     def award_xp(self, source: str, source_id: str | None, xp: int) -> int:
+        _stats_cache.pop(self.db_path, None)
         with tx(self.db_path) as conn:
             conn.execute(
                 "INSERT INTO xp_ledger (source, source_id, xp) VALUES (?, ?, ?)",
@@ -101,6 +123,12 @@ class GamificationRepository:
             )
 
     def aggregate_stats(self) -> dict[str, int]:
+        cached = _stats_cache.get(self.db_path)
+        now = time.monotonic()
+        if cached is not None:
+            expiry, stats = cached
+            if now < expiry:
+                return stats
         with get_db(self.db_path) as conn:
             tasks_done = int(
                 conn.execute("SELECT COUNT(*) FROM tasks WHERE deleted_at IS NULL AND (done = 1 OR status = 'done')").fetchone()[0]
@@ -111,10 +139,12 @@ class GamificationRepository:
             cards_rated = int(conn.execute("SELECT COALESCE(SUM(reviews_done), 0) FROM review_cards").fetchone()[0])
             journal_dates = [str(row["entry_date"]) for row in conn.execute("SELECT entry_date FROM journal_entries WHERE deleted_at IS NULL").fetchall()]
             habit_rows = conn.execute("SELECT habit_id, checkin_date FROM habit_checkins ORDER BY checkin_date ASC").fetchall()
-        return {
+        stats = {
             "tasks_done": tasks_done,
             "best_streak": _best_habit_streak(habit_rows),
             "focus_minutes": focus_minutes,
             "journal_streak": _consecutive_streak(journal_dates),
             "cards_rated": cards_rated,
         }
+        _stats_cache[self.db_path] = (now + 60, stats)
+        return stats

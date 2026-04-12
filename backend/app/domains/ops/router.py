@@ -6,8 +6,9 @@ import json
 from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
+from secrets import compare_digest
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 
 from app.core.config import Settings, get_settings_dependency
@@ -42,12 +43,28 @@ from app.middleware.auth_scopes import (
 )
 from app.services.upload_security import validate_upload
 
-router = APIRouter(prefix="/ops", tags=["ops"])
 MAX_EXPORT_RESPONSE_BYTES = 25 * 1024 * 1024
 
 
 async def _svc(settings: Settings = Depends(get_settings_dependency)) -> OpsService:
-    return OpsService(str(settings.db_path))
+    return OpsService(settings)
+
+
+async def require_ops_secret(
+    settings: Settings = Depends(get_settings_dependency),
+    x_ops_secret: str | None = Header(default=None),
+) -> None:
+    if not settings.ops_secret:
+        raise HTTPException(status_code=503, detail="Ops secret is not configured")
+    if not x_ops_secret or not compare_digest(x_ops_secret, settings.ops_secret):
+        raise HTTPException(status_code=403, detail="Invalid ops secret")
+
+
+router = APIRouter(
+    prefix="/ops",
+    tags=["ops"],
+    dependencies=[Depends(require_ops_secret)],
+)
 
 
 def _ensure_export_size_within_limit(content: bytes, *, label: str) -> bytes:

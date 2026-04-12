@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 AUTH_HEADERS = {"Authorization": "Bearer dev-local-key"}
 
 
@@ -99,3 +101,67 @@ def test_trigger_alarm_audio_returns_typed_shape(client) -> None:
     body = response.json()
     assert set(body) == {"stream_url", "spoke", "error"}
     assert body["spoke"] == "Wake up now"
+
+
+def test_trigger_alarm_error_response_does_not_leak_exception_details(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domains.alarms import router as alarms_router_module
+
+    alarm = create_alarm(client)
+
+    def explode(self, identifier: str):
+        raise RuntimeError(f"boom from /tmp/private/{identifier}")
+
+    monkeypatch.setattr(alarms_router_module.AlarmsService, "trigger_alarm", explode)
+
+    response = client.post(f"/api/v2/alarms/{alarm['id']}/trigger", headers=AUTH_HEADERS)
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Alarm trigger failed"}
+    assert "traceback" not in response.text.lower()
+    assert "/tmp/private" not in response.text
+    assert "RuntimeError" not in response.text
+
+
+def test_resolve_alarm_url_error_does_not_leak_exception_info(
+    client,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.domains.player.service import PlayerService
+
+    def explode(self, url: str):
+        raise ConnectionError(f"DNS lookup failed for {url} at /etc/resolv.conf")
+
+    monkeypatch.setattr(PlayerService, "resolve_url", explode)
+
+    response = client.post(
+        "/api/v2/alarms/resolve-url?url=https://example.com",
+        headers=AUTH_HEADERS,
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert "detail" in body
+    assert "traceback" not in response.text.lower()
+    assert "Traceback" not in response.text
+    assert "ConnectionError" not in response.text
+    assert "/etc/" not in response.text
+    assert "/home/" not in response.text
+    assert "/tmp/" not in response.text
+
+
+def test_trigger_alarm_audio_with_invalid_id_does_not_leak_exception_info(client) -> None:
+    response = client.post(
+        "/api/v2/alarms/alm_nonexistent/trigger-audio",
+        headers=AUTH_HEADERS,
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "traceback" not in response.text.lower()
+    assert "Traceback" not in response.text
+    assert "Exception" not in response.text
+    assert "/home/" not in response.text
+    assert "/tmp/" not in response.text

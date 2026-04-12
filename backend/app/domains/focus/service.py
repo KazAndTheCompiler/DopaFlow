@@ -7,9 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 
-from app.core.config import get_settings
-from app.domains.gamification.repository import GamificationRepository
-from app.domains.gamification.service import GamificationService
+from app.core.gamification_helpers import award as award_gamification
 from app.domains.focus import repository
 from app.domains.focus.schemas import FocusStatus
 
@@ -36,13 +34,12 @@ class PomodoroState:
 state = PomodoroState()
 
 
-def _restore_from_db() -> None:
+def _restore_from_db(db_path: str) -> None:
     """Restore in-memory state from DB when the process restarted mid-session."""
 
     if state.status != PomodoroStatus.idle:
         return
     try:
-        db_path = get_settings().db_path
         active = repository.get_active_session(db_path)
         if not active:
             return
@@ -66,18 +63,6 @@ def _restore_from_db() -> None:
         state.elapsed_seconds = 0
     except Exception:
         logger.exception("Failed to restore focus state from DB")
-
-
-def _award(source: str, source_id: str | None = None) -> None:
-    try:
-        db = get_settings().db_path
-        GamificationService(GamificationRepository(db)).award(source, source_id)
-    except Exception:
-        logger.exception(
-            "Failed to award gamification for source=%s source_id=%s", source, source_id
-        )
-
-
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -89,10 +74,9 @@ def _elapsed_seconds() -> int:
     return max(state.elapsed_seconds, int((_now() - started_at).total_seconds()))
 
 
-def start(minutes: int, task_id: str | None = None) -> FocusStatus:
+def start(db_path: str, minutes: int, task_id: str | None = None) -> FocusStatus:
     """Start a Pomodoro session."""
 
-    db_path = get_settings().db_path
     reconcile_stale(db_path)
     session_id = repository.create_session(db_path, task_id, minutes)
     started_at = _now().isoformat()
@@ -116,20 +100,23 @@ def start(minutes: int, task_id: str | None = None) -> FocusStatus:
 def pause() -> FocusStatus:
     """Pause the active Pomodoro."""
 
-    _restore_from_db()
+def pause(db_path: str) -> FocusStatus:
+    """Pause the active Pomodoro."""
+
+    _restore_from_db(db_path)
     if state.status != PomodoroStatus.running:
         return get_status()
     state.status = PomodoroStatus.paused
     state.paused_at = _now().isoformat()
     if state.log_id:
-        repository.update_session_status(get_settings().db_path, state.log_id, "paused")
+        repository.update_session_status(db_path, state.log_id, "paused")
     return get_status()
 
 
-def resume() -> FocusStatus:
+def resume(db_path: str) -> FocusStatus:
     """Resume the active Pomodoro."""
 
-    _restore_from_db()
+    _restore_from_db(db_path)
     if state.status != PomodoroStatus.paused:
         return get_status()
     paused_at = datetime.fromisoformat(state.paused_at) if state.paused_at else _now()
@@ -138,33 +125,31 @@ def resume() -> FocusStatus:
     state.status = PomodoroStatus.running
     state.paused_at = None
     if state.log_id:
-        db_path = get_settings().db_path
         repository.add_pause_duration(db_path, state.log_id, pause_ms)
         repository.update_session_status(db_path, state.log_id, "running")
     return get_status()
 
 
-def stop() -> FocusStatus:
+def stop(db_path: str) -> FocusStatus:
     """Stop the active Pomodoro without marking it complete."""
 
-    _restore_from_db()
+    _restore_from_db(db_path)
     if state.log_id:
-        repository.end_session(get_settings().db_path, state.log_id, completed=False)
-        repository.clear_active_session(get_settings().db_path)
+        repository.end_session(db_path, state.log_id, completed=False)
+        repository.clear_active_session(db_path)
     state.status = PomodoroStatus.idle
     state.paused_at = None
     return get_status()
 
 
-def complete() -> FocusStatus:
+def complete(db_path: str) -> FocusStatus:
     """Complete the active Pomodoro."""
 
-    _restore_from_db()
+    _restore_from_db(db_path)
     if state.log_id:
-        db_path = get_settings().db_path
         repository.end_session(db_path, state.log_id, completed=True)
         repository.clear_active_session(db_path)
-        _award("focus_session", state.log_id)
+        award_gamification("focus_session", state.log_id, logger=logger)
     state.status = PomodoroStatus.idle
     state.paused_at = None
     return get_status()

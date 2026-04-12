@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from app.core.config import Settings
 from app.core.id_gen import validate_prefix
 from app.domains.ops.service import OpsService
 
@@ -55,14 +56,14 @@ def test_verify_backup_rejects_incompatible_schema(tmp_path: Path) -> None:
     finally:
         conn.close()
 
-    result = OpsService(str(tmp_path / "unused.sqlite")).verify_backup(_sqlite_bytes(restore_db))
+    result = OpsService(Settings(db_path=str(tmp_path / "unused.sqlite"))).verify_backup(_sqlite_bytes(restore_db))
 
     assert result["valid"] is False
     assert "missing required tables" in str(result["error"]).lower()
 
 
 def test_restore_db_rejects_incompatible_schema_without_touching_live_db(db_path: Path) -> None:
-    service = OpsService(str(db_path))
+    service = OpsService(Settings(db_path=str(db_path)))
     original_bytes = Path(db_path).read_bytes()
 
     invalid_restore = Path(db_path).with_name("invalid-restore.sqlite")
@@ -80,7 +81,7 @@ def test_restore_db_rejects_incompatible_schema_without_touching_live_db(db_path
 
 
 def test_seed_first_run_uses_domain_id_prefixes(db_path: Path) -> None:
-    service = OpsService(str(db_path))
+    service = OpsService(Settings(db_path=str(db_path)))
 
     result = service.seed_first_run()
 
@@ -137,7 +138,7 @@ def test_export_payload_logs_missing_optional_tables(tmp_path: Path, caplog: pyt
     finally:
         conn.close()
 
-    service = OpsService(str(db_path))
+    service = OpsService(Settings(db_path=str(db_path)))
     caplog.set_level(logging.WARNING, logger="app.domains.ops.service")
 
     payload = service.export_payload()

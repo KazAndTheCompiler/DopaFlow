@@ -1,32 +1,33 @@
 import type { Habit } from "../../../shared/types";
 import { apiClient } from "./client";
+import { habitSchema, habitsSchema, parseApiSchema } from "./schemas";
 
-export function listHabits(): Promise<Habit[]> {
-  return apiClient<Habit[]>("/habits/");
+export async function listHabits(): Promise<Habit[]> {
+  return parseApiSchema<Habit[]>(habitsSchema, await apiClient<unknown>("/habits/"));
 }
 
-export function createHabit(payload: Partial<Habit>): Promise<Habit> {
-  return apiClient<Habit>("/habits/", { method: "POST", body: JSON.stringify(payload) });
+export async function createHabit(payload: Partial<Habit>): Promise<Habit> {
+  return parseApiSchema<Habit>(habitSchema, await apiClient<unknown>("/habits/", { method: "POST", body: JSON.stringify(payload) }));
 }
 
-export function checkInHabit(payload: { habitId: string; checkedAt: string; moodScore?: number }): Promise<Habit> {
-  return apiClient<Habit>(`/habits/${payload.habitId}/checkin`, {
+export async function checkInHabit(payload: { habitId: string; checkedAt: string; moodScore?: number }): Promise<Habit> {
+  return parseApiSchema<Habit>(habitSchema, await apiClient<unknown>(`/habits/${payload.habitId}/checkin`, {
     method: "POST",
     body: JSON.stringify({ checked_at: payload.checkedAt, mood_score: payload.moodScore }),
-  });
+  }));
 }
 
-export function freezeHabit(habitId: string, days: number): Promise<Habit> {
+export async function freezeHabit(habitId: string, days: number): Promise<Habit> {
   const until = new Date();
   until.setDate(until.getDate() + days);
-  return apiClient<Habit>(`/habits/${habitId}/freeze`, {
+  return parseApiSchema<Habit>(habitSchema, await apiClient<unknown>(`/habits/${habitId}/freeze`, {
     method: "PATCH",
     body: JSON.stringify({ freeze_until: until.toISOString().slice(0, 10) }),
-  });
+  }));
 }
 
-export function unfreezeHabit(habitId: string): Promise<Habit> {
-  return apiClient<Habit>(`/habits/${habitId}/unfreeze`, { method: "PATCH" });
+export async function unfreezeHabit(habitId: string): Promise<Habit> {
+  return parseApiSchema<Habit>(habitSchema, await apiClient<unknown>(`/habits/${habitId}/unfreeze`, { method: "PATCH" }));
 }
 
 export function getHabitLogs(habitId: string): Promise<{ habit_id: string; checkin_date: string }[]> {

@@ -5,12 +5,20 @@ from __future__ import annotations
 import logging
 import pathlib
 import sqlite3
+from hashlib import sha256
 from contextlib import contextmanager
 from typing import Generator
 
-try:
+import importlib.util
+
+import sqlparse
+from fastapi import HTTPException
+
+from app.core.config import Settings
+
+if importlib.util.find_spec("libsql_experimental") is not None:
     import libsql_experimental as libsql
-except ModuleNotFoundError:  # pragma: no cover - optional dependency in local dev
+else:
     libsql = None
 
 logger = logging.getLogger("dopaflow.db")
@@ -25,10 +33,26 @@ def _migrations_dir() -> pathlib.Path:
 def _connect(db_path: str, turso_url: str | None = None, turso_token: str | None = None):
     if turso_url:
         if libsql is None:
-            raise RuntimeError("libsql-experimental is required when turso_url is configured")
+            raise ImportError(
+                "Install libsql-experimental to use Turso: pip install libsql-experimental"
+            )
         return libsql.connect(turso_url, auth_token=turso_token)
     pathlib.Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(db_path)
+
+
+def _resolve_db_config(
+    settings_or_db_path: Settings | str,
+    turso_url: str | None = None,
+    turso_token: str | None = None,
+) -> tuple[str, str | None, str | None]:
+    if isinstance(settings_or_db_path, Settings):
+        return (
+            settings_or_db_path.db_path,
+            settings_or_db_path.turso_url,
+            settings_or_db_path.turso_token,
+        )
+    return settings_or_db_path, turso_url, turso_token
 
 
 def _prepare_sqlite_connection(conn: sqlite3.Connection) -> None:
@@ -54,6 +78,59 @@ def _prepare_connection(conn) -> None:
         raise RuntimeError("Database connection setup failed") from exc
 
 
+def check_db_health(conn) -> None:
+    try:
+        conn.execute("PRAGMA user_version").fetchone()
+    except (AttributeError, TypeError, sqlite3.Error) as exc:
+        logger.exception("Database health check failed")
+        raise RuntimeError("Database health check failed") from exc
+
+
+def _split_sql_statements(sql: str) -> list[str]:
+    statements: list[str] = []
+    buffer: list[str] = []
+
+    for char in sql:
+        buffer.append(char)
+        if char != ";":
+            continue
+        candidate = "".join(buffer)
+        if sqlite3.complete_statement(candidate):
+            statement = candidate.strip()
+            if statement:
+                statements.append(statement)
+            buffer.clear()
+
+    trailing = "".join(buffer).strip()
+    if trailing:
+        statements.append(trailing)
+
+    return statements
+
+
+def _migration_checksum(sql: str) -> str:
+    return sha256(sql.encode("utf-8")).hexdigest()
+
+
+def _ensure_migrations_table(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS _migrations (
+            filename TEXT PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            checksum TEXT NOT NULL DEFAULT ''
+        )
+        """
+    )
+
+    columns = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()
+    }
+    if "checksum" not in columns:
+        conn.execute("ALTER TABLE _migrations ADD COLUMN checksum TEXT NOT NULL DEFAULT ''")
+
+
 def _apply_migration_sql(conn, sql: str) -> None:
     """Execute a full migration script while preserving SQL bodies intact."""
 
@@ -61,48 +138,77 @@ def _apply_migration_sql(conn, sql: str) -> None:
         conn.executescript(sql)
         return
 
-    for statement in sql.split(";"):
-        statement = statement.strip()
-        if statement:
-            conn.execute(statement)
+    for statement in sqlparse.split(sql):
+        cleaned = statement.strip()
+        if cleaned:
+            conn.execute(cleaned)
 
 
-def run_migrations(db_path: str, turso_url: str | None = None, turso_token: str | None = None) -> None:
+def run_migrations(
+    settings_or_db_path: Settings | str,
+    turso_url: str | None = None,
+    turso_token: str | None = None,
+) -> None:
     """Apply all pending SQL migrations in order."""
 
+    db_path, turso_url, turso_token = _resolve_db_config(
+        settings_or_db_path,
+        turso_url=turso_url,
+        turso_token=turso_token,
+    )
     conn = _connect(db_path, turso_url=turso_url, turso_token=turso_token)
     _prepare_connection(conn)
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS _migrations (
-            filename TEXT PRIMARY KEY,
-            applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """
-    )
-    applied = {row[0] for row in conn.execute("SELECT filename FROM _migrations").fetchall()}
+    check_db_health(conn)
+    _ensure_migrations_table(conn)
+    applied = {
+        row[0]: row[1]
+        for row in conn.execute("SELECT filename, checksum FROM _migrations").fetchall()
+    }
     migration_files = sorted(_migrations_dir().glob("*.sql"))
     for migration_file in migration_files:
-        if migration_file.name not in applied:
-            logger.info("Applying migration: %s", migration_file.name)
-            sql = migration_file.read_text(encoding="utf-8")
-            try:
-                conn.execute("BEGIN")
-                _apply_migration_sql(conn, sql)
-                conn.execute("INSERT INTO _migrations (filename) VALUES (?)", (migration_file.name,))
-                conn.execute("COMMIT")
-                logger.info("Migration applied: %s", migration_file.name)
-            except Exception:
-                conn.execute("ROLLBACK")
-                logger.exception("Migration failed, rolled back: %s", migration_file.name)
-                raise
+        sql = migration_file.read_text(encoding="utf-8")
+        checksum = _migration_checksum(sql)
+        applied_checksum = applied.get(migration_file.name)
+        if applied_checksum is not None:
+            if applied_checksum and applied_checksum != checksum:
+                logger.warning("Applied migration has been modified: %s", migration_file.name)
+            if not applied_checksum:
+                conn.execute(
+                    "UPDATE _migrations SET checksum = ? WHERE filename = ?",
+                    (checksum, migration_file.name),
+                )
+            continue
+
+        logger.info("Applying migration: %s", migration_file.name)
+        try:
+            conn.execute("BEGIN")
+            _apply_migration_sql(conn, sql)
+            conn.execute(
+                "INSERT INTO _migrations (filename, checksum) VALUES (?, ?)",
+                (migration_file.name, checksum),
+            )
+            conn.execute("COMMIT")
+            logger.info("Migration applied: %s", migration_file.name)
+        except Exception:
+            conn.execute("ROLLBACK")
+            logger.exception("Migration failed, rolled back: %s", migration_file.name)
+            raise
     conn.close()
 
 
 @contextmanager
-def get_db(db_path: str, turso_url: str | None = None, turso_token: str | None = None) -> Generator[sqlite3.Connection, None, None]:
+def get_db(
+    settings_or_db_path: Settings | str,
+    turso_url: str | None = None,
+    turso_token: str | None = None,
+) -> Generator[sqlite3.Connection, None, None]:
     """Yield a SQLite connection with WAL and foreign keys enabled."""
 
+    db_path, turso_url, turso_token = _resolve_db_config(
+        settings_or_db_path,
+        turso_url=turso_url,
+        turso_token=turso_token,
+    )
     conn = _connect(db_path, turso_url=turso_url, turso_token=turso_token)
     _prepare_connection(conn)
     try:
@@ -112,17 +218,29 @@ def get_db(db_path: str, turso_url: str | None = None, turso_token: str | None =
 
 
 @contextmanager
-def tx(db_path: str, turso_url: str | None = None, turso_token: str | None = None) -> Generator[sqlite3.Connection, None, None]:
+def tx(
+    settings_or_db_path: Settings | str,
+    turso_url: str | None = None,
+    turso_token: str | None = None,
+) -> Generator[sqlite3.Connection, None, None]:
     """Yield a connection inside an explicit transaction."""
 
+    db_path, turso_url, turso_token = _resolve_db_config(
+        settings_or_db_path,
+        turso_url=turso_url,
+        turso_token=turso_token,
+    )
     conn = _connect(db_path, turso_url=turso_url, turso_token=turso_token)
     _prepare_connection(conn)
     try:
         yield conn
         conn.commit()
-    except Exception:
-        logger.exception("Transaction failed, rolling back")
+    except Exception as exc:
         conn.rollback()
+        if isinstance(exc, (HTTPException, ValueError)):
+            logger.debug("Transaction rolled back for expected error: %s", exc)
+        else:
+            logger.exception("Transaction failed, rolling back")
         raise
     finally:
         conn.close()

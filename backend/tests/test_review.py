@@ -246,6 +246,42 @@ def test_review_bulk_and_export_preview_routes_return_typed_contracts(client) ->
     assert isinstance(preview_body["cards"][0]["tags"], list)
 
 
+def test_due_cards_route_supports_limit_and_offset(client) -> None:
+    deck_response = client.post("/api/v2/review/decks", json={"name": "Due Pagination Deck"})
+    assert deck_response.status_code == 200
+    deck_id = deck_response.json()["id"]
+
+    for idx in range(1, 26):
+        response = client.post(
+            f"/api/v2/review/decks/{deck_id}/cards",
+            json={
+                "front": f"Front {idx:02d}",
+                "back": f"Back {idx:02d}",
+                "tags": [],
+                "source": "manual",
+            },
+        )
+        assert response.status_code == 200
+
+    first_page = client.get(
+        "/api/v2/review/due",
+        params={"deck_id": deck_id, "limit": 20, "offset": 0},
+    )
+    second_page = client.get(
+        "/api/v2/review/due",
+        params={"deck_id": deck_id, "limit": 20, "offset": 20},
+    )
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert len(first_page.json()) == 20
+    assert len(second_page.json()) == 5
+    assert first_page.json()[0]["front"] == "Front 01"
+    assert first_page.json()[-1]["front"] == "Front 20"
+    assert second_page.json()[0]["front"] == "Front 21"
+    assert second_page.json()[-1]["front"] == "Front 25"
+
+
 def test_sm2_rating_sequence_easy_increases_interval(db_path) -> None:
     repo = ReviewRepository(str(db_path))
     svc = ReviewService(repo)

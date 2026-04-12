@@ -96,6 +96,8 @@ export interface TaskQuickAddPreview {
   tags?: string[];
   estimated_minutes?: number | null;
   recurrence_rule?: string | null;
+  ambiguity?: boolean | null;
+  ambiguity_hints?: string[];
   /** Legacy parser field still emitted by some preview/voice paths. */
   rrule?: string | null;
 }
@@ -217,17 +219,20 @@ export interface Notification {
 
 export interface PackyWhisper {
   text: string;
-  tone: "neutral" | "helpful";
+  tone: "neutral" | "helpful" | "positive";
   suggested_action?: string | null;
 }
 
-export interface VoiceCommandPreview {
-  transcript: string;
-  status: string;
-  command_word: string | null;
-  parsed: Record<string, unknown>;
-  preview: Record<string, unknown>;
-}
+// VoiceCommandPreview — kept for potential server-STT preview UI (currently unused)
+// interface VoiceCommandPreview {
+//   transcript: string;
+//   status: string;
+//   command_word: string | null;
+//   parsed: Record<string, unknown>;
+//   preview: Record<string, unknown>;
+// }
+
+export type PackyVoiceMode = "preview" | "executed" | "clarification" | "conversational" | "empty";
 
 export interface PackyVoiceResponse {
   intent: string;
@@ -239,6 +244,7 @@ export interface PackyVoiceResponse {
   tts_text: string;
   follow_ups: string[];
   status: string;
+  mode: PackyVoiceMode;
 }
 
 export interface MomentumScore {

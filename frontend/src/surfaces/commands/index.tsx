@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { executeCommandText, getCommandList, type CommandListItem } from "@api/index";
 import { showToast } from "@ds/primitives/Toast";
 import VoiceCommandModal from "../../components/VoiceCommandModal";
+import { getPackyMomentum, getPackyWhisper } from "@api/index";
 
 export default function CommandsView(): JSX.Element {
   const [search, setSearch] = useState("");
@@ -26,6 +27,18 @@ export default function CommandsView(): JSX.Element {
     [search, commands],
   );
 
+  const handleExecute = (text: string): void => {
+    void executeCommandText(text, true, "text")
+      .then(async (result) => {
+        const reply = typeof result.reply === "string" ? result.reply.trim() : "";
+        showToast(reply || "Command completed.", "success");
+        await Promise.all([getPackyWhisper(), getPackyMomentum()].map((p) => p.catch(() => null)));
+      })
+      .catch(() => {
+        showToast("Command failed. Check the server is running.", "error");
+      });
+  };
+
   return (
     <div style={{ display: "grid", gap: "1rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -35,7 +48,7 @@ export default function CommandsView(): JSX.Element {
             Natural language works here now. Prefixes still work, but they are no longer required.
           </span>
         </div>
-        <VoiceCommandModal />
+        <VoiceCommandModal route="commands" />
       </div>
       <input
         type="text"
@@ -75,16 +88,7 @@ export default function CommandsView(): JSX.Element {
                 event.currentTarget.style.borderColor = "var(--border-subtle)";
                 event.currentTarget.style.background = "var(--surface)";
               }}
-              onClick={() => {
-                void executeCommandText(command.text, true)
-                  .then((result) => {
-                    const reply = typeof result.reply === "string" ? result.reply.trim() : "";
-                    showToast(reply || "Command completed.", "success");
-                  })
-                  .catch(() => {
-                    showToast("Command failed.", "error");
-                  });
-              }}
+              onClick={() => handleExecute(command.text)}
             >
               <strong>{command.name}</strong>
               {command.category && (

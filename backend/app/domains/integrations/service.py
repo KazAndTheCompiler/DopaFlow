@@ -12,6 +12,7 @@ from typing import Any
 
 import httpx
 
+from app.core.config import Settings
 from app.core.database import get_db, tx
 from app.core.id_gen import notification_id
 
@@ -34,10 +35,10 @@ async def _deliver_one(url: str, body: dict[str, Any], secret: str | None) -> di
         return {"ok": False, "error": str(exc)}
 
 
-def emit_event(db_path: str, event_type: str, payload: dict[str, Any]) -> None:
+def emit_event(settings: Settings, event_type: str, payload: dict[str, Any]) -> None:
     """Insert an outbox event for later delivery."""
 
-    with tx(db_path) as conn:
+    with tx(settings) as conn:
         conn.execute(
             """
             INSERT INTO outbox_events (id, event_type, payload_json, status, attempts, created_at, updated_at)
@@ -47,13 +48,13 @@ def emit_event(db_path: str, event_type: str, payload: dict[str, Any]) -> None:
         )
 
 
-def dispatch_once(db_path: str, limit: int = 20) -> dict[str, int]:
+def dispatch_once(settings: Settings, limit: int = 20) -> dict[str, int]:
     """Deliver pending outbox events to all enabled webhooks."""
 
     processed = 0
     delivered = 0
     failed = 0
-    with get_db(db_path) as conn:
+    with get_db(settings) as conn:
         events = conn.execute(
             """
             SELECT * FROM outbox_events
@@ -74,7 +75,7 @@ def dispatch_once(db_path: str, limit: int = 20) -> dict[str, int]:
             if not result.get("ok"):
                 success = False
                 break
-        with tx(db_path) as conn:
+        with tx(settings) as conn:
             if success:
                 delivered += 1
                 conn.execute(
@@ -95,10 +96,10 @@ def dispatch_once(db_path: str, limit: int = 20) -> dict[str, int]:
     return {"processed": processed, "delivered": delivered, "failed": failed}
 
 
-def snapshot_metrics(db_path: str) -> dict[str, int]:
+def snapshot_metrics(settings: Settings) -> dict[str, int]:
     """Return coarse outbox queue counts."""
 
-    with get_db(db_path) as conn:
+    with get_db(settings) as conn:
         rows = conn.execute(
             """
             SELECT status, COUNT(*) AS count

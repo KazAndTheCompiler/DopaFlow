@@ -60,14 +60,14 @@ def test_complete_focus_logs_gamification_failure_without_failing_session(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    from app.domains.gamification.service import GamificationService
+    from app.core import gamification_helpers
 
     start_session(client)
 
     def explode_award(self, source: str, source_id: str | None = None):
         raise RuntimeError("xp unavailable")
 
-    monkeypatch.setattr(GamificationService, "award", explode_award)
+    monkeypatch.setattr(gamification_helpers.GamificationService, "award", explode_award)
     caplog.set_level(logging.ERROR, logger="app.domains.focus.service")
 
     response = client.post("/api/v2/focus/sessions/control", json={"action": "completed"})

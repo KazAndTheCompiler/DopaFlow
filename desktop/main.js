@@ -1,21 +1,24 @@
 const path = require("node:path");
-const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain, shell } = require("electron");
+const Store = require("electron-store");
+const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain, shell, screen } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const AutoLaunch = require("electron-auto-launch");
 const pkg = require("./package.json");
 
 const { BackendRuntime } = require("./backend-runtime");
+const { sanitizeOpenPathPayload } = require("./ipc-validation");
 const { NotificationRuntime } = require("./notification-runtime");
 const { buildBackendEnv } = require("./runtime-auth");
 const { WindowRuntime } = require("./window-runtime");
 
-const singleInstance = app.requestSingleInstanceLock();
-if (!singleInstance) {
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
   app.quit();
 }
 
 let tray = null;
 let unreadCount = 0;
+const configStore = new Store();
 
 const isPackaged = app.isPackaged;
 const backendCommand = isPackaged
@@ -32,6 +35,7 @@ const runtime = new BackendRuntime({
   command: backendCommand,
   args: backendArgs,
   env: backendEnv,
+  healthUrl: "http://127.0.0.1:8000/health/ready",
 });
 
 const releaseChannel = pkg.dopaflowReleaseChannel === "stable" ? "stable" : "dev";
@@ -47,6 +51,34 @@ function getBuildInfo() {
 }
 
 let windowRuntime = null;
+
+function hasBackendExited(backendProcess) {
+  return !backendProcess || backendProcess.killed || backendProcess.exitCode !== null || backendProcess.signalCode !== null;
+}
+
+function terminateBackendProcess() {
+  const backendProcess = runtime.child;
+
+  runtime.child = null;
+  runtime.stop();
+
+  if (hasBackendExited(backendProcess)) {
+    return;
+  }
+
+  try {
+    if (process.platform === "win32" && typeof backendProcess.pid === "number") {
+      process.kill(backendProcess.pid);
+      return;
+    }
+
+    backendProcess.kill();
+  } catch (error) {
+    if (error?.code !== "ESRCH") {
+      throw error;
+    }
+  }
+}
 
 function updateTray() {
   if (!tray) {
@@ -89,7 +121,7 @@ const notificationRuntime = new NotificationRuntime({
     pushUnreadCount();
   },
   onAlarmFired: (alarm) => {
-    windowRuntime?.getMainWindow()?.webContents.send("alarm-fired", alarm);
+    windowRuntime?.getMainWindow()?.webContents.send("alarm:due", alarm);
   },
   focusMainWindow: () => {
     windowRuntime?.focusMainWindow();
@@ -121,7 +153,10 @@ function setupIpc() {
   ipcMain.on("open-journal", () => windowRuntime?.openJournalWindow());
   ipcMain.on("open-calendar", () => windowRuntime?.openCalendar());
   ipcMain.on("open-path", (_event, routePath) => {
-    windowRuntime?.openPath(routePath);
+    const safeRoutePath = sanitizeOpenPathPayload(routePath);
+    if (safeRoutePath) {
+      windowRuntime?.openPath(safeRoutePath);
+    }
   });
   ipcMain.on("focus-completed", (_event, data) => {
     const focus_notif = new Notification({
@@ -137,8 +172,13 @@ function setupIpc() {
   });
 }
 
-if (singleInstance) {
+if (gotLock) {
   app.on("second-instance", (_event, argv) => {
+    const mainWindow = windowRuntime?.getMainWindow();
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
     const deepLink = argv.find((value) => value.startsWith("dopaflow://"));
     if (deepLink) {
       windowRuntime?.openDeepLink(deepLink);
@@ -153,6 +193,8 @@ app.whenReady().then(() => {
   new AutoLaunch({ name: "DopaFlow" });
   windowRuntime = new WindowRuntime({
     BrowserWindow,
+    screen,
+    configStore,
     isPackaged,
     assetsDir: path.join(__dirname, "assets"),
     preloadPath: path.join(__dirname, "preload.js"),
@@ -192,5 +234,5 @@ app.on("open-url", (event, url) => {
 app.on("will-quit", () => {
   notificationRuntime.stop();
   globalShortcut.unregisterAll();
-  runtime.stop();
+  terminateBackendProcess();
 });

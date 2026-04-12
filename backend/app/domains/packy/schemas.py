@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -47,6 +49,9 @@ class PackyVoiceResponse(BaseModel):
     tts_text: str = ""
     follow_ups: list[str] = Field(default_factory=list)
     status: str = "ok"
+    mode: Literal["preview", "executed", "clarification", "conversational", "empty"] = (
+        "preview"
+    )
 
 
 class PackyLorebookRequest(BaseModel):
@@ -76,7 +81,7 @@ class PackyWhisper(BaseModel):
     """Proactive tip surfaced in the shell status bar."""
 
     text: str
-    tone: str = "neutral"
+    tone: Literal["neutral", "helpful", "positive"] = "neutral"
     suggested_action: str | None = None
 
 

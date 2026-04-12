@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 /path/to/DopaFlow-*.AppImage" >&2
+if [[ $# -gt 1 ]]; then
+  echo "Usage: $0 [/path/to/DopaFlow-*.AppImage]" >&2
   exit 1
 fi
 
-APPIMAGE_PATH="$(realpath "$1")"
+APPIMAGE_INPUT="${1:-desktop/dist/DopaFlow-*.AppImage}"
+shopt -s nullglob
+APPIMAGE_MATCHES=($APPIMAGE_INPUT)
+shopt -u nullglob
+
+if [[ ${#APPIMAGE_MATCHES[@]} -ne 1 ]]; then
+  echo "Expected exactly one AppImage match for: $APPIMAGE_INPUT" >&2
+  exit 1
+fi
+
+APPIMAGE_PATH="$(realpath "${APPIMAGE_MATCHES[0]}")"
 
 if [[ ! -f "$APPIMAGE_PATH" ]]; then
   echo "AppImage not found: $APPIMAGE_PATH" >&2
@@ -24,6 +34,13 @@ echo "Extracting AppImage into $WORKDIR"
   cd "$WORKDIR"
   "$APPIMAGE_PATH" --appimage-extract >/dev/null
 )
+
+echo
+echo "Checking AppImage embedded signature"
+if ! "$APPIMAGE_PATH" --appimage-signature >/dev/null; then
+  echo "AppImage signature verification failed." >&2
+  exit 1
+fi
 
 ROOT="$WORKDIR/squashfs-root"
 APP_RUN="$ROOT/AppRun"

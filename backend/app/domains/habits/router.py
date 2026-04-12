@@ -41,6 +41,7 @@ from app.domains.habits.schemas import (
     HabitWeeklyOverview,
 )
 from app.middleware.auth_scopes import require_scope
+from app.services.event_stream import publish_invalidation
 
 router = APIRouter(tags=["habits"], redirect_slashes=False)
 
@@ -74,7 +75,8 @@ async def list_habits(db_path: str = Depends(_db_path)) -> list[HabitRead]:
     dependencies=[Depends(require_scope("write:habits"))],
 )
 async def add_habit(
-    payload: HabitCreate, db_path: str = Depends(_db_path)
+    payload: HabitCreate,
+    db_path: str = Depends(_db_path),
 ) -> HabitRead:
     name = payload.name.strip()
     if not name:
@@ -94,6 +96,7 @@ async def add_habit(
         )
         if patched is not None:
             created = patched
+    await publish_invalidation("habits")
     return HabitRead(**created)
 
 
@@ -160,7 +163,9 @@ async def checkin(
     target_date = (
         None if payload is None else payload.checkin_date or payload.checked_at
     )
-    return HabitRead(**service.checkin(db_path, identifier, target_date))
+    result = HabitRead(**service.checkin(db_path, identifier, target_date))
+    await publish_invalidation("habits")
+    return result
 
 
 @router.delete(
@@ -171,9 +176,12 @@ async def checkin(
 async def delete_checkin(
     identifier: str, checkin_date: str, db_path: str = Depends(_db_path)
 ) -> DeleteResponse:
-    return DeleteResponse(
+    result = DeleteResponse(
         deleted=repository.delete_checkin(db_path, identifier, checkin_date)
     )
+    if result.deleted:
+        await publish_invalidation("habits")
+    return result
 
 
 @router.get(
@@ -218,6 +226,7 @@ async def update_habit(
     )
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
+    await publish_invalidation("habits")
     return HabitRead(**habit)
 
 
@@ -232,6 +241,7 @@ async def delete_habit(
     deleted = repository.delete_habit(db_path, identifier)
     if not deleted:
         raise HTTPException(status_code=404, detail="Habit not found")
+    await publish_invalidation("habits")
     return DeleteResponse(deleted=True)
 
 
@@ -248,6 +258,7 @@ async def freeze(
     )
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
+    await publish_invalidation("habits")
     return HabitRead(**habit)
 
 
@@ -260,6 +271,7 @@ async def unfreeze(identifier: str, db_path: str = Depends(_db_path)) -> HabitRe
     habit = repository.update_habit(db_path, identifier, {"freeze_until": None})
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
+    await publish_invalidation("habits")
     return HabitRead(**habit)
 
 

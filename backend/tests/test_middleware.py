@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import os
 from pathlib import Path
 
 import httpx
@@ -12,8 +14,10 @@ from app.middleware.request_log import RequestLogMiddleware
 from app.middleware.security import SecurityHeadersMiddleware
 
 
-def build_app(db_path: str) -> FastAPI:
+def build_app(db_path: str, *, packaged: bool = False) -> FastAPI:
     app = FastAPI()
+    os.environ.pop("DOPAFLOW_DISABLE_RATE_LIMITS", None)
+    os.environ.pop("ZOESTM_DISABLE_RATE_LIMITS", None)
 
     class Settings:
         dev_auth = False
@@ -21,13 +25,27 @@ def build_app(db_path: str) -> FastAPI:
         api_key = "dev-local-key"
 
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware, db_path=db_path, default_limit_per_minute=60, command_limit_per_minute=5)
+    app.add_middleware(
+        RateLimitMiddleware,
+        db_path=db_path,
+        default_limit_per_minute=60,
+        command_limit_per_minute=5,
+        packaged=packaged,
+    )
     app.add_middleware(AuthMiddleware, settings=Settings())
     app.add_middleware(RequestLogMiddleware)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/health/live")
+    async def health_live() -> dict[str, str]:
+        return {"status": "ok"}
+
+    @app.get("/health/ready")
+    async def health_ready() -> dict[str, str | None]:
+        return {"status": "ready", "reason": None}
 
     @app.get("/secure")
     async def secure() -> dict[str, str]:
@@ -118,6 +136,24 @@ async def test_health_is_exempt_from_auth(tmp_path: Path) -> None:
 
 
 @pytest.mark.anyio
+async def test_health_ready_is_exempt_from_auth(tmp_path: Path) -> None:
+    app = build_app(str(tmp_path / "rate-limit.db"))
+
+    response = await request(app, "GET", "/health/ready")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_health_live_is_exempt_from_auth(tmp_path: Path) -> None:
+    app = build_app(str(tmp_path / "rate-limit.db"))
+
+    response = await request(app, "GET", "/health/live")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.anyio
 async def test_single_authorized_request_is_not_rate_limited(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
@@ -168,6 +204,22 @@ async def test_rate_limit_returns_503_when_storage_backend_is_unavailable(tmp_pa
 
 
 @pytest.mark.anyio
+async def test_packaged_build_ignores_disable_rate_limits_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    app = build_app(str(tmp_path / "rate-limit.db"), packaged=True)
+    monkeypatch.setenv("DOPAFLOW_DISABLE_RATE_LIMITS", "1")
+    with caplog.at_level("WARNING", logger="app.middleware.rate_limit"):
+        headers = {"x-api-key": "dev-local-key"}
+        statuses = []
+
+        for _ in range(65):
+            response = await request(app, "GET", "/secure", headers=headers)
+            statuses.append(response.status_code)
+
+        assert 429 in statuses
+        assert any("DOPAFLOW_DISABLE_RATE_LIMITS is set but ignored in packaged build" in r.message for r in caplog.records)
+
+
+@pytest.mark.anyio
 async def test_rate_limit_ignores_spoofed_forwarded_ip_from_untrusted_client(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
     headers = {"x-api-key": "dev-local-key", "x-forwarded-for": "198.51.100.77"}
@@ -187,7 +239,14 @@ async def test_security_headers_are_applied_to_api_responses(tmp_path: Path) -> 
     response = await request(app, "GET", "/secure", headers={"x-api-key": "dev-local-key"})
 
     assert response.status_code == 200
-    assert response.headers["Content-Security-Policy"].startswith("default-src 'none'")
+    assert response.headers["Content-Security-Policy"] == (
+        "default-src 'self'; "
+        "connect-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "object-src 'none'"
+    )
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
     assert response.headers["Permissions-Policy"] == "camera=(), microphone=(self), geolocation=()"

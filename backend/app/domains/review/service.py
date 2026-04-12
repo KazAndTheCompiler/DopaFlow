@@ -10,9 +10,7 @@ import tempfile
 import zipfile
 from datetime import UTC, date, datetime, timedelta
 
-from app.core.config import get_settings
-from app.domains.gamification.repository import GamificationRepository
-from app.domains.gamification.service import GamificationService
+from app.core.gamification_helpers import award as award_gamification
 from app.domains.review.repository import ReviewRepository
 from app.domains.review.schemas import (
     DeckCreate,
@@ -57,18 +55,6 @@ DEFAULT_EASE = 2.5
 _RATING_MAP = {"again": 1, "hard": 2, "good": 3, "easy": 4}
 
 logger = logging.getLogger(__name__)
-
-
-def _award(source: str, source_id: str | None = None) -> None:
-    try:
-        db = get_settings().db_path
-        GamificationService(GamificationRepository(db)).award(source, source_id)
-    except Exception:
-        logger.exception(
-            "Failed to award gamification points for source=%s source_id=%s",
-            source,
-            source_id,
-        )
 
 
 def sm2_next(
@@ -144,8 +130,10 @@ class ReviewService:
         """Edit the front and back text of an existing card."""
         return self.repository.update_card(card_id, front, back)
 
-    def get_due_cards(self, deck_id: str, limit: int = 20) -> list[ReviewCardRead]:
-        return self.repository.get_due_cards(deck_id, limit)
+    def get_due_cards(
+        self, deck_id: str, limit: int = 20, offset: int = 0
+    ) -> list[ReviewCardRead]:
+        return self.repository.get_due_cards(deck_id, limit, offset)
 
     def rate_card(self, payload: ReviewRating) -> ReviewCardRead:
         """Update scheduling fields after a review rating and persist them."""
@@ -167,7 +155,7 @@ class ReviewService:
             last_rating=payload.rating,
             reviews_done=existing.reviews_done + 1,
         )
-        _award("review_card", existing.id)
+        award_gamification("review_card", existing.id, logger=logger)
         return card
 
     def answer_card(
@@ -197,7 +185,7 @@ class ReviewService:
         )
         if deck_id:
             self.repository.bump_session_answer(deck_id, rating_label.lower())
-        _award("review_card", card_id)
+        award_gamification("review_card", card_id, logger=logger)
         return ReviewAnswerResponse(
             session=ReviewAnswerSession(
                 state=updated.id,

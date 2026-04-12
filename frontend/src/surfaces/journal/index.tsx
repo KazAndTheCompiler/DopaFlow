@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import { useAppJournal } from "../../app/AppContexts";
 import TemplatesPicker from "../../components/TemplatesPicker";
-import { exportJournalToday } from "../../api/journal";
 import AnalyticsView from "./AnalyticsView";
 import EditorView from "./EditorView";
 import GraphView from "./GraphView";
@@ -33,10 +32,10 @@ export default function JournalView(): JSX.Element {
     return () => {
       const todayEntry = journal.entries.find((e) => e.date === today);
       if (todayEntry) {
-        exportJournalToday().catch(() => {});
+        journal.exportToday().catch(() => {});
       }
     };
-  }, [journal.entries, today]);
+  }, [journal.entries, journal.exportToday, today]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -50,7 +49,7 @@ export default function JournalView(): JSX.Element {
 
   const handleExportToday = async () => {
     try {
-      const result = await exportJournalToday();
+      const result = await journal.exportToday();
       if (result.entry_count > 0) {
         setExportMessage("Saved to journal-backup");
         setTimeout(() => setExportMessage(""), 3000);

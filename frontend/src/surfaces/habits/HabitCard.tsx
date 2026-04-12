@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Habit } from "../../../../shared/types";
-import { freezeHabit, unfreezeHabit } from "@api/habits";
+import { useAppHabits } from "../../app/AppContexts";
 
 export interface HabitCardProps {
   habit: Habit;
@@ -9,6 +9,7 @@ export interface HabitCardProps {
 }
 
 export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.Element {
+  const habits = useAppHabits();
   const isFrozen = habit.freeze_until ? new Date(habit.freeze_until) > new Date() : false;
   const [isHovered, setIsHovered] = useState(false);
   const [showFreezeMenu, setShowFreezeMenu] = useState(false);
@@ -145,7 +146,7 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
         </span>
         {isFrozen ? (
           <button
-            onClick={() => void unfreezeHabit(habit.id).then(() => onRefresh?.())}
+            onClick={() => void habits.unfreeze(habit.id).then(() => onRefresh?.())}
             style={{ padding: "0.15rem 0.5rem", borderRadius: "999px", background: "var(--surface-2)", fontSize: "var(--text-sm)", color: "var(--accent)", border: "none", cursor: "pointer" }}
           >
             FR frozen · unfreeze
@@ -166,7 +167,7 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
                 {[1, 3, 7, 14].map((days) => (
                   <button
                     key={days}
-                    onClick={() => void freezeHabit(habit.id, days).then(() => { setShowFreezeMenu(false); onRefresh?.(); })}
+                    onClick={() => void habits.freeze(habit.id, days).then(() => { setShowFreezeMenu(false); onRefresh?.(); })}
                     style={{ padding: "0.3rem 0.6rem", borderRadius: "6px", border: "none", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: "var(--text-sm)", textAlign: "left" }}
                   >
                     {days === 1 ? "1 day" : `${days} days`}

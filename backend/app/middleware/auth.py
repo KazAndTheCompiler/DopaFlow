@@ -10,6 +10,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 TRUSTED_HOSTS = {"127.0.0.1", "localhost", "::1"}
+HEALTH_PATHS = {"/health", "/health/live", "/health/ready"}
 
 
 def _env_flag(name: str) -> bool:
@@ -37,7 +38,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         """Apply the local trust boundary before enforcing remote authentication."""
 
-        if request.url.path == "/health":
+        if request.url.path in HEALTH_PATHS:
             return await call_next(request)
 
         host = request.client.host if request.client else ""
