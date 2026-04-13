@@ -1,4 +1,4 @@
-.PHONY: help dev backend test test-backend test-frontend test-e2e lint typecheck build doctor clean
+.PHONY: help dev backend test test-backend test-frontend test-unit test-e2e lint lint-backend lint-frontend format format-check typecheck build doctor clean validate
 
 PYTHON := python3
 PIP := pip3
@@ -9,17 +9,23 @@ DESKTOP_DIR := desktop
 help: ## Show this help
 	@echo "DopaFlow development commands"
 	@echo ""
-	@echo "  make dev           Start frontend dev server (http://localhost:5173)"
-	@echo "  make backend       Start backend dev server (http://localhost:8000)"
-	@echo "  make test          Run all tests (backend + frontend typecheck)"
-	@echo "  make test-backend  Run backend tests with pytest"
-	@echo "  make test-frontend Run frontend typecheck + build"
-	@echo "  make test-e2e      Run frontend E2E smoke tests"
-	@echo "  make lint          Lint all projects"
-	@echo "  make typecheck     TypeScript typecheck frontend"
-	@echo "  make build         Build frontend production bundle"
-	@echo "  make doctor        Check environment readiness"
-	@echo "  make clean         Remove build artifacts and caches"
+	@echo "  make dev              Start frontend dev server (http://localhost:5173)"
+	@echo "  make backend          Start backend dev server (http://localhost:8000)"
+	@echo "  make test             Run all tests (backend + frontend typecheck)"
+	@echo "  make test-backend     Run backend tests with pytest"
+	@echo "  make test-frontend    Run frontend typecheck"
+	@echo "  make test-unit        Run frontend unit tests (Vitest)"
+	@echo "  make test-e2e         Run frontend E2E smoke tests"
+	@echo "  make lint             Lint all projects (backend + frontend)"
+	@echo "  make lint-backend     Lint backend with ruff"
+	@echo "  make lint-frontend    Lint frontend with ESLint"
+	@echo "  make format           Format all code (prettier + ruff)"
+	@echo "  make format:check     Check formatting without modifying files"
+	@echo "  make typecheck        TypeScript typecheck frontend"
+	@echo "  make build            Build frontend production bundle"
+	@echo "  make doctor           Check environment readiness"
+	@echo "  make validate         Run all quality checks (lint + typecheck + backend tests)"
+	@echo "  make clean            Remove build artifacts and caches"
 	@echo ""
 	@echo "  Prerequisites: Node 18+, Python 3.11-3.12"
 
@@ -37,19 +43,39 @@ test-backend: ## Run backend pytest suite
 	@echo "Running backend tests..."
 	cd $(BACKEND_DIR) && $(PYTHON) -m pytest tests/ -v --tb=short
 
-test-frontend: typecheck ## Run frontend typecheck and build
+test-frontend: typecheck ## Run frontend typecheck
 	@echo "Running frontend typecheck..."
 	cd $(FRONTEND_DIR) && npm run typecheck
+
+test-unit: ## Run frontend unit tests with Vitest
+	@echo "Running frontend unit tests..."
+	cd $(FRONTEND_DIR) && npm run test:unit
 
 test-e2e: ## Run frontend E2E smoke tests (requires dev servers running)
 	@echo "Running frontend E2E smoke tests..."
 	cd $(FRONTEND_DIR) && npm run test:e2e:smoke
 
-lint: ## Lint all projects
-	@echo "Linting backend..."
-	cd $(BACKEND_DIR) && $(PIP) install ruff --quiet 2>/dev/null && ruff check .
-	@echo "Linting frontend..."
-	cd $(FRONTEND_DIR) && npx eslint src/ --ext .ts,.tsx --quiet 2>/dev/null || true
+lint: lint-backend lint-frontend ## Lint all projects
+
+lint-backend: ## Lint backend with ruff
+	@echo "Linting backend with ruff..."
+	cd $(BACKEND_DIR) && ruff check .
+
+lint-frontend: ## Lint frontend with ESLint
+	@echo "Linting frontend with ESLint..."
+	cd $(FRONTEND_DIR) && npm run lint
+
+format: ## Format all code (prettier + ruff)
+	@echo "Formatting frontend with prettier..."
+	cd $(FRONTEND_DIR) && npm run format
+	@echo "Formatting backend with ruff..."
+	cd $(BACKEND_DIR) && ruff format .
+
+format:check: ## Check formatting without modifying files
+	@echo "Checking frontend formatting..."
+	cd $(FRONTEND_DIR) && npm run format:check
+	@echo "Checking backend formatting..."
+	cd $(BACKEND_DIR) && ruff format --check .
 
 typecheck: ## TypeScript typecheck
 	@echo "Typechecking frontend..."
@@ -58,6 +84,8 @@ typecheck: ## TypeScript typecheck
 build: ## Build frontend production bundle
 	@echo "Building frontend..."
 	cd $(FRONTEND_DIR) && npm run build
+
+validate: lint-backend lint-frontend typecheck test-backend ## Run all quality checks
 
 doctor: ## Check environment readiness
 	@echo "Checking environment..."

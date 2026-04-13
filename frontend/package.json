@@ -6,9 +6,16 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run typecheck && vite build && node scripts/check-bundle-size.js",
     "preview": "vite preview",
-    "test": "npm run test:e2e",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
     "test:e2e": "./scripts/run-playwright.sh test",
     "test:e2e:smoke": "./scripts/run-playwright.sh test tests/e2e/route_startup.spec.ts tests/e2e/app_smoke.spec.ts --reporter=line",
     "test:e2e:core": "./scripts/run-playwright.sh test tests/e2e/route_startup.spec.ts tests/e2e/app_smoke.spec.ts tests/e2e/tasks_flow.spec.ts tests/e2e/daily_loop.spec.ts tests/e2e/shell_breakpoints.spec.ts --reporter=line",
@@ -27,6 +34,16 @@
   "devDependencies": {
     "@playwright/test": "^1.51.1",
     "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1"
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@vitest/ui": "^2.1.8",
+    "eslint": "^9.20.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.4.2",
+    "vitest": "^2.1.8"
   }
 }

@@ -170,6 +170,20 @@ def db_path(
 
 
 @pytest.fixture()
+def sqlite_db_path(tmp_path: Path) -> Path:
+    """Provide a fresh temporary SQLite database path for migration tests."""
+    path = tmp_path / "migration-test.sqlite"
+    os.environ["DOPAFLOW_DB_PATH"] = str(path)
+    os.environ["DOPAFLOW_DEV_AUTH"] = "true"
+    os.environ["DOPAFLOW_DISABLE_LOCAL_AUDIO"] = "1"
+    os.environ["DOPAFLOW_DISABLE_BACKGROUND_JOBS"] = "1"
+    os.environ["DOPAFLOW_DISABLE_RATE_LIMITS"] = "1"
+    from app.core.config import get_settings
+    get_settings.cache_clear()
+    return path
+
+
+@pytest.fixture()
 def client(db_path: Path, _app) -> LiveServerClient:
     os.environ["DOPAFLOW_DB_PATH"] = str(db_path)
     os.environ["DOPAFLOW_DEV_AUTH"] = "true"

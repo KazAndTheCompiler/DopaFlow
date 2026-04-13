@@ -105,16 +105,22 @@ npm run dist:stable:linux
 ### Repository commands
 
 ```bash
-make help          # show all available commands
-make dev           # start frontend dev server
-make backend       # start backend dev server
-make test          # run all tests
-make test-backend  # run backend tests
-make test-frontend # run frontend typecheck + unit
-make lint          # lint all projects
-make typecheck     # typecheck all projects
-make build         # build frontend
-make doctor         # check environment readiness
+make help              # show all available commands
+make dev               # start frontend dev server
+make backend           # start backend dev server
+make test             # run all tests (backend + frontend typecheck)
+make test-backend      # run backend tests with pytest
+make test-frontend    # run frontend typecheck
+make test-e2e         # run frontend E2E smoke tests
+make lint             # lint all projects (backend + frontend)
+make lint-backend     # lint backend with ruff
+make lint-frontend    # lint frontend with ESLint
+make format           # format code (prettier + ruff)
+make format:check     # check formatting without modifying
+make validate         # run all quality checks (lint + typecheck + backend tests)
+make typecheck        # TypeScript typecheck frontend
+make build            # build frontend production bundle
+make doctor           # check environment readiness
 ```
 
 ### Frontend surfaces
