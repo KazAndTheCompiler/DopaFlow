@@ -14,7 +14,7 @@ ALLOWED_DEPLOY_KEYS = {REPO_ROOT / ".deploy-keys" / "README.md"}
 IGNORED_SCAN_ROOTS = {
     REPO_ROOT / ".git",
     REPO_ROOT / ".venv",
-    REPO_ROOT / "LLM_work_folder",
+    REPO_ROOT / "docs" / "internal" / "ai-workflow" / "LLM_work_folder",
     REPO_ROOT / "build",
     REPO_ROOT / "release",
     REPO_ROOT / "desktop" / "dist",
