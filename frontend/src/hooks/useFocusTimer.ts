@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import type { FocusSession } from "../../../shared/types";
+import { useState, useEffect, useMemo } from 'react';
+import type { FocusSession } from '../../../shared/types';
 
 export interface UseFocusTimerResult {
   activeTimerLabel: string | undefined;
@@ -7,13 +7,13 @@ export interface UseFocusTimerResult {
 
 export function useFocusTimer(
   activeSession: FocusSession | null | undefined,
-  focusNow: number
+  focusNow: number,
 ): UseFocusTimerResult {
   const activeTimerLabel = useMemo(() => {
     const session = activeSession;
     if (!session) {
- return undefined;
-}
+      return undefined;
+    }
     const totalSeconds = Math.max(0, Math.round((session.duration_minutes ?? 0) * 60));
     if (!session.started_at) {
       return `${session.duration_minutes}m ${session.status}`;
@@ -25,9 +25,11 @@ export function useFocusTimer(
     const pausedSeconds = Math.floor((session.paused_duration_ms ?? 0) / 1000);
     const elapsedSeconds = Math.max(0, Math.floor((focusNow - startedAt) / 1000) - pausedSeconds);
     const remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
-    const minutes = Math.floor(remainingSeconds / 60).toString().padStart(2, "0");
-    const seconds = (remainingSeconds % 60).toString().padStart(2, "0");
-    return session.status === "paused"
+    const minutes = Math.floor(remainingSeconds / 60)
+      .toString()
+      .padStart(2, '0');
+    const seconds = (remainingSeconds % 60).toString().padStart(2, '0');
+    return session.status === 'paused'
       ? `${minutes}:${seconds} paused`
       : `${minutes}:${seconds} left`;
   }, [activeSession, focusNow]);
@@ -42,7 +44,7 @@ export function useFocusTimerController(activeSession: FocusSession | null | und
   const [focusNow, setFocusNow] = useState<number>(() => Date.now());
 
   useEffect(() => {
-    if (!activeSession || activeSession.status !== "running") {
+    if (!activeSession || activeSession.status !== 'running') {
       return;
     }
     const intervalId = window.setInterval(() => setFocusNow(Date.now()), 1000);

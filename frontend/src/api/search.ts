@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 
 export interface SearchResult {
   id: string;
@@ -20,17 +20,17 @@ export function search(
     types?: string[];
     from?: string;
     to?: string;
-  }
+  },
 ): Promise<SearchResponse> {
   const params = new URLSearchParams({ q: query });
   if (options?.types?.length) {
-    params.set("types", options.types.join(","));
+    params.set('types', options.types.join(','));
   }
   if (options?.from) {
-    params.set("from", options.from);
+    params.set('from', options.from);
   }
   if (options?.to) {
-    params.set("to", options.to);
+    params.set('to', options.to);
   }
   return apiClient<SearchResponse>(`/search?${params.toString()}`);
 }

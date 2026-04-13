@@ -1,4 +1,4 @@
-import { apiClient } from "./client";
+import { apiClient } from './client';
 
 export interface GoalMilestone {
   id: string;
@@ -11,7 +11,7 @@ export interface Goal {
   id: string;
   title: string;
   description?: string;
-  horizon: "week" | "month" | "quarter" | "year";
+  horizon: 'week' | 'month' | 'quarter' | 'year';
   milestones: GoalMilestone[];
   created_at: string;
   updated_at?: string;
@@ -21,26 +21,29 @@ export interface Goal {
 export type CreateGoalPayload = {
   title: string;
   description?: string | undefined;
-  horizon: Goal["horizon"];
+  horizon: Goal['horizon'];
   milestone_labels?: string[];
 };
 
 export function listGoals(): Promise<Goal[]> {
-  return apiClient<Goal[]>("/goals/");
+  return apiClient<Goal[]>('/goals/');
 }
 
 export function createGoal(payload: CreateGoalPayload): Promise<Goal> {
-  return apiClient<Goal>("/goals/", { method: "POST", body: JSON.stringify(payload) });
+  return apiClient<Goal>('/goals/', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export function deleteGoal(goalId: string): Promise<{ ok: boolean }> {
-  return apiClient<{ ok: boolean }>(`/goals/${goalId}`, { method: "DELETE" });
+  return apiClient<{ ok: boolean }>(`/goals/${goalId}`, { method: 'DELETE' });
 }
 
 export function completeMilestone(goalId: string, milestoneId: string): Promise<Goal> {
-  return apiClient<Goal>(`/goals/${goalId}/milestones/${milestoneId}/complete`, { method: "POST" });
+  return apiClient<Goal>(`/goals/${goalId}/milestones/${milestoneId}/complete`, { method: 'POST' });
 }
 
 export function addMilestone(goalId: string, label: string): Promise<Goal> {
-  return apiClient<Goal>(`/goals/${goalId}/milestones`, { method: "POST", body: JSON.stringify({ label }) });
+  return apiClient<Goal>(`/goals/${goalId}/milestones`, {
+    method: 'POST',
+    body: JSON.stringify({ label }),
+  });
 }

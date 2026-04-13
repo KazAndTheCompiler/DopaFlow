@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 /**
  * JARVIS-style concentric circle wave animation.
@@ -13,7 +13,7 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!visible || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    if (!visible || typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       setError(null);
       return;
     }
@@ -24,46 +24,49 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
         stream.getTracks().forEach((track) => track.stop());
       })
       .catch((err: unknown) => {
-        const name = err && typeof err === "object" && "name" in err ? String((err as { name?: unknown }).name ?? "") : "";
-        if (name === "NotAllowedError") {
-          setError("Microphone access denied — check browser permissions.");
+        const name =
+          err && typeof err === 'object' && 'name' in err
+            ? String((err as { name?: unknown }).name ?? '')
+            : '';
+        if (name === 'NotAllowedError') {
+          setError('Microphone access denied — check browser permissions.');
         }
       });
   }, [visible]);
 
   if (!visible) {
- return null;
-}
+    return null;
+  }
 
   const rings = [0, 1, 2, 3, 4];
 
   return (
     <div
       style={{
-        position: "fixed",
+        position: 'fixed',
         inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 9999,
-        pointerEvents: "none",
-        animation: "fadeIn 200ms ease",
+        pointerEvents: 'none',
+        animation: 'fadeIn 200ms ease',
       }}
     >
-      <div style={{ position: "relative", width: 200, height: 200 }}>
+      <div style={{ position: 'relative', width: 200, height: 200 }}>
         {error ? (
           <div
             style={{
-              display: "grid",
-              placeItems: "center",
-              width: "100%",
-              height: "100%",
-              padding: "1rem",
-              borderRadius: "24px",
-              background: "color-mix(in srgb, var(--surface) 92%, transparent)",
-              border: "1px solid var(--border-subtle)",
-              color: "var(--state-overdue)",
-              textAlign: "center",
+              display: 'grid',
+              placeItems: 'center',
+              width: '100%',
+              height: '100%',
+              padding: '1rem',
+              borderRadius: '24px',
+              background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
+              border: '1px solid var(--border-subtle)',
+              color: 'var(--state-overdue)',
+              textAlign: 'center',
               lineHeight: 1.5,
             }}
           >
@@ -74,10 +77,10 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
             <div
               key={i}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 inset: 0,
-                borderRadius: "50%",
-                border: "1.5px solid var(--accent-primary)",
+                borderRadius: '50%',
+                border: '1.5px solid var(--accent-primary)',
                 opacity: 0,
                 animation: `jarvisRing 2.4s ease-out ${i * 0.35}s infinite`,
               }}
@@ -88,17 +91,17 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
         {!error && (
           <div
             style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
               width: 12,
               height: 12,
               marginLeft: -6,
               marginTop: -6,
-              borderRadius: "50%",
-              background: "var(--accent-primary)",
-              boxShadow: "0 0 20px 6px var(--accent-primary)",
-              animation: "jarvisPulse 1.2s ease-in-out infinite",
+              borderRadius: '50%',
+              background: 'var(--accent-primary)',
+              boxShadow: '0 0 20px 6px var(--accent-primary)',
+              animation: 'jarvisPulse 1.2s ease-in-out infinite',
             }}
           />
         )}

@@ -4,7 +4,7 @@
  * Falls back silently if speechSynthesis is unavailable (e.g. some headless browsers).
  */
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from 'react';
 
 export interface UseTTSResult {
   speak: (text: string) => void;
@@ -13,20 +13,20 @@ export interface UseTTSResult {
 }
 
 export function useTTS(): UseTTSResult {
-  const supported = typeof window !== "undefined" && "speechSynthesis" in window;
+  const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
   const [speaking, setSpeaking] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   const speak = useCallback(
     (text: string): void => {
       if (!supported || !text.trim()) {
- return;
-}
+        return;
+      }
       // Cancel any in-progress speech before queuing a new utterance
       window.speechSynthesis.cancel();
       if (timerRef.current) {
- clearInterval(timerRef.current);
-}
+        clearInterval(timerRef.current);
+      }
 
       const utterance = new SpeechSynthesisUtterance(text.trim());
       utterance.rate = 0.95;
@@ -37,14 +37,14 @@ export function useTTS(): UseTTSResult {
       utterance.onend = () => {
         setSpeaking(false);
         if (timerRef.current) {
- clearInterval(timerRef.current);
-}
+          clearInterval(timerRef.current);
+        }
       };
       utterance.onerror = () => {
         setSpeaking(false);
         if (timerRef.current) {
- clearInterval(timerRef.current);
-}
+          clearInterval(timerRef.current);
+        }
       };
 
       setSpeaking(true);
@@ -55,12 +55,12 @@ export function useTTS(): UseTTSResult {
         if (!window.speechSynthesis.speaking) {
           setSpeaking(false);
           if (timerRef.current) {
- clearInterval(timerRef.current);
-}
+            clearInterval(timerRef.current);
+          }
         }
       }, 300);
     },
-    [supported]
+    [supported],
   );
 
   return { speak, speaking, supported };

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 declare const window: Window & {
   dopaflow?: {
@@ -14,9 +14,9 @@ interface UpdateInfo {
 
 interface BuildInfo {
   version: string;
-  releaseChannel: "stable" | "dev";
+  releaseChannel: 'stable' | 'dev';
   autoUpdateEnabled: boolean;
-  updateSource: "github-releases" | "manual";
+  updateSource: 'github-releases' | 'manual';
 }
 
 interface UpdateState {
@@ -27,7 +27,12 @@ interface UpdateState {
 }
 
 export function useUpdateBanner(): UpdateState {
-  const [state, setState] = useState<UpdateState>({ available: false, downloaded: false, version: undefined, buildInfo: undefined });
+  const [state, setState] = useState<UpdateState>({
+    available: false,
+    downloaded: false,
+    version: undefined,
+    buildInfo: undefined,
+  });
 
   useEffect(() => {
     if (!window.dopaflow) {
@@ -36,14 +41,14 @@ export function useUpdateBanner(): UpdateState {
 
     let active = true;
 
-    void window.dopaflow.invoke?.("df:get-build-info").then((info) => {
+    void window.dopaflow.invoke?.('df:get-build-info').then((info) => {
       if (!active || !info) {
         return;
       }
       setState((prev) => ({ ...prev, buildInfo: info as BuildInfo }));
     });
 
-    const unsubAvailable = window.dopaflow.on("df:update-available", (info: unknown) => {
+    const unsubAvailable = window.dopaflow.on('df:update-available', (info: unknown) => {
       const updateInfo = info as UpdateInfo | undefined;
       setState((prev) => ({
         ...prev,
@@ -53,11 +58,11 @@ export function useUpdateBanner(): UpdateState {
       }));
     });
 
-    const unsubDownloaded = window.dopaflow.on("df:update-downloaded", () => {
+    const unsubDownloaded = window.dopaflow.on('df:update-downloaded', () => {
       setState((prev) => ({ ...prev, downloaded: true }));
     });
 
-    const unsubBuildInfo = window.dopaflow.on("df:build-info", (info: unknown) => {
+    const unsubBuildInfo = window.dopaflow.on('df:build-info', (info: unknown) => {
       setState((prev) => ({ ...prev, buildInfo: info as BuildInfo }));
     });
 
@@ -73,5 +78,5 @@ export function useUpdateBanner(): UpdateState {
 }
 
 export function installUpdate(): void {
-  window.dopaflow?.send("df:install-update");
+  window.dopaflow?.send('df:install-update');
 }

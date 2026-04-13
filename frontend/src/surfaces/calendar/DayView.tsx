@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
-import type { CalendarEvent } from "../../../../shared/types";
-import EmptyState from "../../design-system/primitives/EmptyState";
-import { CATEGORY_COLORS } from "./WeekView";
+import { useRef, useState } from 'react';
+import type { CalendarEvent } from '../../../../shared/types';
+import EmptyState from '../../design-system/primitives/EmptyState';
+import { CATEGORY_COLORS } from './WeekView';
 
 interface DayViewProps {
   events: CalendarEvent[];
@@ -16,25 +16,25 @@ interface DayViewProps {
 
 function sameDay(left: Date, right: Date): boolean {
   return (
-    left.getFullYear() === right.getFullYear()
-    && left.getMonth() === right.getMonth()
-    && left.getDate() === right.getDate()
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
   );
 }
 
 function eventColor(event: CalendarEvent): string {
-  return CATEGORY_COLORS[event.category ?? ""] ?? "var(--accent)";
+  return CATEGORY_COLORS[event.category ?? ''] ?? 'var(--accent)';
 }
 
 function eventSourceKey(event: CalendarEvent): string {
-  if (event.source_type?.startsWith("peer:")) {
-    return event.source_type.slice("peer:".length);
+  if (event.source_type?.startsWith('peer:')) {
+    return event.source_type.slice('peer:'.length);
   }
-  return "local";
+  return 'local';
 }
 
 function isLocalEditable(event: CalendarEvent): boolean {
-  return !event.provider_readonly && !event.source_type?.startsWith("peer:");
+  return !event.provider_readonly && !event.source_type?.startsWith('peer:');
 }
 
 const HOUR_ROW_REM = 2.5;
@@ -62,7 +62,7 @@ const MIN_HEIGHT_REM = HOUR_ROW_REM / 4; // 15 min minimum
 
 type DragRef = {
   id: string;
-  type: "move" | "resize";
+  type: 'move' | 'resize';
   startMouseY: number;
   startTopRem: number;
   startHeightRem: number;
@@ -97,21 +97,21 @@ export function DayView({
 
   function getPixelsPerRem(): number {
     if (!gridRef.current) {
- return 16;
-}
+      return 16;
+    }
     return gridRef.current.getBoundingClientRect().height / (TOTAL_HOURS * HOUR_ROW_REM);
   }
 
   const onMoveMouseDown = (e: React.MouseEvent, event: CalendarEvent): void => {
     if (!isLocalEditable(event) || !onRescheduleEvent) {
- return;
-}
+      return;
+    }
     e.stopPropagation();
     const tRem = topOffsetRem(event);
     const hRem = heightRem(event);
     dragRef.current = {
       id: event.id,
-      type: "move",
+      type: 'move',
       startMouseY: e.clientY,
       startTopRem: tRem,
       startHeightRem: hRem,
@@ -123,15 +123,15 @@ export function DayView({
 
   const onResizeMouseDown = (e: React.MouseEvent, event: CalendarEvent): void => {
     if (!isLocalEditable(event) || !onResizeEvent) {
- return;
-}
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     const tRem = topOffsetRem(event);
     const hRem = heightRem(event);
     dragRef.current = {
       id: event.id,
-      type: "resize",
+      type: 'resize',
       startMouseY: e.clientY,
       startTopRem: tRem,
       startHeightRem: hRem,
@@ -142,16 +142,16 @@ export function DayView({
 
   const onGridMouseMove = (e: React.MouseEvent): void => {
     if (!dragRef.current) {
- return;
-}
+      return;
+    }
     const { id, type, startMouseY, startTopRem, startHeightRem, pixelsPerRem } = dragRef.current;
     const deltaRem = (e.clientY - startMouseY) / pixelsPerRem;
     // Require at least 2px movement before starting visual drag
     if (Math.abs(e.clientY - startMouseY) < 2 && !dragVisual) {
- return;
-}
+      return;
+    }
     const maxTopRem = TOTAL_HOURS * HOUR_ROW_REM - MIN_HEIGHT_REM;
-    if (type === "move") {
+    if (type === 'move') {
       const newTop = Math.max(0, Math.min(startTopRem + deltaRem, maxTopRem));
       setDragVisual({ id, topRem: newTop, heightRem: startHeightRem });
     } else {
@@ -173,10 +173,10 @@ export function DayView({
 
     const event = timedEvents.find((e) => e.id === id);
     if (!event) {
- return;
-}
+      return;
+    }
 
-    if (type === "move" && onRescheduleEvent) {
+    if (type === 'move' && onRescheduleEvent) {
       const { hours: h, minutes: m } = remToSnappedTime(visual.topRem);
       const newStart = new Date(event.start_at);
       newStart.setHours(h, m, 0, 0);
@@ -186,7 +186,7 @@ export function DayView({
       } finally {
         setPendingId(null);
       }
-    } else if (type === "resize" && onResizeEvent) {
+    } else if (type === 'resize' && onResizeEvent) {
       const endRem = visual.topRem + visual.heightRem;
       const startMinutes = (visual.topRem / HOUR_ROW_REM) * 60;
       const { hours: eh, minutes: em } = remToSnappedTime(endRem);
@@ -209,44 +209,89 @@ export function DayView({
   return (
     <section
       style={{
-        padding: "1rem",
-        background: "color-mix(in srgb, var(--surface) 92%, transparent)",
-        backdropFilter: "var(--surface-glass-blur, blur(14px))",
-        borderRadius: "18px",
-        border: "1px solid var(--border-subtle)",
-        maxHeight: "600px",
-        overflowY: "auto",
-        display: "grid",
-        gap: "0.85rem",
-        position: "relative",
+        padding: '1rem',
+        background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
+        backdropFilter: 'var(--surface-glass-blur, blur(14px))',
+        borderRadius: '18px',
+        border: '1px solid var(--border-subtle)',
+        maxHeight: '600px',
+        overflowY: 'auto',
+        display: 'grid',
+        gap: '0.85rem',
+        position: 'relative',
       }}
     >
-      <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />
-      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-inner-light)", pointerEvents: "none", borderRadius: "inherit" }} />
-      <div aria-hidden="true" style={{ position: "absolute", top: 0, left: 0, right: 0, height: "35%", background: "var(--surface-inner-highlight)", pointerEvents: "none", borderRadius: "inherit" }} />
-      <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "var(--surface-specular)", pointerEvents: "none", borderRadius: "inherit" }} />
-      <div style={{ display: "grid", gap: "0.45rem" }}>
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '8%',
+          right: '8%',
+          height: '1px',
+          background:
+            'linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)',
+          pointerEvents: 'none',
+          borderRadius: '1px',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'var(--surface-inner-light)',
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '35%',
+          background: 'var(--surface-inner-highlight)',
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'var(--surface-specular)',
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+        }}
+      />
+      <div style={{ display: 'grid', gap: '0.45rem' }}>
         <strong>All day</strong>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem" }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
           {allDayEvents.length === 0 ? (
-            <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>No all-day events.</span>
+            <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+              No all-day events.
+            </span>
           ) : (
             allDayEvents.map((event) => {
               const sourceKey = eventSourceKey(event);
               return (
                 <span
                   key={event.id}
-                  title={sourceLabels[sourceKey] ?? "Local"}
+                  title={sourceLabels[sourceKey] ?? 'Local'}
                   style={{
-                    padding: "0.35rem 0.6rem",
-                    borderRadius: "999px",
+                    padding: '0.35rem 0.6rem',
+                    borderRadius: '999px',
                     background: sourceColors[sourceKey] ?? eventColor(event),
-                    color: "var(--text-inverted)",
-                    fontSize: "var(--text-sm)",
-                    maxWidth: "100%",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
+                    color: 'var(--text-inverted)',
+                    fontSize: 'var(--text-sm)',
+                    maxWidth: '100%',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                     opacity: event.provider_readonly ? 0.88 : 1,
                   }}
                 >
@@ -266,23 +311,23 @@ export function DayView({
         />
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "64px 1fr", gap: "0.75rem" }}>
-        <div style={{ display: "grid", gridTemplateRows: `repeat(24, ${HOUR_ROW_REM}rem)` }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr', gap: '0.75rem' }}>
+        <div style={{ display: 'grid', gridTemplateRows: `repeat(24, ${HOUR_ROW_REM}rem)` }}>
           {hours.map((hour) => (
             <div
               key={hour}
               style={{
                 height: `${HOUR_ROW_REM}rem`,
-                display: "flex",
-                alignItems: "start",
-                justifyContent: "flex-end",
-                paddingRight: "0.4rem",
-                fontSize: "0.7rem",
-                color: hour === currentHour ? "var(--accent)" : "var(--text-secondary)",
+                display: 'flex',
+                alignItems: 'start',
+                justifyContent: 'flex-end',
+                paddingRight: '0.4rem',
+                fontSize: '0.7rem',
+                color: hour === currentHour ? 'var(--accent)' : 'var(--text-secondary)',
                 fontWeight: hour === currentHour ? 700 : 400,
               }}
             >
-              {String(hour).padStart(2, "0")}:00
+              {String(hour).padStart(2, '0')}:00
             </div>
           ))}
         </div>
@@ -291,16 +336,16 @@ export function DayView({
           ref={gridRef}
           onMouseMove={onGridMouseMove}
           onMouseUp={() => {
- void onGridMouseUp();
-}}
+            void onGridMouseUp();
+          }}
           onMouseLeave={() => {
- void onGridMouseUp();
-}}
+            void onGridMouseUp();
+          }}
           style={{
-            position: "relative",
-            display: "grid",
+            position: 'relative',
+            display: 'grid',
             gridTemplateRows: `repeat(24, ${HOUR_ROW_REM}rem)`,
-            userSelect: "none",
+            userSelect: 'none',
           }}
         >
           {hours.map((hour) => (
@@ -308,14 +353,18 @@ export function DayView({
               key={hour}
               onClick={() => onSlotClick?.(hour)}
               style={{
-                borderTop: "none",
-                borderBottom: hour === currentHour
-                  ? "2px solid var(--accent)"
-                  : "1px solid var(--border-subtle)",
-                background: hour === currentHour ? "color-mix(in srgb, var(--accent) 5%, transparent)" : "transparent",
-                cursor: onSlotClick ? "pointer" : "default",
+                borderTop: 'none',
+                borderBottom:
+                  hour === currentHour
+                    ? '2px solid var(--accent)'
+                    : '1px solid var(--border-subtle)',
+                background:
+                  hour === currentHour
+                    ? 'color-mix(in srgb, var(--accent) 5%, transparent)'
+                    : 'transparent',
+                cursor: onSlotClick ? 'pointer' : 'default',
               }}
-              title={onSlotClick ? `Block ${String(hour).padStart(2, "0")}:00` : undefined}
+              title={onSlotClick ? `Block ${String(hour).padStart(2, '0')}:00` : undefined}
             />
           ))}
 
@@ -325,7 +374,7 @@ export function DayView({
             const start = new Date(event.start_at);
             const sourceKey = eventSourceKey(event);
             const sourceColor = sourceColors[sourceKey] ?? eventColor(event);
-            const sourceLabel = sourceLabels[sourceKey] ?? "Local";
+            const sourceLabel = sourceLabels[sourceKey] ?? 'Local';
             const canInteract = isLocalEditable(event);
             const canDrag = canInteract && !!onRescheduleEvent;
             const canResize = canInteract && !!onResizeEvent;
@@ -336,70 +385,122 @@ export function DayView({
             return (
               <div
                 key={event.id}
-                title={`${event.title} · ${sourceLabel}${event.provider_readonly ? " · read-only" : canDrag ? " · drag to reschedule" : ""}`}
+                title={`${event.title} · ${sourceLabel}${event.provider_readonly ? ' · read-only' : canDrag ? ' · drag to reschedule' : ''}`}
                 onMouseDown={canDrag ? (e) => onMoveMouseDown(e, event) : undefined}
                 onClick={isDragging ? undefined : () => onEventClick?.(event)}
                 style={{
-                  position: "absolute",
-                  left: "0.45rem",
-                  right: "0.45rem",
+                  position: 'absolute',
+                  left: '0.45rem',
+                  right: '0.45rem',
                   top: `${topRem}rem`,
-                  minHeight: "1rem",
+                  minHeight: '1rem',
                   height: `${hRem}rem`,
-                  padding: "0.45rem 0.6rem",
-                  borderRadius: "12px",
+                  padding: '0.45rem 0.6rem',
+                  borderRadius: '12px',
                   background: `linear-gradient(165deg, color-mix(in srgb, ${sourceColor} 24%, var(--surface)), color-mix(in srgb, ${sourceColor} 14%, var(--surface)))`,
                   border: isDragging
                     ? `2px solid ${sourceColor}`
                     : `1px solid color-mix(in srgb, ${sourceColor} 40%, var(--border-subtle))`,
                   opacity: isPending ? 0.6 : event.provider_readonly ? 0.84 : 1,
-                  color: "var(--text-primary)",
-                  overflow: "hidden",
-                  cursor: isDragging ? "grabbing" : canDrag ? "grab" : "pointer",
-                  pointerEvents: "auto",
-                  display: "grid",
-                  alignContent: "start",
-                  gap: "0.2rem",
-                  boxShadow: isDragging ? "0 6px 20px rgba(0,0,0,0.22)" : "var(--shadow-soft)",
+                  color: 'var(--text-primary)',
+                  overflow: 'hidden',
+                  cursor: isDragging ? 'grabbing' : canDrag ? 'grab' : 'pointer',
+                  pointerEvents: 'auto',
+                  display: 'grid',
+                  alignContent: 'start',
+                  gap: '0.2rem',
+                  boxShadow: isDragging ? '0 6px 20px rgba(0,0,0,0.22)' : 'var(--shadow-soft)',
                   zIndex: isDragging ? 20 : 1,
-                  transition: isDragging ? "none" : "top 80ms ease, height 80ms ease",
+                  transition: isDragging ? 'none' : 'top 80ms ease, height 80ms ease',
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", minWidth: 0 }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "999px", background: sourceColor, flexShrink: 0 }} />
-                  <span style={{ fontSize: "0.65rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.05em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+                  <span
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '999px',
+                      background: sourceColor,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      color: 'var(--text-secondary)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                    }}
+                  >
                     {sourceLabel}
                   </span>
                   {event.provider_readonly && (
-                    <span style={{ fontSize: "0.6rem", color: "var(--text-secondary)", opacity: 0.7, flexShrink: 0 }}>🔒</span>
+                    <span
+                      style={{
+                        fontSize: '0.6rem',
+                        color: 'var(--text-secondary)',
+                        opacity: 0.7,
+                        flexShrink: 0,
+                      }}
+                    >
+                      🔒
+                    </span>
                   )}
                   {isPending && (
-                    <span style={{ fontSize: "0.6rem", color: "var(--text-secondary)", flexShrink: 0 }}>…</span>
+                    <span
+                      style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', flexShrink: 0 }}
+                    >
+                      …
+                    </span>
                   )}
                 </div>
-                <span style={{ fontSize: "var(--text-sm)", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span
+                  style={{
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 700,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {event.title}
                 </span>
-                <span style={{ fontSize: "0.68rem", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {String(start.getHours()).padStart(2, "0")}:{String(start.getMinutes()).padStart(2, "0")}
-                  {" - "}
-                  {new Date(event.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  {event.recurrence ? " · repeats" : ""}
+                <span
+                  style={{
+                    fontSize: '0.68rem',
+                    color: 'var(--text-secondary)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {String(start.getHours()).padStart(2, '0')}:
+                  {String(start.getMinutes()).padStart(2, '0')}
+                  {' - '}
+                  {new Date(event.end_at).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {event.recurrence ? ' · repeats' : ''}
                 </span>
 
                 {canResize && (
                   <div
                     onMouseDown={(e) => onResizeMouseDown(e, event)}
                     style={{
-                      position: "absolute",
-                      bottom: "2px",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      width: "28px",
-                      height: "5px",
-                      borderRadius: "3px",
+                      position: 'absolute',
+                      bottom: '2px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '28px',
+                      height: '5px',
+                      borderRadius: '3px',
                       background: `color-mix(in srgb, ${sourceColor} 50%, transparent)`,
-                      cursor: "ns-resize",
+                      cursor: 'ns-resize',
                       flexShrink: 0,
                     }}
                     title="Drag to resize"

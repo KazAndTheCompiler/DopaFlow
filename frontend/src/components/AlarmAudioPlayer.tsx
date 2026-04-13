@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { resolveUrl } from "@api/player";
-import { Skeleton } from "@ds/primitives/Skeleton";
-import { showToast } from "@ds/primitives/Toast";
+import { resolveUrl } from '@api/player';
+import { Skeleton } from '@ds/primitives/Skeleton';
+import { showToast } from '@ds/primitives/Toast';
 
 interface AlarmAudioPlayerProps {
   youtubeUrl: string;
   autoPlay?: boolean;
 }
 
-export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPlayerProps): JSX.Element | null {
+export function AlarmAudioPlayer({
+  youtubeUrl,
+  autoPlay = false,
+}: AlarmAudioPlayerProps): JSX.Element | null {
   const audioRef = useRef<HTMLAudioElement>(null);
   const queueExhaustedRef = useRef(false);
   const [embedUrl, setEmbedUrl] = useState<string | null>(null);
@@ -23,8 +26,8 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
 
   useEffect(() => {
     if (!youtubeUrl) {
- return;
-}
+      return;
+    }
 
     let cancelled = false;
 
@@ -36,9 +39,9 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
 
       try {
         const parsed = new URL(youtubeUrl);
-        const videoId = parsed.hostname.includes("youtu.be")
+        const videoId = parsed.hostname.includes('youtu.be')
           ? parsed.pathname.slice(1)
-          : (parsed.searchParams.get("v") ?? "");
+          : (parsed.searchParams.get('v') ?? '');
         if (!videoId) {
           if (!cancelled) {
             setEmbedUrl(null);
@@ -47,11 +50,15 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
           return;
         }
 
-        const autoplayParam = autoPlay ? "1" : "0";
+        const autoplayParam = autoPlay ? '1' : '0';
         const nextEmbedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=${autoplayParam}&rel=0`;
-        const resolved = await resolveUrl(youtubeUrl).catch(() => ({ stream_url: null, error: "resolve_failed" }));
+        const resolved = await resolveUrl(youtubeUrl).catch(() => ({
+          stream_url: null,
+          error: 'resolve_failed',
+        }));
         const nextQueue = [resolved.stream_url, youtubeUrl].filter(
-          (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index
+          (value, index, values): value is string =>
+            Boolean(value) && values.indexOf(value) === index,
         );
 
         if (!cancelled) {
@@ -81,15 +88,19 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
     const audio = audioRef.current;
     const activeSource = sourceQueue[sourceIndex];
     if (!audio) {
- return;
-}
+      return;
+    }
     if (!activeSource) {
       audio.pause();
-      audio.removeAttribute("src");
+      audio.removeAttribute('src');
       audio.load();
-      if (sourceQueue.length > 0 && sourceIndex >= sourceQueue.length && !queueExhaustedRef.current) {
+      if (
+        sourceQueue.length > 0 &&
+        sourceIndex >= sourceQueue.length &&
+        !queueExhaustedRef.current
+      ) {
         queueExhaustedRef.current = true;
-        showToast("Audio source unavailable — queue exhausted.", "warn");
+        showToast('Audio source unavailable — queue exhausted.', 'warn');
       }
       return;
     }
@@ -104,19 +115,19 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
   }, [autoPlay, sourceIndex, sourceQueue]);
 
   if (!youtubeUrl) {
- return null;
-}
+    return null;
+  }
   if (loading) {
     return (
       <div
         style={{
-          marginTop: "0.5rem",
-          padding: "0.65rem 0.75rem",
-          borderRadius: "12px",
-          background: "var(--surface)",
-          border: "1px solid var(--border-subtle)",
-          display: "grid",
-          gap: "0.4rem",
+          marginTop: '0.5rem',
+          padding: '0.65rem 0.75rem',
+          borderRadius: '12px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border-subtle)',
+          display: 'grid',
+          gap: '0.4rem',
         }}
       >
         <Skeleton width="132px" height="12px" />
@@ -126,15 +137,15 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
   }
   if (!embedUrl) {
     return (
-      <div style={{ marginTop: "0.5rem", display: "grid", gap: "0.35rem" }}>
-        <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>
+      <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.35rem' }}>
+        <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
           Could not embed this YouTube link directly.
         </div>
         <a
           href={youtubeUrl}
           target="_blank"
           rel="noreferrer"
-          style={{ color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 600 }}
+          style={{ color: 'var(--accent)', fontSize: 'var(--text-sm)', fontWeight: 600 }}
         >
           Open YouTube link
         </a>
@@ -142,26 +153,31 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
     );
   }
   return (
-    <div style={{ marginTop: "0.5rem", display: "grid", gap: "0.35rem" }}>
-      <audio
-        ref={audioRef}
-        onError={skipToNext}
-        style={{ display: "none" }}
-      />
-      <div style={{ position: "relative", width: "100%", paddingTop: "56.25%", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
+    <div style={{ marginTop: '0.5rem', display: 'grid', gap: '0.35rem' }}>
+      <audio ref={audioRef} onError={skipToNext} style={{ display: 'none' }} />
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          paddingTop: '56.25%',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          border: '1px solid var(--border-subtle)',
+        }}
+      >
         <iframe
           src={embedUrl}
           title="Alarm audio"
           allow="autoplay; encrypted-media"
           allowFullScreen
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0 }}
         />
       </div>
       <a
         href={youtubeUrl}
         target="_blank"
         rel="noreferrer"
-        style={{ color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 600 }}
+        style={{ color: 'var(--accent)', fontSize: 'var(--text-sm)', fontWeight: 600 }}
       >
         Open in YouTube
       </a>

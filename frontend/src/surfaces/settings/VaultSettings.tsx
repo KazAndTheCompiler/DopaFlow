@@ -1,27 +1,22 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties } from 'react';
 
-import {
-  pullJournal,
-  pullTasks,
-  pushJournal,
-  pushTasks,
-} from "@api/index";
+import { pullJournal, pullTasks, pushJournal, pushTasks } from '@api/index';
 
-import { VaultConflictList } from "./VaultConflictList";
-import { VaultDailyTaskSection } from "./VaultDailyTaskSection";
-import { cardStyle, labelStyle, StatusDot, SyncRow } from "./VaultSettingsShared";
-import { VaultTaskImportPanel } from "./VaultTaskImportPanel";
-import { useVaultSettings } from "./useVaultSettings";
+import { VaultConflictList } from './VaultConflictList';
+import { VaultDailyTaskSection } from './VaultDailyTaskSection';
+import { cardStyle, labelStyle, StatusDot, SyncRow } from './VaultSettingsShared';
+import { VaultTaskImportPanel } from './VaultTaskImportPanel';
+import { useVaultSettings } from './useVaultSettings';
 
 const pathInputStyle: CSSProperties = {
-  width: "100%",
-  padding: "0.45rem 0.7rem",
-  borderRadius: "8px",
-  border: "1px solid var(--border)",
-  background: "var(--surface)",
-  color: "var(--text-primary)",
-  fontSize: "var(--text-sm)",
-  fontFamily: "monospace",
+  width: '100%',
+  padding: '0.45rem 0.7rem',
+  borderRadius: '8px',
+  border: '1px solid var(--border)',
+  background: 'var(--surface)',
+  color: 'var(--text-primary)',
+  fontSize: 'var(--text-sm)',
+  fontFamily: 'monospace',
 };
 
 function VaultCoverageSummary({
@@ -32,15 +27,19 @@ function VaultCoverageSummary({
   tasksFolder?: string | null | undefined;
 }): JSX.Element {
   return (
-    <div style={{ ...cardStyle, gap: "0.35rem" }}>
-      <span style={{ ...labelStyle, marginBottom: "0.2rem" }}>What syncs</span>
+    <div style={{ ...cardStyle, gap: '0.35rem' }}>
+      <span style={{ ...labelStyle, marginBottom: '0.2rem' }}>What syncs</span>
       {[
-        ["Journal", `${dailyNoteFolder ?? "Daily"}/*.md — one note per day`],
-        ["Tasks", `${tasksFolder ?? "Tasks"}/*.md — one file per project + Inbox`],
+        ['Journal', `${dailyNoteFolder ?? 'Daily'}/*.md — one note per day`],
+        ['Tasks', `${tasksFolder ?? 'Tasks'}/*.md — one file per project + Inbox`],
       ].map(([name, description]) => (
-        <div key={name} style={{ display: "flex", gap: "0.5rem", alignItems: "baseline" }}>
-          <span style={{ fontSize: "var(--text-sm)", fontWeight: 600, minWidth: "10ch" }}>{name}</span>
-          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>{description}</span>
+        <div key={name} style={{ display: 'flex', gap: '0.5rem', alignItems: 'baseline' }}>
+          <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, minWidth: '10ch' }}>
+            {name}
+          </span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            {description}
+          </span>
         </div>
       ))}
     </div>
@@ -71,15 +70,21 @@ export function VaultSettings(): JSX.Element {
   } = useVaultSettings();
 
   if (loading) {
-    return <div style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)" }}>Loading vault settings…</div>;
+    return (
+      <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+        Loading vault settings…
+      </div>
+    );
   }
 
   return (
-    <div style={{ display: "grid", gap: "0.75rem" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+    <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <StatusDot ok={status?.vault_reachable ?? false} />
-        <strong style={{ fontSize: "var(--text-base)" }}>Obsidian Vault</strong>
-        <span style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)", marginLeft: "auto" }}>
+        <strong style={{ fontSize: 'var(--text-base)' }}>Obsidian Vault</strong>
+        <span
+          style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginLeft: 'auto' }}
+        >
           {status?.total_indexed ?? 0} indexed · {status?.conflicts ?? 0} conflicts
         </span>
       </div>
@@ -93,8 +98,16 @@ export function VaultSettings(): JSX.Element {
           placeholder="~/Documents/MyVault"
           onChange={(event) => setPathInput(event.target.value)}
         />
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "var(--text-sm)", cursor: "pointer" }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              fontSize: 'var(--text-sm)',
+              cursor: 'pointer',
+            }}
+          >
             <input
               type="checkbox"
               checked={enabledInput}
@@ -104,13 +117,13 @@ export function VaultSettings(): JSX.Element {
           </label>
           <button
             style={{
-              padding: "0.4rem 0.9rem",
-              borderRadius: "8px",
-              border: "none",
-              background: "var(--accent)",
-              color: "var(--text-inverted)",
-              cursor: "pointer",
-              fontSize: "var(--text-sm)",
+              padding: '0.4rem 0.9rem',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'var(--accent)',
+              color: 'var(--text-inverted)',
+              cursor: 'pointer',
+              fontSize: 'var(--text-sm)',
               fontWeight: 600,
             }}
             onClick={saveConfig}
@@ -133,15 +146,15 @@ export function VaultSettings(): JSX.Element {
           <SyncRow
             label="Journal"
             description="Push daily notes · pull vault edits back"
-            onPush={() => run("Journal push", pushJournal)}
-            onPull={() => run("Journal pull", pullJournal)}
+            onPush={() => run('Journal push', pushJournal)}
+            onPull={() => run('Journal pull', pullJournal)}
             disabled={busy}
           />
           <SyncRow
             label="Tasks"
             description="Push task lists · pull checkbox changes back"
-            onPush={() => run("Tasks push", pushTasks)}
-            onPull={() => run("Tasks pull", pullTasks)}
+            onPush={() => run('Tasks push', pushTasks)}
+            onPull={() => run('Tasks pull', pullTasks)}
             disabled={busy}
           />
         </div>
@@ -153,9 +166,9 @@ export function VaultSettings(): JSX.Element {
       {lastMessage && (
         <span
           style={{
-            fontSize: "var(--text-sm)",
-            color: syncState === "error" ? "var(--color-warn, #f87171)" : "var(--text-secondary)",
-            whiteSpace: "pre-line",
+            fontSize: 'var(--text-sm)',
+            color: syncState === 'error' ? 'var(--color-warn, #f87171)' : 'var(--text-secondary)',
+            whiteSpace: 'pre-line',
           }}
         >
           {lastMessage}

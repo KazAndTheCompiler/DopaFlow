@@ -1,9 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-import type { Habit } from "../../../shared/types";
-import { showToast } from "@ds/primitives/Toast";
-import { checkInHabit, createHabit, freezeHabit, getHabitLogs, listHabits, unfreezeHabit } from "@api/index";
-import { getInvalidationEventName } from "./useSSE";
+import type { Habit } from '../../../shared/types';
+import { showToast } from '@ds/primitives/Toast';
+import {
+  checkInHabit,
+  createHabit,
+  freezeHabit,
+  getHabitLogs,
+  listHabits,
+  unfreezeHabit,
+} from '@api/index';
+import { getInvalidationEventName } from './useSSE';
 
 export interface UseHabitsResult {
   habits: Habit[];
@@ -28,9 +35,9 @@ export function useHabits(): UseHabitsResult {
     try {
       setHabits(await listHabits());
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load habits";
+      const msg = e instanceof Error ? e.message : 'Failed to load habits';
       setError(msg);
-      showToast("Could not load habits.", "error");
+      showToast('Could not load habits.', 'error');
     } finally {
       setLoading(false);
     }
@@ -44,23 +51,31 @@ export function useHabits(): UseHabitsResult {
     const handleInvalidate = (): void => {
       void refresh();
     };
-    window.addEventListener(getInvalidationEventName("habits"), handleInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName("habits"), handleInvalidate);
+    window.addEventListener(getInvalidationEventName('habits'), handleInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName('habits'), handleInvalidate);
   }, [refresh]);
 
-  const freeze = useCallback(async (habitId: string, days: number): Promise<void> => {
-    await freezeHabit(habitId, days);
-    await refresh();
-  }, [refresh]);
+  const freeze = useCallback(
+    async (habitId: string, days: number): Promise<void> => {
+      await freezeHabit(habitId, days);
+      await refresh();
+    },
+    [refresh],
+  );
 
-  const unfreeze = useCallback(async (habitId: string): Promise<void> => {
-    await unfreezeHabit(habitId);
-    await refresh();
-  }, [refresh]);
+  const unfreeze = useCallback(
+    async (habitId: string): Promise<void> => {
+      await unfreezeHabit(habitId);
+      await refresh();
+    },
+    [refresh],
+  );
 
-  const getLogs = useCallback((habitId: string): Promise<{ habit_id: string; checkin_date: string }[]> => (
-    getHabitLogs(habitId)
-  ), []);
+  const getLogs = useCallback(
+    (habitId: string): Promise<{ habit_id: string; checkin_date: string }[]> =>
+      getHabitLogs(habitId),
+    [],
+  );
 
   return {
     habits,
@@ -76,17 +91,21 @@ export function useHabits(): UseHabitsResult {
         }
         return [...prev, result];
       });
-      showToast("Habit created.", "success");
+      showToast('Habit created.', 'success');
       return result;
     },
     checkIn: async (habitId: string, moodScore?: number) => {
       try {
-        await checkInHabit({ habitId, checkedAt: new Date().toISOString(), ...(moodScore !== undefined ? { moodScore } : {}) });
+        await checkInHabit({
+          habitId,
+          checkedAt: new Date().toISOString(),
+          ...(moodScore !== undefined ? { moodScore } : {}),
+        });
         await refresh();
-        showToast("Habit checked in. ST updated.", "success");
+        showToast('Habit checked in. ST updated.', 'success');
       } catch {
         await refresh(); // rollback via real data
-        showToast("Check-in failed.", "error");
+        showToast('Check-in failed.', 'error');
       }
     },
     freeze,

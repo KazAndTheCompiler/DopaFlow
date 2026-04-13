@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-import type { JournalEntry } from "../../../shared/types";
+import type { JournalEntry } from '../../../shared/types';
 import {
   applyJournalTemplate,
   deleteJournalEntry,
@@ -14,8 +14,8 @@ import {
   listJournalEntries,
   saveJournalEntry,
   triggerJournalBackup,
-} from "@api/index";
-import { getInvalidationEventName } from "./useSSE";
+} from '@api/index';
+import { getInvalidationEventName } from './useSSE';
 
 interface JournalTemplateSummary {
   id: string;
@@ -52,7 +52,10 @@ export function useJournal(): UseJournalResult {
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      const [nextEntries, status] = await Promise.all([listJournalEntries(), getJournalBackupStatus()]);
+      const [nextEntries, status] = await Promise.all([
+        listJournalEntries(),
+        getJournalBackupStatus(),
+      ]);
       setEntries(nextEntries);
       setBackupPath(status.backup_path);
       setLastBackupAt(status.last_backup_at);
@@ -71,13 +74,16 @@ export function useJournal(): UseJournalResult {
     setTemplates(nextTemplates.map((template) => ({ id: template.id, name: template.name })));
   }, []);
 
-  const applyTemplate = useCallback((templateId: string): Promise<{ body: string; tags: string[] }> => (
-    applyJournalTemplate(templateId)
-  ), []);
+  const applyTemplate = useCallback(
+    (templateId: string): Promise<{ body: string; tags: string[] }> =>
+      applyJournalTemplate(templateId),
+    [],
+  );
 
-  const exportToday = useCallback((): Promise<{ path: string; entry_count: number }> => (
-    exportJournalToday()
-  ), []);
+  const exportToday = useCallback(
+    (): Promise<{ path: string; entry_count: number }> => exportJournalToday(),
+    [],
+  );
 
   useEffect(() => {
     void refresh();
@@ -91,8 +97,8 @@ export function useJournal(): UseJournalResult {
       void refreshGraph();
       void refreshTemplates();
     };
-    window.addEventListener(getInvalidationEventName("journal"), handleInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName("journal"), handleInvalidate);
+    window.addEventListener(getInvalidationEventName('journal'), handleInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName('journal'), handleInvalidate);
   }, [refresh, refreshGraph, refreshTemplates]);
 
   return {

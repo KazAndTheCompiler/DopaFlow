@@ -37,10 +37,20 @@ a {
 }
 
 /* Scrollbars */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
 
 /* Focus */
 :focus-visible {
@@ -51,7 +61,9 @@ a {
 
 /* Global button polish */
 button {
-  transition: opacity 120ms ease, transform 100ms ease;
+  transition:
+    opacity 120ms ease,
+    transform 100ms ease;
 }
 button:not(:disabled):hover {
   opacity: 0.85;
@@ -126,6 +138,13 @@ select:focus {
 
 /* Voice listening pulse */
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.25); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.25);
+  }
 }

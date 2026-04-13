@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 import {
   getVaultConflictPreview,
@@ -7,10 +7,10 @@ import {
   resolveVaultConflict,
   rollbackVaultFile,
   updateVaultConfig,
-} from "@api/index";
-import type { VaultConflictPreview, VaultFileRecord, VaultStatus } from "../../../../shared/types";
+} from '@api/index';
+import type { VaultConflictPreview, VaultFileRecord, VaultStatus } from '../../../../shared/types';
 
-type SyncState = "idle" | "working" | "done" | "error";
+type SyncState = 'idle' | 'working' | 'done' | 'error';
 
 type SyncResult = {
   pushed?: number;
@@ -43,12 +43,14 @@ export function useVaultSettings(): {
 } {
   const [status, setStatus] = useState<VaultStatus | null>(null);
   const [conflicts, setConflicts] = useState<VaultFileRecord[]>([]);
-  const [conflictPreviews, setConflictPreviews] = useState<Record<number, VaultConflictPreview | undefined>>({});
+  const [conflictPreviews, setConflictPreviews] = useState<
+    Record<number, VaultConflictPreview | undefined>
+  >({});
   const [previewErrorById, setPreviewErrorById] = useState<Record<number, string | undefined>>({});
   const [loadingPreviewId, setLoadingPreviewId] = useState<number | null>(null);
-  const [pathInput, setPathInput] = useState("");
+  const [pathInput, setPathInput] = useState('');
   const [enabledInput, setEnabledInput] = useState(false);
-  const [syncState, setSyncState] = useState<SyncState>("idle");
+  const [syncState, setSyncState] = useState<SyncState>('idle');
   const [lastMessage, setLastMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +64,9 @@ export function useVaultSettings(): {
         setEnabledInput(nextStatus.config.vault_enabled);
       })
       .catch((error: unknown) => {
-        setLastMessage(`Vault refresh failed: ${error instanceof Error ? error.message : "unknown"}`);
+        setLastMessage(
+          `Vault refresh failed: ${error instanceof Error ? error.message : 'unknown'}`,
+        );
       })
       .finally(() => setLoading(false));
   };
@@ -74,34 +78,34 @@ export function useVaultSettings(): {
   const saveConfig = (): void => {
     void updateVaultConfig({ vault_path: pathInput, vault_enabled: enabledInput })
       .then(() => {
-        setLastMessage("Settings saved.");
+        setLastMessage('Settings saved.');
         refresh();
       })
       .catch((error: unknown) => {
-        setLastMessage(`Error: ${error instanceof Error ? error.message : "unknown"}`);
+        setLastMessage(`Error: ${error instanceof Error ? error.message : 'unknown'}`);
       });
   };
 
   const run = (label: string, fn: () => Promise<SyncResult>): void => {
-    setSyncState("working");
+    setSyncState('working');
     setLastMessage(null);
     void fn()
       .then((result) => {
-        setSyncState("done");
-        const count = result.pushed ?? ((result.imported ?? 0) + (result.updated ?? 0));
+        setSyncState('done');
+        const count = result.pushed ?? (result.imported ?? 0) + (result.updated ?? 0);
         let message = `${label}: ${count} synced`;
         if (result.conflicts) {
- message += ` · ${result.conflicts} conflicts`;
-}
+          message += ` · ${result.conflicts} conflicts`;
+        }
         if (result.errors.length) {
- message += `\n${result.errors.slice(0, 3).join("; ")}`;
-}
+          message += `\n${result.errors.slice(0, 3).join('; ')}`;
+        }
         setLastMessage(message);
         refresh();
       })
       .catch((error: unknown) => {
-        setSyncState("error");
-        setLastMessage(`${label} failed: ${error instanceof Error ? error.message : "unknown"}`);
+        setSyncState('error');
+        setLastMessage(`${label} failed: ${error instanceof Error ? error.message : 'unknown'}`);
       });
   };
 
@@ -112,18 +116,18 @@ export function useVaultSettings(): {
         refresh();
       })
       .catch((error: unknown) => {
-        setLastMessage(`Rollback failed: ${error instanceof Error ? error.message : "unknown"}`);
+        setLastMessage(`Rollback failed: ${error instanceof Error ? error.message : 'unknown'}`);
       });
   };
 
   const doResolve = (filePath: string): void => {
     void resolveVaultConflict(filePath)
       .then(() => {
-        setLastMessage("Conflict resolved.");
+        setLastMessage('Conflict resolved.');
         refresh();
       })
       .catch((error: unknown) => {
-        setLastMessage(`Resolve failed: ${error instanceof Error ? error.message : "unknown"}`);
+        setLastMessage(`Resolve failed: ${error instanceof Error ? error.message : 'unknown'}`);
       });
   };
 
@@ -143,7 +147,7 @@ export function useVaultSettings(): {
       .catch((error: unknown) => {
         setPreviewErrorById((current) => ({
           ...current,
-          [recordId]: error instanceof Error ? error.message : "Preview failed",
+          [recordId]: error instanceof Error ? error.message : 'Preview failed',
         }));
       })
       .finally(() => setLoadingPreviewId((current) => (current === recordId ? null : current)));
@@ -160,7 +164,7 @@ export function useVaultSettings(): {
     syncState,
     lastMessage,
     loading,
-    busy: syncState === "working",
+    busy: syncState === 'working',
     active: Boolean(status?.vault_reachable && status?.config.vault_enabled),
     setPathInput,
     setEnabledInput,

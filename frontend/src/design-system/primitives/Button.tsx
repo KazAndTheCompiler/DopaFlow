@@ -1,39 +1,40 @@
-import { useState } from "react";
-import type { ButtonHTMLAttributes, PropsWithChildren } from "react";
+import { useState } from 'react';
+import type { ButtonHTMLAttributes, PropsWithChildren } from 'react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: 'primary' | 'secondary' | 'ghost';
 }
 
 export function Button({
   children,
   style,
-  variant = "primary",
+  variant = 'primary',
   disabled,
   ...props
 }: PropsWithChildren<ButtonProps>): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const palette =
-    variant === "primary"
+    variant === 'primary'
       ? {
-          background: "var(--accent)",
-          color: "var(--text-inverted)",
-          border: "1px solid transparent",
-          boxShadow: "var(--button-primary-glow, 0 1px 3px color-mix(in srgb, var(--accent) 40%, transparent)), inset 0 1px 0 color-mix(in srgb, white 15%, transparent)",
+          background: 'var(--accent)',
+          color: 'var(--text-inverted)',
+          border: '1px solid transparent',
+          boxShadow:
+            'var(--button-primary-glow, 0 1px 3px color-mix(in srgb, var(--accent) 40%, transparent)), inset 0 1px 0 color-mix(in srgb, white 15%, transparent)',
         }
-      : variant === "secondary"
+      : variant === 'secondary'
         ? {
-            background: "var(--surface-2)",
-            color: "var(--text)",
-            border: "1px solid var(--border)",
-            boxShadow: "0 1px 2px color-mix(in srgb, black 6%, transparent)",
+            background: 'var(--surface-2)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 1px 2px color-mix(in srgb, black 6%, transparent)',
           }
         : {
-            background: "transparent",
-            color: "var(--text)",
-            border: "1px solid var(--border)",
-            boxShadow: "none",
+            background: 'transparent',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
+            boxShadow: 'none',
           };
 
   return (
@@ -58,16 +59,21 @@ export function Button({
         props.onMouseUp?.(event);
       }}
       style={{
-        padding: "0.6rem 1.1rem",
-        borderRadius: "10px",
-        cursor: disabled ? "not-allowed" : "pointer",
+        padding: '0.6rem 1.1rem',
+        borderRadius: '10px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         fontWeight: 500,
-        fontSize: "var(--text-sm)",
-        letterSpacing: "0.01em",
+        fontSize: 'var(--text-sm)',
+        letterSpacing: '0.01em',
         opacity: disabled ? 0.45 : 1,
-        transform: disabled ? "none" : isPressed ? "translateY(1px) scale(0.985)" : "translateY(0) scale(1)",
-        filter: disabled ? "none" : isHovered ? "brightness(1.04)" : "none",
-        transition: "transform 140ms ease, filter 140ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease",
+        transform: disabled
+          ? 'none'
+          : isPressed
+            ? 'translateY(1px) scale(0.985)'
+            : 'translateY(0) scale(1)',
+        filter: disabled ? 'none' : isHovered ? 'brightness(1.04)' : 'none',
+        transition:
+          'transform 140ms ease, filter 140ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease',
         ...palette,
         ...style,
       }}
