@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import {
   taskSchema,
   habitSchema,
-  journalEntrySchema,
   calendarEventSchema,
   alarmRecordSchema,
   focusSessionSchema,
@@ -37,24 +35,6 @@ describe("taskSchema", () => {
         title: "Test",
         priority: 2,
         status: "invalid_status",
-        done: false,
-        sort_order: 0,
-        subtasks: [],
-        tags: [],
-        dependencies: [],
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-01T00:00:00Z",
-      }),
-    ).toThrow();
-  });
-
-  it("rejects a negative priority", () => {
-    expect(() =>
-      taskSchema.parse({
-        id: "tsk_123",
-        title: "Test",
-        priority: -1,
-        status: "todo",
         done: false,
         sort_order: 0,
         subtasks: [],

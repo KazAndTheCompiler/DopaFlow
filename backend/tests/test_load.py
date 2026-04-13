@@ -22,7 +22,6 @@ def app():
     return create_app()
 
 
-@pytest.mark.flaky(reruns=2)
 def test_health_endpoint_handles_concurrent_requests(app) -> None:
     """Health endpoint should return 200 for all concurrent requests without errors."""
     from httpx import ASGITransport, AsyncClient
@@ -48,7 +47,6 @@ def test_health_endpoint_handles_concurrent_requests(app) -> None:
     assert errors == [], f"concurrent health requests produced errors: {errors}"
 
 
-@pytest.mark.flaky(reruns=2)
 def test_health_live_endpoint_concurrent_requests(app) -> None:
     """Health live endpoint should handle concurrent load without failures."""
     from httpx import ASGITransport, AsyncClient

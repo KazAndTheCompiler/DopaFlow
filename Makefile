@@ -20,7 +20,7 @@ help: ## Show this help
 	@echo "  make lint-backend     Lint backend with ruff"
 	@echo "  make lint-frontend    Lint frontend with ESLint"
 	@echo "  make format           Format all code (prettier + ruff)"
-	@echo "  make format:check     Check formatting without modifying files"
+	@echo "  make format-check     Check formatting without modifying files"
 	@echo "  make typecheck        TypeScript typecheck frontend"
 	@echo "  make build            Build frontend production bundle"
 	@echo "  make doctor           Check environment readiness"
@@ -71,7 +71,7 @@ format: ## Format all code (prettier + ruff)
 	@echo "Formatting backend with ruff..."
 	cd $(BACKEND_DIR) && ruff format .
 
-format:check: ## Check formatting without modifying files
+format-check: ## Check formatting without modifying files
 	@echo "Checking frontend formatting..."
 	cd $(FRONTEND_DIR) && npm run format:check
 	@echo "Checking backend formatting..."

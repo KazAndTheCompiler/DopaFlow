@@ -8,8 +8,9 @@
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "url";
 
-const DIST_DIR = new URL("../dist", import.meta.url);
+const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
 const HARD_LIMIT_KB = 5 * 1024; // 5MB
 
 function getJsFiles(dir) {

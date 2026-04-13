@@ -27,10 +27,10 @@ def test_migration_checksum_differs_on_content_change(sqlite_db_path: Path) -> N
     assert c1 != c2
 
 
-def test_drift_warning_logged_when_applied_migration_is_modified(
-    sqlite_db_path: Path, caplog: pytest.LogCaptureFixture
+def test_drift_raises_when_applied_migration_is_modified(
+    sqlite_db_path: Path,
 ) -> None:
-    """If an already-applied migration file changes, a warning is logged."""
+    """If an already-applied migration file changes, startup fails with RuntimeError."""
     run_migrations(str(sqlite_db_path))
 
     conn = sqlite3.connect(sqlite_db_path)
@@ -38,13 +38,11 @@ def test_drift_warning_logged_when_applied_migration_is_modified(
     conn.commit()
     conn.close()
 
-    with caplog.at_level("WARNING"):
+    with pytest.raises(RuntimeError, match="Migration drift detected") as exc_info:
         run_migrations(str(sqlite_db_path))
 
-    assert any(
-        "been modified" in record.message and "001_init.sql" in record.message
-        for record in caplog.records
-    )
+    assert "001_init.sql" in str(exc_info.value)
+    assert "been modified" in str(exc_info.value) or "Migration drift detected" in str(exc_info.value)
 
 
 def test_checksum_recorded_for_new_migration(sqlite_db_path: Path) -> None:
