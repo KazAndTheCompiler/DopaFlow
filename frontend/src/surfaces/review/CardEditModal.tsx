@@ -16,13 +16,17 @@ export function CardEditModal({ card, onClose, onSave }: CardEditModalProps): JS
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!card) return;
+    if (!card) {
+ return;
+}
     setFront(card.front);
     setBack(card.back);
     setSaving(false);
   }, [card]);
 
-  if (!card) return null;
+  if (!card) {
+ return null;
+}
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -49,7 +53,9 @@ export function CardEditModal({ card, onClose, onSave }: CardEditModalProps): JS
   };
 
   const handleSave = async (): Promise<void> => {
-    if (!front.trim() || saving) return;
+    if (!front.trim() || saving) {
+ return;
+}
     setSaving(true);
     try {
       await onSave(card.id, front.trim(), back.trim());

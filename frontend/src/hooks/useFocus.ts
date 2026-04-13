@@ -31,7 +31,7 @@ export function useFocus(): UseFocusResult {
   return {
     sessions,
     activeSession: sessions.find(
-      (session) => session.status === "running" || session.status === "paused" || session.status === "active",
+      (session) => session.status === "running" || session.status === "paused" || session.status === "active"
     ),
     refresh,
     start: async (taskId?: string, minutes = 25) => {

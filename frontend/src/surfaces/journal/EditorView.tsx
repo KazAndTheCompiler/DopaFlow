@@ -54,7 +54,9 @@ export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDat
 
   const scheduleAutosave = useCallback(
     (nextBody: string, nextEmoji: string): void => {
-      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      if (timerRef.current !== null) {
+ clearTimeout(timerRef.current);
+}
       timerRef.current = setTimeout(() => {
         setStatus("saving");
         const tags = (nextBody.match(/#(\w+)/g) ?? []).map((t) => t.slice(1));
@@ -64,7 +66,7 @@ export function EditorView({ entry, entries, selectedDate, onSave, onNavigateDat
         });
       }, AUTOSAVE_DELAY_MS);
     },
-    [selectedDate, onSave],
+    [selectedDate, onSave]
   );
 
   const handleBodyChange = (value: string): void => {

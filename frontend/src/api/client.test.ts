@@ -22,7 +22,7 @@ describe("apiClient", () => {
   describe("rate limiting", () => {
     it("throws rate_limited error on 429 response", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 429, statusText: "Too Many Requests" }),
+        new Response(null, { status: 429, statusText: "Too Many Requests" })
       );
 
       await expect(apiClient("/test")).rejects.toThrow("rate_limited");
@@ -32,7 +32,7 @@ describe("apiClient", () => {
   describe("server errors", () => {
     it("throws server_error on 500", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 500 }),
+        new Response(null, { status: 500 })
       );
 
       await expect(apiClient("/test")).rejects.toThrow("server_error:500");
@@ -56,7 +56,7 @@ describe("apiClient", () => {
         new Response(errorBody, {
           status: 404,
           headers: { "content-type": "application/json" },
-        }),
+        })
       );
 
       await expect(apiClient("/test")).rejects.toThrow("API request failed: 404 Habit not found");
@@ -64,7 +64,7 @@ describe("apiClient", () => {
 
     it("throws with status text when detail parsing fails", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 404, statusText: "Not Found" }),
+        new Response(null, { status: 404, statusText: "Not Found" })
       );
 
       await expect(apiClient("/test")).rejects.toThrow("API request failed: 404 Not Found");
@@ -78,7 +78,7 @@ describe("apiClient", () => {
         new Response(JSON.stringify(data), {
           status: 200,
           headers: { "content-type": "application/json" },
-        }),
+        })
       );
 
       const result = await apiClient("/tasks/tsk_123");
@@ -87,7 +87,7 @@ describe("apiClient", () => {
 
     it("returns undefined on 204", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 204 }),
+        new Response(null, { status: 204 })
       );
 
       const result = await apiClient("/test");
@@ -99,7 +99,7 @@ describe("apiClient", () => {
         new Response(null, {
           status: 200,
           headers: { "content-length": "0" },
-        }),
+        })
       );
 
       const result = await apiClient("/test");
@@ -111,7 +111,7 @@ describe("apiClient", () => {
         new Response("plain text response", {
           status: 200,
           headers: { "content-type": "text/plain" },
-        }),
+        })
       );
 
       const result = await apiClient("/test");

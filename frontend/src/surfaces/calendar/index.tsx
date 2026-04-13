@@ -83,7 +83,7 @@ export default function CalendarView(): JSX.Element {
       hiddenSources,
       monthAnchor,
       selectedEventId,
-    ],
+    ]
   );
 
   const toggleSource = (sourceId: string): void => {
@@ -117,7 +117,9 @@ export default function CalendarView(): JSX.Element {
 
   const handleRescheduleEvent = async (id: string, newStartAt: string): Promise<void> => {
     const event = calendar.events.find((e) => e.id === id);
-    if (!event) return;
+    if (!event) {
+ return;
+}
     const durationMs = new Date(event.end_at).getTime() - new Date(event.start_at).getTime();
     const newStart = new Date(newStartAt);
     const newEnd = new Date(newStart.getTime() + durationMs);
@@ -139,7 +141,9 @@ export default function CalendarView(): JSX.Element {
   };
 
   const submitDayBlock = async (): Promise<void> => {
-    if (!prefillTitle.trim()) return;
+    if (!prefillTitle.trim()) {
+ return;
+}
     const [hours, minutes] = blockStartTime.split(":").map((value) => Number(value) || 0);
     const start = new Date(dayAnchor);
     start.setHours(hours, minutes, 0, 0);

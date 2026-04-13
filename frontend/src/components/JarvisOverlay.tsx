@@ -31,7 +31,9 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
       });
   }, [visible]);
 
-  if (!visible) return null;
+  if (!visible) {
+ return null;
+}
 
   const rings = [0, 1, 2, 3, 4];
 

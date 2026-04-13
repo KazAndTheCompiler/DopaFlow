@@ -4,9 +4,15 @@ import { calendarEventSchema, calendarEventsSchema, parseApiSchema } from "./sch
 
 export async function listCalendarEvents(params?: { from?: string; until?: string; category?: string }): Promise<CalendarEvent[]> {
   const qs = new URLSearchParams();
-  if (params?.from) qs.set("from", params.from);
-  if (params?.until) qs.set("until", params.until);
-  if (params?.category) qs.set("category", params.category);
+  if (params?.from) {
+ qs.set("from", params.from);
+}
+  if (params?.until) {
+ qs.set("until", params.until);
+}
+  if (params?.category) {
+ qs.set("category", params.category);
+}
   const query = qs.toString() ? `?${qs.toString()}` : "";
   return parseApiSchema<CalendarEvent[]>(calendarEventsSchema, await apiClient<unknown>(`/calendar/events${query}`));
 }

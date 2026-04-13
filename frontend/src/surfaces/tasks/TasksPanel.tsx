@@ -30,12 +30,16 @@ export function TasksPanel({
     return <SkeletonList rows={6} />;
   }
   const handleBulkComplete = async (): Promise<void> => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0) {
+ return;
+}
     await onBulkComplete?.(Array.from(selectedIds));
   };
 
   const handleBulkDelete = async (): Promise<void> => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0) {
+ return;
+}
     await onBulkDelete?.(Array.from(selectedIds));
   };
 

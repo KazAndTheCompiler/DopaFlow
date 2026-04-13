@@ -57,7 +57,9 @@ export default function SearchView(): JSX.Element {
   const [focusedIdx, setFocusedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+ inputRef.current?.focus();
+}, []);
 
   const q = query.toLowerCase().trim();
 
@@ -144,9 +146,13 @@ export default function SearchView(): JSX.Element {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setFocusedIdx((i) => Math.min(i + 1, flat.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setFocusedIdx((i) => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter" && flat[focusedIdx]) { handleSelect(flat[focusedIdx]); }
+    if (e.key === "ArrowDown") {
+ e.preventDefault(); setFocusedIdx((i) => Math.min(i + 1, flat.length - 1));
+} else if (e.key === "ArrowUp") {
+ e.preventDefault(); setFocusedIdx((i) => Math.max(i - 1, 0));
+} else if (e.key === "Enter" && flat[focusedIdx]) {
+ handleSelect(flat[focusedIdx]);
+}
   };
 
   const sections: Array<{ type: ResultType; label: string; items: FlatResult[] }> = (
@@ -166,7 +172,9 @@ export default function SearchView(): JSX.Element {
         type="text"
         placeholder="Search tasks, habits, journal… ↑↓ to navigate, Enter to open"
         value={query}
-        onChange={(e) => { setQuery(e.currentTarget.value); setFocusedIdx(0); }}
+        onChange={(e) => {
+ setQuery(e.currentTarget.value); setFocusedIdx(0);
+}}
         onKeyDown={handleKeyDown}
         style={{ fontSize: "1.05rem", padding: "0.875rem 1rem" }}
       />

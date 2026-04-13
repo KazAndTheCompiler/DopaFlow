@@ -100,7 +100,9 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
   }, []);
 
   const start = useCallback((): void => {
-    if (!SR) return;
+    if (!SR) {
+ return;
+}
     setError(null);
     setTranscript("");
     setInterim("");
@@ -125,7 +127,9 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
           interimText += result[0].transcript;
         }
       }
-      if (finalText) setTranscript((prev) => (prev + " " + finalText).trim());
+      if (finalText) {
+ setTranscript((prev) => (`${prev  } ${  finalText}`).trim());
+}
       setInterim(interimText);
     };
 

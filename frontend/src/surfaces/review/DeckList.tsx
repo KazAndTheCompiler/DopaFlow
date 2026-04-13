@@ -52,7 +52,9 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+ return;
+}
     setImporting(true);
     setImportStatus(null);
     try {
@@ -63,7 +65,9 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
       setImportStatus(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setImporting(false);
-      if (fileRef.current) fileRef.current.value = "";
+      if (fileRef.current) {
+ fileRef.current.value = "";
+}
     }
   };
 
@@ -173,7 +177,9 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
                 onSubmit={(e) => {
                   e.preventDefault();
                   const name = renameValue.trim();
-                  if (!name) return;
+                  if (!name) {
+ return;
+}
                   void renameReviewDeck(deck.id, name).then(() => {
                     setRenamingId(null);
                     void refresh();
@@ -194,7 +200,9 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <strong style={{ flex: 1 }}>{deck.name}</strong>
                 <button
-                  onClick={() => { setRenamingId(deck.id); setRenameValue(deck.name); }}
+                  onClick={() => {
+ setRenamingId(deck.id); setRenameValue(deck.name);
+}}
                   title="Rename deck"
                   style={{ border: "none", background: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "var(--text-sm)", padding: "0.2rem 0.4rem", borderRadius: "6px" }}
                 >
@@ -204,7 +212,9 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
                   <>
                     <span style={{ fontSize: "var(--text-xs)", color: "var(--state-overdue)" }}>Delete deck + all cards?</span>
                     <button
-                      onClick={() => void deleteReviewDeck(deck.id).then(() => { setDeletingId(null); void refresh(); })}
+                      onClick={() => void deleteReviewDeck(deck.id).then(() => {
+ setDeletingId(null); void refresh();
+})}
                       style={{ border: "none", background: "var(--state-overdue)", color: "white", cursor: "pointer", fontSize: "var(--text-xs)", padding: "0.2rem 0.5rem", borderRadius: "6px", fontWeight: 600 }}
                     >
                       Confirm
@@ -259,7 +269,9 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
         onSubmit={(event) => {
           event.preventDefault();
           const name = draftName.trim();
-          if (!name) return;
+          if (!name) {
+ return;
+}
           void (async () => {
             await createReviewDeck({ name, source_type: "manual" });
             setDraftName("");

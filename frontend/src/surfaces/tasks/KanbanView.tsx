@@ -55,7 +55,11 @@ function KanbanCard({
       onMouseLeave={() => setIsHovered(false)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onEdit(task); }}
+      onKeyDown={(e) => {
+ if (e.key === "Enter" || e.key === " ") {
+ onEdit(task);
+}
+}}
     >
       <div style={{ display: "flex", alignItems: "flex-start", gap: "0.4rem" }}>
         <span

@@ -12,7 +12,7 @@ export async function listTasks(sortBy?: string): Promise<Task[]> {
     params.set("sort_by", sortBy);
   }
   const queryString = params.toString();
-  return parseApiSchema<Task[]>(tasksSchema, await apiClient<unknown>("/tasks/" + (queryString ? `?${queryString}` : "")));
+  return parseApiSchema<Task[]>(tasksSchema, await apiClient<unknown>(`/tasks/${  queryString ? `?${queryString}` : ""}`));
 }
 
 export async function createTask(payload: Partial<Task>): Promise<Task> {

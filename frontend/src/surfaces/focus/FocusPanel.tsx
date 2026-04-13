@@ -32,11 +32,15 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
   }, []);
 
   useEffect(() => {
-    if (!prefill || selectedTaskId !== null) return;
+    if (!prefill || selectedTaskId !== null) {
+ return;
+}
     const matchedTask = tasks.find(
-      (task) => !task.done && task.title.trim().toLowerCase() === prefill.trim().toLowerCase(),
+      (task) => !task.done && task.title.trim().toLowerCase() === prefill.trim().toLowerCase()
     );
-    if (!matchedTask) return;
+    if (!matchedTask) {
+ return;
+}
     setSelectedTaskId(matchedTask.id);
     onTaskSelect?.(matchedTask.id);
   }, [onTaskSelect, prefill, selectedTaskId, tasks]);
@@ -150,7 +154,9 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
                 }}
               >
                 <button
-                  onClick={() => { setSelectedTaskId(null); onTaskSelect?.(null); setTaskPickerOpen(false); }}
+                  onClick={() => {
+ setSelectedTaskId(null); onTaskSelect?.(null); setTaskPickerOpen(false);
+}}
                   style={{
                     padding: "0.45rem 0.65rem",
                     borderRadius: "8px",
@@ -198,7 +204,9 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
 
         {prefill && !isActive && !selectedTask && (
           <button
-            onClick={() => { localStorage.removeItem(FOCUS_PREFILL_KEY); setPrefill(null); }}
+            onClick={() => {
+ localStorage.removeItem(FOCUS_PREFILL_KEY); setPrefill(null);
+}}
             title="Clear suggested task"
             style={{
               padding: "0.3rem 0.7rem",
@@ -222,7 +230,9 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
           {PRESETS.map(({ label, minutes }) => (
             <button
               key={minutes}
-              onClick={() => { setSelected(minutes); setCustomMinutes(""); }}
+              onClick={() => {
+ setSelected(minutes); setCustomMinutes("");
+}}
               disabled={isActive}
               style={{
                 padding: "0.4rem 0.85rem",
@@ -271,7 +281,9 @@ export function FocusPanel({ isActive, onStart, tasks = [], onTaskSelect }: Focu
         </div>
 
         <button
-          onClick={() => { localStorage.removeItem(FOCUS_PREFILL_KEY); setPrefill(null); onStart(selected); }}
+          onClick={() => {
+ localStorage.removeItem(FOCUS_PREFILL_KEY); setPrefill(null); onStart(selected);
+}}
           disabled={isActive}
           style={{
             padding: "0.5rem 1.4rem",

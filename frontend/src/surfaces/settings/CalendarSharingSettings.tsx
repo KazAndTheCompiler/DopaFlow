@@ -49,7 +49,7 @@ export default function CalendarSharingSettings(): JSX.Element {
         }
         return Date.now() - new Date(feed.last_synced_at).getTime() > 36 * 60 * 60 * 1000;
       }).length,
-    [feeds],
+    [feeds]
   );
   const localApiBaseUrl = useMemo(() => API_BASE_URL.replace(/\/+$/, ""), []);
   const createdSetupCode = createdToken

@@ -53,11 +53,13 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
       { label: "Done", value: doneCount, tone: "var(--state-ok)", detail: "already closed" },
       { label: "Overdue", value: overdueCount, tone: overdueCount > 0 ? "var(--state-overdue)" : "var(--text-secondary)", detail: overdueCount > 0 ? "needs triage" : "under control" },
     ],
-    [activeCount, doneCount, overdueCount],
+    [activeCount, doneCount, overdueCount]
   );
 
   useEffect(() => {
-    if (!isBoard || boardMode !== "eisenhower") return;
+    if (!isBoard || boardMode !== "eisenhower") {
+ return;
+}
     void apiClient<{ q1: []; q2: []; q3: []; q4: [] }>("/boards/eisenhower")
       .then((body) => setQuadrants(body))
       .catch(() => setQuadrants({ q1: [], q2: [], q3: [], q4: [] }));
@@ -147,8 +149,12 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
         <TaskEditModal
           task={editingTask}
           onClose={() => setEditingTask(null)}
-          onSave={async (id, patch) => { await tasks.update(id, patch); }}
-          onDelete={async (id) => { await tasks.remove(id); }}
+          onSave={async (id, patch) => {
+ await tasks.update(id, patch);
+}}
+          onDelete={async (id) => {
+ await tasks.remove(id);
+}}
         />
       </div>
     );
@@ -252,8 +258,12 @@ export default function TasksView({ initialView = "list" }: TasksViewProps): JSX
       <TaskEditModal
         task={editingTask}
         onClose={() => setEditingTask(null)}
-        onSave={async (id, patch) => { await tasks.update(id, patch); }}
-        onDelete={async (id) => { await tasks.remove(id); }}
+        onSave={async (id, patch) => {
+ await tasks.update(id, patch);
+}}
+        onDelete={async (id) => {
+ await tasks.remove(id);
+}}
       />
     </div>
   );

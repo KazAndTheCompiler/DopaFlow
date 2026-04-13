@@ -36,7 +36,9 @@ export function useProjects(): UseProjectsResult {
     }
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+ void refresh();
+}, [refresh]);
 
   useEffect(() => {
     const handleTasksInvalidate = (): void => {
@@ -64,7 +66,9 @@ export function useProjects(): UseProjectsResult {
     },
     remove: async (id) => {
       await deleteProject(id);
-      if (activeProjectId === id) setActiveProjectId(null);
+      if (activeProjectId === id) {
+ setActiveProjectId(null);
+}
       await refresh();
     },
     refresh,

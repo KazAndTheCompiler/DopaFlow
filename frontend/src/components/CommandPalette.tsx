@@ -41,7 +41,9 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
         label: `Filter: ${p.name}`,
         hint: `Show only ${p.name} tasks`,
         icon: p.icon || "PR",
-        action: () => { onProjectSelect(p.id); setOpen(false); setInput(""); },
+        action: () => {
+ onProjectSelect(p.id); setOpen(false); setInput("");
+},
       });
     });
   }
@@ -51,13 +53,17 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
     suggestions.push({
       label: `Go to ${route.label}`,
       icon: route.icon,
-      action: () => { onNavigate?.(route.id); setOpen(false); setInput(""); },
+      action: () => {
+ onNavigate?.(route.id); setOpen(false); setInput("");
+},
     });
   });
 
   // Clear project filter
   if (onProjectSelect && (!q || "clear".includes(q) || "all".includes(q))) {
-    suggestions.unshift({ label: "Clear project filter", icon: "CL", action: () => { onProjectSelect(null); setOpen(false); setInput(""); } });
+    suggestions.unshift({ label: "Clear project filter", icon: "CL", action: () => {
+ onProjectSelect(null); setOpen(false); setInput("");
+} });
   }
 
   const visibleSuggestions = suggestions.slice(0, 8);
@@ -86,7 +92,9 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
   useEffect(() => {
-    if (open && inputRef.current) inputRef.current.focus();
+    if (open && inputRef.current) {
+ inputRef.current.focus();
+}
   }, [open]);
   const handleExecute = async (): Promise<void> => {
     if (visibleSuggestions.length > 0 && !input.startsWith("/")) {
@@ -103,16 +111,23 @@ export default function CommandPalette({ onExecute, projects = [], onProjectSele
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (visibleSuggestions.length > 0) setSelectedIdx((i) => (i + 1) % visibleSuggestions.length);
-    }
-    else if (e.key === "ArrowUp") {
+      if (visibleSuggestions.length > 0) {
+ setSelectedIdx((i) => (i + 1) % visibleSuggestions.length);
+}
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (visibleSuggestions.length > 0) setSelectedIdx((i) => (i - 1 + visibleSuggestions.length) % visibleSuggestions.length);
-    }
-    else if (e.key === "Enter") { void handleExecute(); }
-    else if (e.key === "Escape") { setOpen(false); }
+      if (visibleSuggestions.length > 0) {
+ setSelectedIdx((i) => (i - 1 + visibleSuggestions.length) % visibleSuggestions.length);
+}
+    } else if (e.key === "Enter") {
+ void handleExecute();
+} else if (e.key === "Escape") {
+ setOpen(false);
+}
   };
-  if (!open) return null;
+  if (!open) {
+ return null;
+}
   return (
     <div
       data-testid="command-palette-overlay"

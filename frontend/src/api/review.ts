@@ -81,6 +81,8 @@ export async function importApkg(deckId: string, file: File): Promise<ImportApkg
   const url = new URL(`${API_BASE_URL}/review/import-apkg`);
   url.searchParams.set("deck_id", deckId);
   const res = await fetch(url.toString(), { method: "POST", body: form });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+ throw new Error(await res.text());
+}
   return res.json() as Promise<ImportApkgResponse>;
 }

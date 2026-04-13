@@ -19,10 +19,14 @@ export function useTTS(): UseTTSResult {
 
   const speak = useCallback(
     (text: string): void => {
-      if (!supported || !text.trim()) return;
+      if (!supported || !text.trim()) {
+ return;
+}
       // Cancel any in-progress speech before queuing a new utterance
       window.speechSynthesis.cancel();
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+ clearInterval(timerRef.current);
+}
 
       const utterance = new SpeechSynthesisUtterance(text.trim());
       utterance.rate = 0.95;
@@ -32,11 +36,15 @@ export function useTTS(): UseTTSResult {
       utterance.onstart = () => setSpeaking(true);
       utterance.onend = () => {
         setSpeaking(false);
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) {
+ clearInterval(timerRef.current);
+}
       };
       utterance.onerror = () => {
         setSpeaking(false);
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) {
+ clearInterval(timerRef.current);
+}
       };
 
       setSpeaking(true);
@@ -46,11 +54,13 @@ export function useTTS(): UseTTSResult {
       timerRef.current = setInterval(() => {
         if (!window.speechSynthesis.speaking) {
           setSpeaking(false);
-          if (timerRef.current) clearInterval(timerRef.current);
+          if (timerRef.current) {
+ clearInterval(timerRef.current);
+}
         }
       }, 300);
     },
-    [supported],
+    [supported]
   );
 
   return { speak, speaking, supported };

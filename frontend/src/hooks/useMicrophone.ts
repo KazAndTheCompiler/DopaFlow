@@ -15,7 +15,9 @@ function pickMimeType(): string {
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
   for (const candidate of candidates) {
     try {
-      if (MediaRecorder.isTypeSupported(candidate)) return candidate;
+      if (MediaRecorder.isTypeSupported(candidate)) {
+ return candidate;
+}
     } catch {}
   }
   return "";
@@ -69,7 +71,9 @@ export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophone
       setError("Microphone unavailable");
       return false;
     }
-    if (isRecording) return true;
+    if (isRecording) {
+ return true;
+}
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = pickMimeType();
@@ -78,7 +82,9 @@ export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophone
       recorderRef.current = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) chunksRef.current.push(event.data);
+        if (event.data.size > 0) {
+ chunksRef.current.push(event.data);
+}
       };
       recorder.onerror = () => {
         setError("The microphone is busy or unavailable right now.");

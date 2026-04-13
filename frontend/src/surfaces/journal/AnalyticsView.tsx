@@ -23,7 +23,7 @@ function allTags(entries: JournalEntry[]): Map<string, number> {
 export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
   const totalWords = useMemo(
     () => entries.reduce((sum, e) => sum + wordCount(e.markdown_body), 0),
-    [entries],
+    [entries]
   );
 
   const avgWords = entries.length > 0 ? Math.round(totalWords / entries.length) : 0;
@@ -31,7 +31,7 @@ export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
   const tagCounts = useMemo(() => allTags(entries), [entries]);
   const topTags = useMemo(
     () => [...tagCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8),
-    [tagCounts],
+    [tagCounts]
   );
 
   const last7 = entries.slice(0, 7).reverse();

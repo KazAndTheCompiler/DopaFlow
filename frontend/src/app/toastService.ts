@@ -12,7 +12,7 @@ function dispatchToast(message: string, type: ToastType): void {
   window.dispatchEvent(
     new CustomEvent<ToastDetail>("dopaflow:toast", {
       detail: { id: ++nextId, message, type },
-    }),
+    })
   );
 }
 

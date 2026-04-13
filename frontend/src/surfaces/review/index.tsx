@@ -18,11 +18,11 @@ export default function ReviewView(): JSX.Element {
   const [editingCard, setEditingCard] = useState<ReviewCard | null>(null);
   const visibleCards = useMemo(
     () => review.cards.filter((card) => !selectedDeckId || card.deck_id === selectedDeckId),
-    [review.cards, selectedDeckId],
+    [review.cards, selectedDeckId]
   );
   const dueCards = useMemo(
     () => visibleCards.filter((card) => !card.next_review_at || new Date(card.next_review_at) <= new Date()),
-    [visibleCards],
+    [visibleCards]
   );
 
   useEffect(() => {

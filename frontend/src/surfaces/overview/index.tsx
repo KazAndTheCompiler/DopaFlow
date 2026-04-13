@@ -88,12 +88,12 @@ export default function OverviewView(): JSX.Element {
 
   const tasksDueToday = useMemo(
     () => tasks.tasks.filter((t) => !t.done && t.due_at && t.due_at.slice(0, 10) <= todayIso).length,
-    [tasks.tasks, todayIso],
+    [tasks.tasks, todayIso]
   );
 
   const tasksCompletedToday = useMemo(
     () => tasks.tasks.filter((t) => t.done && t.updated_at?.slice(0, 10) === todayIso).length,
-    [tasks.tasks, todayIso],
+    [tasks.tasks, todayIso]
   );
 
   const focusMinutesToday = useMemo(() => {
@@ -104,7 +104,9 @@ export default function OverviewView(): JSX.Element {
   }, [focus.sessions, todayIso]);
 
   const habitsStreakAvg = useMemo(() => {
-    if (!habits.habits.length) return 0;
+    if (!habits.habits.length) {
+ return 0;
+}
     return Math.round(habits.habits.reduce((sum, h) => sum + (h.current_streak ?? 0), 0) / habits.habits.length);
   }, [habits.habits]);
 
@@ -123,7 +125,7 @@ export default function OverviewView(): JSX.Element {
         .map((node) => ({ id: node.id, label: node.date, links: node.entry_count }))
         .sort((a, b) => b.links - a.links)
         .slice(0, 5),
-    [app?.journal.graph.nodes],
+    [app?.journal.graph.nodes]
   );
 
   const weeklyDigest = app?.insights.weeklyDigest;
@@ -137,14 +139,14 @@ export default function OverviewView(): JSX.Element {
           }
           return left.title.localeCompare(right.title);
         })[0] ?? null,
-    [app?.tasks.tasks, todayIso],
+    [app?.tasks.tasks, todayIso]
   );
   const nextCalendarBlock = useMemo(
     () =>
       (app?.calendar.events ?? [])
         .filter((event) => event.start_at.slice(0, 10) === todayIso)
         .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())[0] ?? null,
-    [app?.calendar.events, todayIso],
+    [app?.calendar.events, todayIso]
   );
 
   const runway = (() => {
@@ -318,7 +320,9 @@ export default function OverviewView(): JSX.Element {
       {/* Packy whisper — first-class slot */}
       {app?.packy.whisper && (
         <button
-          onClick={() => { window.location.hash = "#/insights"; }}
+          onClick={() => {
+ window.location.hash = "#/insights";
+}}
           style={{
             padding: "1rem 1.25rem",
             borderRadius: "16px",
@@ -470,7 +474,9 @@ export default function OverviewView(): JSX.Element {
         {/* Top journal connections */}
         {topLinkedNodes.length > 0 && (
           <button
-            onClick={() => { window.location.hash = "#/journal"; }}
+            onClick={() => {
+ window.location.hash = "#/journal";
+}}
             style={{ padding: "1.25rem", borderRadius: "16px", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "var(--surface-glass-blur, blur(14px))", border: "1px solid var(--border-subtle)", display: "grid", gap: "0.5rem", textAlign: "left", cursor: "pointer", width: "100%", position: "relative" }}
           >
             <div aria-hidden="true" style={{ position: "absolute", top: 0, left: "8%", right: "8%", height: "1px", background: "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)", pointerEvents: "none", borderRadius: "1px" }} />

@@ -29,7 +29,7 @@ const CommandsView = lazy(() => import("@surfaces/commands"));
 const SettingsView = lazy(() => import("@surfaces/settings"));
 
 function wrapSurface(
-  Surface: LazyExoticComponent<ComponentType>,
+  Surface: LazyExoticComponent<ComponentType>
 ): ComponentType {
   return function WrappedSurface(): JSX.Element {
     return (

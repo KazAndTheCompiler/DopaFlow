@@ -211,7 +211,7 @@ function CorrelationsCard({ correlations }: { correlations: CorrelationInsight[]
             const value = Number(correlation.pearson_r ?? 0);
             const isPositive = value >= 0;
             const color = isPositive ? "var(--state-completed)" : "var(--state-overdue)";
-            
+
             return (
               <div key={correlation.metric} style={{ display: "grid", gap: "0.4rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

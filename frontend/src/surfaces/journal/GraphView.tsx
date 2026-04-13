@@ -13,7 +13,9 @@ const NODE_R = 10;
 /** Deterministic seeded pseudo-random to position nodes without D3. */
 function seededPosition(seed: string, max: number, margin: number): number {
   let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < seed.length; i++) {
+ h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;
+}
   return margin + ((h % (max - margin * 2)) + (max - margin * 2)) % (max - margin * 2);
 }
 
@@ -24,8 +26,8 @@ export function GraphView({ graph }: GraphViewProps): JSX.Element {
     const map = new Map<string, { x: number; y: number; count: number }>();
     for (const node of graph.nodes) {
       map.set(node.id, {
-        x: seededPosition(node.id + "x", WIDTH, NODE_R + 4),
-        y: seededPosition(node.id + "y", HEIGHT, NODE_R + 4),
+        x: seededPosition(`${node.id  }x`, WIDTH, NODE_R + 4),
+        y: seededPosition(`${node.id  }y`, HEIGHT, NODE_R + 4),
         count: node.entry_count,
       });
     }
@@ -68,7 +70,9 @@ export function GraphView({ graph }: GraphViewProps): JSX.Element {
         {graph.edges.map((edge, i) => {
           const src = nodeMap.get(edge.source);
           const tgt = nodeMap.get(edge.target);
-          if (!src || !tgt) return null;
+          if (!src || !tgt) {
+ return null;
+}
           return (
             <line
               key={i}
@@ -84,7 +88,9 @@ export function GraphView({ graph }: GraphViewProps): JSX.Element {
         })}
         {graph.nodes.map((node) => {
           const pos = nodeMap.get(node.id);
-          if (!pos) return null;
+          if (!pos) {
+ return null;
+}
           const r = NODE_R + Math.min(node.entry_count * 2, 8);
           return (
             <g key={node.id}>

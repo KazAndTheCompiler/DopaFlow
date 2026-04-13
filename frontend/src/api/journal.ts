@@ -20,8 +20,12 @@ export interface JournalGraphData {
 
 export async function listJournalEntries(params?: { tag?: string; search?: string }): Promise<JournalEntry[]> {
   const qs = new URLSearchParams();
-  if (params?.tag) qs.set("tag", params.tag);
-  if (params?.search) qs.set("search", params.search);
+  if (params?.tag) {
+ qs.set("tag", params.tag);
+}
+  if (params?.search) {
+ qs.set("search", params.search);
+}
   const query = qs.toString() ? `?${qs.toString()}` : "";
   return parseApiSchema<JournalEntry[]>(journalEntriesSchema, await apiClient<unknown>(`/journal/entries${query}`));
 }

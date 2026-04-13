@@ -42,7 +42,7 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
 
   const tasks = tasksState.tasks;
   const overdue = tasks.filter(
-    (t) => !t.done && t.status !== "cancelled" && t.status !== "done" && isOverdue(t),
+    (t) => !t.done && t.status !== "cancelled" && t.status !== "done" && isOverdue(t)
   );
 
   // Pre-select top 3 by priority when entering step 2
@@ -95,20 +95,20 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
           decisions,
           picks: Array.from(picks),
         },
-      }),
+      })
     );
   }, [decisions, energy, picks, step, today]);
 
   // Yesterday's stats
   const yISO = yesterdayISO();
   const yesterdayTasks = tasks.filter(
-    (t) => t.done && (t as { updated_at?: string }).updated_at?.slice(0, 10) === yISO,
+    (t) => t.done && (t as { updated_at?: string }).updated_at?.slice(0, 10) === yISO
   ).length;
   const yesterdayFocus = focus.sessions
     .filter((s) => s.status === "completed" && (s as { ended_at?: string }).ended_at?.slice(0, 10) === yISO)
     .reduce((sum, s) => sum + ((s as { duration_minutes?: number }).duration_minutes ?? 0), 0);
   const habitStreak = habits.habits.reduce(
-    (max, h) => Math.max(max, h.current_streak ?? 0), 0,
+    (max, h) => Math.max(max, h.current_streak ?? 0), 0
   );
 
   // Today's events
@@ -155,7 +155,7 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
       const level = ENERGY_LEVELS[energy];
       void packy.updateLorebook(
         `Energy: ${level.label}`,
-        `Morning energy logged as ${level.label} (${level.value}/4)`,
+        `Morning energy logged as ${level.label} (${level.value}/4)`
       );
     }
     localStorage.setItem(TODAY_KEY, today);
@@ -176,7 +176,9 @@ export default function PlanMyDayModal({ onClose, onNavigate }: PlanMyDayModalPr
         {step === 0 && (
           <EnergyCheck
             energy={energy}
-            onPick={(v) => { setEnergy(v); }}
+            onPick={(v) => {
+ setEnergy(v);
+}}
             onNext={() => setStep(1)}
           />
         )}

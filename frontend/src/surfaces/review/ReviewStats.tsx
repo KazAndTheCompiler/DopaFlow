@@ -4,7 +4,9 @@ import { useMemo } from "react";
 import type { ReviewCard } from "../../../../shared/types";
 
 function daysUntil(dateStr?: string | null): number | null {
-  if (!dateStr) return null;
+  if (!dateStr) {
+ return null;
+}
   const diff = new Date(dateStr).getTime() - Date.now();
   return Math.ceil(diff / 86_400_000);
 }
@@ -16,7 +18,9 @@ export function ReviewStats({ cards }: { cards: ReviewCard[] }): JSX.Element {
   }), [cards]);
 
   const avgEase = useMemo(() => {
-    if (cards.length === 0) return 0;
+    if (cards.length === 0) {
+ return 0;
+}
     return cards.reduce((s, c) => s + c.ease_factor, 0) / cards.length;
   }, [cards]);
 

@@ -85,7 +85,9 @@ export default function JournalView(): JSX.Element {
 
       <div style={{ display: "grid", gap: "1rem", alignContent: "start", minWidth: 0 }}>
         <div style={{ display: "flex", gap: "1rem", alignItems: "start", flexWrap: "wrap", minWidth: 0 }}>
-          <TemplatesPicker onApply={(body, tags) => { void journal.save({ date: selectedDate, markdown_body: body, tags, emoji: activeEntry?.emoji ?? null }); }} />
+          <TemplatesPicker onApply={(body, tags) => {
+ void journal.save({ date: selectedDate, markdown_body: body, tags, emoji: activeEntry?.emoji ?? null });
+}} />
           {selectedDate === today && (
             <button
               onClick={handleExportToday}

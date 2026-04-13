@@ -96,12 +96,16 @@ export function DayView({
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   function getPixelsPerRem(): number {
-    if (!gridRef.current) return 16;
+    if (!gridRef.current) {
+ return 16;
+}
     return gridRef.current.getBoundingClientRect().height / (TOTAL_HOURS * HOUR_ROW_REM);
   }
 
   const onMoveMouseDown = (e: React.MouseEvent, event: CalendarEvent): void => {
-    if (!isLocalEditable(event) || !onRescheduleEvent) return;
+    if (!isLocalEditable(event) || !onRescheduleEvent) {
+ return;
+}
     e.stopPropagation();
     const tRem = topOffsetRem(event);
     const hRem = heightRem(event);
@@ -118,7 +122,9 @@ export function DayView({
   };
 
   const onResizeMouseDown = (e: React.MouseEvent, event: CalendarEvent): void => {
-    if (!isLocalEditable(event) || !onResizeEvent) return;
+    if (!isLocalEditable(event) || !onResizeEvent) {
+ return;
+}
     e.preventDefault();
     e.stopPropagation();
     const tRem = topOffsetRem(event);
@@ -135,11 +141,15 @@ export function DayView({
   };
 
   const onGridMouseMove = (e: React.MouseEvent): void => {
-    if (!dragRef.current) return;
+    if (!dragRef.current) {
+ return;
+}
     const { id, type, startMouseY, startTopRem, startHeightRem, pixelsPerRem } = dragRef.current;
     const deltaRem = (e.clientY - startMouseY) / pixelsPerRem;
     // Require at least 2px movement before starting visual drag
-    if (Math.abs(e.clientY - startMouseY) < 2 && !dragVisual) return;
+    if (Math.abs(e.clientY - startMouseY) < 2 && !dragVisual) {
+ return;
+}
     const maxTopRem = TOTAL_HOURS * HOUR_ROW_REM - MIN_HEIGHT_REM;
     if (type === "move") {
       const newTop = Math.max(0, Math.min(startTopRem + deltaRem, maxTopRem));
@@ -162,7 +172,9 @@ export function DayView({
     setDragVisual(null);
 
     const event = timedEvents.find((e) => e.id === id);
-    if (!event) return;
+    if (!event) {
+ return;
+}
 
     if (type === "move" && onRescheduleEvent) {
       const { hours: h, minutes: m } = remToSnappedTime(visual.topRem);
@@ -278,8 +290,12 @@ export function DayView({
         <div
           ref={gridRef}
           onMouseMove={onGridMouseMove}
-          onMouseUp={() => { void onGridMouseUp(); }}
-          onMouseLeave={() => { void onGridMouseUp(); }}
+          onMouseUp={() => {
+ void onGridMouseUp();
+}}
+          onMouseLeave={() => {
+ void onGridMouseUp();
+}}
           style={{
             position: "relative",
             display: "grid",

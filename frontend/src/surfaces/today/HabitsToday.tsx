@@ -6,7 +6,9 @@ export interface HabitsTodayProps {
 }
 
 function isCheckedInToday(habit: Habit): boolean {
-  if (!habit.last_checkin_date) return false;
+  if (!habit.last_checkin_date) {
+ return false;
+}
   const checkinDate = new Date(habit.last_checkin_date);
   const today = new Date();
   return (

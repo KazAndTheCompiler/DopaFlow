@@ -33,7 +33,7 @@ export function usePacky(): UsePackyResult {
   const updateLorebook = useCallback(async (
     headline: string,
     body: string,
-    stats?: { completed_today?: number; habit_streak?: number; focus_minutes_today?: number },
+    stats?: { completed_today?: number; habit_streak?: number; focus_minutes_today?: number }
   ) => {
     await updatePackyLorebook({ headline, body, ...(stats ?? {}) });
     await refresh();

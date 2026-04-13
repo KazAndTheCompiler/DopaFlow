@@ -33,10 +33,18 @@ function inferGitHubStatus(): { tone: OverviewTone; detail: string } {
 }
 
 function toneStyle(tone: OverviewTone): CSSProperties {
-  if (tone === "Connected") return { color: "var(--state-ok)", background: "color-mix(in srgb, var(--state-ok) 14%, transparent)" };
-  if (tone === "Needs attention") return { color: "var(--state-warn)", background: "color-mix(in srgb, var(--state-warn) 14%, transparent)" };
-  if (tone === "Error") return { color: "var(--state-overdue)", background: "color-mix(in srgb, var(--state-overdue) 14%, transparent)" };
-  if (tone === "Local-only") return { color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" };
+  if (tone === "Connected") {
+ return { color: "var(--state-ok)", background: "color-mix(in srgb, var(--state-ok) 14%, transparent)" };
+}
+  if (tone === "Needs attention") {
+ return { color: "var(--state-warn)", background: "color-mix(in srgb, var(--state-warn) 14%, transparent)" };
+}
+  if (tone === "Error") {
+ return { color: "var(--state-overdue)", background: "color-mix(in srgb, var(--state-overdue) 14%, transparent)" };
+}
+  if (tone === "Local-only") {
+ return { color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" };
+}
   return { color: "var(--text-secondary)", background: "var(--surface-2)" };
 }
 

@@ -68,7 +68,7 @@ export function VaultConflictList({
                   ? "Hide preview"
                   : "Preview changes",
               false,
-              loadingId === conflict.id,
+              loadingId === conflict.id
             )}
             {smBtn(() => onRollback(conflict.id), "Rollback to DopaFlow")}
             {smBtn(() => onResolve(conflict.file_path), "Keep vault version")}

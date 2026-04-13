@@ -64,18 +64,36 @@ const ROUTE_SUGGESTIONS: Record<string, Record<string, string[]>> = {
 // ---------------------------------------------------------------------------
 
 function formatEntityValue(key: string, value: unknown): string {
-  if (value == null || (Array.isArray(value) && value.length === 0)) return "";
-  if (key === "priority" && typeof value === "number") return PRIORITY_LABELS[value]?.label ?? String(value);
+  if (value == null || (Array.isArray(value) && value.length === 0)) {
+ return "";
+}
+  if (key === "priority" && typeof value === "number") {
+ return PRIORITY_LABELS[value]?.label ?? String(value);
+}
   if ((key === "rrule" || key === "recurrence_rule") && typeof value === "string") {
-    if (value.includes("DAILY")) return "Repeats daily";
-    if (value.includes("WEEKLY") && value.includes("BYDAY")) return `Repeats weekly (${value.split("BYDAY=")[1]})`;
-    if (value.includes("WEEKLY")) return "Repeats weekly";
-    if (value.includes("MONTHLY")) return "Repeats monthly";
-    if (value.includes("YEARLY")) return "Repeats yearly";
+    if (value.includes("DAILY")) {
+ return "Repeats daily";
+}
+    if (value.includes("WEEKLY") && value.includes("BYDAY")) {
+ return `Repeats weekly (${value.split("BYDAY=")[1]})`;
+}
+    if (value.includes("WEEKLY")) {
+ return "Repeats weekly";
+}
+    if (value.includes("MONTHLY")) {
+ return "Repeats monthly";
+}
+    if (value.includes("YEARLY")) {
+ return "Repeats yearly";
+}
     return `Recurring (${value})`;
   }
-  if (Array.isArray(value)) return value.join(", ");
-  if (key === "estimated_minutes" && typeof value === "number") return `~${value}min`;
+  if (Array.isArray(value)) {
+ return value.join(", ");
+}
+  if (key === "estimated_minutes" && typeof value === "number") {
+ return `~${value}min`;
+}
   if (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
     const d = new Date(value);
     if (!Number.isNaN(d.getTime())) {
@@ -92,10 +110,16 @@ function formatEntityValue(key: string, value: unknown): string {
 }
 
 function shouldShowEntity(key: string, value: unknown): boolean {
-  if (value == null || value === "" || value === false) return false;
-  if (Array.isArray(value) && value.length === 0) return false;
+  if (value == null || value === "" || value === false) {
+ return false;
+}
+  if (Array.isArray(value) && value.length === 0) {
+ return false;
+}
   // Skip internal/technical keys
-  if (key === "date" && typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+  if (key === "date" && typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+ return false;
+}
   return true;
 }
 
@@ -144,7 +168,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
 
   const processTranscript = useCallback(
     async (text: string) => {
-      if (processingRef.current || !text.trim()) return;
+      if (processingRef.current || !text.trim()) {
+ return;
+}
       processingRef.current = true;
       setPhase("processing");
       setError(null);
@@ -157,8 +183,12 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
 
         // Auto-execute non-actionable intents
         if (res.intent === "greeting" || res.intent === "help") {
-          if (res.tts_text) speak(res.tts_text);
-          if (continuousMode) scheduleFollowUpRelisten(res);
+          if (res.tts_text) {
+ speak(res.tts_text);
+}
+          if (continuousMode) {
+ scheduleFollowUpRelisten(res);
+}
         } else if (res.tts_text && res.status === "ok") {
           speak(res.tts_text);
         }
@@ -169,7 +199,7 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
         processingRef.current = false;
       }
     },
-    [speak, continuousMode, route],
+    [speak, continuousMode, route]
   );
 
   // When speech recognition produces a final transcript, process it
@@ -181,13 +211,17 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   }, [transcriptText, listening, processTranscript]);
 
   useEffect(() => {
-    if (!sttError) return;
+    if (!sttError) {
+ return;
+}
     setError(sttError);
     setPhase("idle");
   }, [sttError]);
 
   useEffect(() => {
-    if (!microphoneError) return;
+    if (!microphoneError) {
+ return;
+}
     setError(microphoneError);
     setPhase("idle");
   }, [microphoneError]);
@@ -195,7 +229,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   // Cleanup
   useEffect(() => {
     return () => {
-      if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+      if (followUpTimeoutRef.current) {
+ clearTimeout(followUpTimeoutRef.current);
+}
     };
   }, []);
 
@@ -204,7 +240,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   // -----------------------------------------------------------------------
 
   const handleExecute = async (): Promise<void> => {
-    if (!transcriptText) return;
+    if (!transcriptText) {
+ return;
+}
     setPhase("executing");
     setError(null);
 
@@ -222,7 +260,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
       onExecuted?.();
 
       // In continuous mode, auto-relisten after speaking
-      if (continuousMode) scheduleFollowUpRelisten(res);
+      if (continuousMode) {
+ scheduleFollowUpRelisten(res);
+}
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Execution failed");
       speak("Something went wrong. Try again?");
@@ -235,7 +275,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   // -----------------------------------------------------------------------
 
   const scheduleFollowUpRelisten = (res: PackyVoiceResponse): void => {
-    if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+    if (followUpTimeoutRef.current) {
+ clearTimeout(followUpTimeoutRef.current);
+}
     // Wait for TTS to finish (~2s per sentence), then re-listen
     const replyLen = (res.reply_text ?? res.tts_text ?? "").length;
     const delay = Math.min(Math.max(replyLen * 50, 1500), 5000);
@@ -243,7 +285,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
       if (continuousMode && sttSupported) {
         void (async () => {
           const microphoneReady = await startMicrophone();
-          if (!microphoneReady) return;
+          if (!microphoneReady) {
+ return;
+}
           stopMicrophone();
           reset();
           setResponse(null);
@@ -278,7 +322,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
     }
     void (async () => {
       const microphoneReady = await startMicrophone();
-      if (!microphoneReady) return;
+      if (!microphoneReady) {
+ return;
+}
       stopMicrophone();
       reset();
       setResponse(null);
@@ -294,9 +340,13 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   // -----------------------------------------------------------------------
 
   const handleClose = (): void => {
-    if (listening) stop();
+    if (listening) {
+ stop();
+}
     stopMicrophone();
-    if (followUpTimeoutRef.current) clearTimeout(followUpTimeoutRef.current);
+    if (followUpTimeoutRef.current) {
+ clearTimeout(followUpTimeoutRef.current);
+}
     reset();
     setResponse(null);
     setError(null);
@@ -316,7 +366,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   const canFollowUp = phase === "done" && response?.follow_ups?.length;
 
   const renderPreview = (): JSX.Element | null => {
-    if (!response) return null;
+    if (!response) {
+ return null;
+}
 
     const entities = response.entities ?? {};
     const showEntities = Object.entries(entities).filter(([k, v]) => shouldShowEntity(k, v));
@@ -434,7 +486,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
             {showEntities.map(([key, value]) => {
               const formatted = formatEntityValue(key, value);
-              if (!formatted) return null;
+              if (!formatted) {
+ return null;
+}
               return (
                 <span
                   key={key}
@@ -534,7 +588,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   };
 
   const renderFollowUps = (): JSX.Element | null => {
-    if (!canFollowUp || !response) return null;
+    if (!canFollowUp || !response) {
+ return null;
+}
     const routeSug = route ? ROUTE_SUGGESTIONS[route]?.[response.intent] : undefined;
     const followUps: string[] = routeSug ?? response.follow_ups;
     return (
@@ -716,7 +772,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
               if (continuousMode) {
                 void (async () => {
                   const microphoneReady = await startMicrophone();
-                  if (!microphoneReady) return;
+                  if (!microphoneReady) {
+ return;
+}
                   stopMicrophone();
                   setPhase("listening");
                   start();
@@ -734,7 +792,9 @@ export function VoiceCommandModal({ initialCommandWord, onExecuted, inline, rout
   );
 
   // Inline mode: render without Modal wrapper
-  if (inline) return content;
+  if (inline) {
+ return content;
+}
 
   return (
     <>

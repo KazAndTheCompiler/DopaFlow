@@ -82,7 +82,9 @@ export default function OnboardingModal({ onCreateHabits, onCreateTask, onFinish
               <button
                 key={h.id}
                 onClick={() => {
-                  setSelected(p => { const n = new Set(p); n.has(h.id) ? n.delete(h.id) : n.add(h.id); return n; });
+                  setSelected(p => {
+ const n = new Set(p); n.has(h.id) ? n.delete(h.id) : n.add(h.id); return n;
+});
                 }}
                 style={{
                   display: "flex", alignItems: "center", gap: "0.55rem", padding: "0.75rem 0.8rem", borderRadius: "14px",
