@@ -75,7 +75,10 @@ raw.md
 
 # --- LLM Work Folders ---
 LLM_work_folder/
-.gitnexus
+docs/internal/ai-workflow/LLM_work_folder/
+
+# --- Internal personal / archived ---
+internal/
 
 # --- Tool / AI config (never commit — may contain keys, prompts, session data) ---
 .claude/

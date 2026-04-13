@@ -38,6 +38,6 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 
 ## Notes
 
-- Root-level working notes, prompts, recovery logs, and conversation artifacts were moved out of the repo surface into the ignored `LLM_work_folder/`.
+- Root-level working notes, prompts, recovery logs, and conversation artifacts were moved out of the repo surface into `docs/internal/ai-workflow/LLM_work_folder/`.
 - The long-form changelog now absorbs session-level backend/frontend notes so obsolete summary snapshots and one-off prompt artifacts can be retired instead of becoming a second truth set.
 - This file is intentionally short and release-facing. The long-form archive lives under `docs/`.

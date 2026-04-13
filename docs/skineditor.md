@@ -557,7 +557,7 @@ To share your custom skin with the community:
 ### DopaFlow Documentation
 
 - [API Reference](./api-reference.md) - Backend API docs
-- [LLM_work_folder/](LLM_work_folder/) - agent prompts and working notes
+- [LLM_work_folder/](docs/internal/ai-workflow/LLM_work_folder/) - agent prompts and working notes
 
 ---
 

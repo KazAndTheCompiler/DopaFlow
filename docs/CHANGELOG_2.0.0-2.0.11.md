@@ -134,14 +134,12 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ### Documentation cleanup
 
-- Promoted backend/frontend session notes into the changelog so `LLM_work_folder/` no longer needs competing summary snapshots as a second record of shipped work.
-- Started deleting obsolete summary files and superseded one-off prompt artifacts from `LLM_work_folder/` instead of leaving them to drift.
+- Promoted backend/frontend session notes into the changelog so internal workflow docs no longer need competing summary snapshots as a second record of shipped work.
 - Kept the live documentation truth set centered on:
   - `CHANGELOG.md`
   - `docs/CHANGELOG_2.0.0-2.0.11.md`
   - `README.md`
-  - `LLM_work_folder/next_steps.md`
-  - `LLM_work_folder/promptpack_agents.md`
+  - `docs/internal/ai-workflow/LLM_work_folder/` (internal workflow and prompts)
 
 ### 2026-04-07
 
@@ -344,18 +342,11 @@ All notable changes, development sessions, and version history for DopaFlow.
 
 ### Tooling and docs
 
-- Added `LLM_work_folder/run_frontend_verification.sh` so build + Playwright verification can be run directly without another approval loop.
-- Rewrote `LLM_work_folder/promptpack_agents.md` around the current working-tree workflow instead of the old 18-test / EPERM-era assumptions.
-- Consolidated the Qwen/Minimax helper-model workflow into the live promptpack/changelog truth set instead of leaving separate stale notes in the work folder.
-- Consolidated the latest delegate-prompt routing into changelog truth instead of keeping one-off prompt files around:
+- Consolidated internal workflow routing into the changelog instead of keeping one-off prompt files around.
+- Added a durable agent split for the next premium push:
   - Claude Sonnet + Haiku lane: premium closure implementation owner for large coherent waves
   - Minimax lane: contained polish/test/regression closer for small sign-off slices
   - Codex lane: repo-wide premium-gap closer focused on turning credible surfaces into premium ones without drifting into more domains
-- Added a durable promptpack split for the next premium push:
-  - `LLM_work_folder/premium_goal_promptpack.md` for Codex-owned cross-surface premium closure
-  - `LLM_work_folder/mimo_nlp_packy_promptpack.md` for Mimo-owned NLP / Packy / command trust work
-  - `LLM_work_folder/claude_overflow_promptpack.md` for narrow, explicitly budgeted Claude overflow slices only
-- Removed temporary delegate prompt files after completion so `LLM_work_folder/` does not become another stale planning graveyard.
 - Updated `docs/userguide.html` to remove stale surface counts, stale shortcut docs, stale skin count, and machine-specific local paths.
 - Hardened frontend API targeting for local release/runtime use:
   - default API base now follows `window.location.origin` instead of assuming `127.0.0.1:8000`
@@ -373,7 +364,7 @@ All notable changes, development sessions, and version history for DopaFlow.
 ### Verification
 
 - Current verification entrypoint:
-  - `bash LLM_work_folder/run_frontend_verification.sh`
+  - `bash docs/internal/ai-workflow/LLM_work_folder/run_frontend_verification.sh`
 - Current frontend verification result:
   - `35 passed`
 
@@ -530,27 +521,12 @@ DopaFlow v2 is a unified productivity app for ADHD brains. It combines the ZoesT
 | **TodayView nav buttons** | Bare buttons → styled with border, Today highlighted in accent when on current day |
 | **TaskEditModal Packy hint** | Auto-fetches Packy tip on task open; renders as tinted accent box above the form |
 
-#### Prompt Pack Documentation Added
-
-Added prompt pack documentation for model-specific task routing (consolidated to CHANGELOG.md, source files removed):
-
-| Model | Role |
-|-------|------|
-| Claude Sonnet | Implementation owner - product-grade frontend/backend work |
-| Claude Haiku | Narrow implementation closer - contained fixes and cleanup |
-| Minimax | Test builder, regression guard, base-health maintainer |
-| Qwen | Documentation owner, repo-state maintainer |
-
-These prompt packs define clear division of labor across helper models used in the development workflow.
-
 #### Implementation Notes
 
-The repo-grounded restart points now live in files that are actually present:
+The repo-grounded restart points:
 
 - `CHANGELOG.md` - shipped changes plus active hardening notes
-- `LLM_work_folder/promptpack_agents.md` - current model-routing and verification prompts
-- `LLM_work_folder/run_frontend_verification.sh` - current frontend build + Playwright entrypoint
-- `backend/app/tools/promptpack.py` - CLI prompt templates for audits, API sync, migrations, and test-focused prompts
+- `docs/internal/ai-workflow/LLM_work_folder/` - internal workflow prompts and agent rules
 
 #### Features Delegated and Completed
 
