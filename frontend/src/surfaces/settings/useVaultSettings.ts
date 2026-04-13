@@ -90,8 +90,12 @@ export function useVaultSettings(): {
         setSyncState("done");
         const count = result.pushed ?? ((result.imported ?? 0) + (result.updated ?? 0));
         let message = `${label}: ${count} synced`;
-        if (result.conflicts) message += ` · ${result.conflicts} conflicts`;
-        if (result.errors.length) message += `\n${result.errors.slice(0, 3).join("; ")}`;
+        if (result.conflicts) {
+ message += ` · ${result.conflicts} conflicts`;
+}
+        if (result.errors.length) {
+ message += `\n${result.errors.slice(0, 3).join("; ")}`;
+}
         setLastMessage(message);
         refresh();
       })

@@ -65,10 +65,14 @@ export function FocusTimer({ session, onPause, onResume, onComplete }: FocusTime
         }
       }, 500);
     } else {
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+      if (intervalRef.current !== null) {
+ clearInterval(intervalRef.current);
+}
     }
     return () => {
-      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+      if (intervalRef.current !== null) {
+ clearInterval(intervalRef.current);
+}
     };
   }, [isRunning, totalSeconds, pausedSeconds]); // eslint-disable-line react-hooks/exhaustive-deps
 

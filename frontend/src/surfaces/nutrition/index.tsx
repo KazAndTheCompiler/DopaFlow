@@ -89,7 +89,9 @@ export default function NutritionView(): JSX.Element {
       fetch(`${API_BASE_URL}/nutrition/goals`).then((r) => r.json()).catch(() => null),
       fetch(`${API_BASE_URL}/nutrition/foods`).then((r) => r.json()).catch(() => []),
     ]);
-    if (todayData) setToday(todayData as DailyTotals);
+    if (todayData) {
+ setToday(todayData as DailyTotals);
+}
     if (goalsData) {
       setGoals(goalsData as Goals);
       setGoalKj(String((goalsData as Goals).daily_kj));
@@ -100,20 +102,28 @@ export default function NutritionView(): JSX.Element {
     setFoods(Array.isArray(foodsData) ? foodsData as FoodLibraryItem[] : []);
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+ void load();
+}, []);
 
   useEffect(() => {
-    const handler = (): void => { void load(); };
+    const handler = (): void => {
+ void load();
+};
     window.addEventListener(NUTRITION_REFRESH_EVENT, handler);
     return () => window.removeEventListener(NUTRITION_REFRESH_EVENT, handler);
   }, []);
 
   useEffect(() => {
-    if (transcript) { setName(transcript); reset(); }
+    if (transcript) {
+ setName(transcript); reset();
+}
   }, [transcript]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLog = async (): Promise<void> => {
-    if (!name.trim() || !kj) return;
+    if (!name.trim() || !kj) {
+ return;
+}
     setSaving(true);
     try {
       await fetch(`${API_BASE_URL}/nutrition/log`, {

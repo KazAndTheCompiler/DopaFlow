@@ -26,7 +26,7 @@ export function askPacky(payload: { text: string; context?: Record<string, unkno
 export function sendVoiceCommand(
   text: string,
   context?: Record<string, unknown>,
-  autoExecute = false,
+  autoExecute = false
 ): Promise<PackyVoiceResponse> {
   return apiClient<PackyVoiceResponse>("/packy/voice-command", {
     method: "POST",

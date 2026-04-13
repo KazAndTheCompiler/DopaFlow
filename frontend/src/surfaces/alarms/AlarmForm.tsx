@@ -39,7 +39,9 @@ export function AlarmForm({ onCreate }: AlarmFormProps): JSX.Element {
   const [busy, setBusy] = useState<boolean>(false);
 
   const handleAdd = async (): Promise<void> => {
-    if (!title.trim() || !at) return;
+    if (!title.trim() || !at) {
+ return;
+}
     setBusy(true);
     try {
       await onCreate({

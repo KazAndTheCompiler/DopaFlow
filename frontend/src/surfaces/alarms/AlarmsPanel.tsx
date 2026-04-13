@@ -8,11 +8,17 @@ function formatNext(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
   const diffMs = d.getTime() - now.getTime();
-  if (diffMs < 0) return "overdue";
+  if (diffMs < 0) {
+ return "overdue";
+}
   const diffMins = Math.round(diffMs / 60_000);
-  if (diffMins < 60) return `in ${diffMins}m`;
+  if (diffMins < 60) {
+ return `in ${diffMins}m`;
+}
   const diffHrs = Math.round(diffMins / 60);
-  if (diffHrs < 24) return `in ${diffHrs}h`;
+  if (diffHrs < 24) {
+ return `in ${diffHrs}h`;
+}
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 

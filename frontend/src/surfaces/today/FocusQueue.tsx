@@ -20,7 +20,9 @@ const FOCUS_QUEUE_REORDER_TYPE = "application/x-dopaflow-focus-queue-id";
 const FOCUS_QUEUE_RETENTION_DAYS = 2;
 
 function defaultTaskSort(left: Task, right: Task): number {
-  if (left.priority !== right.priority) return left.priority - right.priority;
+  if (left.priority !== right.priority) {
+ return left.priority - right.priority;
+}
   const leftDue = left.due_at ? new Date(left.due_at).getTime() : Number.POSITIVE_INFINITY;
   const rightDue = right.due_at ? new Date(right.due_at).getTime() : Number.POSITIVE_INFINITY;
   return leftDue - rightDue;
@@ -129,8 +131,12 @@ export function FocusQueue({ tasks, activeSession, onStartFocus, onComplete }: F
       const leftIndex = orderIndex.get(left.id);
       const rightIndex = orderIndex.get(right.id);
       if (leftIndex != null || rightIndex != null) {
-        if (leftIndex == null) return 1;
-        if (rightIndex == null) return -1;
+        if (leftIndex == null) {
+ return 1;
+}
+        if (rightIndex == null) {
+ return -1;
+}
         return leftIndex - rightIndex;
       }
       return defaultTaskSort(left, right);
@@ -226,7 +232,9 @@ export function FocusQueue({ tasks, activeSession, onStartFocus, onComplete }: F
             </span>
           </div>
           <button
-            onClick={() => { window.location.hash = "#/focus"; }}
+            onClick={() => {
+ window.location.hash = "#/focus";
+}}
             style={{
               padding: "0.4rem 0.85rem",
               borderRadius: "8px",
@@ -392,7 +400,9 @@ export function FocusQueue({ tasks, activeSession, onStartFocus, onComplete }: F
           })}
           {hiddenCount > 0 && (
             <button
-              onClick={() => { window.location.hash = "#/tasks"; }}
+              onClick={() => {
+ window.location.hash = "#/tasks";
+}}
               style={{
                 padding: "0.45rem 0.8rem",
                 borderRadius: "10px",

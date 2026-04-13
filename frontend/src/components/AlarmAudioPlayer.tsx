@@ -22,7 +22,9 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
   }, [sourceQueue]);
 
   useEffect(() => {
-    if (!youtubeUrl) return;
+    if (!youtubeUrl) {
+ return;
+}
 
     let cancelled = false;
 
@@ -49,7 +51,7 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
         const nextEmbedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=${autoplayParam}&rel=0`;
         const resolved = await resolveUrl(youtubeUrl).catch(() => ({ stream_url: null, error: "resolve_failed" }));
         const nextQueue = [resolved.stream_url, youtubeUrl].filter(
-          (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
+          (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index
         );
 
         if (!cancelled) {
@@ -78,7 +80,9 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
   useEffect(() => {
     const audio = audioRef.current;
     const activeSource = sourceQueue[sourceIndex];
-    if (!audio) return;
+    if (!audio) {
+ return;
+}
     if (!activeSource) {
       audio.pause();
       audio.removeAttribute("src");
@@ -99,7 +103,9 @@ export function AlarmAudioPlayer({ youtubeUrl, autoPlay = false }: AlarmAudioPla
     }
   }, [autoPlay, sourceIndex, sourceQueue]);
 
-  if (!youtubeUrl) return null;
+  if (!youtubeUrl) {
+ return null;
+}
   if (loading) {
     return (
       <div

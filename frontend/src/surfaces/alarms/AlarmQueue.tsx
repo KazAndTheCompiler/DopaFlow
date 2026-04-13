@@ -26,9 +26,13 @@ function formatAlarmTime(iso: string): string {
   const nextDay = d.toDateString() === tomorrow.toDateString();
 
   const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  if (sameDay) return `Today ${time}`;
-  if (nextDay) return `Tomorrow ${time}`;
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " " + time;
+  if (sameDay) {
+ return `Today ${time}`;
+}
+  if (nextDay) {
+ return `Tomorrow ${time}`;
+}
+  return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })  } ${  time}`;
 }
 
 function isPast(iso: string): boolean {
@@ -118,7 +122,9 @@ export function AlarmQueue({ alarms, activeAlarmId, onTrigger, onDelete }: Alarm
 
             <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
               <button
-                onClick={() => { setJustFiredId(alarm.id); void onTrigger(alarm.id); }}
+                onClick={() => {
+ setJustFiredId(alarm.id); void onTrigger(alarm.id);
+}}
                 title="Fire now"
                 style={{
                   padding: "0.3rem 0.6rem",

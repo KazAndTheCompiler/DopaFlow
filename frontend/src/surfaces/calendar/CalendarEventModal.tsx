@@ -57,7 +57,9 @@ export default function CalendarEventModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (!event) return;
+    if (!event) {
+ return;
+}
     setTitle(event.title);
     setDescription(event.description ?? "");
     setDate(isoToDateInput(event.start_at));
@@ -70,12 +72,16 @@ export default function CalendarEventModal({
     setSaving(false);
   }, [event]);
 
-  if (!event) return null;
+  if (!event) {
+ return null;
+}
 
   const readOnly = event.provider_readonly;
 
   const handleSave = async (): Promise<void> => {
-    if (!title.trim() || saving || readOnly) return;
+    if (!title.trim() || saving || readOnly) {
+ return;
+}
     setSaving(true);
     try {
       const start = new Date(`${date}T${allDay ? "00:00" : startTime}`);
@@ -96,7 +102,9 @@ export default function CalendarEventModal({
   };
 
   const handleDelete = async (): Promise<void> => {
-    if (readOnly || saving) return;
+    if (readOnly || saving) {
+ return;
+}
     if (!confirmDelete) {
       setConfirmDelete(true);
       return;

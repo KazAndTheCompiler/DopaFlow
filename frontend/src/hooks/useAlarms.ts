@@ -39,7 +39,9 @@ export function useAlarms(): UseAlarmsResult {
   }, []);
 
   const fireLocally = useCallback((alarm: Alarm): void => {
-    if (alarm.muted || firedRef.current.has(alarm.id)) return;
+    if (alarm.muted || firedRef.current.has(alarm.id)) {
+ return;
+}
     firedRef.current.add(alarm.id);
     if (alarm.kind === "tts" || alarm.kind == null) {
       const text = alarm.tts_text || alarm.title;
@@ -59,9 +61,13 @@ export function useAlarms(): UseAlarmsResult {
     // Browser-side fallback so local web release alarms work even without OS TTS binaries.
     const now = Date.now();
     for (const alarm of nextAlarms) {
-      if (alarm.muted) continue;
+      if (alarm.muted) {
+ continue;
+}
       const alarmTime = new Date(alarm.at).getTime();
-      if (Number.isNaN(alarmTime)) continue;
+      if (Number.isNaN(alarmTime)) {
+ continue;
+}
       if (alarmTime <= now && now - alarmTime < 2 * 60_000) {
         fireLocally(alarm);
         continue;

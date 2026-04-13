@@ -24,7 +24,9 @@ export function GmailConnect(): JSX.Element {
   useEffect(() => {
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
-    if (!code) return;
+    if (!code) {
+ return;
+}
     const callbackState = url.searchParams.get("state");
     const expectedState = sessionStorage.getItem(OAUTH_STATE_STORAGE_KEY);
     if (!callbackState || callbackState !== expectedState) {

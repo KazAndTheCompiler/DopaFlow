@@ -13,7 +13,9 @@ const STATUS_COLORS: Record<string, string> = {
 function getWorstStatus(statuses: string[]): string {
   const order = ["error", "syncing", "idle", "ok"];
   for (const status of order) {
-    if (statuses.includes(status)) return status;
+    if (statuses.includes(status)) {
+ return status;
+}
   }
   return "idle";
 }

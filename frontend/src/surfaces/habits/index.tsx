@@ -16,14 +16,18 @@ export default function HabitsView(): JSX.Element {
   const [checkins, setCheckins] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    if (habits.habits.length === 0) return;
+    if (habits.habits.length === 0) {
+ return;
+}
     void Promise.all(
       habits.habits.map((h) =>
         habits.getLogs(h.id).then((logs) => ({ id: h.id, dates: logs.map((l) => l.checkin_date) }))
       )
     ).then((results) => {
       const map: Record<string, string[]> = {};
-      for (const r of results) map[r.id] = r.dates;
+      for (const r of results) {
+ map[r.id] = r.dates;
+}
       setCheckins(map);
     });
   }, [habits.habits, habits.getLogs]);
@@ -39,7 +43,9 @@ export default function HabitsView(): JSX.Element {
 
   const handleAdd = async (): Promise<void> => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+ return;
+}
     setBusy(true);
     try {
       await habits.create({ name: trimmed, target_freq: freq, target_period: period });

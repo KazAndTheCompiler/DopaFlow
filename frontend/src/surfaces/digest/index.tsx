@@ -28,7 +28,9 @@ interface DigestViewModel {
 type DigestResponse = DailyDigest | WeeklyDigestReport;
 
 function toViewModel(period: "today" | "week", raw: DigestResponse | null): DigestViewModel | null {
-  if (!raw) return null;
+  if (!raw) {
+ return null;
+}
 
   const tasks = raw.tasks;
   const habits = raw.habits;
@@ -245,7 +247,9 @@ export default function DigestView(): JSX.Element {
               { label: "Journal", value: digest.journal_entries, color: "#f59e0b" },
             ].filter((segment) => segment.value > 0);
             const total = segments.reduce((sum, segment) => sum + segment.value, 0);
-            if (total === 0) return null;
+            if (total === 0) {
+ return null;
+}
             return (
               <div
                 style={{

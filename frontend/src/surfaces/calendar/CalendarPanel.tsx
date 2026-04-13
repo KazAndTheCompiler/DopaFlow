@@ -37,7 +37,9 @@ export function CalendarPanel({ onCreate, onVoiceExecuted }: CalendarPanelProps)
   const durationTotalMinutes = Math.max(1, durationHours * 60 + durationMinutes);
 
   const handleAdd = async (): Promise<void> => {
-    if (!title.trim() || submitting || !date) return;
+    if (!title.trim() || submitting || !date) {
+ return;
+}
     const start = new Date(`${date}T${time}`);
     if (isNaN(start.getTime())) {
       showToast("Invalid date or time.", "error");

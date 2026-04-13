@@ -21,10 +21,10 @@ export default function CommandsView(): JSX.Element {
         ? commands.filter(
             (command) =>
               command.name.toLowerCase().includes(search.toLowerCase()) ||
-              command.description.toLowerCase().includes(search.toLowerCase()),
+              command.description.toLowerCase().includes(search.toLowerCase())
           )
         : commands,
-    [search, commands],
+    [search, commands]
   );
 
   const handleExecute = (text: string): void => {

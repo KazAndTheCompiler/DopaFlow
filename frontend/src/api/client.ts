@@ -71,7 +71,7 @@ export async function apiClient<T>(path: string, init?: RequestInit): Promise<T>
     } catch (retryError) {
       fireToast("Network error — the local release backend is unreachable.", "error");
       throw new Error(
-        retryError instanceof Error ? `network_error:${retryError.message}` : "network_error:unknown",
+        retryError instanceof Error ? `network_error:${retryError.message}` : "network_error:unknown"
       );
     }
   }

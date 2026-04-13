@@ -72,13 +72,17 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    if (!task) { setDependencies([]); return; }
+    if (!task) {
+ setDependencies([]); return;
+}
     void tasks.getContext(task.id)
       .then((ctx) => {
         const nextDependencies = ctx.dependencies ?? [];
         setDependencies(nextDependencies);
         setInitialSnapshot((prev) => {
-          if (!prev) return prev;
+          if (!prev) {
+ return prev;
+}
           return { ...prev, dependencies: nextDependencies.map((dep) => dep.id) };
         });
       })
@@ -86,7 +90,9 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!task) return;
+    if (!task) {
+ return;
+}
     setPackyHint("");
     void askPacky({ text: `Task: "${task.title}". One concrete tip to move this forward.`, context: { route: "tasks" } })
       .then((r) => setPackyHint(r.reply_text))
@@ -94,7 +100,9 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!task) return;
+    if (!task) {
+ return;
+}
     const nextSnapshot: TaskEditSnapshot = {
       title: task.title,
       description: task.description ?? "",
@@ -129,7 +137,9 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   }, [task]);
 
   useEffect(() => {
-    if (!task || !initialSnapshot) return;
+    if (!task || !initialSnapshot) {
+ return;
+}
     const nextSnapshot: TaskEditSnapshot = {
       title,
       description,
@@ -164,16 +174,22 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
     title,
   ]);
 
-  if (!task) return null;
+  if (!task) {
+ return null;
+}
 
   const handleRequestClose = (): void => {
-    if (isDirty && !window.confirm("Discard changes?")) return;
+    if (isDirty && !window.confirm("Discard changes?")) {
+ return;
+}
     onClose();
   };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape") {
+ return;
+}
       event.preventDefault();
       handleRequestClose();
     };
@@ -182,7 +198,9 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
   }, [isDirty, onClose]);
 
   const handleSave = async (): Promise<void> => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+ return;
+}
     setSaving(true);
     try {
       const tags = tagsRaw
@@ -314,7 +332,11 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
           <Input
             value={title}
             onChange={(e) => setTitle(e.currentTarget.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void handleSave(); }}
+            onKeyDown={(e) => {
+ if (e.key === "Enter") {
+ void handleSave();
+}
+}}
             autoFocus
           />
           <label style={fieldLabel}>Description</label>
@@ -443,8 +465,12 @@ export default function TaskEditModal({ task, onClose, onSave, onDelete }: TaskE
               type="button"
               onClick={() => {
                 const match = tasks.tasks.find((t) => t.title === depSearch && t.id !== task?.id);
-                if (!match || !task) return;
-                void tasks.addDependency(task.id, match.id).then(() => { setDependencies((ds) => [...ds, match]); setDepSearch(""); });
+                if (!match || !task) {
+ return;
+}
+                void tasks.addDependency(task.id, match.id).then(() => {
+ setDependencies((ds) => [...ds, match]); setDepSearch("");
+});
               }}
               style={{ padding: "0.65rem 0.8rem", borderRadius: "10px", border: "none", background: "var(--accent)", color: "var(--text-inverted)", cursor: "pointer", fontWeight: 600, fontSize: "var(--text-sm)" }}
             >

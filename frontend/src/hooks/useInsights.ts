@@ -29,7 +29,7 @@ export function useInsights(): UseInsightsResult {
             title: nextWeeklyDigest.title,
             highlights: Array.isArray(nextWeeklyDigest.highlights) ? nextWeeklyDigest.highlights : [],
           }
-        : undefined,
+        : undefined
     );
     setCorrelations(Array.isArray(nextCorrelations) ? nextCorrelations : []);
   };

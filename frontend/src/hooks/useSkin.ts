@@ -30,18 +30,28 @@ const CUSTOM_SKIN_STYLE_ID = "dopaflow-custom-skin-vars";
 function readCustomSkin(): SkinDefinition | null {
   try {
     const raw = window.localStorage.getItem(CUSTOM_SKIN_KEY);
-    if (!raw) return null;
+    if (!raw) {
+ return null;
+}
     const parsed = JSON.parse(raw) as Partial<SkinDefinition>;
-    if (!parsed || typeof parsed.id !== "string" || typeof parsed.name !== "string" || !parsed.vars) return null;
+    if (!parsed || typeof parsed.id !== "string" || typeof parsed.name !== "string" || !parsed.vars) {
+ return null;
+}
     const definition: SkinDefinition = {
       id: parsed.id,
       name: parsed.name,
       category: parsed.category === "light" ? "light" : "dark",
       vars: parsed.vars,
     };
-    if (parsed.author) definition.author = parsed.author;
-    if (parsed.preview) definition.preview = parsed.preview;
-    if (parsed.accessibility) definition.accessibility = parsed.accessibility;
+    if (parsed.author) {
+ definition.author = parsed.author;
+}
+    if (parsed.preview) {
+ definition.preview = parsed.preview;
+}
+    if (parsed.accessibility) {
+ definition.accessibility = parsed.accessibility;
+}
     return definition;
   } catch {
     return null;
@@ -54,8 +64,12 @@ function toSkinMeta(definition: SkinDefinition): SkinMeta {
     name: definition.name,
     category: definition.category,
   };
-  if (definition.preview) meta.preview = definition.preview;
-  if (definition.accessibility) meta.accessibility = definition.accessibility;
+  if (definition.preview) {
+ meta.preview = definition.preview;
+}
+  if (definition.accessibility) {
+ meta.accessibility = definition.accessibility;
+}
   return meta;
 }
 
@@ -73,7 +87,9 @@ export function saveCustomSkin(definition: {
 
 function upsertSkinMeta(list: SkinMeta[], meta: SkinMeta): SkinMeta[] {
   const existingIndex = list.findIndex((skin) => skin.id === meta.id);
-  if (existingIndex === -1) return [...list, meta];
+  if (existingIndex === -1) {
+ return [...list, meta];
+}
   return list.map((skin, index) => (index === existingIndex ? meta : skin));
 }
 
@@ -131,7 +147,9 @@ function loadSkin(id: string): void {
 async function loadManifest(): Promise<SkinMeta[]> {
   try {
     const res = await fetch(`${SKINS_BASE}/manifest.json`);
-    if (!res.ok) throw new Error("manifest not found");
+    if (!res.ok) {
+ throw new Error("manifest not found");
+}
     const m: SkinManifest = await res.json();
     const customSkin = readCustomSkin();
     if (customSkin && !m.skins.some((skin) => skin.id === customSkin.id)) {

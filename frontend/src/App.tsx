@@ -148,7 +148,7 @@ export default function App(): JSX.Element {
 
   const handleCommandExecution = useCallback(async (
     text: string,
-    options?: { source?: "text" | "voice"; clearOnHandled?: boolean },
+    options?: { source?: "text" | "voice"; clearOnHandled?: boolean }
   ): Promise<boolean> => {
     const success = await commandExecutor.execute(text, options, route, navigate);
     if (options?.clearOnHandled !== false && success) {
@@ -232,7 +232,7 @@ export default function App(): JSX.Element {
       void packy.updateLorebook(
         "Daily sync",
         `Tasks: ${snapshot.tasksDone}, Streak: ${snapshot.habitScore}, Focus: ${focusMinutes}m`,
-        { completed_today: snapshot.tasksDone, habit_streak: snapshot.habitScore, focus_minutes_today: focusMinutes },
+        { completed_today: snapshot.tasksDone, habit_streak: snapshot.habitScore, focus_minutes_today: focusMinutes }
       );
     }
   }, [focus.sessions, gamification.refresh, habits.habits, journal.entries, packy.updateLorebook, review.cards, tasks.tasks]);

@@ -35,27 +35,39 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
 
   // Listen for focus event from keyboard shortcuts
   useEffect(() => {
-    const handleFocusEvent = (): void => { inputRef.current?.focus(); };
+    const handleFocusEvent = (): void => {
+ inputRef.current?.focus();
+};
     document.addEventListener("focus-task-create", handleFocusEvent);
     return () => document.removeEventListener("focus-task-create", handleFocusEvent);
   }, []);
 
   // Debounced NL parse preview
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {
+ clearTimeout(debounceRef.current);
+}
     const text = value.trim();
-    if (text.length < 4) { setPreview(null); return; }
+    if (text.length < 4) {
+ setPreview(null); return;
+}
     debounceRef.current = setTimeout(() => {
       void quickAddTask({ text })
         .then((parsed) => setPreview(parsed as ParsePreview))
         .catch(() => setPreview(null));
     }, 400);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+ if (debounceRef.current) {
+ clearTimeout(debounceRef.current);
+}
+};
   }, [value]);
 
   const handleAdd = (): void => {
     const text = value.trim();
-    if (!text) return;
+    if (!text) {
+ return;
+}
     void onCreate(text);
     setValue("");
     setPreview(null);
@@ -66,8 +78,12 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
     const d = new Date(due);
     const today = new Date();
     const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-    if (d.toDateString() === today.toDateString()) return "today";
-    if (d.toDateString() === tomorrow.toDateString()) return "tomorrow";
+    if (d.toDateString() === today.toDateString()) {
+ return "today";
+}
+    if (d.toDateString() === tomorrow.toDateString()) {
+ return "tomorrow";
+}
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
   };
 

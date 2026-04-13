@@ -28,7 +28,9 @@ function buildBlocks(sessions: FocusSession[], events: CalendarEvent[]): BlockIt
   sessions.forEach((session) => {
     const start = new Date(session.started_at);
     const startMinutes = start.getHours() * 60 + start.getMinutes() - START_HOUR * 60;
-    if (startMinutes < 0 || startMinutes > TOTAL_MINUTES) return;
+    if (startMinutes < 0 || startMinutes > TOTAL_MINUTES) {
+ return;
+}
     const dur = Math.max(session.duration_minutes, 24);
     items.push({ id: session.id, title: `Focus · ${session.duration_minutes}m`, top: (startMinutes / TOTAL_MINUTES) * 100, height: Math.max((dur / TOTAL_MINUTES) * 100, 2.5), color: "var(--accent)", lane: 0, kind: "session", startMinutes, endMinutes: startMinutes + dur });
   });
@@ -36,7 +38,9 @@ function buildBlocks(sessions: FocusSession[], events: CalendarEvent[]): BlockIt
   events.forEach((event) => {
     const start = new Date(event.start_at);
     const startMinutes = start.getHours() * 60 + start.getMinutes() - START_HOUR * 60;
-    if (startMinutes < 0 || startMinutes > TOTAL_MINUTES) return;
+    if (startMinutes < 0 || startMinutes > TOTAL_MINUTES) {
+ return;
+}
     const dur = Math.max(30, Math.round((new Date(event.end_at).getTime() - start.getTime()) / 60_000));
     items.push({ id: event.id, title: event.title, top: (startMinutes / TOTAL_MINUTES) * 100, height: Math.max((dur / TOTAL_MINUTES) * 100, 2.5), color: CATEGORY_COLORS[event.category ?? ""] ?? "var(--accent)", lane: 0, kind: "event", startMinutes, endMinutes: startMinutes + dur });
   });
@@ -67,12 +71,16 @@ export function TimeBlocks({ sessions, events, onRescheduleEvent }: TimeBlocksPr
 
   const getRelativePct = (clientY: number): number => {
     const rect = gridRef.current?.getBoundingClientRect();
-    if (!rect) return 0;
+    if (!rect) {
+ return 0;
+}
     return Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
   };
 
   const onBlockMouseDown = (e: React.MouseEvent, block: BlockItem): void => {
-    if (block.kind === "session" || !onRescheduleEvent) return; // only events are reschedulable
+    if (block.kind === "session" || !onRescheduleEvent) {
+ return;
+} // only events are reschedulable
     e.preventDefault();
     const pct = getRelativePct(e.clientY);
     dragRef.current = { id: block.id, kind: block.kind, offsetPct: pct - block.top };
@@ -80,13 +88,17 @@ export function TimeBlocks({ sessions, events, onRescheduleEvent }: TimeBlocksPr
   };
 
   const onGridMouseMove = (e: React.MouseEvent): void => {
-    if (!dragRef.current) return;
+    if (!dragRef.current) {
+ return;
+}
     const pct = getRelativePct(e.clientY) - dragRef.current.offsetPct;
     setDragTopPct({ id: dragRef.current.id, pct: Math.max(0, Math.min(97, pct)) });
   };
 
   const onGridMouseUp = (): void => {
-    if (!dragRef.current || !dragTopPct || !onRescheduleEvent) { dragRef.current = null; setDragTopPct(null); return; }
+    if (!dragRef.current || !dragTopPct || !onRescheduleEvent) {
+ dragRef.current = null; setDragTopPct(null); return;
+}
     const newMinutes = Math.round((dragTopPct.pct / 100) * TOTAL_MINUTES / 15) * 15 + START_HOUR * 60;
     onRescheduleEvent(dragRef.current.id, minutesToIso(newMinutes));
     dragRef.current = null;

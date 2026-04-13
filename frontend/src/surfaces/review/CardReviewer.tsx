@@ -49,13 +49,18 @@ export function CardReviewer({
 
   const loadQueue = useCallback(
     async (offset: number, replace: boolean) => {
-      if (replace) setLoading(true);
-      else setLoadingMore(true);
+      if (replace) {
+ setLoading(true);
+} else {
+ setLoadingMore(true);
+}
       try {
         const cards = await listDueReviewCards(deckId, BATCH_SIZE, offset);
         setHasMore(cards.length === BATCH_SIZE);
         setQueue((prev) => {
-          if (replace) return cards;
+          if (replace) {
+ return cards;
+}
           const seen = new Set(prev.map((item) => item.id));
           return [...prev, ...cards.filter((item) => !seen.has(item.id))];
         });
@@ -63,10 +68,12 @@ export function CardReviewer({
         if (replace) {
           setLoading(false);
           setStarted(true);
-        } else setLoadingMore(false);
+        } else {
+ setLoadingMore(false);
+}
       }
     },
-    [deckId],
+    [deckId]
   );
 
   useEffect(() => {
@@ -78,7 +85,9 @@ export function CardReviewer({
   }, [deckId, loadQueue]);
 
   useEffect(() => {
-    if (!started || loading || loadingMore || !hasMore || queue.length >= PREFETCH_THRESHOLD) return;
+    if (!started || loading || loadingMore || !hasMore || queue.length >= PREFETCH_THRESHOLD) {
+ return;
+}
     void loadQueue(queue.length, false);
   }, [hasMore, loadQueue, loading, loadingMore, queue.length, started]);
 
@@ -88,18 +97,24 @@ export function CardReviewer({
 
   const handleRate = useCallback(
     async (rating: 1 | 2 | 3 | 4) => {
-      if (!card) return;
+      if (!card) {
+ return;
+}
       await rateReviewCard({ cardId: card.id, rating });
       setQueue((prev) => prev.filter((item) => item.id !== card.id));
       onRated?.();
     },
-    [card, onRated],
+    [card, onRated]
   );
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") return;
-      if (!card) return;
+      if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") {
+ return;
+}
+      if (!card) {
+ return;
+}
 
       if (e.key === " " || e.key === "f" || e.key === "F") {
         e.preventDefault();
@@ -108,13 +123,18 @@ export function CardReviewer({
       }
 
       if (flipped) {
-        if (e.key === "1") void handleRate(1);
-        else if (e.key === "2") void handleRate(2);
-        else if (e.key === "3") void handleRate(3);
-        else if (e.key === "4") void handleRate(4);
+        if (e.key === "1") {
+ void handleRate(1);
+} else if (e.key === "2") {
+ void handleRate(2);
+} else if (e.key === "3") {
+ void handleRate(3);
+} else if (e.key === "4") {
+ void handleRate(4);
+}
       }
     },
-    [card, flipped, handleRate],
+    [card, flipped, handleRate]
   );
 
   useEffect(() => {
@@ -247,7 +267,9 @@ export function CardReviewer({
           </span>
           {onEditCard && (
             <button
-              onClick={(e) => { e.stopPropagation(); onEditCard(card); }}
+              onClick={(e) => {
+ e.stopPropagation(); onEditCard(card);
+}}
               title="Edit this card"
               style={{
                 border: "1px solid var(--border-subtle)",
@@ -281,7 +303,9 @@ export function CardReviewer({
             {RATINGS.map(({ value, label, color, key }) => (
               <button
                 key={value}
-                onClick={() => { void handleRate(value); setFlipped(false); }}
+                onClick={() => {
+ void handleRate(value); setFlipped(false);
+}}
                 title={`Rate: ${label} (press ${key})`}
                 style={{
                   flex: 1,

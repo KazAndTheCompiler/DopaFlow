@@ -167,7 +167,9 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
                 {[1, 3, 7, 14].map((days) => (
                   <button
                     key={days}
-                    onClick={() => void habits.freeze(habit.id, days).then(() => { setShowFreezeMenu(false); onRefresh?.(); })}
+                    onClick={() => void habits.freeze(habit.id, days).then(() => {
+ setShowFreezeMenu(false); onRefresh?.();
+})}
                     style={{ padding: "0.3rem 0.6rem", borderRadius: "6px", border: "none", background: "transparent", color: "var(--text)", cursor: "pointer", fontSize: "var(--text-sm)", textAlign: "left" }}
                   >
                     {days === 1 ? "1 day" : `${days} days`}

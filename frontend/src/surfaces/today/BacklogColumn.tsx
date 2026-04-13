@@ -7,9 +7,15 @@ export interface BacklogColumnProps {
 }
 
 function priorityColor(priority: number): string {
-  if (priority === 1) return "var(--state-overdue)";
-  if (priority === 2) return "var(--state-warn)";
-  if (priority === 3) return "var(--state-completed)";
+  if (priority === 1) {
+ return "var(--state-overdue)";
+}
+  if (priority === 2) {
+ return "var(--state-warn)";
+}
+  if (priority === 3) {
+ return "var(--state-completed)";
+}
   return "var(--text-muted)";
 }
 

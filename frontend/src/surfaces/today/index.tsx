@@ -47,9 +47,9 @@ export default function TodayView(): JSX.Element {
       tasks.tasks.filter(
         (task) =>
           (isSameDay(task.due_at, selectedDate) || focusQueueIds.includes(task.id)) &&
-          (!activeProjectId || task.project_id === activeProjectId),
+          (!activeProjectId || task.project_id === activeProjectId)
       ),
-    [tasks.tasks, focusQueueIds, selectedDate, activeProjectId],
+    [tasks.tasks, focusQueueIds, selectedDate, activeProjectId]
   );
 
   const backlog = useMemo(
@@ -58,9 +58,9 @@ export default function TodayView(): JSX.Element {
         (task) =>
           !task.due_at &&
           !focusQueueIds.includes(task.id) &&
-          (!activeProjectId || task.project_id === activeProjectId),
+          (!activeProjectId || task.project_id === activeProjectId)
       ),
-    [tasks.tasks, focusQueueIds, activeProjectId],
+    [tasks.tasks, focusQueueIds, activeProjectId]
   );
 
   const overdueTasks = useMemo(
@@ -70,9 +70,9 @@ export default function TodayView(): JSX.Element {
           !task.done &&
           Boolean(task.due_at) &&
           task.due_at!.slice(0, 10) < selectedDateIso &&
-          (!activeProjectId || task.project_id === activeProjectId),
+          (!activeProjectId || task.project_id === activeProjectId)
       ),
-    [activeProjectId, tasks.tasks, selectedDateIso],
+    [activeProjectId, tasks.tasks, selectedDateIso]
   );
 
   const completedToday = useMemo(
@@ -81,9 +81,9 @@ export default function TodayView(): JSX.Element {
         (task) =>
           task.done &&
           task.updated_at?.slice(0, 10) === selectedDateIso &&
-          (!activeProjectId || task.project_id === activeProjectId),
+          (!activeProjectId || task.project_id === activeProjectId)
       ).length,
-    [activeProjectId, tasks.tasks, selectedDateIso],
+    [activeProjectId, tasks.tasks, selectedDateIso]
   );
 
   const upcomingEvents = useMemo(
@@ -92,7 +92,7 @@ export default function TodayView(): JSX.Element {
         .filter((event) => isSameDay(event.start_at, selectedDate))
         .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())
         .slice(0, 3),
-    [calendar.events, selectedDate],
+    [calendar.events, selectedDate]
   );
 
   useEffect(() => {

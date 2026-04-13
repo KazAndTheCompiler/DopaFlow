@@ -28,7 +28,7 @@ function isToday(isoString: string): boolean {
 
 export function SessionHistory({ sessions }: { sessions: FocusSession[] }): JSX.Element {
   const todayCompleted = sessions.filter(
-    (s) => s.status === "completed" && isToday(s.started_at),
+    (s) => s.status === "completed" && isToday(s.started_at)
   );
   const totalMinutesToday = todayCompleted.reduce((sum, s) => sum + s.duration_minutes, 0);
 
@@ -108,9 +108,9 @@ export function SessionHistory({ sessions }: { sessions: FocusSession[] }): JSX.
             const sameDay = isToday(session.started_at);
             const dateLabel = sameDay
               ? startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : startDate.toLocaleDateString([], { month: "short", day: "numeric" }) +
-                " " +
-                startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              : `${startDate.toLocaleDateString([], { month: "short", day: "numeric" })
+                } ${
+                startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
             const statusColor = STATUS_COLORS[session.status] ?? "var(--text-secondary)";
             return (
               <div

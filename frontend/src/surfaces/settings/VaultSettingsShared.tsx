@@ -79,7 +79,7 @@ export function smBtn(
   onClick: () => void,
   text: string,
   primary = false,
-  disabled = false,
+  disabled = false
 ): JSX.Element {
   return (
     <button

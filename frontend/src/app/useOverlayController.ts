@@ -27,7 +27,7 @@ export function useOverlayController(): OverlayController {
   const [inboxOpen, setInboxOpen] = useState<boolean>(false);
   const [planOpen, setPlanOpen] = useState<boolean>(false);
   const [shutdownOpen, setShutdownOpen] = useState<boolean>(false);
-  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() => 
+  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() =>
     !localStorage.getItem(APP_STORAGE_KEYS.onboardingComplete)
   );
 

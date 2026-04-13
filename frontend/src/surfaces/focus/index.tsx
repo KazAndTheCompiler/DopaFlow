@@ -88,7 +88,7 @@ export default function FocusView(): JSX.Element {
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const todayCompletedSessions = sessions.filter(
-    (session) => session.status === "completed" && session.started_at?.slice(0, 10) === todayIso,
+    (session) => session.status === "completed" && session.started_at?.slice(0, 10) === todayIso
   );
   const focusMinutesToday = todayCompletedSessions.reduce((sum, session) => sum + (session.duration_minutes ?? 0), 0);
   const selectedTask = selectedTaskId ? tasks.tasks.find((task) => task.id === selectedTaskId) : null;

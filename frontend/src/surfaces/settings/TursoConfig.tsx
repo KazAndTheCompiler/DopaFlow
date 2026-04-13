@@ -45,7 +45,9 @@ export function TursoConfig(): JSX.Element {
   };
 
   const handleTest = async (): Promise<void> => {
-    if (!url.trim() || !token.trim()) return;
+    if (!url.trim() || !token.trim()) {
+ return;
+}
     setTestState("testing");
     setTestError(null);
     try {

@@ -110,7 +110,9 @@ export function ToastContainer(): JSX.Element {
   const remove = (id: number): void => setToasts((prev) => prev.filter((t) => t.id !== id));
   const liveMode = toasts[toasts.length - 1]?.type === "error" ? "assertive" : "polite";
 
-  if (!toasts.length) return <></>;
+  if (!toasts.length) {
+ return <></>;
+}
 
   return (
     <div

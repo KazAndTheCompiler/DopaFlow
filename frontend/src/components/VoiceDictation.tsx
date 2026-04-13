@@ -24,7 +24,9 @@ export function VoiceDictation({ onTranscript, disabled = false }: VoiceDictatio
         const lang = navigator.language || "en-US";
         const response = await fetch(`${API_BASE_URL}/journal/transcribe?lang=${encodeURIComponent(lang)}`, { method: "POST", body: form });
         const result = (await response.json()) as { transcript?: string; error?: string };
-        if (!response.ok) throw new Error(result.error ?? "transcription_failed");
+        if (!response.ok) {
+ throw new Error(result.error ?? "transcription_failed");
+}
         const text = result.transcript?.trim();
         if (!text) {
           setError("No speech detected — try speaking louder or closer to the mic.");

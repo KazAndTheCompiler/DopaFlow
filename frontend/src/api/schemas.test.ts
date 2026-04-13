@@ -42,7 +42,7 @@ describe("taskSchema", () => {
         dependencies: [],
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
-      }),
+      })
     ).toThrow();
   });
 
@@ -93,7 +93,7 @@ describe("habitSchema", () => {
         color: "#ff0000",
         current_streak: "bad",
         best_streak: 10,
-      }),
+      })
     ).toThrow();
   });
 });
@@ -127,7 +127,7 @@ describe("calendarEventSchema", () => {
         provider_readonly: false,
         created_at: "2026-04-13T00:00:00Z",
         updated_at: "2026-04-13T00:00:00Z",
-      }),
+      })
     ).toThrow();
   });
 });
@@ -206,7 +206,7 @@ describe("parseApiSchema", () => {
         dependencies: [],
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
-      }),
+      })
     ).toThrow();
   });
 });

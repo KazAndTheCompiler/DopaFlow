@@ -9,7 +9,9 @@ export function TemplatesPicker({ onApply }: TemplatesPickerProps): JSX.Element 
   const journal = useAppJournal();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [open, setOpen] = useState(false);
-  useEffect(() => { setTemplates(journal.templates); }, [journal.templates]);
+  useEffect(() => {
+ setTemplates(journal.templates);
+}, [journal.templates]);
   return (
     <div style={{ position: "relative", width: "fit-content" }}>
       <Button

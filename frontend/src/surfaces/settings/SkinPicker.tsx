@@ -29,11 +29,15 @@ async function loadExportableSkin(activeSkin: string, skins: SkinMeta[]): Promis
   }
 
   const skinMeta = skins.find((skin) => skin.id === activeSkin);
-  if (!skinMeta) return null;
+  if (!skinMeta) {
+ return null;
+}
 
   const skinsBase = window.location.protocol === "file:" ? "./skins" : "/skins";
   const response = await fetch(`${skinsBase}/${activeSkin}.json`);
-  if (!response.ok) return null;
+  if (!response.ok) {
+ return null;
+}
   return (await response.json()) as SkinDefinition;
 }
 
@@ -187,20 +191,26 @@ export function SkinPicker({
   const handleSelect = useCallback((id: string) => {
     onPick(id);
     setAppliedId(id);
-    if (appliedTimerRef.current) clearTimeout(appliedTimerRef.current);
+    if (appliedTimerRef.current) {
+ clearTimeout(appliedTimerRef.current);
+}
     appliedTimerRef.current = setTimeout(() => setAppliedId(null), 1200);
   }, [onPick]);
 
   useEffect(() => {
     return () => {
-      if (appliedTimerRef.current) clearTimeout(appliedTimerRef.current);
+      if (appliedTimerRef.current) {
+ clearTimeout(appliedTimerRef.current);
+}
     };
   }, []);
 
   const handleReset = useCallback(() => {
     onPick(DEFAULT_SKIN);
     setAppliedId(DEFAULT_SKIN);
-    if (appliedTimerRef.current) clearTimeout(appliedTimerRef.current);
+    if (appliedTimerRef.current) {
+ clearTimeout(appliedTimerRef.current);
+}
     appliedTimerRef.current = setTimeout(() => setAppliedId(null), 1200);
   }, [onPick]);
 
@@ -224,7 +234,9 @@ export function SkinPicker({
 
   const handleImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+ return;
+}
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -240,9 +252,15 @@ export function SkinPicker({
           category: normalizeCategory(imported.category),
           vars: imported.vars,
         };
-        if (imported.preview) normalized.preview = imported.preview;
-        if (typeof imported.accessibility === "string") normalized.accessibility = imported.accessibility;
-        if (typeof imported.author === "string") normalized.author = imported.author;
+        if (imported.preview) {
+ normalized.preview = imported.preview;
+}
+        if (typeof imported.accessibility === "string") {
+ normalized.accessibility = imported.accessibility;
+}
+        if (typeof imported.author === "string") {
+ normalized.author = imported.author;
+}
         saveCustomSkin(normalized);
         setImportError(null);
         onPick(normalized.id);
@@ -351,7 +369,9 @@ export function SkinPicker({
       {/* Active skin strip */}
       {(() => {
         const activeMeta = skins.find(s => s.id === current);
-        if (!activeMeta) return null;
+        if (!activeMeta) {
+ return null;
+}
         return (
           <div style={{
             display: "flex",

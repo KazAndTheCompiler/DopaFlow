@@ -10,7 +10,9 @@ const PRESETS = [
 ];
 
 function fmtTime(seconds: number): string {
-  if (!isFinite(seconds)) return "0:00";
+  if (!isFinite(seconds)) {
+ return "0:00";
+}
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
@@ -73,17 +75,23 @@ export default function PlayerView(): JSX.Element {
 
   const addToQueue = useCallback(async () => {
     const url = urlInput.trim();
-    if (!url) return;
+    if (!url) {
+ return;
+}
     const item: QueueItem = { url, title: titleInput.trim() || url };
     const next = [...queue, item];
     persistQueue(next);
     setUrlInput("");
     setTitleInput("");
-    if (!nowPlaying) await playItem(item);
+    if (!nowPlaying) {
+ await playItem(item);
+}
   }, [urlInput, titleInput, queue, nowPlaying, persistQueue, playItem]);
 
   const playNext = useCallback(async () => {
-    if (queue.length === 0) { setNowPlaying(null); return; }
+    if (queue.length === 0) {
+ setNowPlaying(null); return;
+}
     const [next, ...rest] = queue;
     persistQueue(rest);
     await playItem(next);
@@ -94,19 +102,28 @@ export default function PlayerView(): JSX.Element {
   }, [queue, persistQueue]);
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (playing) audioRef.current.pause();
-    else void audioRef.current.play().catch(() => {});
+    if (!audioRef.current) {
+ return;
+}
+    if (playing) {
+ audioRef.current.pause();
+} else {
+ void audioRef.current.play().catch(() => {});
+}
   };
 
   const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (audioRef.current) audioRef.current.currentTime = Number(e.currentTarget.value);
+    if (audioRef.current) {
+ audioRef.current.currentTime = Number(e.currentTarget.value);
+}
   };
 
   const changeVolume = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = Number(e.currentTarget.value);
     setVolume(v);
-    if (audioRef.current) audioRef.current.volume = v;
+    if (audioRef.current) {
+ audioRef.current.volume = v;
+}
   };
 
   const card: React.CSSProperties = {
@@ -211,14 +228,22 @@ export default function PlayerView(): JSX.Element {
             placeholder="YouTube or audio URL"
             value={urlInput}
             onChange={(e) => setUrlInput(e.currentTarget.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void addToQueue(); }}
+            onKeyDown={(e) => {
+ if (e.key === "Enter") {
+ void addToQueue();
+}
+}}
           />
           <input
             style={inputStyle}
             placeholder="Title (optional)"
             value={titleInput}
             onChange={(e) => setTitleInput(e.currentTarget.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") void addToQueue(); }}
+            onKeyDown={(e) => {
+ if (e.key === "Enter") {
+ void addToQueue();
+}
+}}
           />
           <Button
             onClick={() => void addToQueue()}
@@ -234,7 +259,9 @@ export default function PlayerView(): JSX.Element {
           {PRESETS.map((preset) => (
             <Button
               key={preset.label}
-              onClick={() => { setUrlInput(preset.url); setTitleInput(preset.label); }}
+              onClick={() => {
+ setUrlInput(preset.url); setTitleInput(preset.label);
+}}
               variant="secondary"
               style={{ padding: "0.3rem 0.7rem", borderRadius: "999px", fontSize: "var(--text-xs)" }}
             >

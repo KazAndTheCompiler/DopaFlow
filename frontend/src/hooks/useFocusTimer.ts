@@ -11,7 +11,9 @@ export function useFocusTimer(
 ): UseFocusTimerResult {
   const activeTimerLabel = useMemo(() => {
     const session = activeSession;
-    if (!session) return undefined;
+    if (!session) {
+ return undefined;
+}
     const totalSeconds = Math.max(0, Math.round((session.duration_minutes ?? 0) * 60));
     if (!session.started_at) {
       return `${session.duration_minutes}m ${session.status}`;

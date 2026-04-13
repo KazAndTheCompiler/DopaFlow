@@ -20,7 +20,9 @@ export function BreakTimerBanner({ breakEndsAt, onDismiss }: BreakTimerBannerPro
   const dismissedRef = useRef(false);
 
   useEffect(() => {
-    if (!breakEndsAt) return;
+    if (!breakEndsAt) {
+ return;
+}
 
     // Persist break end time so it survives navigation within the session
     localStorage.setItem(BREAK_STORAGE_KEY, breakEndsAt.toISOString());
