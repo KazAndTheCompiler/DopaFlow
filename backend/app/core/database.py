@@ -171,7 +171,13 @@ def run_migrations(
         applied_checksum = applied.get(migration_file.name)
         if applied_checksum is not None:
             if applied_checksum and applied_checksum != checksum:
-                logger.warning("Applied migration has been modified: %s", migration_file.name)
+                raise RuntimeError(
+                    f"Migration drift detected: applied migration '{migration_file.name}' "
+                    f"has been modified since it was applied. "
+                    f"Applied checksum: {applied_checksum}, "
+                    f"current file checksum: {checksum}. "
+                    f"Previously applied migrations must not be changed."
+                )
             if not applied_checksum:
                 conn.execute(
                     "UPDATE _migrations SET checksum = ? WHERE filename = ?",

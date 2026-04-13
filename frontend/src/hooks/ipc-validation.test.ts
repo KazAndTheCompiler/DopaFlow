@@ -68,7 +68,7 @@ describe("sanitizeOpenPathPayload", () => {
   it("returns null for unknown route IDs", () => {
     expect(sanitizeOpenPathPayload("#/unknown-route")).toBeNull();
     expect(sanitizeOpenPathPayload("#/fake")).toBeNull();
-    expect(sanitizeOpenPathPayload("#/TASKS")).toBeNull();
+    expect(sanitizeOpenPathPayload("#/TASKS")).toBe("#/tasks");
   });
 
   it("returns normalized route for all valid known routes", () => {

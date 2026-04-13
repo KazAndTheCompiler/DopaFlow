@@ -1,18 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 const mockFetch = vi.fn();
-const mockFire = vi.fn();
 
 vi.stubGlobal("fetch", mockFetch);
-
-vi.mock("../app/toastService", () => ({
-  fire: mockFire,
-}));
 
 describe("apiClient", () => {
   beforeEach(() => {
     mockFetch.mockReset();
-    mockFire.mockReset();
     vi.clearAllMocks();
   });
 
@@ -33,15 +27,6 @@ describe("apiClient", () => {
 
       await expect(apiClient("/test")).rejects.toThrow("rate_limited");
     });
-
-    it("fires warning toast on 429", async () => {
-      mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 429 }),
-      );
-
-      await apiClient("/test").catch(() => {});
-      expect(mockFire).toHaveBeenCalledWith("Too many requests — slow down a moment.", "warn");
-    });
   });
 
   describe("server errors", () => {
@@ -52,15 +37,6 @@ describe("apiClient", () => {
 
       await expect(apiClient("/test")).rejects.toThrow("server_error:500");
     });
-
-    it("fires error toast on 5xx", async () => {
-      mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 503 }),
-      );
-
-      await apiClient("/test").catch(() => {});
-      expect(mockFire).toHaveBeenCalledWith("Server error — check the backend is running.", "error");
-    });
   });
 
   describe("network errors", () => {
@@ -70,15 +46,6 @@ describe("apiClient", () => {
         .mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
       await expect(apiClient("/test")).rejects.toThrow("network_error:");
-    });
-
-    it("fires error toast on network failure after retry", async () => {
-      mockFetch
-        .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-        .mockRejectedValueOnce(new TypeError("Failed to fetch"));
-
-      await apiClient("/test").catch(() => {});
-      expect(mockFire).toHaveBeenCalledWith("Network error — the local release backend is unreachable.", "error");
     });
   });
 

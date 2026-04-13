@@ -1,6 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { renderHook } from "@testing-library/react";
-import { getInvalidationEventName, useSSE } from "./useSSE";
+import { describe, expect, it } from "vitest";
+import { getInvalidationEventName } from "./useSSE";
 
 describe("getInvalidationEventName", () => {
   it("returns correctly namespaced event for each domain", () => {

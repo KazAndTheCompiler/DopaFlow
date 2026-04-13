@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 
 
-def test_request_id_header_echoed_on_every_response(app, client) -> None:
+def test_request_id_header_echoed_on_every_response(_app, client) -> None:
     """Every API response includes X-Request-ID, whether provided by client or generated."""
     response = client.get("/health")
     assert response.status_code == 200
@@ -15,7 +15,7 @@ def test_request_id_header_echoed_on_every_response(app, client) -> None:
     assert response.headers["X-Request-ID"] == "custom-id-123"
 
 
-def test_request_id_carried_through_error_responses(app, client) -> None:
+def test_request_id_carried_through_error_responses(_app, client) -> None:
     """Error responses also include the X-Request-ID header."""
     response = client.get("/api/v2/tasks", headers={"x-request-id": "error-test-id"})
     # Auth error — still should carry the request ID

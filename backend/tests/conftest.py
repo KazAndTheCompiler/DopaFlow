@@ -16,6 +16,10 @@ class HTTPResponse:
         self.status_code = response.status_code
         self.text = response.text
 
+    @property
+    def headers(self):
+        return self._response.headers
+
     def json(self):
         return self._response.json()
 

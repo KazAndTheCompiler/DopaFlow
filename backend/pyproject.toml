@@ -1,4 +1,7 @@
-[lint]
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
 select = [
   "E",     # pycodestyle errors
   "W",     # pycodestyle warnings
@@ -18,12 +21,12 @@ ignore = [
   "TCH003", # type-checking import in wrong block
 ]
 
-[lint per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["TCH"]
 "__init__.py" = ["F401"]
 "app/core/config.py" = ["TCH"]
 
-[format]
+[tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
