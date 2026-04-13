@@ -1,14 +1,10 @@
-import type { AppRoute } from "../appRoutes";
-import {
-  NavButton,
-  SidebarHeader,
-  SidebarProjectList,
-} from "./SidebarSections";
-import { SidebarFooter } from "./SidebarFooter";
-import { useAppHabits } from "../app/AppContexts";
-import { useAppProjects } from "../app/AppContexts";
-import { useAppPacky } from "../app/AppContexts";
-import { useAppInsights } from "../app/AppContexts";
+import type { AppRoute } from '../appRoutes';
+import { NavButton, SidebarHeader, SidebarProjectList } from './SidebarSections';
+import { SidebarFooter } from './SidebarFooter';
+import { useAppHabits } from '../app/AppContexts';
+import { useAppProjects } from '../app/AppContexts';
+import { useAppPacky } from '../app/AppContexts';
+import { useAppInsights } from '../app/AppContexts';
 
 export interface SidebarItem {
   id: AppRoute;
@@ -44,22 +40,25 @@ export function Sidebar({
     <aside
       data-testid="sidebar-desktop"
       style={{
-        width: collapsed ? "var(--sidebar-collapsed-width)" : "var(--sidebar-expanded-width)",
-        transition: "width 180ms ease",
-        borderRight: "1px solid var(--border)",
-        background: "var(--sidebar-gradient, var(--surface))",
-        backdropFilter: "var(--nav-rail-glass-blur)",
-        padding: "1rem 0.5rem",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        position: "relative",
+        width: collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-expanded-width)',
+        transition: 'width 180ms ease',
+        borderRight: '1px solid var(--border)',
+        background: 'var(--sidebar-gradient, var(--surface))',
+        backdropFilter: 'var(--nav-rail-glass-blur)',
+        padding: '1rem 0.5rem',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        position: 'relative',
       }}
     >
       <SidebarHeader collapsed={collapsed} onToggle={onToggle} />
 
-      <nav data-testid="sidebar-nav" style={{ display: "grid", gap: "0.25rem", flex: 1, overflowY: "auto" }}>
+      <nav
+        data-testid="sidebar-nav"
+        style={{ display: 'grid', gap: '0.25rem', flex: 1, overflowY: 'auto' }}
+      >
         {items.map((item) => (
           <NavButton
             key={item.id}

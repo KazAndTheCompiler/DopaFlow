@@ -1,5 +1,5 @@
-import type { MomentumScore, PackyVoiceResponse, PackyWhisper } from "../../../shared/types";
-import { apiClient } from "./client";
+import type { MomentumScore, PackyVoiceResponse, PackyWhisper } from '../../../shared/types';
+import { apiClient } from './client';
 
 export type { PackyVoiceResponse };
 
@@ -10,13 +10,17 @@ export interface PackyLorebookResponse {
   id: string;
 }
 
-export function askPacky(payload: { text: string; context?: Record<string, unknown>; session_id?: string }): Promise<{
+export function askPacky(payload: {
+  text: string;
+  context?: Record<string, unknown>;
+  session_id?: string;
+}): Promise<{
   intent: string;
   extracted_data: Record<string, unknown>;
   reply_text: string;
   suggested_action?: string;
 }> {
-  return apiClient("/packy/ask", { method: "POST", body: JSON.stringify(payload) });
+  return apiClient('/packy/ask', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 /**
@@ -26,16 +30,16 @@ export function askPacky(payload: { text: string; context?: Record<string, unkno
 export function sendVoiceCommand(
   text: string,
   context?: Record<string, unknown>,
-  autoExecute = false
+  autoExecute = false,
 ): Promise<PackyVoiceResponse> {
-  return apiClient<PackyVoiceResponse>("/packy/voice-command", {
-    method: "POST",
+  return apiClient<PackyVoiceResponse>('/packy/voice-command', {
+    method: 'POST',
     body: JSON.stringify({ text, context, auto_execute: autoExecute }),
   });
 }
 
 export function getPackyWhisper(): Promise<PackyWhisper> {
-  return apiClient<PackyWhisper>("/packy/whisper");
+  return apiClient<PackyWhisper>('/packy/whisper');
 }
 
 export function updatePackyLorebook(payload: {
@@ -45,9 +49,12 @@ export function updatePackyLorebook(payload: {
   habit_streak?: number;
   focus_minutes_today?: number;
 }): Promise<PackyLorebookResponse> {
-  return apiClient<PackyLorebookResponse>("/packy/lorebook", { method: "POST", body: JSON.stringify(payload) });
+  return apiClient<PackyLorebookResponse>('/packy/lorebook', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getPackyMomentum(): Promise<MomentumScore> {
-  return apiClient<MomentumScore>("/packy/momentum");
+  return apiClient<MomentumScore>('/packy/momentum');
 }

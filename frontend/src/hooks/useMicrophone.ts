@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UseMicrophoneOptions {
   onStop?: (blob: Blob, mimeType: string) => void | Promise<void>;
@@ -12,33 +12,37 @@ interface UseMicrophoneResult {
 }
 
 function pickMimeType(): string {
-  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
   for (const candidate of candidates) {
     try {
       if (MediaRecorder.isTypeSupported(candidate)) {
- return candidate;
-}
+        return candidate;
+      }
     } catch {}
   }
-  return "";
+  return '';
 }
 
 function mapMicrophoneError(exc: unknown): string {
-  if (exc && typeof exc === "object" && "name" in exc) {
-    const name = String((exc as { name?: unknown }).name ?? "");
-    if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
-      return "Microphone permission was denied by the browser.";
+  if (exc && typeof exc === 'object' && 'name' in exc) {
+    const name = String((exc as { name?: unknown }).name ?? '');
+    if (
+      name === 'NotAllowedError' ||
+      name === 'PermissionDeniedError' ||
+      name === 'SecurityError'
+    ) {
+      return 'Microphone permission was denied by the browser.';
     }
-    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-      return "No microphone was found.";
+    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      return 'No microphone was found.';
     }
-    if (name === "NotReadableError") {
-      return "The microphone is busy or unavailable right now.";
+    if (name === 'NotReadableError') {
+      return 'The microphone is busy or unavailable right now.';
     }
   }
-  const message = exc instanceof Error ? exc.message : "Microphone unavailable";
+  const message = exc instanceof Error ? exc.message : 'Microphone unavailable';
   return /denied|notallowed|permission/i.test(message)
-    ? "Microphone permission was denied by the browser."
+    ? 'Microphone permission was denied by the browser.'
     : message;
 }
 
@@ -67,33 +71,35 @@ export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophone
 
   const start = useCallback(async (): Promise<boolean> => {
     setError(null);
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setError("Microphone unavailable");
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setError('Microphone unavailable');
       return false;
     }
     if (isRecording) {
- return true;
-}
+      return true;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = pickMimeType();
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       streamRef.current = stream;
       recorderRef.current = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
- chunksRef.current.push(event.data);
-}
+          chunksRef.current.push(event.data);
+        }
       };
       recorder.onerror = () => {
-        setError("The microphone is busy or unavailable right now.");
+        setError('The microphone is busy or unavailable right now.');
         setIsRecording(false);
         recorderRef.current = null;
         stopTracks();
       };
       recorder.onstop = () => {
-        const finalMimeType = recorder.mimeType || "audio/webm";
+        const finalMimeType = recorder.mimeType || 'audio/webm';
         const blob = new Blob(chunksRef.current, { type: finalMimeType });
         recorderRef.current = null;
         chunksRef.current = [];
@@ -115,10 +121,13 @@ export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophone
     }
   }, [isRecording, onStop, stopTracks]);
 
-  useEffect(() => () => {
-    recorderRef.current?.stop();
-    stopTracks();
-  }, [stopTracks]);
+  useEffect(
+    () => () => {
+      recorderRef.current?.stop();
+      stopTracks();
+    },
+    [stopTracks],
+  );
 
   return { isRecording, start, stop, error };
 }

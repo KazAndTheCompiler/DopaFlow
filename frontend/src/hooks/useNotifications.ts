@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import type { Notification } from "../../../shared/types";
-import { getUnreadCount, listNotifications, markAllNotificationsRead, markNotificationRead } from "@api/index";
+import type { Notification } from '../../../shared/types';
+import {
+  getUnreadCount,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@api/index';
 
 export interface UseNotificationsResult {
   notifications: Notification[];
@@ -16,7 +21,10 @@ export function useNotifications(): UseNotificationsResult {
   const [unread, setUnread] = useState<number>(0);
 
   const refresh = async (): Promise<void> => {
-    const [nextNotifications, unreadState] = await Promise.all([listNotifications(), getUnreadCount()]);
+    const [nextNotifications, unreadState] = await Promise.all([
+      listNotifications(),
+      getUnreadCount(),
+    ]);
     setNotifications(nextNotifications);
     setUnread(unreadState.count);
   };

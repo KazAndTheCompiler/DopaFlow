@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-import type { Project } from "@shared/types";
-import { showToast } from "@ds/primitives/Toast";
-import { createProject, deleteProject, getProjectTaskCounts, listProjects, updateProject } from "@api/projects";
-import { getInvalidationEventName } from "./useSSE";
+import type { Project } from '@shared/types';
+import { showToast } from '@ds/primitives/Toast';
+import {
+  createProject,
+  deleteProject,
+  getProjectTaskCounts,
+  listProjects,
+  updateProject,
+} from '@api/projects';
+import { getInvalidationEventName } from './useSSE';
 
 export interface UseProjectsResult {
   projects: Project[];
@@ -30,22 +36,23 @@ export function useProjects(): UseProjectsResult {
       setProjects(ps);
       setTaskCounts(counts);
     } catch {
-      showToast("Could not load projects.", "error");
+      showToast('Could not load projects.', 'error');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
- void refresh();
-}, [refresh]);
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     const handleTasksInvalidate = (): void => {
       void refresh();
     };
-    window.addEventListener(getInvalidationEventName("tasks"), handleTasksInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName("tasks"), handleTasksInvalidate);
+    window.addEventListener(getInvalidationEventName('tasks'), handleTasksInvalidate);
+    return () =>
+      window.removeEventListener(getInvalidationEventName('tasks'), handleTasksInvalidate);
   }, [refresh]);
 
   return {
@@ -57,7 +64,7 @@ export function useProjects(): UseProjectsResult {
     create: async (payload) => {
       const p = await createProject(payload);
       await refresh();
-      showToast(`Project "${p.name}" created.`, "success");
+      showToast(`Project "${p.name}" created.`, 'success');
       return p;
     },
     update: async (id, patch) => {
@@ -67,8 +74,8 @@ export function useProjects(): UseProjectsResult {
     remove: async (id) => {
       await deleteProject(id);
       if (activeProjectId === id) {
- setActiveProjectId(null);
-}
+        setActiveProjectId(null);
+      }
       await refresh();
     },
     refresh,

@@ -7,7 +7,7 @@
  *   const { listening, transcript, start, stop, supported } = useSpeechRecognition();
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Type declarations for Web Speech API
 interface SpeechRecognitionErrorEvent extends Event {
@@ -16,13 +16,13 @@ interface SpeechRecognitionErrorEvent extends Event {
 
 function mapSpeechError(error: string): string {
   switch (error) {
-    case "not-allowed":
-    case "service-not-allowed":
-      return "Microphone permission was denied by the browser.";
-    case "audio-capture":
-      return "No microphone was found for voice input.";
-    case "network":
-      return "Voice recognition hit a network error.";
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return 'Microphone permission was denied by the browser.';
+    case 'audio-capture':
+      return 'No microphone was found for voice input.';
+    case 'network':
+      return 'Voice recognition hit a network error.';
     default:
       return error;
   }
@@ -68,8 +68,8 @@ interface SpeechRecognition extends EventTarget {
 export interface UseSpeechRecognitionResult {
   supported: boolean;
   listening: boolean;
-  transcript: string;       // last confirmed final transcript
-  interim: string;          // live partial result while speaking
+  transcript: string; // last confirmed final transcript
+  interim: string; // live partial result while speaking
   error: string | null;
   start: () => void;
   stop: () => void;
@@ -78,18 +78,23 @@ export interface UseSpeechRecognitionResult {
 
 // webkit prefix for Safari / older Chrome
 const SR: { new (): SpeechRecognition } | undefined =
-  typeof window !== "undefined"
-    ? ((window as unknown as { SpeechRecognition?: { new (): SpeechRecognition }; webkitSpeechRecognition?: { new (): SpeechRecognition } })
-        .SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: { new (): SpeechRecognition } }).webkitSpeechRecognition) as { new (): SpeechRecognition } | undefined
+  typeof window !== 'undefined'
+    ? (((
+        window as unknown as {
+          SpeechRecognition?: { new (): SpeechRecognition };
+          webkitSpeechRecognition?: { new (): SpeechRecognition };
+        }
+      ).SpeechRecognition ??
+        (window as unknown as { webkitSpeechRecognition?: { new (): SpeechRecognition } })
+          .webkitSpeechRecognition) as { new (): SpeechRecognition } | undefined)
     : undefined;
 
-export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult {
+export function useSpeechRecognition(lang = 'en-US'): UseSpeechRecognitionResult {
   const supported = Boolean(SR);
   const recRef = useRef<SpeechRecognition | null>(null);
   const [listening, setListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [interim, setInterim] = useState("");
+  const [transcript, setTranscript] = useState('');
+  const [interim, setInterim] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   // Clean up on unmount
@@ -101,11 +106,11 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
 
   const start = useCallback((): void => {
     if (!SR) {
- return;
-}
+      return;
+    }
     setError(null);
-    setTranscript("");
-    setInterim("");
+    setTranscript('');
+    setInterim('');
     recRef.current?.abort();
 
     const rec = new SR();
@@ -117,8 +122,8 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
     rec.onstart = (): void => setListening(true);
 
     rec.onresult = (event: SpeechRecognitionEvent): void => {
-      let finalText = "";
-      let interimText = "";
+      let finalText = '';
+      let interimText = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (result.isFinal) {
@@ -128,14 +133,14 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
         }
       }
       if (finalText) {
- setTranscript((prev) => (`${prev  } ${  finalText}`).trim());
-}
+        setTranscript((prev) => `${prev} ${finalText}`.trim());
+      }
       setInterim(interimText);
     };
 
     rec.onerror = (event: SpeechRecognitionErrorEvent): void => {
       // "no-speech" and "aborted" are benign — user just didn't speak
-      if (event.error !== "no-speech" && event.error !== "aborted") {
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
         setError(mapSpeechError(event.error));
       }
       setListening(false);
@@ -143,17 +148,19 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
 
     rec.onend = (): void => {
       setListening(false);
-      setInterim("");
+      setInterim('');
     };
 
     recRef.current = rec;
     try {
       rec.start();
     } catch (exc) {
-      const message = exc instanceof Error ? exc.message : "Voice recognition could not start.";
-      setError(/notallowed|permission|denied/i.test(message)
-        ? "Microphone permission was denied by the browser."
-        : message);
+      const message = exc instanceof Error ? exc.message : 'Voice recognition could not start.';
+      setError(
+        /notallowed|permission|denied/i.test(message)
+          ? 'Microphone permission was denied by the browser.'
+          : message,
+      );
       setListening(false);
       recRef.current = null;
     }
@@ -168,8 +175,8 @@ export function useSpeechRecognition(lang = "en-US"): UseSpeechRecognitionResult
     recRef.current?.abort();
     recRef.current = null;
     setListening(false);
-    setTranscript("");
-    setInterim("");
+    setTranscript('');
+    setInterim('');
     setError(null);
   }, []);
 

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState } from 'react';
 
-import type { Task } from "@shared/types";
+import type { Task } from '@shared/types';
 
-import { EMOJI_CHOICES, primaryBtn, secondaryBtn } from "./ShutdownShared";
+import { EMOJI_CHOICES, primaryBtn, secondaryBtn } from './ShutdownShared';
 
 interface ShutdownJournalPromptProps {
   tomorrowTasks: Task[];
@@ -22,7 +22,7 @@ export function ShutdownJournalPrompt({
   onFinish,
 }: ShutdownJournalPromptProps): JSX.Element {
   const [emoji, setEmoji] = useState<string | null>(null);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState('');
 
   const handleSubmit = async (): Promise<void> => {
     if (emoji) {
@@ -33,18 +33,25 @@ export function ShutdownJournalPrompt({
 
   return (
     <div>
-      <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", marginTop: 0, marginBottom: "1rem" }}>
+      <p
+        style={{
+          color: 'var(--text-secondary)',
+          fontSize: 'var(--text-sm)',
+          marginTop: 0,
+          marginBottom: '1rem',
+        }}
+      >
         Next lineup
       </p>
       {tomorrowTasks.length === 0 ? (
         <div
           style={{
-            padding: "0.5rem 0.75rem",
-            borderRadius: "10px",
-            background: "var(--surface-2)",
-            marginBottom: "1.5rem",
-            fontSize: "var(--text-sm)",
-            color: "var(--text-secondary)",
+            padding: '0.5rem 0.75rem',
+            borderRadius: '10px',
+            background: 'var(--surface-2)',
+            marginBottom: '1.5rem',
+            fontSize: 'var(--text-sm)',
+            color: 'var(--text-secondary)',
           }}
         >
           No scheduled tasks for tomorrow yet.
@@ -52,55 +59,77 @@ export function ShutdownJournalPrompt({
       ) : (
         <div
           style={{
-            padding: "0.5rem 0.75rem",
-            borderRadius: "10px",
-            background: "var(--surface-2)",
-            marginBottom: "1.5rem",
-            display: "grid",
-            gap: "0.3rem",
+            padding: '0.5rem 0.75rem',
+            borderRadius: '10px',
+            background: 'var(--surface-2)',
+            marginBottom: '1.5rem',
+            display: 'grid',
+            gap: '0.3rem',
           }}
         >
           {tomorrowTasks.slice(0, 5).map((task) => (
-            <div key={task.id} style={{ fontSize: "var(--text-sm)", display: "flex", gap: "0.45rem", alignItems: "center" }}>
-              <span style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>→</span>
+            <div
+              key={task.id}
+              style={{
+                fontSize: 'var(--text-sm)',
+                display: 'flex',
+                gap: '0.45rem',
+                alignItems: 'center',
+              }}
+            >
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>→</span>
               <span>{task.title}</span>
             </div>
           ))}
           {tomorrowTasks.length > 5 && (
-            <div style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}>+{tomorrowTasks.length - 5} more</div>
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+              +{tomorrowTasks.length - 5} more
+            </div>
           )}
         </div>
       )}
 
-      <p style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", marginTop: 0, marginBottom: "0.75rem" }}>
+      <p
+        style={{
+          color: 'var(--text-secondary)',
+          fontSize: 'var(--text-sm)',
+          marginTop: 0,
+          marginBottom: '0.75rem',
+        }}
+      >
         How did today feel?
       </p>
 
-      <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
         {EMOJI_CHOICES.map((choice) => (
           <button
             key={choice.emoji}
             onClick={() => setEmoji(choice.emoji)}
             style={{
-              minWidth: "68px",
-              padding: "0.6rem 0.65rem",
-              borderRadius: "10px",
-              border: "1.5px solid",
-              borderColor: emoji === choice.emoji ? "var(--accent)" : "var(--border-subtle)",
-              background: emoji === choice.emoji ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--surface-2)",
-              cursor: "pointer",
-              transition: "border-color 120ms, background 120ms",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.28rem",
+              minWidth: '68px',
+              padding: '0.6rem 0.65rem',
+              borderRadius: '10px',
+              border: '1.5px solid',
+              borderColor: emoji === choice.emoji ? 'var(--accent)' : 'var(--border-subtle)',
+              background:
+                emoji === choice.emoji
+                  ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
+                  : 'var(--surface-2)',
+              cursor: 'pointer',
+              transition: 'border-color 120ms, background 120ms',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '0.28rem',
             }}
             title={choice.label}
             aria-label={choice.label}
             aria-pressed={emoji === choice.emoji}
           >
-            <span style={{ fontSize: "1.35rem", lineHeight: 1 }}>{choice.emoji}</span>
-            <span style={{ fontSize: "10px", color: "var(--text-secondary)", fontWeight: 600 }}>{choice.label}</span>
+            <span style={{ fontSize: '1.35rem', lineHeight: 1 }}>{choice.emoji}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              {choice.label}
+            </span>
           </button>
         ))}
       </div>
@@ -110,38 +139,38 @@ export function ShutdownJournalPrompt({
         onChange={(e) => setNote(e.target.value)}
         placeholder="(Optional) Any thoughts?"
         style={{
-          width: "100%",
-          padding: "0.75rem",
-          borderRadius: "10px",
-          border: "1px solid var(--border-subtle)",
-          background: "var(--surface-2)",
-          color: "var(--text)",
-          fontSize: "var(--text-sm)",
-          fontFamily: "inherit",
-          resize: "vertical",
-          minHeight: "70px",
-          marginBottom: "1.5rem",
-          boxSizing: "border-box",
+          width: '100%',
+          padding: '0.75rem',
+          borderRadius: '10px',
+          border: '1px solid var(--border-subtle)',
+          background: 'var(--surface-2)',
+          color: 'var(--text)',
+          fontSize: 'var(--text-sm)',
+          fontFamily: 'inherit',
+          resize: 'vertical',
+          minHeight: '70px',
+          marginBottom: '1.5rem',
+          boxSizing: 'border-box',
         }}
       />
 
       {error && (
         <div
           style={{
-            padding: "0.75rem 0.9rem",
-            borderRadius: "12px",
-            border: "1px solid color-mix(in srgb, var(--state-overdue) 35%, var(--border-subtle))",
-            background: "color-mix(in srgb, var(--state-overdue) 8%, transparent)",
-            color: "var(--text-secondary)",
-            fontSize: "var(--text-sm)",
-            marginBottom: "1rem",
+            padding: '0.75rem 0.9rem',
+            borderRadius: '12px',
+            border: '1px solid color-mix(in srgb, var(--state-overdue) 35%, var(--border-subtle))',
+            background: 'color-mix(in srgb, var(--state-overdue) 8%, transparent)',
+            color: 'var(--text-secondary)',
+            fontSize: 'var(--text-sm)',
+            marginBottom: '1rem',
           }}
         >
           {error}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button onClick={onBack} style={secondaryBtn} disabled={saving}>
           Back
         </button>
@@ -151,14 +180,14 @@ export function ShutdownJournalPrompt({
           style={{
             flex: 1,
             ...primaryBtn,
-            background: emoji && !saving ? primaryBtn.background : "var(--border-subtle)",
-            color: "var(--text-inverted)",
-            cursor: emoji && !saving ? "pointer" : "not-allowed",
+            background: emoji && !saving ? primaryBtn.background : 'var(--border-subtle)',
+            color: 'var(--text-inverted)',
+            cursor: emoji && !saving ? 'pointer' : 'not-allowed',
             opacity: emoji && !saving ? 1 : 0.5,
-            boxShadow: emoji && !saving ? "var(--shadow-soft)" : "none",
+            boxShadow: emoji && !saving ? 'var(--shadow-soft)' : 'none',
           }}
         >
-          {saving ? "Saving…" : "Finish shutdown"}
+          {saving ? 'Saving…' : 'Finish shutdown'}
         </button>
       </div>
     </div>

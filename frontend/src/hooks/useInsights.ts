@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import type { MomentumScore } from "../../../shared/types";
-import { getCorrelations, getMomentum, getWeeklyDigest } from "@api/index";
-import type { CorrelationInsight, WeeklyDigest } from "@api/insights";
+import type { MomentumScore } from '../../../shared/types';
+import { getCorrelations, getMomentum, getWeeklyDigest } from '@api/index';
+import type { CorrelationInsight, WeeklyDigest } from '@api/insights';
 
 export interface UseInsightsResult {
   momentum?: MomentumScore | undefined;
@@ -24,12 +24,14 @@ export function useInsights(): UseInsightsResult {
     ]);
     setMomentum(nextMomentum);
     setWeeklyDigest(
-      nextWeeklyDigest && typeof nextWeeklyDigest.title === "string"
+      nextWeeklyDigest && typeof nextWeeklyDigest.title === 'string'
         ? {
             title: nextWeeklyDigest.title,
-            highlights: Array.isArray(nextWeeklyDigest.highlights) ? nextWeeklyDigest.highlights : [],
+            highlights: Array.isArray(nextWeeklyDigest.highlights)
+              ? nextWeeklyDigest.highlights
+              : [],
           }
-        : undefined
+        : undefined,
     );
     setCorrelations(Array.isArray(nextCorrelations) ? nextCorrelations : []);
   };

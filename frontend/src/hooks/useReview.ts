@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import type { ReviewCard } from "../../../shared/types";
-import { createReviewCard, listReviewCards, rateReviewCard } from "@api/index";
+import type { ReviewCard } from '../../../shared/types';
+import { createReviewCard, listReviewCards, rateReviewCard } from '@api/index';
 
 export interface UseReviewResult {
   cards: ReviewCard[];

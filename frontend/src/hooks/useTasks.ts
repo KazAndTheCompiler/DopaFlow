@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-import type { Task } from "../../../shared/types";
-import { showToast } from "@ds/primitives/Toast";
+import type { Task } from '../../../shared/types';
+import { showToast } from '@ds/primitives/Toast';
 import {
   addTaskDependency,
   bulkCompleteTask,
@@ -16,8 +16,8 @@ import {
   startTaskTimer,
   stopTaskTimer,
   updateTask,
-} from "@api/index";
-import { getInvalidationEventName } from "./useSSE";
+} from '@api/index';
+import { getInvalidationEventName } from './useSSE';
 
 export interface TaskFilters {
   done: boolean | null;
@@ -54,8 +54,12 @@ export interface UseTasksResult {
 
 export function useTasks(): UseTasksResult {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [filters, setFilters] = useState<TaskFilters>({ done: null, priority: null, dueToday: false });
-  const [sortBy, setSortBy] = useState<string>("default");
+  const [filters, setFilters] = useState<TaskFilters>({
+    done: null,
+    priority: null,
+    dueToday: false,
+  });
+  const [sortBy, setSortBy] = useState<string>('default');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -68,9 +72,9 @@ export function useTasks(): UseTasksResult {
       setTasks(response);
       setSelectedIds(new Set());
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load tasks";
+      const msg = e instanceof Error ? e.message : 'Failed to load tasks';
       setError(msg);
-      showToast("Could not load tasks.", "error");
+      showToast('Could not load tasks.', 'error');
     } finally {
       setLoading(false);
     }
@@ -84,8 +88,8 @@ export function useTasks(): UseTasksResult {
     const handleInvalidate = (): void => {
       void refresh();
     };
-    window.addEventListener(getInvalidationEventName("tasks"), handleInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName("tasks"), handleInvalidate);
+    window.addEventListener(getInvalidationEventName('tasks'), handleInvalidate);
+    return () => window.removeEventListener(getInvalidationEventName('tasks'), handleInvalidate);
   }, [refresh]);
 
   const toggleSelect = (id: string): void => {
@@ -137,29 +141,33 @@ export function useTasks(): UseTasksResult {
       const parsed = await quickAddTask({ text });
       const title = parsed.title?.trim() || text.trim();
       if (!title) {
-        throw new Error("task_title_required");
+        throw new Error('task_title_required');
       }
       return createTask({ ...parsed, title });
     },
     createStructuredTask: async (task: Partial<Task>) => createTask(task),
     complete: async (id: string) => {
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: true, status: "done" as const } : t));
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, done: true, status: 'done' as const } : t)),
+      );
       try {
         await completeTask(id);
-        window.dispatchEvent(new CustomEvent("dopaflow:gamification-refresh"));
+        window.dispatchEvent(new CustomEvent('dopaflow:gamification-refresh'));
       } catch {
-        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, done: false, status: "todo" as const } : t));
-        showToast("Failed to complete task.", "error");
+        setTasks((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, done: false, status: 'todo' as const } : t)),
+        );
+        showToast('Failed to complete task.', 'error');
       }
     },
     update: async (id: string, patch: Partial<Task>) => {
       const snapshot = tasks;
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t));
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
       try {
         await updateTask(id, patch);
       } catch {
         setTasks(snapshot);
-        showToast("Failed to update task.", "error");
+        showToast('Failed to update task.', 'error');
       }
     },
     remove: async (id: string) => {
@@ -169,19 +177,21 @@ export function useTasks(): UseTasksResult {
         await deleteTask(id);
       } catch {
         setTasks(snapshot);
-        showToast("Failed to delete task.", "error");
+        showToast('Failed to delete task.', 'error');
       }
     },
     bulkComplete: async (ids: string[]) => {
-      setTasks((prev) => prev.map((t) => ids.includes(t.id) ? { ...t, done: true, status: "done" as const } : t));
+      setTasks((prev) =>
+        prev.map((t) => (ids.includes(t.id) ? { ...t, done: true, status: 'done' as const } : t)),
+      );
       setSelectedIds(new Set());
       try {
         await bulkCompleteTask(ids);
-        window.dispatchEvent(new CustomEvent("dopaflow:gamification-refresh"));
-        showToast(`${ids.length} tasks completed.`, "success");
+        window.dispatchEvent(new CustomEvent('dopaflow:gamification-refresh'));
+        showToast(`${ids.length} tasks completed.`, 'success');
       } catch {
         await refresh();
-        showToast("Bulk complete failed.", "error");
+        showToast('Bulk complete failed.', 'error');
       }
     },
     bulkDelete: async (ids: string[]) => {
@@ -190,10 +200,10 @@ export function useTasks(): UseTasksResult {
       setSelectedIds(new Set());
       try {
         await bulkDeleteTask(ids);
-        showToast(`${ids.length} tasks deleted.`, "success");
+        showToast(`${ids.length} tasks deleted.`, 'success');
       } catch {
         setTasks(snapshot);
-        showToast("Bulk delete failed.", "error");
+        showToast('Bulk delete failed.', 'error');
       }
     },
     getContext: (id: string) => getTaskContext(id),

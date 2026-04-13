@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
-const SKIN_KEY = "dopaflow:skin";
-const DEFAULT_SKIN = "ink-and-stone";
-const CUSTOM_SKIN_KEY = "dopaflow:custom_skin";
-const SKINS_BASE = window.location.protocol === "file:" ? "./skins" : "/skins";
+const SKIN_KEY = 'dopaflow:skin';
+const DEFAULT_SKIN = 'ink-and-stone';
+const CUSTOM_SKIN_KEY = 'dopaflow:custom_skin';
+const SKINS_BASE = window.location.protocol === 'file:' ? './skins' : '/skins';
 
 export interface SkinMeta {
   id: string;
   name: string;
-  category: "light" | "dark";
+  category: 'light' | 'dark';
   default?: boolean;
   accessibility?: string;
   preview?: { bg: string; accent: string; surface: string };
@@ -25,33 +25,38 @@ interface SkinDefinition extends SkinMeta {
   vars: Record<string, string>;
 }
 
-const CUSTOM_SKIN_STYLE_ID = "dopaflow-custom-skin-vars";
+const CUSTOM_SKIN_STYLE_ID = 'dopaflow-custom-skin-vars';
 
 function readCustomSkin(): SkinDefinition | null {
   try {
     const raw = window.localStorage.getItem(CUSTOM_SKIN_KEY);
     if (!raw) {
- return null;
-}
+      return null;
+    }
     const parsed = JSON.parse(raw) as Partial<SkinDefinition>;
-    if (!parsed || typeof parsed.id !== "string" || typeof parsed.name !== "string" || !parsed.vars) {
- return null;
-}
+    if (
+      !parsed ||
+      typeof parsed.id !== 'string' ||
+      typeof parsed.name !== 'string' ||
+      !parsed.vars
+    ) {
+      return null;
+    }
     const definition: SkinDefinition = {
       id: parsed.id,
       name: parsed.name,
-      category: parsed.category === "light" ? "light" : "dark",
+      category: parsed.category === 'light' ? 'light' : 'dark',
       vars: parsed.vars,
     };
     if (parsed.author) {
- definition.author = parsed.author;
-}
+      definition.author = parsed.author;
+    }
     if (parsed.preview) {
- definition.preview = parsed.preview;
-}
+      definition.preview = parsed.preview;
+    }
     if (parsed.accessibility) {
- definition.accessibility = parsed.accessibility;
-}
+      definition.accessibility = parsed.accessibility;
+    }
     return definition;
   } catch {
     return null;
@@ -65,19 +70,19 @@ function toSkinMeta(definition: SkinDefinition): SkinMeta {
     category: definition.category,
   };
   if (definition.preview) {
- meta.preview = definition.preview;
-}
+    meta.preview = definition.preview;
+  }
   if (definition.accessibility) {
- meta.accessibility = definition.accessibility;
-}
+    meta.accessibility = definition.accessibility;
+  }
   return meta;
 }
 
 export function saveCustomSkin(definition: {
   id: string;
   name: string;
-  category: "light" | "dark";
-  preview?: SkinMeta["preview"];
+  category: 'light' | 'dark';
+  preview?: SkinMeta['preview'];
   accessibility?: string;
   author?: string;
   vars: Record<string, string>;
@@ -88,16 +93,16 @@ export function saveCustomSkin(definition: {
 function upsertSkinMeta(list: SkinMeta[], meta: SkinMeta): SkinMeta[] {
   const existingIndex = list.findIndex((skin) => skin.id === meta.id);
   if (existingIndex === -1) {
- return [...list, meta];
-}
+    return [...list, meta];
+  }
   return list.map((skin, index) => (index === existingIndex ? meta : skin));
 }
 
 function migrateOldSkinKey(): void {
-  const oldValue = window.localStorage.getItem("zoescal-skin");
+  const oldValue = window.localStorage.getItem('zoescal-skin');
   if (oldValue && !window.localStorage.getItem(SKIN_KEY)) {
     window.localStorage.setItem(SKIN_KEY, oldValue);
-    window.localStorage.removeItem("zoescal-skin");
+    window.localStorage.removeItem('zoescal-skin');
   }
 }
 
@@ -113,20 +118,20 @@ function getSkinClassName(id: string): string {
 function applySkinClass(id: string): void {
   const root = document.documentElement;
   const nextClassName = getSkinClassName(id);
-  const preservedClasses = Array.from(root.classList).filter((name) => !name.startsWith("skin-"));
-  root.className = [...preservedClasses, nextClassName].join(" ");
+  const preservedClasses = Array.from(root.classList).filter((name) => !name.startsWith('skin-'));
+  root.className = [...preservedClasses, nextClassName].join(' ');
 }
 
 function applyCustomSkinVars(id: string, vars: Record<string, string>): void {
   let styleEl = document.getElementById(CUSTOM_SKIN_STYLE_ID) as HTMLStyleElement | null;
   if (!styleEl) {
-    styleEl = document.createElement("style");
+    styleEl = document.createElement('style');
     styleEl.id = CUSTOM_SKIN_STYLE_ID;
     document.head.appendChild(styleEl);
   }
   const declarations = Object.entries(vars)
     .map(([key, value]) => `  ${key}: ${value};`)
-    .join("\n");
+    .join('\n');
   styleEl.textContent = `html.${getSkinClassName(id)} {\n${declarations}\n}`;
 }
 
@@ -148,8 +153,8 @@ async function loadManifest(): Promise<SkinMeta[]> {
   try {
     const res = await fetch(`${SKINS_BASE}/manifest.json`);
     if (!res.ok) {
- throw new Error("manifest not found");
-}
+      throw new Error('manifest not found');
+    }
     const m: SkinManifest = await res.json();
     const customSkin = readCustomSkin();
     if (customSkin && !m.skins.some((skin) => skin.id === customSkin.id)) {

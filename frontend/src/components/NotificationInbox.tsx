@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import type { Notification } from "../../../shared/types";
-import { showToast } from "../design-system/primitives/Toast";
-import EmptyState from "../design-system/primitives/EmptyState";
+import type { Notification } from '../../../shared/types';
+import { showToast } from '../design-system/primitives/Toast';
+import EmptyState from '../design-system/primitives/EmptyState';
 
 export interface NotificationInboxProps {
   open: boolean;
@@ -12,38 +12,38 @@ export interface NotificationInboxProps {
   onReadAll: () => Promise<void>;
 }
 
-const LEVEL_COLORS: Record<Notification["level"], string> = {
-  alarm: "var(--state-overdue)",
-  habit: "var(--state-completed)",
-  insight: "var(--accent)",
-  system: "var(--text-secondary)",
-  warn: "var(--state-warn)",
-  info: "var(--accent)",
+const LEVEL_COLORS: Record<Notification['level'], string> = {
+  alarm: 'var(--state-overdue)',
+  habit: 'var(--state-completed)',
+  insight: 'var(--accent)',
+  system: 'var(--text-secondary)',
+  warn: 'var(--state-warn)',
+  info: 'var(--accent)',
 };
 
 function relativeTime(value: string): string {
   const diffMs = new Date(value).getTime() - Date.now();
   const diffMinutes = Math.round(diffMs / 60_000);
-  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
   if (Math.abs(diffMinutes) < 60) {
-    return formatter.format(diffMinutes, "minute");
+    return formatter.format(diffMinutes, 'minute');
   }
 
   const diffHours = Math.round(diffMinutes / 60);
   if (Math.abs(diffHours) < 24) {
-    return formatter.format(diffHours, "hour");
+    return formatter.format(diffHours, 'hour');
   }
 
   const diffDays = Math.round(diffHours / 24);
-  return formatter.format(diffDays, "day");
+  return formatter.format(diffDays, 'day');
 }
 
-function getLevelColor(level: Notification["level"] | undefined): string {
+function getLevelColor(level: Notification['level'] | undefined): string {
   if (!level) {
-    return "var(--text-secondary)";
+    return 'var(--text-secondary)';
   }
-  return LEVEL_COLORS[level] ?? "var(--text-secondary)";
+  return LEVEL_COLORS[level] ?? 'var(--text-secondary)';
 }
 
 export function NotificationInbox({
@@ -70,200 +70,254 @@ export function NotificationInbox({
       await onReadAll();
     } catch {
       setLocalNotifications(previousNotifications);
-      showToast("Failed to clear notifications.", "error");
+      showToast('Failed to clear notifications.', 'error');
     }
   };
 
   return (
     <>
-    <div
-      aria-hidden={!open}
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 199,
-        background: "rgba(10, 12, 16, 0.28)",
-        opacity: open ? 1 : 0,
-        pointerEvents: open ? "auto" : "none",
-        transition: "opacity 0.22s ease",
-      }}
-    />
-    <aside
-      aria-hidden={!open}
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: "380px",
-        maxWidth: "calc(100vw - 1rem)",
-        zIndex: 200,
-        display: "grid",
-        gridTemplateRows: "auto 1fr",
-        background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, white 6%), var(--surface))",
-        borderLeft: "1px solid var(--border)",
-        boxShadow: "-18px 0 36px rgba(0, 0, 0, 0.18)",
-        transform: open ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.22s ease",
-      }}
-    >
       <div
+        aria-hidden={!open}
+        onClick={onClose}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          padding: "1rem 1rem 0.9rem",
-          borderBottom: "1px solid var(--border-subtle)",
+          position: 'fixed',
+          inset: 0,
+          zIndex: 199,
+          background: 'rgba(10, 12, 16, 0.28)',
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+          transition: 'opacity 0.22s ease',
+        }}
+      />
+      <aside
+        aria-hidden={!open}
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: '380px',
+          maxWidth: 'calc(100vw - 1rem)',
+          zIndex: 200,
+          display: 'grid',
+          gridTemplateRows: 'auto 1fr',
+          background:
+            'linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, white 6%), var(--surface))',
+          borderLeft: '1px solid var(--border)',
+          boxShadow: '-18px 0 36px rgba(0, 0, 0, 0.18)',
+          transform: open ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.22s ease',
         }}
       >
-        <div style={{ display: "grid", gap: "0.15rem", marginRight: "auto" }}>
-          <strong>Inbox</strong>
-          <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)" }}>
-            {localNotifications.length === 0
-              ? "Reminders, sync updates, and system alerts in one place."
-              : unreadCount > 0
-                ? `${unreadCount} item${unreadCount === 1 ? "" : "s"} still need attention.`
-                : `All caught up. ${localNotifications.length} item${localNotifications.length === 1 ? "" : "s"} reviewed.`}
-          </span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '1rem 1rem 0.9rem',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ display: 'grid', gap: '0.15rem', marginRight: 'auto' }}>
+            <strong>Inbox</strong>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+              {localNotifications.length === 0
+                ? 'Reminders, sync updates, and system alerts in one place.'
+                : unreadCount > 0
+                  ? `${unreadCount} item${unreadCount === 1 ? '' : 's'} still need attention.`
+                  : `All caught up. ${localNotifications.length} item${localNotifications.length === 1 ? '' : 's'} reviewed.`}
+            </span>
+          </div>
+          <button
+            onClick={() => void handleReadAll()}
+            style={{
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--surface-2)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              fontSize: 'var(--text-sm)',
+              padding: '0.45rem 0.7rem',
+              borderRadius: '10px',
+              fontWeight: 700,
+            }}
+          >
+            Read all
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Close notifications"
+            style={{
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--surface-2)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              fontSize: '0.95rem',
+              lineHeight: 1,
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              fontWeight: 800,
+            }}
+          >
+            X
+          </button>
         </div>
-        <button
-          onClick={() => void handleReadAll()}
-          style={{
-            border: "1px solid var(--border-subtle)",
-            background: "var(--surface-2)",
-            color: "var(--text-primary)",
-            cursor: "pointer",
-            fontSize: "var(--text-sm)",
-            padding: "0.45rem 0.7rem",
-            borderRadius: "10px",
-            fontWeight: 700,
-          }}
-        >
-          Read all
-        </button>
-        <button
-          onClick={onClose}
-          aria-label="Close notifications"
-          style={{
-            border: "1px solid var(--border-subtle)",
-            background: "var(--surface-2)",
-            color: "var(--text-primary)",
-            cursor: "pointer",
-            fontSize: "0.95rem",
-            lineHeight: 1,
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
-            fontWeight: 800,
-          }}
-        >
-          X
-        </button>
-      </div>
 
-      <div style={{ overflowY: "auto", padding: "0.9rem", display: "grid", gap: "0.75rem" }}>
-        {localNotifications.length === 0 ? (
-          <EmptyState icon="IN" title="Inbox clear" subtitle="Nothing needs action right now. New reminders and sync updates will land here." />
-        ) : (
-          <>
-            {unread.length > 0 && (
-              <section style={{ display: "grid", gap: "0.5rem" }}>
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Needs attention
-                </span>
-                {unread.map((notification) => (
-                  <button
-                    key={notification.id}
-                    onClick={() => onRead(notification.id)}
+        <div style={{ overflowY: 'auto', padding: '0.9rem', display: 'grid', gap: '0.75rem' }}>
+          {localNotifications.length === 0 ? (
+            <EmptyState
+              icon="IN"
+              title="Inbox clear"
+              subtitle="Nothing needs action right now. New reminders and sync updates will land here."
+            />
+          ) : (
+            <>
+              {unread.length > 0 && (
+                <section style={{ display: 'grid', gap: '0.5rem' }}>
+                  <span
                     style={{
-                      display: "grid",
-                      gap: "0.45rem",
-                      textAlign: "left",
-                      padding: "0.95rem",
-                      borderRadius: "16px",
-                      border: "1px solid var(--border-subtle)",
-                      background: "linear-gradient(150deg, color-mix(in srgb, var(--surface-2) 84%, white 16%), var(--surface-2))",
-                      cursor: "pointer",
-                      boxShadow: "var(--shadow-soft)",
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-secondary)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          minWidth: "44px",
-                          height: "24px",
-                          borderRadius: "999px",
-                          background: `${getLevelColor(notification.level)}16`,
-                          color: getLevelColor(notification.level),
-                          display: "grid",
-                          placeItems: "center",
-                          fontSize: "0.65rem",
-                          fontWeight: 800,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {(notification.level ?? "info").toUpperCase().slice(0, 4)}
-                      </span>
-                      <strong>{notification.title?.trim() || "Untitled notification"}</strong>
-                      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-                        {relativeTime(notification.created_at)}
-                      </span>
-                    </div>
-                    {notification.body ? (
-                      <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
-                        {notification.body}
-                      </span>
-                    ) : notification.action_url ? (
-                      <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
-                        Action available for this alert.
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </section>
-            )}
-            {recentRead.length > 0 && (
-              <section style={{ display: "grid", gap: "0.5rem" }}>
-                <span style={{ fontSize: "var(--text-xs)", color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Recently cleared
-                </span>
-                {recentRead.map((notification) => (
-                  <button
-                    key={notification.id}
-                    onClick={() => onRead(notification.id)}
+                    Needs attention
+                  </span>
+                  {unread.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => onRead(notification.id)}
+                      style={{
+                        display: 'grid',
+                        gap: '0.45rem',
+                        textAlign: 'left',
+                        padding: '0.95rem',
+                        borderRadius: '16px',
+                        border: '1px solid var(--border-subtle)',
+                        background:
+                          'linear-gradient(150deg, color-mix(in srgb, var(--surface-2) 84%, white 16%), var(--surface-2))',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--shadow-soft)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            minWidth: '44px',
+                            height: '24px',
+                            borderRadius: '999px',
+                            background: `${getLevelColor(notification.level)}16`,
+                            color: getLevelColor(notification.level),
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {(notification.level ?? 'info').toUpperCase().slice(0, 4)}
+                        </span>
+                        <strong>{notification.title?.trim() || 'Untitled notification'}</strong>
+                        <span
+                          style={{
+                            marginLeft: 'auto',
+                            fontSize: 'var(--text-xs)',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
+                          {relativeTime(notification.created_at)}
+                        </span>
+                      </div>
+                      {notification.body ? (
+                        <span
+                          style={{
+                            color: 'var(--text-secondary)',
+                            fontSize: 'var(--text-sm)',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {notification.body}
+                        </span>
+                      ) : notification.action_url ? (
+                        <span
+                          style={{
+                            color: 'var(--text-secondary)',
+                            fontSize: 'var(--text-sm)',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          Action available for this alert.
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
+                </section>
+              )}
+              {recentRead.length > 0 && (
+                <section style={{ display: 'grid', gap: '0.5rem' }}>
+                  <span
                     style={{
-                      display: "grid",
-                      gap: "0.35rem",
-                      textAlign: "left",
-                      padding: "0.85rem",
-                      borderRadius: "14px",
-                      border: "1px solid var(--border-subtle)",
-                      background: "color-mix(in srgb, var(--surface) 94%, white 6%)",
-                      opacity: 0.78,
-                      cursor: "pointer",
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-secondary)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <strong style={{ fontWeight: 500 }}>{notification.title?.trim() || "Untitled notification"}</strong>
-                      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-                        {relativeTime(notification.created_at)}
-                      </span>
-                    </div>
-                    {notification.body ? (
-                      <span style={{ color: "var(--text-secondary)", fontSize: "var(--text-sm)", lineHeight: 1.4 }}>
-                        {notification.body}
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </section>
-            )}
-          </>
-        )}
-      </div>
-    </aside>
+                    Recently cleared
+                  </span>
+                  {recentRead.map((notification) => (
+                    <button
+                      key={notification.id}
+                      onClick={() => onRead(notification.id)}
+                      style={{
+                        display: 'grid',
+                        gap: '0.35rem',
+                        textAlign: 'left',
+                        padding: '0.85rem',
+                        borderRadius: '14px',
+                        border: '1px solid var(--border-subtle)',
+                        background: 'color-mix(in srgb, var(--surface) 94%, white 6%)',
+                        opacity: 0.78,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <strong style={{ fontWeight: 500 }}>
+                          {notification.title?.trim() || 'Untitled notification'}
+                        </strong>
+                        <span
+                          style={{
+                            marginLeft: 'auto',
+                            fontSize: 'var(--text-xs)',
+                            color: 'var(--text-muted)',
+                          }}
+                        >
+                          {relativeTime(notification.created_at)}
+                        </span>
+                      </div>
+                      {notification.body ? (
+                        <span
+                          style={{
+                            color: 'var(--text-secondary)',
+                            fontSize: 'var(--text-sm)',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {notification.body}
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
+                </section>
+              )}
+            </>
+          )}
+        </div>
+      </aside>
     </>
   );
 }

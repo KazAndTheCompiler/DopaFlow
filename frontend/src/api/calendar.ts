@@ -1,53 +1,81 @@
-import type { CalendarEvent, SyncConflict } from "../../../shared/types";
-import { apiClient } from "./client";
-import { calendarEventSchema, calendarEventsSchema, parseApiSchema } from "./schemas";
+import type { CalendarEvent, SyncConflict } from '../../../shared/types';
+import { apiClient } from './client';
+import { calendarEventSchema, calendarEventsSchema, parseApiSchema } from './schemas';
 
-export async function listCalendarEvents(params?: { from?: string; until?: string; category?: string }): Promise<CalendarEvent[]> {
+export async function listCalendarEvents(params?: {
+  from?: string;
+  until?: string;
+  category?: string;
+}): Promise<CalendarEvent[]> {
   const qs = new URLSearchParams();
   if (params?.from) {
- qs.set("from", params.from);
-}
+    qs.set('from', params.from);
+  }
   if (params?.until) {
- qs.set("until", params.until);
-}
+    qs.set('until', params.until);
+  }
   if (params?.category) {
- qs.set("category", params.category);
-}
-  const query = qs.toString() ? `?${qs.toString()}` : "";
-  return parseApiSchema<CalendarEvent[]>(calendarEventsSchema, await apiClient<unknown>(`/calendar/events${query}`));
+    qs.set('category', params.category);
+  }
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return parseApiSchema<CalendarEvent[]>(
+    calendarEventsSchema,
+    await apiClient<unknown>(`/calendar/events${query}`),
+  );
 }
 
 export async function createCalendarEvent(payload: Partial<CalendarEvent>): Promise<CalendarEvent> {
-  return parseApiSchema<CalendarEvent>(calendarEventSchema, await apiClient<unknown>("/calendar/events", { method: "POST", body: JSON.stringify(payload) }));
+  return parseApiSchema<CalendarEvent>(
+    calendarEventSchema,
+    await apiClient<unknown>('/calendar/events', { method: 'POST', body: JSON.stringify(payload) }),
+  );
 }
 
-export async function updateCalendarEvent(id: string, patch: Partial<CalendarEvent>): Promise<CalendarEvent> {
-  return parseApiSchema<CalendarEvent>(calendarEventSchema, await apiClient<unknown>(`/calendar/events/${id}`, { method: "PATCH", body: JSON.stringify(patch) }));
+export async function updateCalendarEvent(
+  id: string,
+  patch: Partial<CalendarEvent>,
+): Promise<CalendarEvent> {
+  return parseApiSchema<CalendarEvent>(
+    calendarEventSchema,
+    await apiClient<unknown>(`/calendar/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  );
 }
 
 export function deleteCalendarEvent(id: string): Promise<{ deleted: boolean }> {
-  return apiClient(`/calendar/events/${id}`, { method: "DELETE" });
+  return apiClient(`/calendar/events/${id}`, { method: 'DELETE' });
 }
 
 export function syncGoogleCalendar(payload: { fetch_from?: string }): Promise<{ status: string }> {
-  return apiClient("/calendar/google/sync", { method: "POST", body: JSON.stringify(payload) });
+  return apiClient('/calendar/google/sync', { method: 'POST', body: JSON.stringify(payload) });
 }
 
-export function getGoogleCalendarOAuthUrl(redirect_uri: string): Promise<{ status: string; url?: string }> {
+export function getGoogleCalendarOAuthUrl(
+  redirect_uri: string,
+): Promise<{ status: string; url?: string }> {
   return apiClient(`/calendar/oauth/url?redirect_uri=${encodeURIComponent(redirect_uri)}`);
 }
 
-export function getCalendarSyncStatus(): Promise<{ ok: boolean; conflicts: number; status: string }> {
-  return apiClient<{ ok: boolean; conflicts: number; status: string }>("/calendar/sync/status");
+export function getCalendarSyncStatus(): Promise<{
+  ok: boolean;
+  conflicts: number;
+  status: string;
+}> {
+  return apiClient<{ ok: boolean; conflicts: number; status: string }>('/calendar/sync/status');
 }
 
 export function listSyncConflicts(): Promise<SyncConflict[]> {
-  return apiClient<SyncConflict[]>("/calendar/sync/conflicts");
+  return apiClient<SyncConflict[]>('/calendar/sync/conflicts');
 }
 
-export function resolveSyncConflict(id: number, resolution: "prefer_local" | "prefer_incoming"): Promise<SyncConflict> {
+export function resolveSyncConflict(
+  id: number,
+  resolution: 'prefer_local' | 'prefer_incoming',
+): Promise<SyncConflict> {
   return apiClient<SyncConflict>(`/calendar/sync/conflicts/${id}/resolve`, {
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify({ resolution }),
   });
 }

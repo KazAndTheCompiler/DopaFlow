@@ -1,4 +1,4 @@
-import { ZodError, z } from "zod";
+import { ZodError, z } from 'zod';
 
 const taskDependencySchema = z.object({
   id: z.string(),
@@ -17,7 +17,7 @@ export const taskSchema = z.object({
   description: z.string().nullable().optional(),
   due_at: z.string().nullable().optional(),
   priority: z.number(),
-  status: z.enum(["todo", "in_progress", "done", "cancelled"]),
+  status: z.enum(['todo', 'in_progress', 'done', 'cancelled']),
   done: z.boolean(),
   estimated_minutes: z.number().nullable().optional(),
   actual_minutes: z.number().nullable().optional(),
@@ -84,7 +84,7 @@ export const calendarEventSchema = z.object({
   source_external_id: z.string().nullable().optional(),
   source_instance_id: z.string().nullable().optional(),
   source_origin_app: z.string().nullable().optional(),
-  sync_status: z.enum(["local_only", "pending_sync", "synced", "conflict", "error"]),
+  sync_status: z.enum(['local_only', 'pending_sync', 'synced', 'conflict', 'error']),
   provider_readonly: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -134,7 +134,7 @@ export function parseApiSchema<T>(schema: z.ZodTypeAny, value: unknown): T {
     return schema.parse(value) as T;
   } catch (error) {
     if (error instanceof ZodError) {
-      console.error("API schema validation failed", error);
+      console.error('API schema validation failed', error);
       throw new Error(error.message);
     }
     throw error;

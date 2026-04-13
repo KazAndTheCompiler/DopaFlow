@@ -1,5 +1,5 @@
-import type { Badge, PlayerLevel } from "../../../shared/types/gamification";
-import { apiClient } from "./client";
+import type { Badge, PlayerLevel } from '../../../shared/types/gamification';
+import { apiClient } from './client';
 
 export interface GamificationStatus {
   level: PlayerLevel;
@@ -8,5 +8,5 @@ export interface GamificationStatus {
 }
 
 export function getGamificationStatus(): Promise<GamificationStatus> {
-  return apiClient<GamificationStatus>("/gamification/status");
+  return apiClient<GamificationStatus>('/gamification/status');
 }

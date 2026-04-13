@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Alarm } from "../../../shared/types";
+import type { Alarm } from '../../../shared/types';
 import {
   createAlarm,
   deleteAlarm,
   getAlarmSchedulerStatus,
   listAlarms,
   triggerAlarm,
-} from "@api/index";
-import { getInvalidationEventName } from "./useSSE";
-import { useTTS } from "./useTTS";
+} from '@api/index';
+import { getInvalidationEventName } from './useSSE';
+import { useTTS } from './useTTS';
 
 export interface UseAlarmsResult {
   alarms: Alarm[];
@@ -38,17 +38,20 @@ export function useAlarms(): UseAlarmsResult {
     timeoutRef.current.clear();
   }, []);
 
-  const fireLocally = useCallback((alarm: Alarm): void => {
-    if (alarm.muted || firedRef.current.has(alarm.id)) {
- return;
-}
-    firedRef.current.add(alarm.id);
-    if (alarm.kind === "tts" || alarm.kind == null) {
-      const text = alarm.tts_text || alarm.title;
-      speak(text);
-    }
-    void triggerAlarm(alarm.id).catch(() => undefined);
-  }, [speak]);
+  const fireLocally = useCallback(
+    (alarm: Alarm): void => {
+      if (alarm.muted || firedRef.current.has(alarm.id)) {
+        return;
+      }
+      firedRef.current.add(alarm.id);
+      if (alarm.kind === 'tts' || alarm.kind == null) {
+        const text = alarm.tts_text || alarm.title;
+        speak(text);
+      }
+      void triggerAlarm(alarm.id).catch(() => undefined);
+    },
+    [speak],
+  );
 
   const refresh = useCallback(async (): Promise<void> => {
     const [nextAlarms, status] = await Promise.all([listAlarms(), getAlarmSchedulerStatus()]);
@@ -62,12 +65,12 @@ export function useAlarms(): UseAlarmsResult {
     const now = Date.now();
     for (const alarm of nextAlarms) {
       if (alarm.muted) {
- continue;
-}
+        continue;
+      }
       const alarmTime = new Date(alarm.at).getTime();
       if (Number.isNaN(alarmTime)) {
- continue;
-}
+        continue;
+      }
       if (alarmTime <= now && now - alarmTime < 2 * 60_000) {
         fireLocally(alarm);
         continue;
@@ -82,16 +85,16 @@ export function useAlarms(): UseAlarmsResult {
 
   // Register service worker and request notification permission
   useEffect(() => {
-    if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+    if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
       return;
     }
 
     const registerSW = async () => {
-      if ("serviceWorker" in navigator) {
+      if ('serviceWorker' in navigator) {
         try {
-          await navigator.serviceWorker.register("/alarm-sw.js", { scope: "/" });
+          await navigator.serviceWorker.register('/alarm-sw.js', { scope: '/' });
           // Request notification permission
-          if ("Notification" in window && Notification.permission === "default") {
+          if ('Notification' in window && Notification.permission === 'default') {
             await Notification.requestPermission();
           }
         } catch {
@@ -105,21 +108,21 @@ export function useAlarms(): UseAlarmsResult {
 
   // Listen for messages from service worker
   useEffect(() => {
-    if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+    if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
       return;
     }
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data.type === "ALARM_FIRED") {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.type === 'ALARM_FIRED') {
           const alarm = event.data.alarm as Alarm;
           const text = event.data.text as string;
           // Only speak if tab is visible and not already fired
           if (
             !firedRef.current.has(alarm.id) &&
             !alarm.muted &&
-            (alarm.kind === "tts" || alarm.kind == null) &&
-            document.visibilityState === "visible"
+            (alarm.kind === 'tts' || alarm.kind == null) &&
+            document.visibilityState === 'visible'
           ) {
             firedRef.current.add(alarm.id);
             speak(text);
@@ -134,9 +137,9 @@ export function useAlarms(): UseAlarmsResult {
     const handleInvalidate = (): void => {
       void refresh();
     };
-    window.addEventListener(getInvalidationEventName("alarms"), handleInvalidate);
+    window.addEventListener(getInvalidationEventName('alarms'), handleInvalidate);
     return () => {
-      window.removeEventListener(getInvalidationEventName("alarms"), handleInvalidate);
+      window.removeEventListener(getInvalidationEventName('alarms'), handleInvalidate);
       clearScheduledTimeouts();
     };
   }, [refresh]);
@@ -159,7 +162,7 @@ export function useAlarms(): UseAlarmsResult {
     trigger: async (id: string) => {
       await triggerAlarm(id);
       const alarm = alarms.find((item) => item.id === id);
-      if (alarm && !alarm.muted && (alarm.kind === "tts" || alarm.kind == null)) {
+      if (alarm && !alarm.muted && (alarm.kind === 'tts' || alarm.kind == null)) {
         firedRef.current.add(alarm.id);
         speak(alarm.tts_text || alarm.title);
       }

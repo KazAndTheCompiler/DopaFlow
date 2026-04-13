@@ -1,6 +1,6 @@
-import type { ReviewCard } from "../../../shared/types";
-import { apiClient, API_BASE_URL } from "./client";
-import { parseApiSchema, reviewCardSchema, reviewCardsSchema } from "./schemas";
+import type { ReviewCard } from '../../../shared/types';
+import { apiClient, API_BASE_URL } from './client';
+import { parseApiSchema, reviewCardSchema, reviewCardsSchema } from './schemas';
 
 export interface ReviewDeck {
   id: string;
@@ -25,36 +25,58 @@ export interface CreateReviewDeckResponse {
 }
 
 export async function listReviewCards(): Promise<ReviewCard[]> {
-  return parseApiSchema<ReviewCard[]>(reviewCardsSchema, await apiClient<unknown>("/review/cards"));
+  return parseApiSchema<ReviewCard[]>(reviewCardsSchema, await apiClient<unknown>('/review/cards'));
 }
 
 export function listReviewDecks(): Promise<ReviewDeck[]> {
-  return apiClient<ReviewDeck[]>("/review/decks");
+  return apiClient<ReviewDeck[]>('/review/decks');
 }
 
-export async function listDueReviewCards(deckId: string, limit = 20, offset = 0): Promise<ReviewCard[]> {
+export async function listDueReviewCards(
+  deckId: string,
+  limit = 20,
+  offset = 0,
+): Promise<ReviewCard[]> {
   const params = new URLSearchParams({
     deck_id: deckId,
     limit: String(limit),
     offset: String(offset),
   });
-  return parseApiSchema<ReviewCard[]>(reviewCardsSchema, await apiClient<unknown>(`/review/due?${params.toString()}`));
+  return parseApiSchema<ReviewCard[]>(
+    reviewCardsSchema,
+    await apiClient<unknown>(`/review/due?${params.toString()}`),
+  );
 }
 
 export function getDeckStats(deckId: string): Promise<DeckStats> {
   return apiClient<DeckStats>(`/review/decks/${deckId}/stats`);
 }
 
-export function createReviewDeck(payload: { name: string; source_type?: string }): Promise<CreateReviewDeckResponse> {
-  return apiClient<CreateReviewDeckResponse>("/review/decks", { method: "POST", body: JSON.stringify(payload) });
+export function createReviewDeck(payload: {
+  name: string;
+  source_type?: string;
+}): Promise<CreateReviewDeckResponse> {
+  return apiClient<CreateReviewDeckResponse>('/review/decks', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function createReviewCard(payload: Partial<ReviewCard>): Promise<ReviewCard> {
-  return parseApiSchema<ReviewCard>(reviewCardSchema, await apiClient<unknown>("/review/cards", { method: "POST", body: JSON.stringify(payload) }));
+  return parseApiSchema<ReviewCard>(
+    reviewCardSchema,
+    await apiClient<unknown>('/review/cards', { method: 'POST', body: JSON.stringify(payload) }),
+  );
 }
 
-export async function rateReviewCard(payload: { cardId: string; rating: number }): Promise<ReviewCard> {
-  return parseApiSchema<ReviewCard>(reviewCardSchema, await apiClient<unknown>("/review/rate", { method: "POST", body: JSON.stringify(payload) }));
+export async function rateReviewCard(payload: {
+  cardId: string;
+  rating: number;
+}): Promise<ReviewCard> {
+  return parseApiSchema<ReviewCard>(
+    reviewCardSchema,
+    await apiClient<unknown>('/review/rate', { method: 'POST', body: JSON.stringify(payload) }),
+  );
 }
 
 export interface ImportApkgResponse {
@@ -64,25 +86,37 @@ export interface ImportApkgResponse {
 }
 
 export function renameReviewDeck(deckId: string, name: string): Promise<ReviewDeck> {
-  return apiClient<ReviewDeck>(`/review/decks/${deckId}`, { method: "PATCH", body: JSON.stringify({ name }) });
+  return apiClient<ReviewDeck>(`/review/decks/${deckId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name }),
+  });
 }
 
 export function deleteReviewDeck(deckId: string): Promise<{ deleted: boolean }> {
-  return apiClient<{ deleted: boolean }>(`/review/decks/${deckId}`, { method: "DELETE" });
+  return apiClient<{ deleted: boolean }>(`/review/decks/${deckId}`, { method: 'DELETE' });
 }
 
-export async function updateReviewCard(cardId: string, patch: { front: string; back: string }): Promise<ReviewCard> {
-  return parseApiSchema<ReviewCard>(reviewCardSchema, await apiClient<unknown>(`/review/cards/${cardId}`, { method: "PATCH", body: JSON.stringify(patch) }));
+export async function updateReviewCard(
+  cardId: string,
+  patch: { front: string; back: string },
+): Promise<ReviewCard> {
+  return parseApiSchema<ReviewCard>(
+    reviewCardSchema,
+    await apiClient<unknown>(`/review/cards/${cardId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  );
 }
 
 export async function importApkg(deckId: string, file: File): Promise<ImportApkgResponse> {
   const form = new FormData();
-  form.append("file", file);
+  form.append('file', file);
   const url = new URL(`${API_BASE_URL}/review/import-apkg`);
-  url.searchParams.set("deck_id", deckId);
-  const res = await fetch(url.toString(), { method: "POST", body: form });
+  url.searchParams.set('deck_id', deckId);
+  const res = await fetch(url.toString(), { method: 'POST', body: form });
   if (!res.ok) {
- throw new Error(await res.text());
-}
+    throw new Error(await res.text());
+  }
   return res.json() as Promise<ImportApkgResponse>;
 }

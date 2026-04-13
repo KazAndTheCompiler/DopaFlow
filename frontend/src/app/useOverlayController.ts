@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
-import { APP_STORAGE_KEYS } from "./appStorage";
-import type { AppRoute } from "../appRoutes";
+import { useState, useCallback } from 'react';
+import { APP_STORAGE_KEYS } from './appStorage';
+import type { AppRoute } from '../appRoutes';
 
 export interface OverlayState {
   inboxOpen: boolean;
@@ -27,8 +27,8 @@ export function useOverlayController(): OverlayController {
   const [inboxOpen, setInboxOpen] = useState<boolean>(false);
   const [planOpen, setPlanOpen] = useState<boolean>(false);
   const [shutdownOpen, setShutdownOpen] = useState<boolean>(false);
-  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(() =>
-    !localStorage.getItem(APP_STORAGE_KEYS.onboardingComplete)
+  const [onboardingOpen, setOnboardingOpen] = useState<boolean>(
+    () => !localStorage.getItem(APP_STORAGE_KEYS.onboardingComplete),
   );
 
   const openInbox = useCallback(() => setInboxOpen(true), []);
@@ -47,17 +47,17 @@ export function useOverlayController(): OverlayController {
   const closeOnboarding = useCallback(() => setOnboardingOpen(false), []);
 
   const finishOnboarding = useCallback((): AppRoute => {
-    localStorage.setItem(APP_STORAGE_KEYS.onboardingComplete, "1");
+    localStorage.setItem(APP_STORAGE_KEYS.onboardingComplete, '1');
     setOnboardingOpen(false);
-    return "today";
+    return 'today';
   }, []);
 
   const isPlanTransition = useCallback((route: AppRoute): boolean => {
-    return route === "plan";
+    return route === 'plan';
   }, []);
 
   const isShutdownTransition = useCallback((route: AppRoute): boolean => {
-    return route === "shutdown";
+    return route === 'shutdown';
   }, []);
 
   return {

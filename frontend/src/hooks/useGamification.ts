@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Badge, PlayerLevel } from "../../../shared/types/gamification";
-import { getGamificationStatus } from "@api/gamification";
+import type { Badge, PlayerLevel } from '../../../shared/types/gamification';
+import { getGamificationStatus } from '@api/gamification';
 
 export interface UseGamificationResult {
   level: PlayerLevel | undefined;
@@ -36,11 +36,14 @@ export function useGamification(onBadgeEarned?: (badge: Badge) => void): UseGami
   const refresh = useCallback(async (): Promise<void> => {
     const status = await getGamificationStatus();
     const badges = Array.isArray(status.badges) ? status.badges : [];
-    const earnedCount = typeof status.earned_count === "number" ? status.earned_count : 0;
-    const nextEarnedIds = new Set(badges.filter((badge) => badge.earned_at).map((badge) => badge.id));
+    const earnedCount = typeof status.earned_count === 'number' ? status.earned_count : 0;
+    const nextEarnedIds = new Set(
+      badges.filter((badge) => badge.earned_at).map((badge) => badge.id),
+    );
 
     if (earnedCount > earnedRef.current) {
-      const earnedBadge = badges.find((badge) => badge.earned_at && !earnedIdsRef.current.has(badge.id)) ?? null;
+      const earnedBadge =
+        badges.find((badge) => badge.earned_at && !earnedIdsRef.current.has(badge.id)) ?? null;
       if (earnedBadge) {
         setNewBadge(earnedBadge);
         onBadgeEarnedRef.current?.(earnedBadge);
@@ -57,5 +60,12 @@ export function useGamification(onBadgeEarned?: (badge: Badge) => void): UseGami
     void refresh();
   }, [refresh]);
 
-  return { level, badges, earnedCount, newBadge, dismissNewBadge: () => setNewBadge(null), refresh };
+  return {
+    level,
+    badges,
+    earnedCount,
+    newBadge,
+    dismissNewBadge: () => setNewBadge(null),
+    refresh,
+  };
 }

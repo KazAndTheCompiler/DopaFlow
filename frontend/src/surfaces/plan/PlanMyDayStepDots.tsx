@@ -1,8 +1,10 @@
-import type { JSX } from "react";
+import type { JSX } from 'react';
 
 export function StepDots({ step, total }: { step: number; total: number }): JSX.Element {
   return (
-    <div style={{ display: "flex", gap: "0.4rem", justifyContent: "center", marginBottom: "1.5rem" }}>
+    <div
+      style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center', marginBottom: '1.5rem' }}
+    >
       {Array.from({ length: total }, (_, index) => (
         <div
           key={index}
@@ -12,11 +14,11 @@ export function StepDots({ step, total }: { step: number; total: number }): JSX.
             borderRadius: 999,
             background:
               index < step
-                ? "color-mix(in srgb, var(--accent) 45%, transparent)"
+                ? 'color-mix(in srgb, var(--accent) 45%, transparent)'
                 : index === step
-                  ? "var(--accent)"
-                  : "var(--border)",
-            transition: "width 200ms ease, background 200ms ease",
+                  ? 'var(--accent)'
+                  : 'var(--border)',
+            transition: 'width 200ms ease, background 200ms ease',
           }}
         />
       ))}
