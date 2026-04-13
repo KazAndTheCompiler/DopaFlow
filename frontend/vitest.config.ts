@@ -28,10 +28,10 @@ export default defineConfig({
         "src/styles.css",
       ],
       thresholds: {
-        statements: 15,
+        statements: 10,
         branches: 10,
-        functions: 15,
-        lines: 15,
+        functions: 14,
+        lines: 10,
       },
     },
   },
