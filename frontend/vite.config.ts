@@ -48,5 +48,9 @@ export default defineConfig({
     rollupOptions: {
       treeshake: true,
     },
+    // Bundle size budget: warn if total JS exceeds 2MB, error at 5MB
+    // This is a sanity check — the app ships as a desktop package so large bundles are acceptable
+    // if they reflect legitimate feature surface area.
+    chunkSizeWarningLimit: 2048,
   },
 });

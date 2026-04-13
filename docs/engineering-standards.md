@@ -83,6 +83,23 @@ Product-facing documentation lives at `docs/` root or is embedded in `README.md`
 | LLM session artifacts | `docs/internal/ai-workflow/` |
 | Personal/dev scripts | `internal/` |
 
+## Version alignment
+
+| Package | Current | Notes |
+|---|---|---|
+| React | `^18.3.1` | Align minor/patch across all packages |
+| TypeScript | `^5.7.3` | Align minor/patch across all packages |
+| Vite | frontend: `^7.3.2`, skinmaker: `^8.0.8` | **Known gap** — skinmaker on Vite 8 is a major version ahead; upgrade when safe |
+| Electron | `^39.8.5` | Desktop only; upgrade requires compatibility testing |
+
+When updating versions:
+1. Update `package.json` with new semver range
+2. Delete `package-lock.json`
+3. Run `npm install` to regenerate
+4. Commit both `package.json` and `package-lock.json` changes together
+
+Do not mix `^` and `~` — prefer `^` for all packages.
+
 ## Internal vs. public boundary
 
 - **Public:** Anything a contributor, user, or casual reviewer should see

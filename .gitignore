@@ -12,13 +12,15 @@ frontend/playwright-report/
 __pycache__/
 *.py[cod]
 *.pyo
-.venv/
 venv/
+.env/
+.venv/
 env/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+requirements-dev.txt
 
 # --- Database ---
 *.db
@@ -87,6 +89,8 @@ internal/
 .continue/
 .aider/
 .opencode/
+tools/mcp/node-tooling-bridge/.venv/
+tools/mcp/node-tooling-bridge/vendor/
 
 # --- Lock files (resolved at install time) ---
 desktop/package-lock.json

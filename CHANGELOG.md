@@ -41,3 +41,29 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 - Root-level working notes, prompts, recovery logs, and conversation artifacts were moved out of the repo surface into `docs/internal/ai-workflow/LLM_work_folder/`.
 - The long-form changelog now absorbs session-level backend/frontend notes so obsolete summary snapshots and one-off prompt artifacts can be retired instead of becoming a second truth set.
 - This file is intentionally short and release-facing. The long-form archive lives under `docs/`.
+
+## Infrastructure hardening (repo-credibility pass)
+
+The following were added to support CI/CD trust and development velocity:
+
+- `frontend/.eslintrc.json` — TypeScript-aware ESLint config
+- `frontend/.prettierrc` — Prettier formatting config
+- `frontend/vitest.config.ts` — Vitest unit test setup
+- `frontend/src/api/client.test.ts` — API client error handling tests
+- `frontend/src/hooks/ipc-validation.test.ts` — IPC route sanitization tests
+- `backend/pyproject.toml` — Ruff lint + format config
+- `backend/pytest.ini` — pytest with asyncio mode and coverage config
+- `backend/tests/test_migrations.py` — Migration checksum drift detection
+- `backend/tests/test_load.py` — Concurrent health endpoint load test
+- `backend/tests/test_request_log.py` — X-Request-ID tracing tests
+- `.github/workflows/frontend-ci.yml` — Frontend CI: ESLint + typecheck + format + vitest + npm audit
+- `.github/workflows/backend-tests.yml` — Backend CI: ruff lint + pytest --cov-fail-under=70
+- `.github/dependabot.yml` — Weekly npm + pip + GitHub Actions dependency updates
+- `Makefile` — Root-level dev commands (`make validate`, `make lint`, etc.)
+- `docs/testing-strategy.md` — Testing pyramid, CI gate table
+- `docs/migrations.md` — Forward-only policy, drift detection
+- `docs/security-model.md` — Runtime modes, auth paths, IPC allowlist
+- `docs/observability.md` — Structured logs, request IDs, slow-request threshold
+- `docs/error-taxonomy.md` — Error shapes, HTTP status codes
+- `docs/runbook.md` — Common failure diagnostics
+- `docs/production-readiness.md` — Full delta report and scorecard
