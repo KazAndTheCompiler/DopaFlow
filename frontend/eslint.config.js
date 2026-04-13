@@ -58,7 +58,7 @@ export default [
       "no-var": "error",
       "object-shorthand": "error",
       "quote-props": ["error", "as-needed"],
-      "comma-dangle": ["error", { arrays: "always-multiline", objects: "always-multiline", imports: "always-multiline", exports: "always-multiline", functions: "never" }],
+      "comma-dangle": "off",
       semi: ["error", "always"],
       "no-dupe-keys": "error",
       "no-duplicate-imports": "off",
