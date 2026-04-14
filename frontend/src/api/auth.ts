@@ -57,8 +57,8 @@ export function parseJwt(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
- return null;
-}
+      return null;
+    }
     const payload = base64urlDecode(parts[1]);
     return JSON.parse(payload);
   } catch {
@@ -69,8 +69,8 @@ export function parseJwt(token: string): Record<string, unknown> | null {
 export async function getAccessToken(): Promise<string | null> {
   const stored = sessionStorage.getItem(TOKEN_KEY);
   if (!stored) {
- return null;
-}
+    return null;
+  }
   const parsed = parseJwt(stored);
   if (!parsed) {
     clearTokens();
@@ -87,22 +87,22 @@ export async function getAccessToken(): Promise<string | null> {
 export async function getUser(): Promise<User | null> {
   const token = await getAccessToken();
   if (!token) {
- return null;
-}
+    return null;
+  }
   const res = await fetch(`${API_BASE_URL}/auth/userinfo`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
- return null;
-}
+    return null;
+  }
   return res.json() as Promise<User>;
 }
 
 async function tryRefresh(): Promise<boolean> {
   const refreshToken = localStorage.getItem(REFRESH_KEY);
   if (!refreshToken) {
- return false;
-}
+    return false;
+  }
   try {
     const res = await fetch(`${API_BASE_URL}/auth/token`, {
       method: 'POST',
@@ -137,7 +137,11 @@ function clearTokens(): void {
   sessionStorage.removeItem(CODE_VERIFIER_KEY);
 }
 
-export async function loginWithRedirect(clientId: string, redirectUri: string, scope = 'openid profile email'): Promise<void> {
+export async function loginWithRedirect(
+  clientId: string,
+  redirectUri: string,
+  scope = 'openid profile email',
+): Promise<void> {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
   const state = generateState();
@@ -162,7 +166,10 @@ export async function loginWithRedirect(clientId: string, redirectUri: string, s
   }
 }
 
-export async function handleCallback(extraParams?: { code?: string; state?: string }): Promise<boolean> {
+export async function handleCallback(extraParams?: {
+  code?: string;
+  state?: string;
+}): Promise<boolean> {
   const code = extraParams?.code ?? new URLSearchParams(window.location.search).get('code');
   const state = extraParams?.state ?? new URLSearchParams(window.location.search).get('state');
   const storedState = sessionStorage.getItem(STATE_KEY);
@@ -210,11 +217,11 @@ export function handleDeepLinkUrl(rawUrl: string): void {
     if (code || state) {
       const params: { code?: string; state?: string } = {};
       if (code) {
- params.code = code;
-}
+        params.code = code;
+      }
       if (state) {
- params.state = state;
-}
+        params.state = state;
+      }
       void handleCallback(params);
     }
   } catch {
@@ -245,13 +252,13 @@ export async function logout(): Promise<void> {
 export function isAuthenticated(): boolean {
   const token = sessionStorage.getItem(TOKEN_KEY);
   if (!token) {
- return false;
-}
+    return false;
+  }
   try {
     const parsed = parseJwt(token);
     if (!parsed) {
- return false;
-}
+      return false;
+    }
     const exp = (parsed.exp as number) * 1000;
     return Date.now() < exp;
   } catch {

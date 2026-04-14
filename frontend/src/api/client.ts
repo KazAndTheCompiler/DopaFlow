@@ -62,7 +62,10 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export async function apiClient<T>(path: string, init?: RequestInit & { requiresAuth?: boolean }): Promise<T> {
+export async function apiClient<T>(
+  path: string,
+  init?: RequestInit & { requiresAuth?: boolean },
+): Promise<T> {
   const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
   const requiresAuth = init?.requiresAuth ?? false;
   const token = requiresAuth ? await _getAuthToken() : null;
