@@ -43,7 +43,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         host = request.client.host if request.client else ""
 
-        if self.settings.dev_auth:
+        if self.settings.dev_auth and not self.settings.production:
             return await call_next(request)
 
         if host in TRUSTED_HOSTS and trust_local_clients_enabled():
