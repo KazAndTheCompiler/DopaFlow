@@ -48,6 +48,7 @@ class TokenRequest(BaseModel):
     client_id: str | None = Field(default=None, max_length=256)
     code_verifier: str | None = Field(default=None, max_length=128)
     refresh_token: str | None = Field(default=None, max_length=256)
+    state: str | None = Field(default=None, max_length=256)
 
     @model_validator(mode="after")
     def check_auth_code_grant(self) -> TokenRequest:

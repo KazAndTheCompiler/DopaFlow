@@ -135,9 +135,9 @@ class AuthService:
     def validate_client_redirect(self, client_id: str, redirect_uri: str) -> dict[str, Any]:
         client = self.get_client(client_id)
         if not client:
-            raise HTTPException(status_code=401, detail="Unknown client_id")
+            raise HTTPException(status_code=401, detail="invalid_client")
         if client["redirect_uri"] != redirect_uri:
-            raise HTTPException(status_code=400, detail="redirect_uri mismatch — must match registered URI")
+            raise HTTPException(status_code=400, detail="invalid_client")
         return client
 
     def authenticate_user(self, email: str, password: str) -> dict[str, Any]:
@@ -189,6 +189,7 @@ class AuthService:
         code_verifier: str,
         client_id: str,
         redirect_uri: str,
+        state: str | None = None,
     ) -> dict[str, Any]:
         code_hash = _token_hash(code)
         verifier_hash = _token_hash(code_verifier)
@@ -199,15 +200,18 @@ class AuthService:
                 (code_hash,),
             ).fetchone()
             if not row:
-                raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
+                raise HTTPException(status_code=400, detail="invalid_grant")
             if row["verifier_hash"] != verifier_hash:
-                raise HTTPException(status_code=400, detail="Invalid code verifier")
+                raise HTTPException(status_code=400, detail="invalid_grant")
             if row["client_id"] != client_id:
-                raise HTTPException(status_code=400, detail="client_id mismatch")
+                raise HTTPException(status_code=400, detail="invalid_grant")
             if row["redirect_uri"] != redirect_uri:
-                raise HTTPException(status_code=400, detail="redirect_uri mismatch")
+                raise HTTPException(status_code=400, detail="invalid_grant")
             if row["expires_at"] < now:
-                raise HTTPException(status_code=400, detail="Authorization code expired")
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            stored_state = row["state"]
+            if stored_state is not None and state is not None and stored_state != state:
+                raise HTTPException(status_code=400, detail="invalid_grant")
             conn.execute(
                 "UPDATE auth_oidc_codes SET used_at = ? WHERE code_hash = ?",
                 (now, code_hash),
@@ -274,9 +278,9 @@ class AuthService:
                 (token_hash,),
             ).fetchone()
             if not row:
-                raise HTTPException(status_code=401, detail="Invalid refresh token")
+                raise HTTPException(status_code=401, detail="invalid_grant")
             if row["expires_at"] < now:
-                raise HTTPException(status_code=401, detail="Refresh token expired")
+                raise HTTPException(status_code=401, detail="invalid_grant")
             user_id = row["user_id"]
             email = row["email"]
             scope = row["scope"]
@@ -378,7 +382,7 @@ class AuthService:
                 (user_id,),
             ).fetchone()
         if not row:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise HTTPException(status_code=401, detail="invalid_token")
         return {
             "sub": row["id"],
             "email": row["email"],

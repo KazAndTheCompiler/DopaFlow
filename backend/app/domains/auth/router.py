@@ -40,6 +40,7 @@ async def token(
             code_verifier=request.code_verifier,
             client_id=request.client_id,
             redirect_uri=request.redirect_uri,
+            state=request.state,
         )
     elif request.grant_type == "refresh_token":
         result = svc.refresh_access_token(refresh_token=request.refresh_token)
@@ -54,14 +55,14 @@ async def userinfo(
     svc: AuthService = Depends(get_auth_service),
 ) -> UserInfo:
     if not authorization:
-        raise HTTPException(status_code=401, detail="Missing Authorization header")
+        raise HTTPException(status_code=401, detail="missing_token")
     scheme, _, token = authorization.partition(" ")
     if scheme.lower() != "bearer" or not token.strip():
-        raise HTTPException(status_code=401, detail="Expected Bearer token")
+        raise HTTPException(status_code=401, detail="invalid_token")
     try:
         verify_scope_token(token.strip())
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid access token")
+        raise HTTPException(status_code=401, detail="invalid_token")
     info = svc.get_userinfo(token.strip())
     return UserInfo(**info)
 
@@ -69,8 +70,16 @@ async def userinfo(
 @router.post("/revoke", response_model=RevokeResponse)
 async def revoke(
     request: RevokeRequest,
+    authorization: str | None = Query(default=None),
     svc: AuthService = Depends(get_auth_service),
 ) -> RevokeResponse:
+    if authorization:
+        scheme, _, token = authorization.partition(" ")
+        if scheme.lower() == "bearer" and token:
+            try:
+                verify_scope_token(token)
+            except Exception:
+                pass
     svc.revoke_token(request.token, token_hint=request.token_hint)
     return RevokeResponse(revoked=True)
 
@@ -130,8 +139,16 @@ async def list_roles() -> dict:
 @router.post("/introspect", response_model=TokenIntrospectionResponse)
 async def introspect(
     request: TokenIntrospectionRequest,
+    authorization: str | None = Query(default=None),
     svc: AuthService = Depends(get_auth_service),
 ) -> TokenIntrospectionResponse:
+    if authorization:
+        scheme, _, token = authorization.partition(" ")
+        if scheme.lower() == "bearer" and token:
+            try:
+                verify_scope_token(token)
+            except Exception:
+                pass
     result = svc.introspect_token(request.token)
     return TokenIntrospectionResponse(**result)
 
