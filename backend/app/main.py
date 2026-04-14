@@ -148,6 +148,21 @@ def create_app() -> FastAPI:
 
     settings = get_settings()
     configure_logging(production=settings.production or settings.packaged)
+
+    import os
+
+    if os.getenv("DOPAFLOW_SENTRY_DSN"):
+        import sentry_sdk
+        from sentry_sdk.integrations.asgi import AsgiIntegration
+
+        sentry_sdk.init(
+            dsn=os.getenv("DOPAFLOW_SENTRY_DSN"),
+            integrations=[AsgiIntegration()],
+            environment=os.getenv("DOPAFLOW_ENV", "production"),
+            release=APP_VERSION,
+            traces_sample_rate=0.1,
+        )
+
     run_migrations(
         settings.db_path, turso_url=settings.turso_url, turso_token=settings.turso_token
     )
