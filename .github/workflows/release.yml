@@ -142,12 +142,14 @@ jobs:
           cd desktop
           npm test
 
+      - name: Install FUSE (required by appimagetool)
+        run: |
+          sudo apt-get install -y libfuse2
+
       - name: Build AppImage
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd desktop
-          npm run dist:stable:linux
+          npm run dist:stable:linux -- --publish never
 
       - name: Verify AppImage deps
         run: |
@@ -214,11 +216,9 @@ jobs:
           npm test
 
       - name: Build NSIS installer
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd desktop
-          npm run dist:stable:win
+          npm run dist:stable:win -- --publish never
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
