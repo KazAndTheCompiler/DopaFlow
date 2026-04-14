@@ -113,11 +113,21 @@ jobs:
               uvicorn.run(app, host=\"127.0.0.1\", port=18765, log_level=\"error\")
           t = threading.Thread(target=run, daemon=True)
           t.start()
-          time.sleep(5)
-          r = urllib.request.urlopen('http://127.0.0.1:18765/health/live')
-          assert r.status == 200
-          r = urllib.request.urlopen('http://127.0.0.1:18765/health/metrics')
-          assert r.status == 200
+          time.sleep(8)
+          try:
+              r = urllib.request.urlopen('http://127.0.0.1:18765/health/live', timeout=5)
+              print('health/live:', r.status)
+              assert r.status == 200
+          except Exception as e:
+              print('health/live failed:', e)
+              raise
+          try:
+              r = urllib.request.urlopen('http://127.0.0.1:18765/health/metrics', timeout=5)
+              print('health/metrics:', r.status)
+              assert r.status == 200
+          except Exception as e:
+              print('health/metrics failed:', e)
+              raise
           print('Startup health check passed')
           " || { echo "Startup health check failed"; exit 1; }
 
