@@ -48,9 +48,6 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 ### 1. N+1 tests are smoke-level
 `test_n_plus_one.py` verifies response correctness, not query counts. Real N+1 detection would require connection-level instrumentation with actual query counting.
 
-### 2. Recovery tests not in CI
-`backend/scripts/test_recovery.py` runs locally but not as a CI job.
-
 ---
 
 ## What was not done (intentionally or not yet)
@@ -63,7 +60,6 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 | SBOM | Not done — intentional for single-user app |
 | Workspace/monorepo unification | Not needed |
 | Rollback strategy | Forward-only, documented as such |
-| Recovery tests in CI | Runs locally only |
 
 ---
 
@@ -88,7 +84,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 | **Desktop startup tests** | Solid | `desktop/tests/` |
 | **Performance** | Partial | Load test in CI; bundle hard-fail; N+1 smoke-level |
 | **Error taxonomy** | Solid | Documented |
-| **Recovery** | Solid | `test_recovery.py` passes 4/4 scenarios |
+| **Recovery** | Solid | `test_recovery.py` passes 4/4 scenarios in CI |
 | **Error tracking** | Solid | Sentry SDK opt-in via DOPAFLOW_SENTRY_DSN |
 | **API contract** | Solid | OpenAPI baseline + CI contract diffing |
 | **E2E in PR CI** | Solid | Playwright route_startup + app_smoke in frontend CI |
@@ -118,5 +114,4 @@ For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting
 
 **What's not production-grade:**
 - No staging environment model
-- Recovery tests not in CI (run locally only)
 - No horizontal scaling story (SQLite, background jobs run on all instances)
