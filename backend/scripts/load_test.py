@@ -105,10 +105,10 @@ async def run_concurrent_load_test(
         latencies = ep["latencies"]
         ep["latencies"] = None
         ep["latency_avg_ms"] = round(statistics.mean(latencies), 2)
-        ep["latency_p95_ms"] = round(
-            sorted(latencies)[int(len(latencies) * 0.95)], 2
+        ep["latency_p95_ms"] = round(sorted(latencies)[int(len(latencies) * 0.95)], 2)
+        ep["success_rate"] = round(
+            ep["success"] / (ep["success"] + ep["errors"]) * 100, 1
         )
-        ep["success_rate"] = round(ep["success"] / (ep["success"] + ep["errors"]) * 100, 1)
 
     return results
 
