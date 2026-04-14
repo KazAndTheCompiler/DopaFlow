@@ -61,7 +61,21 @@ jobs:
           api_paths = [p for p in spec['paths'] if p.startswith('/api/v2')]
           assert len(api_paths) > 0, 'No /api/v2 paths found'
           print(f'OpenAPI valid: {len(spec[\"paths\"])} total paths, {len(api_paths)} under /api/v2')
+          import json
+          with open('openapi_current.json', 'w') as f:
+              json.dump(spec, f)
           "
+
+      - name: Check API contract (breaking changes)
+        run: |
+          cd backend
+          git fetch origin main
+          if git show origin/main:openapi_baseline.json > openapi_baseline.json 2>/dev/null; then
+            echo "Baseline found, checking for breaking changes..."
+            python3 scripts/api_contract_check.py openapi_baseline.json openapi_current.json
+          else
+            echo "No baseline found — this is the first run. Skipping contract check."
+          fi
 
   backend-tests:
     name: Backend Tests

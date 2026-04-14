@@ -67,9 +67,17 @@ jobs:
       - name: Install Playwright browsers
         run: |
           cd frontend
-          npx playwright install --with-deps chromium || true
+          npx playwright install --with-deps chromium
+
+      - name: Serve built frontend
+        run: |
+          cd frontend
+          npx serve dist -l 4173 &
+          echo "Server PID: $!"
+          sleep 3
+          curl -s http://127.0.0.1:4173 | head -5
 
       - name: Run smoke E2E tests
         run: |
           cd frontend
-          npm run test:e2e:smoke || true
+          npx playwright test --config playwright.ci.config.ts tests/e2e/route_startup.spec.ts tests/e2e/app_smoke.spec.ts --reporter=line --project=chromium
