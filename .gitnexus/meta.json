@@ -1,12 +1,12 @@
 {
   "repoPath": "/home/kaz/madlab/build/dopaflow",
-  "lastCommit": "d1a4625448f8c5a04bc60fc14c1674f21510f600",
-  "indexedAt": "2026-04-12T10:12:12.820Z",
+  "lastCommit": "a010a91e42093860fc1e330656145f7ef10d7e2f",
+  "indexedAt": "2026-04-14T03:23:09.358Z",
   "stats": {
-    "files": 663,
-    "nodes": 5544,
-    "edges": 15159,
-    "communities": 373,
+    "files": 700,
+    "nodes": 5982,
+    "edges": 16540,
+    "communities": 413,
     "processes": 300,
     "embeddings": 0
   }
