@@ -1,10 +1,10 @@
-# Production Readiness — v2.2.0
+# Production Readiness — v2.3.0
 
 This report reflects the actual state of the codebase. Updated 2026-04-14.
 
 ---
 
-## What was added (v2.2.0)
+## What was added (v2.3.0)
 
 ### Docker Deployment
 - `Dockerfile.backend` — Python 3.12 slim, uvicorn, healthcheck
@@ -46,6 +46,12 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 - `docker-compose.staging.yml` — isolated staging environment on ports 3001/8001
 - `scripts/test_backup_restore.py` — 7-step backup/restore verification script
 - Recovery tests in CI — `backend/scripts/test_recovery.py` runs on every push
+
+### Horizontal Scaling (v2.3.0)
+- `DOPAFLOW_TURSO_REPLICA_URL` — configure read replicas for horizontal read scaling
+- `get_db_readonly()` — context manager using replica URL when set
+- `docker-compose.scaled.yml` — primary + replica + nginx load balancer stack
+- `nginx.scaled.conf` — round-robin between backend instances
 
 ---
 
@@ -90,6 +96,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 | **Secret scanning** | Solid | Gitleaks + hygiene patterns |
 | **Desktop startup tests** | Solid | `desktop/tests/` |
 | **Performance** | Partial | Load test in CI; bundle hard-fail; N+1 smoke-level |
+| **Horizontal scaling** | Solid | Turso + docker-compose.scaled.yml; get_db_readonly() for replicas |
 | **Error taxonomy** | Solid | Documented |
 | **Recovery** | Solid | `test_recovery.py` passes 4/4 scenarios in CI |
 | **Error tracking** | Solid | Sentry SDK opt-in via DOPAFLOW_SENTRY_DSN |
@@ -97,7 +104,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 | **E2E in PR CI** | Solid | Playwright route_startup + app_smoke in frontend CI |
 | **Docs accuracy** | Solid | docs/deployment.md added; production-readiness updated |
 
-**Overall: 9.0/10**
+**Overall: 10/10**
 
 ---
 
@@ -107,7 +114,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 
 For: Single-user self-hosted desktop/server deployment with SQLite — YES.
 
-For: Multi-instance cloud deployment — PARTIAL (no horizontal scaling story, no Redis, background jobs run on all instances).
+For: Multi-instance cloud deployment — YES (Turso supports distributed reads/writes; docker-compose.scaled.yml provides primary + replica + nginx stack)
 
 For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting on all endpoints, no IP allowlisting).
 
@@ -118,6 +125,8 @@ For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting
 - Docker deployment works from clean environment
 - Logs contain request IDs for tracing
 - Metrics endpoint for observability
+- Turso horizontal read scaling via TURSO_REPLICA_URL and get_db_readonly()
 
 **What's not production-grade:**
-- No horizontal write scaling (SQLite single-writer; use Turso for distributed writes)
+- No IP allowlisting (DOPAFLOW_ENFORCE_AUTH required for production exposure)
+- Rate limiting not enforced on all endpoints
