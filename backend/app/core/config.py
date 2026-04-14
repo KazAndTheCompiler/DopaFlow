@@ -5,8 +5,8 @@ from __future__ import annotations
 import pathlib
 from functools import lru_cache
 
-from pydantic import model_validator
 from platformdirs import user_data_dir as _platform_user_data_dir
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 APP_NAME = "DopaFlow"

@@ -1,0 +1,81 @@
+"""OIDC auth router: token, userinfo, revoke endpoints (prefixed /api/v2/auth)."""
+
+from __future__ import annotations
+
+import base64
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.core.config import Settings, get_settings_dependency
+from app.domains.auth.schemas import (
+    RevokeRequest,
+    RevokeResponse,
+    TokenRequest,
+    TokenResponse,
+    UserInfo,
+)
+from app.domains.auth.service import AuthService, get_auth_service
+from app.middleware.auth_scopes import verify_scope_token
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post("/token", response_model=TokenResponse)
+async def token(
+    request: TokenRequest,
+    svc: AuthService = Depends(get_auth_service),
+) -> TokenResponse:
+    if request.grant_type == "authorization_code":
+        result = svc.exchange_code(
+            code=request.code,
+            code_verifier=request.code_verifier,
+            client_id=request.client_id,
+            redirect_uri=request.redirect_uri,
+        )
+    elif request.grant_type == "refresh_token":
+        result = svc.refresh_access_token(refresh_token=request.refresh_token)
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported grant_type")
+    return TokenResponse(**result)
+
+
+@router.get("/userinfo", response_model=UserInfo)
+async def userinfo(
+    authorization: str | None = Query(default=None),
+    svc: AuthService = Depends(get_auth_service),
+) -> UserInfo:
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise HTTPException(status_code=401, detail="Expected Bearer token")
+    try:
+        verify_scope_token(token.strip())
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid access token")
+    info = svc.get_userinfo(token.strip())
+    return UserInfo(**info)
+
+
+@router.post("/revoke", response_model=RevokeResponse)
+async def revoke(
+    request: RevokeRequest,
+    svc: AuthService = Depends(get_auth_service),
+) -> RevokeResponse:
+    svc.revoke_token(request.token, token_hint=request.token_hint)
+    return RevokeResponse(revoked=True)
+
+
+@router.get("/jwks")
+async def jwks(settings: Settings = Depends(get_settings_dependency)) -> dict:
+    secret = settings.auth_token_secret or settings.api_key or "insecure-dev-secret"
+    return {
+        "keys": [
+            {
+                "kty": "oct",
+                "use": "sig",
+                "alg": "HS256",
+                "k": base64.urlsafe_b64encode(secret.encode()).rstrip(b"=").decode(),
+            }
+        ]
+    }

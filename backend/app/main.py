@@ -6,9 +6,10 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.config import default_backup_dir, get_settings
 from app.core.database import get_db, run_migrations
@@ -16,6 +17,9 @@ from app.core.scheduler import start_scheduler, stop_scheduler
 from app.core.version import APP_VERSION
 from app.domains.alarms.audio_router import router as alarm_audio_router
 from app.domains.alarms.router import router as alarms_router
+from app.domains.auth.oidc import build_discovery
+from app.domains.auth.router import router as auth_router
+from app.domains.auth.service import AuthService
 from app.domains.boards.router import router as boards_router
 from app.domains.calendar.router import router as calendar_router
 from app.domains.calendar_sharing.router import router as calendar_sharing_router
@@ -85,6 +89,7 @@ _DOMAIN_ROUTERS = [
 
 _AUXILIARY_ROUTERS = (
     (alarm_audio_router, API_PREFIX),
+    (auth_router, API_PREFIX),
     (events_router, API_PREFIX),
     (meta_router, API_PREFIX),
     (ops_router, API_PREFIX),
@@ -196,6 +201,130 @@ def create_app() -> FastAPI:
         return response
 
     register_routers(app)
+
+    @app.get("/.well-known/openid-configuration", tags=["auth"])
+    async def oidc_discovery() -> object:
+        return build_discovery(settings)
+
+    @app.get("/.well-known/oauth-authorization-server", tags=["auth"])
+    async def oauth_discovery() -> object:
+        return build_discovery(settings)
+
+    def _login_page_html(
+        client_id: str,
+        redirect_uri: str,
+        state: str,
+        scope: str,
+        code_challenge: str,
+        code_challenge_method: str,
+        error: str | None = None,
+    ) -> str:
+        error_block = f'<p class="error">{error}</p>' if error else ""
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in — DopaFlow</title>
+<style>
+body {{ font-family: sans-serif; max-width: 400px; margin: 60px auto; padding: 0 20px; }}
+h1 {{ margin-bottom: 24px; }}
+label {{ display: block; margin-bottom: 4px; font-weight: 500; }}
+input[type=email], input[type=password] {{ width: 100%; padding: 8px; margin-bottom: 16px; box-sizing: border-box; }}
+button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer; }}
+.error {{ color: #dc2626; margin-bottom: 12px; }}
+</style>
+</head>
+<body>
+<h1>Sign in to DopaFlow</h1>
+{error_block}
+<form method="post" action="/authorize">
+<input type="hidden" name="state" value="{state}">
+<input type="hidden" name="code_challenge" value="{code_challenge}">
+<input type="hidden" name="code_challenge_method" value="{code_challenge_method}">
+<input type="hidden" name="redirect_uri" value="{redirect_uri}">
+<input type="hidden" name="client_id" value="{client_id}">
+<input type="hidden" name="scope" value="{scope}">
+<label for="email">Email</label>
+<input type="email" id="email" name="email" required autocomplete="email">
+<label for="password">Password</label>
+<input type="password" id="password" name="password" required autocomplete="current-password">
+<button type="submit">Sign in</button>
+</form>
+</body>
+</html>"""
+
+    svc = AuthService(settings)
+
+    @app.get("/authorize", tags=["auth"])
+    async def authorize_get(
+        response_type: str,
+        client_id: str,
+        redirect_uri: str,
+        scope: str = "openid profile email",
+        state: str = "",
+        code_challenge: str = "",
+        code_challenge_method: str = "S256",
+    ):
+        if response_type != "code":
+            return JSONResponse(status_code=400, content={"detail": "response_type must be 'code'"})
+        if code_challenge_method != "S256":
+            return JSONResponse(status_code=400, content={"detail": "code_challenge_method must be 'S256'"})
+        if len(state) < 16:
+            return JSONResponse(status_code=400, content={"detail": "state must be at least 16 characters"})
+        if len(code_challenge) < 43:
+            return JSONResponse(status_code=400, content={"detail": "code_challenge must be at least 43 characters"})
+        return HTMLResponse(
+            content=_login_page_html(
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                state=state,
+                scope=scope,
+                code_challenge=code_challenge,
+                code_challenge_method=code_challenge_method,
+            )
+        )
+
+    @app.post("/authorize", tags=["auth"])
+    async def authorize_post(
+        email: str,
+        password: str,
+        state: str,
+        code_challenge: str,
+        code_challenge_method: str,
+        redirect_uri: str,
+        client_id: str,
+        scope: str = "openid profile email",
+    ):
+        if code_challenge_method != "S256":
+            return JSONResponse(status_code=400, content={"detail": "code_challenge_method must be 'S256'"})
+        try:
+            user = svc.authenticate_user(email, password)
+        except HTTPException:
+            return HTMLResponse(
+                status_code=401,
+                content=_login_page_html(
+                    client_id=client_id,
+                    redirect_uri=redirect_uri,
+                    state=state,
+                    scope=scope,
+                    code_challenge=code_challenge,
+                    code_challenge_method=code_challenge_method,
+                    error="Invalid email or password",
+                ),
+            )
+        code = svc.create_auth_code(
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            code_verifier=code_challenge,
+            scope=scope,
+            user_id=user["id"],
+            email=user["email"],
+        )
+        separator = "&" if "?" in redirect_uri else "?"
+        return RedirectResponse(
+            url=f"{redirect_uri}{separator}code={code}&state={state}",
+            status_code=302,
+        )
 
     @app.get("/health/live", tags=["system"])
     async def health_live() -> dict[str, str]:
