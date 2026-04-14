@@ -7,6 +7,15 @@ const defaultApiBaseUrl =
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? defaultApiBaseUrl;
 
+async function _getAuthToken(): Promise<string | null> {
+  try {
+    const { getAccessToken } = await import('./auth');
+    return await getAccessToken();
+  } catch {
+    return null;
+  }
+}
+
 let lastToast: { message: string; time: number } | null = null;
 
 function fireToast(message: string, type: 'error' | 'warn'): void {
@@ -53,23 +62,24 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export async function apiClient<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiClient<T>(path: string, init?: RequestInit & { requiresAuth?: boolean }): Promise<T> {
   const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  const requiresAuth = init?.requiresAuth ?? false;
+  const token = requiresAuth ? await _getAuthToken() : null;
   const request = async (): Promise<Response> =>
     fetch(`${API_BASE_URL}${path}`, {
-      headers: isFormData
-        ? { ...(init?.headers ?? {}) }
-        : {
-            'Content-Type': 'application/json',
-            ...(init?.headers ?? {}),
-          },
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        ...(init?.headers ?? {}),
+      },
       ...init,
     });
   let response: Response | undefined;
 
   try {
     response = await request();
-  } catch (error) {
+  } catch {
     await new Promise((r) => setTimeout(r, 1000));
     try {
       response = await request();

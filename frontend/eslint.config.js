@@ -38,6 +38,8 @@ export default [
         cancelAnimationFrame: "readonly",
         WebSocket: "readonly",
         crypto: "readonly",
+        btoa: "readonly",
+        atob: "readonly",
         JSX: "readonly",
         React: "readonly",
       },
