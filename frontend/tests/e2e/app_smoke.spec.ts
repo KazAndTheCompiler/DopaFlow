@@ -64,6 +64,7 @@ test.beforeEach(async ({ page }) => {
           recurrence_parent_id: null,
           sort_order: 0,
           subtasks: [],
+          dependencies: [],
           tags: ['ui'],
           source_type: null,
           source_external_id: null,
