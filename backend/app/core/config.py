@@ -50,7 +50,8 @@ class Settings(BaseSettings):
     disable_local_audio: bool = False
     disable_background_jobs: bool = False
     packaged: bool = False
-    extra_cors_origins: str = ""  # comma-separated additional allowed origins
+    production: bool = False
+    extra_cors_origins: str = ""
 
     journal_backup_dir: str = DEFAULT_BACKUP
 

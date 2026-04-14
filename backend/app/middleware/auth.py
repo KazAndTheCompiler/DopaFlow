@@ -10,7 +10,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 TRUSTED_HOSTS = {"127.0.0.1", "localhost", "::1"}
-HEALTH_PATHS = {"/health", "/health/live", "/health/ready"}
+HEALTH_PATHS = {"/health", "/health/live", "/health/ready", "/health/metrics"}
 
 
 def _env_flag(name: str) -> bool:

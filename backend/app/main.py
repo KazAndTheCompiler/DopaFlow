@@ -147,7 +147,7 @@ def create_app() -> FastAPI:
     """Create and configure the DopaFlow FastAPI application."""
 
     settings = get_settings()
-    configure_logging(packaged=settings.packaged)
+    configure_logging(production=settings.production or settings.packaged)
     run_migrations(
         settings.db_path, turso_url=settings.turso_url, turso_token=settings.turso_token
     )

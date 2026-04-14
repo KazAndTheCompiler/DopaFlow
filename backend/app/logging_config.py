@@ -5,8 +5,8 @@ import logging
 from pythonjsonlogger import jsonlogger
 
 
-def _build_formatter(packaged: bool) -> logging.Formatter:
-    if packaged:
+def _build_formatter(production: bool) -> logging.Formatter:
+    if production:
         return jsonlogger.JsonFormatter(
             "%(asctime)s %(levelname)s %(name)s %(message)s",
             rename_fields={
@@ -22,9 +22,9 @@ def _build_formatter(packaged: bool) -> logging.Formatter:
     )
 
 
-def configure_logging(*, packaged: bool) -> None:
+def configure_logging(*, production: bool) -> None:
     root_logger = logging.getLogger()
-    formatter = _build_formatter(packaged)
+    formatter = _build_formatter(production)
     handlers = root_logger.handlers or [logging.StreamHandler()]
     if not root_logger.handlers:
         root_logger.addHandler(handlers[0])
