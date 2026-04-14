@@ -12,8 +12,10 @@ services:
     environment:
       - DOPAFLOW_DB_PATH=/data/dopaflow.db
       - DOPAFLOW_BASE_URL=http://localhost:8000
+      # Auth: DEV_AUTH skips auth for local dev. ENFORCE_AUTH requires API key.
+      # For local quick-start: ENFORCE_AUTH=false (default from .env.example)
+      # For production: set ENFORCE_AUTH=true and configure DOPAFLOW_API_KEY
       - DOPAFLOW_DEV_AUTH=false
-      - DOPAFLOW_ENFORCE_AUTH=true
       - DOPAFLOW_DISABLE_BACKGROUND_JOBS=false
       - DOPAFLOW_ALLOW_LOCAL_WEBHOOK_TARGETS=false
       - DOPAFLOW_DISABLE_LOCAL_AUDIO=false
