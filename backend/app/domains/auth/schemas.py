@@ -89,3 +89,26 @@ class RevokeRequest(BaseModel):
 
 class RevokeResponse(BaseModel):
     revoked: bool
+
+
+class UserCreate(BaseModel):
+    email: str = Field(min_length=1, max_length=256)
+    password: str = Field(min_length=8, max_length=256)
+    role: str = Field(default="viewer")
+
+
+class UserRead(BaseModel):
+    id: str
+    email: str
+    role: str
+
+
+class UserReadFull(BaseModel):
+    id: str
+    email: str
+    role: str
+    created_at: str | None = None
+
+
+class UserList(BaseModel):
+    users: list[UserReadFull]

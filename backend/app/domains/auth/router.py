@@ -12,10 +12,14 @@ from app.domains.auth.schemas import (
     RevokeResponse,
     TokenRequest,
     TokenResponse,
+    UserCreate,
     UserInfo,
+    UserList,
+    UserRead,
+    UserReadFull,
 )
 from app.domains.auth.service import AuthService, get_auth_service
-from app.middleware.auth_scopes import verify_scope_token
+from app.middleware.auth_scopes import require_scope, verify_scope_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -79,3 +83,40 @@ async def jwks(settings: Settings = Depends(get_settings_dependency)) -> dict:
             }
         ]
     }
+
+
+@router.post(
+    "/users",
+    response_model=UserRead,
+    dependencies=[Depends(require_scope("admin:ops"))],
+)
+async def create_user(
+    payload: UserCreate,
+    svc: AuthService = Depends(get_auth_service),
+) -> UserRead:
+    user = svc.create_user(
+        email=payload.email,
+        password=payload.password,
+        role=payload.role,
+    )
+    return UserRead(id=user["id"], email=user["email"], role=user["role"])
+
+
+@router.get(
+    "/users",
+    response_model=UserList,
+    dependencies=[Depends(require_scope("admin:ops"))],
+)
+async def list_users(
+    svc: AuthService = Depends(get_auth_service),
+) -> UserList:
+    users = svc.list_users()
+    return UserList(
+        users=[UserReadFull(id=u["id"], email=u["email"], role=u["role"], created_at=u.get("created_at")) for u in users]
+    )
+
+
+@router.get("/roles")
+async def list_roles() -> dict:
+    from app.domains.auth.service import ROLE_SCOPES
+    return {"roles": dict(ROLE_SCOPES)}
