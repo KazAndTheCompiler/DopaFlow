@@ -1,5 +1,5 @@
 const path = require("node:path");
-const Store = require("electron-store");
+const Store = require("electron-store").default;
 const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain, shell, screen } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const AutoLaunch = require("electron-auto-launch");
