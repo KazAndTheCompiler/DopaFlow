@@ -10,6 +10,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 - `Dockerfile.backend` — Python 3.12 slim, uvicorn, healthcheck
 - `Dockerfile.frontend` — Node 20 build stage + nginx Alpine serving static files
 - `docker-compose.yml` — backend + frontend + networks + persistent volume
+- `docker-compose.staging.yml` — isolated staging on ports 3001/8001, separate volume
 - `frontend/nginx.conf` — SPA fallback, `/api/*` proxy to backend
 - `docs/deployment.md` — full deployment guide with env var reference
 - `.env.example` — documented environment variables
@@ -41,6 +42,11 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 - OpenAPI contract diffing in CI — fails on breaking endpoint/method removal
 - `openapi_baseline.json` — committed baseline for contract comparison
 
+### Staging + Backup Testing (v2.2.0)
+- `docker-compose.staging.yml` — isolated staging environment on ports 3001/8001
+- `scripts/test_backup_restore.py` — 7-step backup/restore verification script
+- Recovery tests in CI — `backend/scripts/test_recovery.py` runs on every push
+
 ---
 
 ## What is actually broken or unreliable
@@ -60,6 +66,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 | SBOM | Not done — intentional for single-user app |
 | Workspace/monorepo unification | Not needed |
 | Rollback strategy | Forward-only, documented as such |
+| Staging environment | Done — docker-compose.staging.yml + test_backup_restore.py |
 
 ---
 
@@ -113,5 +120,4 @@ For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting
 - Metrics endpoint for observability
 
 **What's not production-grade:**
-- No staging environment model
 - No horizontal scaling story (SQLite, background jobs run on all instances)
