@@ -122,7 +122,7 @@ jobs:
               print('health/live failed:', e)
               raise
           try:
-              r = urllib.request.urlopen('http://127.0.0.1:18765/health/metrics', timeout=5)
+              r = urllib.request.urlopen('http://127.0.0.1:18765/api/v2/health/metrics', timeout=5)
               print('health/metrics:', r.status)
               assert r.status == 200
           except Exception as e:
