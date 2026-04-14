@@ -62,8 +62,9 @@ The frontend nginx container proxies `/api/*` to the backend, so the frontend on
 | `DOPAFLOW_DISABLE_LOCAL_AUDIO` | `false` | Disable TTS/audio features |
 | `DOPAFLOW_DISABLE_BACKGROUND_JOBS` | `false` | Disable APScheduler background tasks |
 | `DOPAFLOW_JOURNAL_BACKUP_DIR` | _(auto)_ | Journal backup directory |
-| `DOPAFLOW_TURSO_URL` | _(none)_ | Turso database URL (replaces SQLite) |
+| `DOPAFLOW_TURSO_URL` | _(none)_ | Turso primary database URL (replaces SQLite) |
 | `DOPAFLOW_TURSO_TOKEN` | _(none)_ | Turso auth token |
+| `DOPAFLOW_TURSO_REPLICA_URL` | _(none)_ | Turso read replica URL (enables horizontal read scaling) |
 | `DOPAFLOW_GOOGLE_CLIENT_ID` | _(none)_ | Google OAuth client ID |
 | `DOPAFLOW_GOOGLE_CLIENT_SECRET` | _(none)_ | Google OAuth client secret |
 
@@ -147,11 +148,26 @@ docker compose cp backend:/tmp/dopaflow.db ./dopaflow-backup-$(date +%Y%m%d).db
 
 **Vertical scaling**: Increase CPU/memory of the host. The app is mostly I/O-bound on SQLite so fast storage (SSD) matters more than CPU.
 
-**Horizontal read scaling (advanced)**: With Turso (libSQL), you can add read replicas. Set `DOPAFLOW_TURSO_URL` to the primary and use `DOPAFLOW_TURSO_READ_ONLY=true` on read-only instances. All writable instances must have `DISABLE_BACKGROUND_JOBS=false`; read-only instances should have `DISABLE_BACKGROUND_JOBS=true` to avoid duplicate scheduled tasks.
+**Horizontal read scaling (with Turso)**: Set up a Turso database with a read replica, then use `docker-compose.scaled.yml`:
+
+```bash
+# 1. Create a Turso database and replica
+# https://turso.tech — dashboard → Databases → Create database → Add replica
+
+# 2. Get your connection URLs from the Turso dashboard
+TURSO_URL=wss://your-db.turso.io
+TURSO_TOKEN=your-auth-token
+TURSO_REPLICA_URL=wss://your-db-readonly.turso.io
+
+# 3. Run the scaled stack
+docker compose -f docker-compose.scaled.yml up -d
+```
+
+The scaled stack runs two backend instances behind nginx: a **primary** (handles writes + background jobs) and a **replica** (uses `get_db_readonly()` with `TURSO_REPLICA_URL`). For full read/write splitting, repositories use `get_db_readonly()` for read-only queries — see `backend/app/core/database.py`.
 
 **What does not scale horizontally with SQLite:**
 - Write operations — SQLite is single-writer; multiple backend instances writing to the same file will cause lock errors
-- Background jobs — APScheduler has no coordination; jobs would fire on every replica
+- Background jobs — APScheduler has no coordination; jobs would fire on every replica without `DISABLE_BACKGROUND_JOBS=true`
 - File-based sessions — user sessions stored in the SQLite DB work fine for single-instance
 
 ---

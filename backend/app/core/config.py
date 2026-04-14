@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     db_path: str = DEFAULT_DB
     turso_url: str | None = None
     turso_token: str | None = None
+    turso_replica_url: str | None = None
 
     dev_auth: bool = False
     enforce_auth: bool = False

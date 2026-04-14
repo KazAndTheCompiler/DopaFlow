@@ -1,0 +1,112 @@
+version: "3.9"
+
+# Horizontal read scaling with DopaFlow + Turso
+#
+# Prerequisites:
+#   1. Create a Turso database: https://turso.tech
+#   2. Create a read replica: Turso dashboard → your db → Replicas → Add replica
+#   3. Get your primary URL (wss://db-name.turso.io) and replica URL
+#
+# Usage:
+#   TURSO_URL=wss://your-primary.turso.io \
+#   TURSO_TOKEN=your-token \
+#   TURSO_REPLICA_URL=wss://your-replica.turso.io \
+#   API_KEY=your-secret \
+#   docker compose -f docker-compose.scaled.yml up -d
+#
+# What this does:
+#   - backend-primary: handles all writes, background jobs, and sync
+#   - backend-replica: handles reads via get_db_readonly() using replica URL
+#   - nginx: load balances between primary and replica for /api/v2/* routes
+#
+# Note: For true read/write split, repositories need to use get_db_readonly()
+# for read-only paths. The replica here distributes read load at the connection
+# level when the same instance handles both reads and writes.
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: dopaflow-nginx-scaled
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./nginx.scaled.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend-primary
+      - backend-replica
+    networks:
+      - dopaflow-scaled
+
+  backend-primary:
+    image: dopaflow-backend:latest
+    container_name: dopaflow-backend-primary
+    restart: unless-stopped
+    environment:
+      - DOPAFLOW_DB_PATH=/data/dopaflow.db
+      - DOPAFLOW_TURSO_URL=${TURSO_URL}
+      - DOPAFLOW_TURSO_TOKEN=${TURSO_TOKEN}
+      - DOPAFLOW_PRODUCTION=true
+      - DOPAFLOW_ENFORCE_AUTH=true
+      - DOPAFLOW_API_KEY=${API_KEY}
+      - DOPAFLOW_AUTH_TOKEN_SECRET=${AUTH_TOKEN_SECRET}
+      - DOPAFLOW_BASE_URL=http://localhost:8000
+      - DOPAFLOW_DISABLE_BACKGROUND_JOBS=false
+      - DOPAFLOW_ALLOW_LOCAL_WEBHOOK_TARGETS=false
+      - DOPAFLOW_DISABLE_LOCAL_AUDIO=false
+    volumes:
+      - dopaflow-scaled-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - dopaflow-scaled
+
+  backend-replica:
+    image: dopaflow-backend:latest
+    container_name: dopaflow-backend-replica
+    restart: unless-stopped
+    environment:
+      - DOPAFLOW_DB_PATH=/data/dopaflow.db
+      - DOPAFLOW_TURSO_URL=${TURSO_URL}
+      - DOPAFLOW_TURSO_TOKEN=${TURSO_TOKEN}
+      - DOPAFLOW_TURSO_REPLICA_URL=${TURSO_REPLICA_URL}
+      - DOPAFLOW_PRODUCTION=true
+      - DOPAFLOW_ENFORCE_AUTH=true
+      - DOPAFLOW_API_KEY=${API_KEY}
+      - DOPAFLOW_AUTH_TOKEN_SECRET=${AUTH_TOKEN_SECRET}
+      - DOPAFLOW_BASE_URL=http://localhost:8000
+      - DOPAFLOW_DISABLE_BACKGROUND_JOBS=true
+      - DOPAFLOW_DISABLE_LOCAL_AUDIO=true
+    volumes:
+      - dopaflow-scaled-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - dopaflow-scaled
+
+  frontend:
+    image: dopaflow-frontend:latest
+    container_name: dopaflow-frontend-scaled
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      - DOPAFLOW_API_KEY=${API_KEY}
+    networks:
+      - dopaflow-scaled
+
+volumes:
+  dopaflow-scaled-data:
+    name: dopaflow-scaled-data
+
+networks:
+  dopaflow-scaled:
+    name: dopaflow-scaled
