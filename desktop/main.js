@@ -51,6 +51,7 @@ function getBuildInfo() {
 }
 
 let windowRuntime = null;
+const pendingDeepLinks = [];
 
 function hasBackendExited(backendProcess) {
   return !backendProcess || backendProcess.killed || backendProcess.exitCode !== null || backendProcess.signalCode !== null;
@@ -181,7 +182,11 @@ if (gotLock) {
     }
     const deepLink = argv.find((value) => value.startsWith("dopaflow://"));
     if (deepLink) {
-      windowRuntime?.openDeepLink(deepLink);
+      if (windowRuntime) {
+        windowRuntime.openDeepLink(deepLink);
+      } else {
+        pendingDeepLinks.push(deepLink);
+      }
       return;
     }
     windowRuntime?.focusMainWindow();
@@ -207,6 +212,7 @@ app.whenReady().then(() => {
   runtime.start();
   runtime.on("ready", () => {
     windowRuntime.ensureMainWindow();
+    windowRuntime.flushPendingDeepLinks(pendingDeepLinks);
     notificationRuntime.start();
   });
 
@@ -228,7 +234,11 @@ app.whenReady().then(() => {
 
 app.on("open-url", (event, url) => {
   event.preventDefault();
-  windowRuntime?.openDeepLink(url);
+  if (windowRuntime) {
+    windowRuntime.openDeepLink(url);
+  } else {
+    pendingDeepLinks.push(url);
+  }
 });
 
 app.on("will-quit", () => {
