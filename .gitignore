@@ -99,3 +99,4 @@ tools/mcp/node-tooling-bridge/vendor/
 # --- Lock files (resolved at install time) ---
 desktop/package-lock.json
 .gitnexus
+frontend/coverage/

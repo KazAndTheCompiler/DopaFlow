@@ -111,5 +111,45 @@ describe('apiClient', () => {
       const result = await apiClient('/test');
       expect(result).toBe('plain text response');
     });
+
+    it('retries on 503 then returns successful response', async () => {
+      const data = { ok: true };
+      mockFetch
+        .mockResolvedValueOnce(new Response(null, { status: 503 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(data), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          }),
+        );
+
+      const result = await apiClient('/test');
+      expect(result).toEqual(data);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('4xx error detail parsing', () => {
+    it('uses parsed string body as error detail', async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response('"validation error"', {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      await expect(apiClient('/test')).rejects.toThrow('API request failed: 400 validation error');
+    });
+
+    it('preserves statusText when parseApiResponse throws', async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response('{invalid json}', {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+
+      await expect(apiClient('/test')).rejects.toThrow('API request failed: 400 ');
+    });
   });
 });
