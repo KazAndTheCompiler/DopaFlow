@@ -120,4 +120,4 @@ For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting
 - Metrics endpoint for observability
 
 **What's not production-grade:**
-- No horizontal scaling story (SQLite, background jobs run on all instances)
+- No horizontal write scaling (SQLite single-writer; use Turso for distributed writes)
