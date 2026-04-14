@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 
 from app.core.config import Settings, get_settings_dependency
+from app.core.metrics import get_metrics
 from app.domains.health.schemas import (
     HealthLiveResponse,
     HealthReadinessResponse,
@@ -49,3 +50,9 @@ async def health_ready(
     if payload["status"] != "ready":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return HealthReadinessResponse(**payload)
+
+
+@router.get("/metrics")
+async def metrics() -> dict:
+    """Return basic request metrics for observability."""
+    return get_metrics()

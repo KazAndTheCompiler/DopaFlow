@@ -11,6 +11,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from app.core.metrics import record_request
+
 logger = logging.getLogger("dopaflow.slow_requests")
 SLOW_THRESHOLD_MS = 200
 
@@ -40,10 +42,12 @@ class RequestLogMiddleware(BaseHTTPMiddleware):
                     }
                 )
             )
+            record_request(request.method, 0, duration_ms)
             raise
 
-        response.headers["X-Request-ID"] = request_id
         duration_ms = (time.monotonic() - start) * 1000
+        response.headers["X-Request-ID"] = request_id
+        record_request(request.method, response.status_code, duration_ms)
         if duration_ms > SLOW_THRESHOLD_MS:
             logger.warning(
                 json.dumps(

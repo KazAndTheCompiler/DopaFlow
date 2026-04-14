@@ -50,6 +50,19 @@ jobs:
           cd backend
           pip-audit --desc --fail -r requirements.txt || true
 
+      - name: Validate OpenAPI schema
+        run: |
+          cd backend
+          python -c "
+          from fastapi.openapi.spec import OpenAPI
+          from app.main import create_app
+          app = create_app()
+          spec = app.openapi()
+          assert spec['info']['title'] == 'DopaFlow API'
+          assert '/api/v2' in spec['paths']
+          print(f'OpenAPI valid: {len(spec[\"paths\"])} paths found')
+          "
+
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
@@ -71,3 +84,74 @@ jobs:
         run: |
           cd backend
           pytest tests/test_migrations.py tests/test_request_log.py tests/test_load.py tests/test_n_plus_one.py -v --tb=short --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=35
+
+  backend-startup:
+    name: Backend Startup Health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend deps
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Start backend and verify health
+        run: |
+          cd backend
+          timeout 15 python -c "
+          import uvicorn, threading, time, urllib.request
+          from app.main import app
+          def run():
+              uvicorn.run(app, host=\"127.0.0.1\", port=18765, log_level=\"error\")
+          t = threading.Thread(target=run, daemon=True)
+          t.start()
+          time.sleep(5)
+          r = urllib.request.urlopen('http://127.0.0.1:18765/health/live')
+          assert r.status == 200
+          r = urllib.request.urlopen('http://127.0.0.1:18765/health/metrics')
+          assert r.status == 200
+          print('Startup health check passed')
+          " || { echo "Startup health check failed"; exit 1; }
+
+  backend-load-test:
+    name: Backend Load Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend + load test deps
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install httpx
+
+      - name: Run load test
+        run: |
+          cd backend
+          timeout 30 python -c "
+          import uvicorn, threading, time, urllib.request
+          from app.main import app
+          def run():
+              uvicorn.run(app, host=\"127.0.0.1\", port=18766, log_level=\"error\")
+          t = threading.Thread(target=run, daemon=True)
+          t.start()
+          time.sleep(5)
+          from scripts.load_test import run_load_test
+          result = run_load_test('http://127.0.0.1:18766/health/live', total_requests=30, concurrent=5)
+          print(f'Load test: {result[\"success\"]}/{result[\"total_requests\"]} OK, p95={result[\"latency_p95_ms\"]}ms')
+          assert result['success'] >= 28, f'Too many failures: {result[\"errors\"]}'
+          assert result['latency_p95_ms'] < 500, f'p95 too high: {result[\"latency_p95_ms\"]}ms'
+          " || { echo "Load test failed"; exit 1; }
