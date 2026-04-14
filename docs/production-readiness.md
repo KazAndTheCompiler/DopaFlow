@@ -1,10 +1,10 @@
-# Production Readiness — v2.1.0
+# Production Readiness — v2.2.0
 
 This report reflects the actual state of the codebase. Updated 2026-04-14.
 
 ---
 
-## What was added (v2.1.0)
+## What was added (v2.2.0)
 
 ### Docker Deployment
 - `Dockerfile.backend` — Python 3.12 slim, uvicorn, healthcheck
@@ -35,6 +35,12 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 - `/health/metrics` added to public health paths (was auth-protected)
 - `DOPAFLOW_PRODUCTION` env var for explicit production mode
 
+### E2E + Error Tracking + API Contracts (v2.2.0)
+- Playwright E2E smoke tests in PR CI (route_startup + app_smoke against built dist)
+- Sentry SDK integration — enable with `DOPAFLOW_SENTRY_DSN` env var
+- OpenAPI contract diffing in CI — fails on breaking endpoint/method removal
+- `openapi_baseline.json` — committed baseline for contract comparison
+
 ---
 
 ## What is actually broken or unreliable
@@ -45,13 +51,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 ### 2. Frontend coverage is low (10-14%)
 Coverage thresholds lowered from 15% → 10% to match reality. Not suitable for catching regressions in untested areas.
 
-### 3. No real error tracking (Sentry)
-Opt-in path documented but not enabled. Production deployments should configure `SENTRY_DSN`.
-
-### 4. No API contract diffing
-OpenAPI spec is validated (exists and is valid), but no CI step compares against a baseline to detect breaking changes.
-
-### 5. Recovery tests not in CI
+### 3. Recovery tests not in CI
 `backend/scripts/test_recovery.py` runs locally but not as a CI job.
 
 ---
@@ -61,14 +61,12 @@ OpenAPI spec is validated (exists and is valid), but no CI step compares against
 | Item | Status |
 |---|---|
 | IaC / deploy environment definition | Not done — docker-compose is the deploy artifact |
-| Real error tracking (Sentry) | Opt-in, not enabled |
-| API contract diffing | Only validates spec exists, not stable across changes |
 | Accessibility testing | Not done |
 | Browser support matrix | Not done |
 | SBOM | Not done — intentional for single-user app |
 | Workspace/monorepo unification | Not needed |
 | Rollback strategy | Forward-only, documented as such |
-| Smoke E2E in PR CI | Only on release tags — requires running app + browser |
+| Recovery tests in CI | Runs locally only |
 
 ---
 
@@ -86,7 +84,7 @@ OpenAPI spec is validated (exists and is valid), but no CI step compares against
 | **Observability** | Solid | JSON logs + /health/metrics + slow-request logging |
 | **Auth paths** | Solid | dev_auth/trust_local opt-in; enforce_auth available |
 | **IPC security** | Solid | Allowlist-based, tested |
-| **CI on push/PR** | Solid | 5 backend CI jobs + Frontend CI + Repo Hygiene |
+| **CI on push/PR** | Solid | 5 backend CI jobs + Frontend CI + Repo Hygiene + E2E |
 | **CI on release tags** | Solid | Full build + E2E + packaging |
 | **Dependency hygiene** | Solid | npm audit + pip-audit + Gitleaks + Dependabot |
 | **Secret scanning** | Solid | Gitleaks + hygiene patterns |
@@ -94,9 +92,12 @@ OpenAPI spec is validated (exists and is valid), but no CI step compares against
 | **Performance** | Partial | Load test in CI; bundle hard-fail; N+1 smoke-level |
 | **Error taxonomy** | Solid | Documented |
 | **Recovery** | Solid | `test_recovery.py` passes 4/4 scenarios |
+| **Error tracking** | Solid | Sentry SDK opt-in via DOPAFLOW_SENTRY_DSN |
+| **API contract** | Solid | OpenAPI baseline + CI contract diffing |
+| **E2E in PR CI** | Solid | Playwright route_startup + app_smoke in frontend CI |
 | **Docs accuracy** | Solid | docs/deployment.md added; production-readiness updated |
 
-**Overall: 8.8/10**
+**Overall: 9.0/10**
 
 ---
 
@@ -119,8 +120,7 @@ For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting
 - Metrics endpoint for observability
 
 **What's not production-grade:**
-- E2E tests not in PR CI (only on release)
 - Frontend test coverage 10-14% (low)
-- No API contract enforcement (breaking changes undetected)
-- No Sentry/error tracking (failures invisible in production)
 - No staging environment model
+- Recovery tests not in CI (run locally only)
+- No horizontal scaling story (SQLite, background jobs run on all instances)
