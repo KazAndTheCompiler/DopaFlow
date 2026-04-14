@@ -1,10 +1,9 @@
 """Load and concurrency sanity tests for critical endpoints."""
+
 from __future__ import annotations
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 
-import httpx
 import pytest
 
 from app.core.config import get_settings
@@ -14,6 +13,7 @@ from app.main import create_app
 @pytest.fixture()
 def app():
     import os
+
     os.environ["DOPAFLOW_DEV_AUTH"] = "true"
     os.environ["DOPAFLOW_DISABLE_LOCAL_AUDIO"] = "1"
     os.environ["DOPAFLOW_DISABLE_BACKGROUND_JOBS"] = "1"
@@ -35,7 +35,9 @@ def test_health_endpoint_handles_concurrent_requests(app) -> None:
                 base_url="http://testserver",
             ) as client:
                 response = await client.get("/health")
-                assert response.status_code == 200, f"health returned {response.status_code}"
+                assert response.status_code == 200, (
+                    f"health returned {response.status_code}"
+                )
         except BaseException as exc:
             errors.append(exc)
 
@@ -86,8 +88,7 @@ def test_no_n_plus_1_on_habit_list_query(app, db_path) -> None:
             transport=ASGITransport(app=app), base_url="http://testserver"
         ) as client:
             response = await client.get(
-                "/api/v2/habits",
-                headers={"Authorization": "Bearer dev-local-key"}
+                "/api/v2/habits", headers={"Authorization": "Bearer dev-local-key"}
             )
             return {"status": response.status_code, "data": response.json()}
 

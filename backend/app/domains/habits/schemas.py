@@ -43,6 +43,7 @@ class HabitPatch(BaseModel):
     color: str | None = None
     freeze_until: str | None = None
 
+
 class HabitCheckIn(BaseModel):
     """Payload for a habit completion event."""
 

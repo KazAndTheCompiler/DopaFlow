@@ -86,7 +86,9 @@ def _row_to_entry(row: object) -> JournalEntryRead:
     try:
         auto_tags = json.loads(row["auto_tags_json"] or "[]")  # type: ignore[index]
     except Exception:
-        logger.exception("Failed to parse auto_tags_json: %s", row.get("auto_tags_json"))
+        logger.exception(
+            "Failed to parse auto_tags_json: %s", row.get("auto_tags_json")
+        )
     return JournalEntryRead(
         id=row["id"],  # type: ignore[index]
         markdown_body=row["markdown_body"],  # type: ignore[index]
@@ -118,7 +120,9 @@ class JournalRepository:
 
     # ── entries ───────────────────────────────────────────────────────────────
 
-    def list_entries(self, tag: str | None = None, search: str | None = None) -> list[JournalEntryRead]:
+    def list_entries(
+        self, tag: str | None = None, search: str | None = None
+    ) -> list[JournalEntryRead]:
         with get_db(self.settings) as conn:
             query = "SELECT * FROM journal_entries WHERE deleted_at IS NULL"
             params: list[object] = []
@@ -157,7 +161,14 @@ class JournalRepository:
                     version        = version + 1,
                     updated_at     = CURRENT_TIMESTAMP
                 """,
-                (new_id, payload.markdown_body, payload.emoji, payload.date, tags_json, auto_tags_json),
+                (
+                    new_id,
+                    payload.markdown_body,
+                    payload.emoji,
+                    payload.date,
+                    tags_json,
+                    auto_tags_json,
+                ),
             )
             row = conn.execute(
                 "SELECT * FROM journal_entries WHERE entry_date = ? AND deleted_at IS NULL",
@@ -238,7 +249,10 @@ class JournalRepository:
                     (entry_date, entry_date),
                 )
         except Exception:
-            logger.exception("Failed to save version for entry_date=%s (versions are non-critical)", entry_date)
+            logger.exception(
+                "Failed to save version for entry_date=%s (versions are non-critical)",
+                entry_date,
+            )
 
     def list_versions(self, entry_date: str) -> list[JournalVersionSummary]:
         try:
@@ -247,11 +261,20 @@ class JournalRepository:
                     "SELECT version_number, word_count, saved_at FROM journal_versions WHERE entry_date = ? ORDER BY version_number DESC",
                     (entry_date,),
                 ).fetchall()
-                return [JournalVersionSummary(version_number=int(row["version_number"]), word_count=row["word_count"], saved_at=str(row["saved_at"])) for row in rows]
+                return [
+                    JournalVersionSummary(
+                        version_number=int(row["version_number"]),
+                        word_count=row["word_count"],
+                        saved_at=str(row["saved_at"]),
+                    )
+                    for row in rows
+                ]
         except Exception:
             return []
 
-    def get_version(self, entry_date: str, version_number: int) -> JournalVersionDetail | None:
+    def get_version(
+        self, entry_date: str, version_number: int
+    ) -> JournalVersionDetail | None:
         try:
             with get_db(self.settings) as conn:
                 row = conn.execute(
@@ -260,7 +283,9 @@ class JournalRepository:
                 ).fetchone()
                 if not row:
                     return None
-                return JournalVersionDetail(body=str(row["body"]), saved_at=str(row["saved_at"]))
+                return JournalVersionDetail(
+                    body=str(row["body"]), saved_at=str(row["saved_at"])
+                )
         except Exception:
             return None
 
@@ -284,11 +309,25 @@ class JournalRepository:
 
     def get_graph_data(self) -> dict[str, list[dict[str, object]]]:
         with get_db(self.settings) as conn:
-            node_rows = conn.execute("SELECT target_slug, COUNT(*) AS entry_count FROM journal_links GROUP BY target_slug ORDER BY target_slug ASC").fetchall()
-            edge_rows = conn.execute("SELECT source_entry_id, target_slug FROM journal_links ORDER BY source_entry_id ASC").fetchall()
+            node_rows = conn.execute(
+                "SELECT target_slug, COUNT(*) AS entry_count FROM journal_links GROUP BY target_slug ORDER BY target_slug ASC"
+            ).fetchall()
+            edge_rows = conn.execute(
+                "SELECT source_entry_id, target_slug FROM journal_links ORDER BY source_entry_id ASC"
+            ).fetchall()
             return {
-                "nodes": [{"id": row["target_slug"], "date": row["target_slug"], "entry_count": int(row["entry_count"])} for row in node_rows],
-                "edges": [{"source": row["source_entry_id"], "target": row["target_slug"]} for row in edge_rows],
+                "nodes": [
+                    {
+                        "id": row["target_slug"],
+                        "date": row["target_slug"],
+                        "entry_count": int(row["entry_count"]),
+                    }
+                    for row in node_rows
+                ],
+                "edges": [
+                    {"source": row["source_entry_id"], "target": row["target_slug"]}
+                    for row in edge_rows
+                ],
             }
 
     # ── analytics ─────────────────────────────────────────────────────────────
@@ -317,10 +356,16 @@ class JournalRepository:
                 tags_ctr[str(t)] += 1
             for t in json.loads(row["auto_tags_json"] or "[]"):
                 auto_tags_ctr[str(t)] += 1
-            words_per_day.append({"date": d, "word_count": _word_count(str(row["markdown_body"] or ""))})
+            words_per_day.append(
+                {"date": d, "word_count": _word_count(str(row["markdown_body"] or ""))}
+            )
 
         total = len(rows)
-        avg_wc = round(sum(item["word_count"] for item in words_per_day) / total, 1) if total else 0.0
+        avg_wc = (
+            round(sum(item["word_count"] for item in words_per_day) / total, 1)
+            if total
+            else 0.0
+        )
 
         streak_current = 0
         today = datetime.now(UTC).date()
@@ -349,7 +394,9 @@ class JournalRepository:
             "mood_distribution": dict(mood_dist),
             "words_per_day": words_per_day,
             "tags_top": [{"tag": t, "count": c} for t, c in tags_ctr.most_common(10)],
-            "auto_tags_top": [{"tag": t, "count": c} for t, c in auto_tags_ctr.most_common(10)],
+            "auto_tags_top": [
+                {"tag": t, "count": c} for t, c in auto_tags_ctr.most_common(10)
+            ],
         }
 
     def get_heatmap(self, year: int) -> dict[str, int]:
@@ -362,14 +409,18 @@ class JournalRepository:
 
     def get_auto_tag_stats(self) -> dict[str, int]:
         with get_db(self.settings) as conn:
-            rows = conn.execute("SELECT auto_tags_json FROM journal_entries WHERE deleted_at IS NULL").fetchall()
+            rows = conn.execute(
+                "SELECT auto_tags_json FROM journal_entries WHERE deleted_at IS NULL"
+            ).fetchall()
         counts: Counter[str] = Counter()
         for row in rows:
             for tag in json.loads(row["auto_tags_json"] or "[]"):
                 counts[str(tag)] += 1
         return dict(counts.most_common())
 
-    def search_rich(self, q: str = "", mood: str | None = None, limit: int = 50) -> list[JournalSearchResult]:
+    def search_rich(
+        self, q: str = "", mood: str | None = None, limit: int = 50
+    ) -> list[JournalSearchResult]:
         with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT id, entry_date, markdown_body, emoji FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date DESC"
@@ -383,7 +434,14 @@ class JournalRepository:
             body = str(row["markdown_body"] or "")
             if q and q.lower() not in _strip_markdown(body).lower():
                 continue
-            results.append(JournalSearchResult(id=str(row["id"]), date=str(row["entry_date"]), snippet=_snippet(body, q), emoji=emoji or None))
+            results.append(
+                JournalSearchResult(
+                    id=str(row["id"]),
+                    date=str(row["entry_date"]),
+                    snippet=_snippet(body, q),
+                    emoji=emoji or None,
+                )
+            )
             if len(results) >= limit:
                 break
         return results
@@ -392,12 +450,16 @@ class JournalRepository:
 
     def list_templates(self) -> list[JournalTemplate]:
         with get_db(self.settings) as conn:
-            rows = conn.execute("SELECT * FROM journal_templates ORDER BY name ASC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM journal_templates ORDER BY name ASC"
+            ).fetchall()
             return [_row_to_template(row) for row in rows]
 
     def get_template(self, template_id: str) -> JournalTemplate | None:
         with get_db(self.settings) as conn:
-            row = conn.execute("SELECT * FROM journal_templates WHERE id = ?", (template_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM journal_templates WHERE id = ?", (template_id,)
+            ).fetchone()
             return _row_to_template(row) if row else None
 
     def create_template(self, name: str, body: str, tags: list[str]) -> JournalTemplate:
@@ -407,7 +469,9 @@ class JournalRepository:
                 "INSERT INTO journal_templates (id, name, body, tags) VALUES (?, ?, ?, ?)",
                 (tpl_id, name, body, json.dumps(tags)),
             )
-            row = conn.execute("SELECT * FROM journal_templates WHERE id = ?", (tpl_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM journal_templates WHERE id = ?", (tpl_id,)
+            ).fetchone()
             return _row_to_template(row)
 
     def update_template(self, template_id: str, patch: dict) -> JournalTemplate | None:
@@ -426,7 +490,9 @@ class JournalRepository:
 
     def delete_template(self, template_id: str) -> bool:
         with tx(self.settings) as conn:
-            result = conn.execute("DELETE FROM journal_templates WHERE id = ?", (template_id,))
+            result = conn.execute(
+                "DELETE FROM journal_templates WHERE id = ?", (template_id,)
+            )
             return result.rowcount > 0
 
     # ── backup ────────────────────────────────────────────────────────────────

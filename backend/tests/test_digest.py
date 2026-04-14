@@ -20,7 +20,9 @@ def _assert_digest_score_bounds(body: dict[str, object]) -> None:
 def test_digest_today_endpoint_returns_expected_shape(client, db_path) -> None:
     today = date.today().isoformat()
     with tx(str(db_path)) as conn:
-        conn.execute("INSERT INTO tasks (id, title, done, updated_at, created_at) VALUES ('dig_task', 'Digest task', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+        conn.execute(
+            "INSERT INTO tasks (id, title, done, updated_at, created_at) VALUES ('dig_task', 'Digest task', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        )
         conn.execute(
             "INSERT INTO journal_entries (id, markdown_body, emoji, entry_date, tags_json) VALUES ('dig_entry', 'Digest entry', NULL, ?, '[]')",
             (today,),
@@ -53,11 +55,21 @@ def test_digest_optional_summaries_log_missing_tables(tmp_path: Path, caplog) ->
     db_path = tmp_path / "digest-minimal.sqlite"
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute("CREATE TABLE tasks (id TEXT PRIMARY KEY, done INTEGER, due_at TEXT, created_at TEXT, updated_at TEXT, tags_json TEXT)")
-        conn.execute("CREATE TABLE habits (id TEXT PRIMARY KEY, name TEXT, deleted_at TEXT)")
-        conn.execute("CREATE TABLE habit_checkins (habit_id TEXT, name TEXT, checkin_date TEXT)")
-        conn.execute("CREATE TABLE focus_sessions (started_at TEXT, duration_minutes INTEGER, status TEXT)")
-        conn.execute("CREATE TABLE journal_entries (markdown_body TEXT, tags_json TEXT, emoji TEXT, entry_date TEXT, deleted_at TEXT)")
+        conn.execute(
+            "CREATE TABLE tasks (id TEXT PRIMARY KEY, done INTEGER, due_at TEXT, created_at TEXT, updated_at TEXT, tags_json TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE habits (id TEXT PRIMARY KEY, name TEXT, deleted_at TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE habit_checkins (habit_id TEXT, name TEXT, checkin_date TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE focus_sessions (started_at TEXT, duration_minutes INTEGER, status TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE journal_entries (markdown_body TEXT, tags_json TEXT, emoji TEXT, entry_date TEXT, deleted_at TEXT)"
+        )
         conn.commit()
     finally:
         conn.close()
@@ -71,8 +83,14 @@ def test_digest_optional_summaries_log_missing_tables(tmp_path: Path, caplog) ->
 
     assert nutrition["days_logged"] == 0
     assert review == {}
-    assert any("Digest nutrition summary unavailable" in record.message for record in caplog.records)
-    assert any("Digest review summary unavailable" in record.message for record in caplog.records)
+    assert any(
+        "Digest nutrition summary unavailable" in record.message
+        for record in caplog.records
+    )
+    assert any(
+        "Digest review summary unavailable" in record.message
+        for record in caplog.records
+    )
 
 
 def test_digest_today_endpoint_returns_typed_nested_shapes(client, db_path) -> None:
@@ -124,7 +142,9 @@ def test_digest_today_score_stays_non_negative_with_zero_tasks(client) -> None:
     assert body["score"] >= 0
 
 
-def test_digest_today_score_caps_at_100_when_all_tasks_are_completed(client, db_path) -> None:
+def test_digest_today_score_caps_at_100_when_all_tasks_are_completed(
+    client, db_path
+) -> None:
     with tx(str(db_path)) as conn:
         for index in range(5):
             conn.execute(
@@ -147,7 +167,9 @@ def test_digest_today_score_caps_at_100_when_all_tasks_are_completed(client, db_
     assert body["score"] <= 100
 
 
-def test_digest_today_score_stays_bounded_with_mixed_overdue_and_completed_tasks(client, db_path) -> None:
+def test_digest_today_score_stays_bounded_with_mixed_overdue_and_completed_tasks(
+    client, db_path
+) -> None:
     with tx(str(db_path)) as conn:
         conn.execute(
             """
@@ -172,7 +194,9 @@ def test_digest_today_score_stays_bounded_with_mixed_overdue_and_completed_tasks
     assert body["tasks"]["overdue"] >= 1
 
 
-def test_digest_week_score_stays_bounded_with_zero_journal_entries(client, db_path) -> None:
+def test_digest_week_score_stays_bounded_with_zero_journal_entries(
+    client, db_path
+) -> None:
     week_start = date.today() - timedelta(days=date.today().weekday())
     with tx(str(db_path)) as conn:
         for index in range(3):
@@ -189,7 +213,9 @@ def test_digest_week_score_stays_bounded_with_zero_journal_entries(client, db_pa
                 ),
             )
 
-    response = client.get("/api/v2/digest/week", params={"week_start": week_start.isoformat()})
+    response = client.get(
+        "/api/v2/digest/week", params={"week_start": week_start.isoformat()}
+    )
 
     assert response.status_code == 200
     body = response.json()

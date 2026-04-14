@@ -12,19 +12,19 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 
 from app.core.config import Settings, get_settings_dependency
-from app.middleware.auth_scopes import require_scope
 from app.domains.packy.repository import PackyRepository
 from app.domains.packy.schemas import (
     MomentumScore,
     PackyAnswer,
     PackyAskRequest,
-    PackyLorebookResponse,
     PackyLorebookRequest,
+    PackyLorebookResponse,
     PackyVoiceCommand,
     PackyVoiceResponse,
     PackyWhisper,
 )
 from app.domains.packy.service import PackyService
+from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(prefix="/packy", tags=["packy"])
 

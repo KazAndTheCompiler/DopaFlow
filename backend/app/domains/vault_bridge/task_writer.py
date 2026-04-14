@@ -28,7 +28,6 @@ from pathlib import Path
 from typing import Any
 
 from app.domains.tasks.schemas import Task
-from app.domains.vault_bridge.file_names import slugify
 from app.domains.vault_bridge.frontmatter import serialize_frontmatter
 from app.domains.vault_bridge.schemas import VaultConfig
 

@@ -14,7 +14,9 @@ router = APIRouter(prefix="/meta", tags=["meta"])
 async def meta_summary() -> MetaResponse:
     """Return app metadata."""
 
-    return MetaResponse(version=APP_VERSION, app_version=APP_VERSION, schema_version=SCHEMA_VERSION)
+    return MetaResponse(
+        version=APP_VERSION, app_version=APP_VERSION, schema_version=SCHEMA_VERSION
+    )
 
 
 @router.get("/version", response_model=VersionResponse)

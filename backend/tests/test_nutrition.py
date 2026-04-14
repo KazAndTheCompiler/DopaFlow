@@ -22,7 +22,14 @@ def test_nutrition_preset_foods_cannot_be_deleted(client) -> None:
 def test_nutrition_user_foods_can_be_deleted(client) -> None:
     created = client.post(
         "/api/v2/nutrition/foods",
-        json={"name": "Custom oats", "kj": 420, "protein_g": 14, "carbs_g": 52, "fat_g": 8, "unit": "bowl"},
+        json={
+            "name": "Custom oats",
+            "kj": 420,
+            "protein_g": 14,
+            "carbs_g": 52,
+            "fat_g": 8,
+            "unit": "bowl",
+        },
     )
     food_id = created.json()["id"]
 
@@ -64,7 +71,14 @@ def test_nutrition_recent_returns_logged_items(client) -> None:
 def test_nutrition_summary_and_monthly_routes_return_typed_shapes(client) -> None:
     client.post(
         "/api/v2/nutrition/log",
-        json={"name": "Salmon", "kj": 500, "protein_g": 32, "carbs_g": 0, "fat_g": 28, "meal_label": "dinner"},
+        json={
+            "name": "Salmon",
+            "kj": 500,
+            "protein_g": 32,
+            "carbs_g": 0,
+            "fat_g": 28,
+            "meal_label": "dinner",
+        },
     )
 
     today = client.get("/api/v2/nutrition/today")
@@ -82,9 +96,16 @@ def test_nutrition_summary_and_monthly_routes_return_typed_shapes(client) -> Non
     summary_response = client.get(f"/api/v2/nutrition/summary/{date}")
     assert summary_response.status_code == 200
     summary_body = summary_response.json()
-    assert set(summary_body["goal_progress"]) == {"daily_kj", "protein_g", "carbs_g", "fat_g"}
+    assert set(summary_body["goal_progress"]) == {
+        "daily_kj",
+        "protein_g",
+        "carbs_g",
+        "fat_g",
+    }
 
-    monthly_response = client.get("/api/v2/nutrition/log/monthly", params={"month": date[:7]})
+    monthly_response = client.get(
+        "/api/v2/nutrition/log/monthly", params={"month": date[:7]}
+    )
     assert monthly_response.status_code == 200
     monthly_body = monthly_response.json()
     assert monthly_body["month"] == date[:7]

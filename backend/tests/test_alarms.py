@@ -54,7 +54,11 @@ def test_get_alarm_by_id(client) -> None:
 def test_patch_alarm_updates_title(client) -> None:
     alarm = create_alarm(client)
 
-    response = client.patch(f"/api/v2/alarms/{alarm['id']}", json={"title": "Updated alarm"}, headers=AUTH_HEADERS)
+    response = client.patch(
+        f"/api/v2/alarms/{alarm['id']}",
+        json={"title": "Updated alarm"},
+        headers=AUTH_HEADERS,
+    )
 
     assert response.status_code == 200
     assert response.json()["title"] == "Updated alarm"
@@ -63,7 +67,9 @@ def test_patch_alarm_updates_title(client) -> None:
 def test_delete_alarm_removes_alarm_and_get_returns_404(client) -> None:
     alarm = create_alarm(client)
 
-    delete_response = client.delete(f"/api/v2/alarms/{alarm['id']}", headers=AUTH_HEADERS)
+    delete_response = client.delete(
+        f"/api/v2/alarms/{alarm['id']}", headers=AUTH_HEADERS
+    )
     get_response = client.get(f"/api/v2/alarms/{alarm['id']}", headers=AUTH_HEADERS)
 
     assert delete_response.status_code == 200
@@ -74,7 +80,9 @@ def test_delete_alarm_removes_alarm_and_get_returns_404(client) -> None:
 def test_trigger_alarm_records_last_fired_at(client) -> None:
     alarm = create_alarm(client)
 
-    trigger_response = client.post(f"/api/v2/alarms/{alarm['id']}/trigger", headers=AUTH_HEADERS)
+    trigger_response = client.post(
+        f"/api/v2/alarms/{alarm['id']}/trigger", headers=AUTH_HEADERS
+    )
     get_response = client.get(f"/api/v2/alarms/{alarm['id']}", headers=AUTH_HEADERS)
 
     assert trigger_response.status_code == 200
@@ -95,7 +103,9 @@ def test_scheduler_status_reports_upcoming_alarm(client) -> None:
 def test_trigger_alarm_audio_returns_typed_shape(client) -> None:
     alarm = create_alarm(client, title="Audio alarm", tts_text="Wake up now")
 
-    response = client.post(f"/api/v2/alarms/{alarm['id']}/trigger-audio", headers=AUTH_HEADERS)
+    response = client.post(
+        f"/api/v2/alarms/{alarm['id']}/trigger-audio", headers=AUTH_HEADERS
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -116,7 +126,9 @@ def test_trigger_alarm_error_response_does_not_leak_exception_details(
 
     monkeypatch.setattr(alarms_router_module.AlarmsService, "trigger_alarm", explode)
 
-    response = client.post(f"/api/v2/alarms/{alarm['id']}/trigger", headers=AUTH_HEADERS)
+    response = client.post(
+        f"/api/v2/alarms/{alarm['id']}/trigger", headers=AUTH_HEADERS
+    )
 
     assert response.status_code == 500
     assert response.json() == {"detail": "Alarm trigger failed"}
@@ -152,7 +164,9 @@ def test_resolve_alarm_url_error_does_not_leak_exception_info(
     assert "/tmp/" not in response.text
 
 
-def test_trigger_alarm_audio_with_invalid_id_does_not_leak_exception_info(client) -> None:
+def test_trigger_alarm_audio_with_invalid_id_does_not_leak_exception_info(
+    client,
+) -> None:
     response = client.post(
         "/api/v2/alarms/alm_nonexistent/trigger-audio",
         headers=AUTH_HEADERS,

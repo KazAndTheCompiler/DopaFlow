@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from contextlib import suppress
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,9 +14,9 @@ from app.core.config import default_backup_dir, get_settings
 from app.core.database import get_db, run_migrations
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.core.version import APP_VERSION
-from app.domains.boards.router import router as boards_router
 from app.domains.alarms.audio_router import router as alarm_audio_router
 from app.domains.alarms.router import router as alarms_router
+from app.domains.boards.router import router as boards_router
 from app.domains.calendar.router import router as calendar_router
 from app.domains.calendar_sharing.router import router as calendar_sharing_router
 from app.domains.commands.router import router as commands_router
@@ -31,23 +30,23 @@ from app.domains.health.router import router as health_router
 from app.domains.health.service import HealthService
 from app.domains.insights.router import router as insights_router
 from app.domains.integrations.router import router as integrations_router
-from app.domains.journal.repository import JournalRepository
 from app.domains.journal.backup_scheduler import JournalBackupScheduler
+from app.domains.journal.repository import JournalRepository
 from app.domains.journal.router import router as journal_router
 from app.domains.journal.service import JournalService
 from app.domains.meta.router import router as meta_router
 from app.domains.motivation.router import router as motivation_router
-from app.domains.nutrition.router import router as nutrition_router
 from app.domains.notifications.router import router as notifications_router
+from app.domains.nutrition.router import router as nutrition_router
 from app.domains.ops.router import router as ops_router
 from app.domains.packy.router import router as packy_router
 from app.domains.player.router import router as player_router
+from app.domains.projects.router import router as projects_router
 from app.domains.review.router import router as review_router
 from app.domains.search.router import router as search_router
 from app.domains.tasks.router import router as tasks_router
-from app.domains.projects.router import router as projects_router
-from app.logging_config import configure_logging
 from app.domains.vault_bridge.router import router as vault_router
+from app.logging_config import configure_logging
 from app.middleware.auth import AuthMiddleware
 from app.middleware.cors import build_cors_options
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -104,7 +103,12 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("Database unreachable at startup") from None
     backup_task: asyncio.Task[None] | None = None
     if not settings.disable_background_jobs:
-        backup_dir = settings.journal_backup_dir if settings.journal_backup_dir != settings.model_fields["journal_backup_dir"].default else default_backup_dir()
+        backup_dir = (
+            settings.journal_backup_dir
+            if settings.journal_backup_dir
+            != settings.model_fields["journal_backup_dir"].default
+            else default_backup_dir()
+        )
         journal_service = JournalService(
             JournalRepository(settings),
             backup_dir=backup_dir,
@@ -144,7 +148,9 @@ def create_app() -> FastAPI:
 
     settings = get_settings()
     configure_logging(packaged=settings.packaged)
-    run_migrations(settings.db_path, turso_url=settings.turso_url, turso_token=settings.turso_token)
+    run_migrations(
+        settings.db_path, turso_url=settings.turso_url, turso_token=settings.turso_token
+    )
 
     app = FastAPI(
         title="DopaFlow API",
@@ -156,7 +162,9 @@ def create_app() -> FastAPI:
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(CORSMiddleware, **build_cors_options(settings.extra_cors_origins))
+    app.add_middleware(
+        CORSMiddleware, **build_cors_options(settings.extra_cors_origins)
+    )
     app.add_middleware(
         RateLimitMiddleware,
         calls_per_minute=120,

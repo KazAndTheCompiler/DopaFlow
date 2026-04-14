@@ -1,4 +1,5 @@
 """Tests for migration drift detection."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -6,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from app.core.database import _ensure_migrations_table, _migration_checksum, run_migrations
+from app.core.database import (
+    _ensure_migrations_table,
+    _migration_checksum,
+    run_migrations,
+)
 
 
 def test_migration_checksum_is_deterministic(sqlite_db_path: Path) -> None:
@@ -34,7 +39,9 @@ def test_drift_raises_when_applied_migration_is_modified(
     run_migrations(str(sqlite_db_path))
 
     conn = sqlite3.connect(sqlite_db_path)
-    conn.execute("UPDATE _migrations SET checksum = 'old_checksum' WHERE filename = '001_init.sql'")
+    conn.execute(
+        "UPDATE _migrations SET checksum = 'old_checksum' WHERE filename = '001_init.sql'"
+    )
     conn.commit()
     conn.close()
 
@@ -42,7 +49,9 @@ def test_drift_raises_when_applied_migration_is_modified(
         run_migrations(str(sqlite_db_path))
 
     assert "001_init.sql" in str(exc_info.value)
-    assert "been modified" in str(exc_info.value) or "Migration drift detected" in str(exc_info.value)
+    assert "been modified" in str(exc_info.value) or "Migration drift detected" in str(
+        exc_info.value
+    )
 
 
 def test_checksum_recorded_for_new_migration(sqlite_db_path: Path) -> None:
@@ -63,6 +72,8 @@ def test_migration_table_has_checksum_column(sqlite_db_path: Path) -> None:
     """_migrations table must have a checksum column."""
     conn = sqlite3.connect(sqlite_db_path)
     _ensure_migrations_table(conn)
-    columns = {row[1] for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()}
+    columns = {
+        row[1] for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()
+    }
     conn.close()
     assert "checksum" in columns

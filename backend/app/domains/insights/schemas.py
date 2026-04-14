@@ -18,4 +18,3 @@ class CorrelationInsight(BaseModel):
     metric: str
     pearson_r: float | None = None
     interpretation: str
-

@@ -2,26 +2,26 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import pytest
+
 from app.domains.tasks import repository as tasks_repo
 from app.domains.tasks.schemas import Task
-from app.domains.vault_bridge.sync_service import VaultSyncService
-from app.domains.vault_bridge.task_writer import (
-    render_task_collection,
-    rewrite_task_id_in_file,
-)
-from app.domains.vault_bridge.task_reader import (
-    parse_task_line,
-    parse_task_collection,
-    parse_task_file,
-)
 from app.domains.vault_bridge.schemas import (
     TaskImportCandidate,
     TaskImportConfirmRequest,
     TaskImportPreview,
+)
+from app.domains.vault_bridge.sync_service import VaultSyncService
+from app.domains.vault_bridge.task_reader import (
+    parse_task_collection,
+    parse_task_file,
+    parse_task_line,
+)
+from app.domains.vault_bridge.task_writer import (
+    render_task_collection,
+    rewrite_task_id_in_file,
 )
 
 _NOW = "2026-01-01T00:00:00+00:00"
@@ -101,7 +101,7 @@ class TestRewriteTaskId:
         f = self._make_file(tmp_path, content)
         rewrite_task_id_in_file(f, "- [ ] Duplicate", "tsk_dup")
         lines = f.read_text().splitlines()
-        ids_found = sum(1 for l in lines if "df:tsk_dup" in l)
+        ids_found = sum(1 for line in lines if "df:tsk_dup" in line)
         assert ids_found == 1
 
     def test_can_target_specific_duplicate_line(self, tmp_path):
@@ -263,7 +263,9 @@ class TestImportRoundTrip:
             ),
         ],
     )
-    def test_task_import_handles_edge_case_frontmatter_variants(self, tmp_path, frontmatter, expected_project):
+    def test_task_import_handles_edge_case_frontmatter_variants(
+        self, tmp_path, frontmatter, expected_project
+    ):
         f = tmp_path / "Tasks.md"
         f.write_text(frontmatter, encoding="utf-8")
 
@@ -274,7 +276,9 @@ class TestImportRoundTrip:
         assert candidates[0].dopaflow_id is None
         assert candidates[0].title
 
-    def test_task_import_keeps_parsing_after_fenced_code_block_contains_frontmatter_delimiter(self, tmp_path):
+    def test_task_import_keeps_parsing_after_fenced_code_block_contains_frontmatter_delimiter(
+        self, tmp_path
+    ):
         content = (
             "---\n"
             "dopaflow_type: task_collection\n"

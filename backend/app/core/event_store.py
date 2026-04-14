@@ -55,7 +55,9 @@ class EventStore:
             """
         )
 
-    def append(self, event_type: EventType, aggregate_id: str, payload: dict[str, Any]) -> int:
+    def append(
+        self, event_type: EventType, aggregate_id: str, payload: dict[str, Any]
+    ) -> int:
         """Persist a new event and return its generated identifier."""
 
         cursor = self.connection.execute(
@@ -67,7 +69,9 @@ class EventStore:
         )
         return int(cursor.lastrowid)
 
-    def query(self, aggregate_id: str | None = None, event_type: EventType | None = None) -> list[StoredEvent]:
+    def query(
+        self, aggregate_id: str | None = None, event_type: EventType | None = None
+    ) -> list[StoredEvent]:
         """Fetch events filtered by aggregate or event type."""
 
         sql = "SELECT id, event_type, aggregate_id, payload_json, created_at FROM event_store WHERE 1 = 1"
@@ -90,4 +94,3 @@ class EventStore:
             )
             for row in rows
         ]
-

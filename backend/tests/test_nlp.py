@@ -44,7 +44,9 @@ class TestClassifyTaskCreate:
         result = classify("add task buy groceries")
         assert result.tts_response != ""
 
-    def test_quick_add_fallback_logs_parser_failure(self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+    def test_quick_add_fallback_logs_parser_failure(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
         from app.services import quick_add
 
         def explode_parse(text: str):
@@ -56,7 +58,10 @@ class TestClassifyTaskCreate:
         result = classify("buy milk tomorrow")
 
         assert result.intent == "unknown"
-        assert any("Quick-add fallback parsing failed" in record.message for record in caplog.records)
+        assert any(
+            "Quick-add fallback parsing failed" in record.message
+            for record in caplog.records
+        )
 
 
 class TestClassifyTaskComplete:
@@ -132,6 +137,7 @@ class TestClassifyCalendar:
         assert end_at is not None
         # Must be parseable as a valid datetime
         from datetime import datetime
+
         parsed = datetime.fromisoformat(end_at.replace("Z", "+00:00"))
         assert parsed.hour == 0
         assert parsed.minute == 30
@@ -260,7 +266,9 @@ class TestFuzzyTaskMatch:
         assert result[0]["title"] == "buy milk"
 
     def test_partial_match(self) -> None:
-        tasks = self._make_tasks(["buy milk from store", "call mom", "fix the milk bug"])
+        tasks = self._make_tasks(
+            ["buy milk from store", "call mom", "fix the milk bug"]
+        )
         result = fuzzy_task_match("milk", tasks)
         assert len(result) >= 1
         titles = [t["title"] for t in result]

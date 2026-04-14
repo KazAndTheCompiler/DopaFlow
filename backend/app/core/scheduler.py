@@ -107,8 +107,9 @@ def _materialize_recurring_tasks() -> None:
 def _sync_peer_feeds() -> None:
     try:
         from app.core.config import get_settings
-        from app.domains.calendar_sharing.service import CalendarSharingService
         from app.domains.calendar_sharing.repository import CalendarSharingRepository
+        from app.domains.calendar_sharing.service import CalendarSharingService
+
         settings = get_settings()
         svc = CalendarSharingService(CalendarSharingRepository(settings.db_path))
         now = time.time()
@@ -146,11 +147,42 @@ def start_scheduler(journal_service: JournalService) -> None:
         if _scheduler.running:
             return
 
-        _scheduler.add_job(journal_service.trigger_backup, "cron", hour=0, minute=0, id="nightly-journal-backup", replace_existing=True)
-        _scheduler.add_job(_expire_focus_sessions, "interval", seconds=30, id="expire_focus", replace_existing=True)
-        _scheduler.add_job(_speak_due_tasks, "interval", seconds=60, id="speak_due_tasks", replace_existing=True)
-        _scheduler.add_job(_materialize_recurring_tasks, "cron", hour="*/6", id="materialize_recurring", replace_existing=True)
-        _scheduler.add_job(_sync_peer_feeds, "interval", minutes=15, id="sync_peer_feeds", replace_existing=True)
+        _scheduler.add_job(
+            journal_service.trigger_backup,
+            "cron",
+            hour=0,
+            minute=0,
+            id="nightly-journal-backup",
+            replace_existing=True,
+        )
+        _scheduler.add_job(
+            _expire_focus_sessions,
+            "interval",
+            seconds=30,
+            id="expire_focus",
+            replace_existing=True,
+        )
+        _scheduler.add_job(
+            _speak_due_tasks,
+            "interval",
+            seconds=60,
+            id="speak_due_tasks",
+            replace_existing=True,
+        )
+        _scheduler.add_job(
+            _materialize_recurring_tasks,
+            "cron",
+            hour="*/6",
+            id="materialize_recurring",
+            replace_existing=True,
+        )
+        _scheduler.add_job(
+            _sync_peer_feeds,
+            "interval",
+            minutes=15,
+            id="sync_peer_feeds",
+            replace_existing=True,
+        )
         _scheduler.start()
 
 

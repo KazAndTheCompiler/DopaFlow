@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.domains.tasks import repository as tasks_repo
-from app.domains.vault_bridge.sync_service import VaultSyncService
 from app.domains.vault_bridge.schemas import TaskImportConfirmRequest
+from app.domains.vault_bridge.sync_service import VaultSyncService
 
 
 def _configure_vault(service: VaultSyncService, vault_root: Path) -> None:

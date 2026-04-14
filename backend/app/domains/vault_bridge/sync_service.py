@@ -9,6 +9,7 @@ from pathlib import Path
 from app.core.config import Settings
 from app.domains.journal.repository import JournalRepository
 from app.domains.journal.schemas import JournalEntryCreate
+from app.domains.vault_bridge.file_names import slugify
 from app.domains.vault_bridge.index_repository import VaultIndexRepository
 from app.domains.vault_bridge.reader import scan_journal_notes
 from app.domains.vault_bridge.schemas import (
@@ -28,7 +29,6 @@ from app.domains.vault_bridge.task_writer import (
     render_task_collection,
     render_tasks_section,
     rewrite_task_id_in_file,
-    slugify,
     write_task_collection,
 )
 from app.domains.vault_bridge.writer import render_journal_note, write_journal_entry
@@ -519,10 +519,10 @@ class VaultSyncService:
 
         tasks_repo = self._tasks_repo()
         # Get tasks due on this date (or earlier, undone)
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         try:
-            target = datetime.strptime(date, "%Y-%m-%d")
+            _target = datetime.strptime(date, "%Y-%m-%d")
         except ValueError:
             return VaultPushResult(
                 pushed=0, skipped=0, conflicts=0, errors=[f"invalid date: {date}"]

@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import asyncio
-import hmac
 import hashlib
+import hmac
 import json
 import logging
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -19,7 +18,9 @@ from app.core.id_gen import notification_id
 logger = logging.getLogger("dopaflow.outbox")
 
 
-async def _deliver_one(url: str, body: dict[str, Any], secret: str | None) -> dict[str, Any]:
+async def _deliver_one(
+    url: str, body: dict[str, Any], secret: str | None
+) -> dict[str, Any]:
     """POST a webhook payload with optional HMAC signing."""
 
     headers = {"Content-Type": "application/json"}
@@ -31,7 +32,7 @@ async def _deliver_one(url: str, body: dict[str, Any], secret: str | None) -> di
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(url, content=payload_bytes, headers=headers)
             return {"ok": response.status_code < 400, "status": response.status_code}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {"ok": False, "error": str(exc)}
 
 
@@ -71,7 +72,9 @@ def dispatch_once(settings: Settings, limit: int = 20) -> dict[str, int]:
         attempts = int(event["attempts"] or 0)
         success = True
         for webhook in webhooks:
-            result = asyncio.run(_deliver_one(webhook["target_url"], payload, webhook["secret"]))
+            result = asyncio.run(
+                _deliver_one(webhook["target_url"], payload, webhook["secret"])
+            )
             if not result.get("ok"):
                 success = False
                 break

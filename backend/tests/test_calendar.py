@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
+import urllib.error
 from datetime import datetime
 from time import perf_counter
-import urllib.error
-import httpx
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+
+import httpx
 
 from app.core.database import tx
 from app.domains.calendar.repository import CalendarRepository
@@ -59,7 +60,9 @@ def test_get_event_by_id(client) -> None:
 def test_patch_event_updates_title(client) -> None:
     event = create_event(client)
 
-    response = client.patch(f"/api/v2/calendar/events/{event['id']}", json={"title": "Retitle"})
+    response = client.patch(
+        f"/api/v2/calendar/events/{event['id']}", json={"title": "Retitle"}
+    )
 
     assert response.status_code == 200
     assert response.json()["title"] == "Retitle"
@@ -87,7 +90,10 @@ def test_range_filter_limits_results(client) -> None:
 
     response = client.get(
         "/api/v2/calendar/events",
-        params={"from": "2026-03-25 00:00:00+00:00", "until": "2026-03-25 23:59:59+00:00"},
+        params={
+            "from": "2026-03-25 00:00:00+00:00",
+            "until": "2026-03-25 23:59:59+00:00",
+        },
     )
 
     assert response.status_code == 200
@@ -97,7 +103,9 @@ def test_range_filter_limits_results(client) -> None:
 def test_patch_can_set_recurrence_rule(client) -> None:
     event = create_event(client)
 
-    response = client.patch(f"/api/v2/calendar/events/{event['id']}", json={"recurrence": "FREQ=WEEKLY"})
+    response = client.patch(
+        f"/api/v2/calendar/events/{event['id']}", json={"recurrence": "FREQ=WEEKLY"}
+    )
 
     assert response.status_code == 200
     assert response.json()["recurrence"] == "FREQ=WEEKLY"
@@ -191,12 +199,14 @@ def test_peer_feed_sync_imports_remote_events(monkeypatch, db_path) -> None:
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     feed = repo.add_feed(
-        SimpleNamespace(**{
-            "label": "Remote partner",
-            "base_url": "https://partner.example.com/api/v2",
-            "token": "secret-token",
-            "color": "#5b8def",
-        })
+        SimpleNamespace(
+            **{
+                "label": "Remote partner",
+                "base_url": "https://partner.example.com/api/v2",
+                "token": "secret-token",
+                "color": "#5b8def",
+            }
+        )
     )
 
     captured: dict[str, object] = {}
@@ -209,19 +219,23 @@ def test_peer_feed_sync_imports_remote_events(monkeypatch, db_path) -> None:
             return False
 
         def read(self) -> bytes:
-            return json.dumps({
-                "entries": [{
-                    "id": "evt_remote_1",
-                    "title": "Peer planning",
-                    "description": "Shared from another install",
-                    "start_at": "2026-03-26T09:00:00+00:00",
-                    "end_at": "2026-03-26T10:00:00+00:00",
-                    "all_day": False,
-                    "category": "work",
-                    "updated_at": "2026-03-25T12:00:00+00:00",
-                    "source": "remote-dopaflow",
-                }],
-            }).encode("utf-8")
+            return json.dumps(
+                {
+                    "entries": [
+                        {
+                            "id": "evt_remote_1",
+                            "title": "Peer planning",
+                            "description": "Shared from another install",
+                            "start_at": "2026-03-26T09:00:00+00:00",
+                            "end_at": "2026-03-26T10:00:00+00:00",
+                            "all_day": False,
+                            "category": "work",
+                            "updated_at": "2026-03-25T12:00:00+00:00",
+                            "source": "remote-dopaflow",
+                        }
+                    ],
+                }
+            ).encode("utf-8")
 
     class _MockOpener:
         def open(self, request, timeout=10):
@@ -255,12 +269,14 @@ def test_peer_feed_sync_rejects_redirects(monkeypatch, db_path) -> None:
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     feed = repo.add_feed(
-        SimpleNamespace(**{
-            "label": "Remote partner",
-            "base_url": "https://partner.example.com/api/v2",
-            "token": "secret-token",
-            "color": "#5b8def",
-        })
+        SimpleNamespace(
+            **{
+                "label": "Remote partner",
+                "base_url": "https://partner.example.com/api/v2",
+                "token": "secret-token",
+                "color": "#5b8def",
+            }
+        )
     )
 
     class _MockOpener:
@@ -285,12 +301,14 @@ def test_remove_feed_deletes_mirrored_events(db_path) -> None:
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     feed = repo.add_feed(
-        SimpleNamespace(**{
-            "label": "Remote partner",
-            "base_url": "https://partner.example.com/api/v2",
-            "token": "secret-token",
-            "color": "#5b8def",
-        })
+        SimpleNamespace(
+            **{
+                "label": "Remote partner",
+                "base_url": "https://partner.example.com/api/v2",
+                "token": "secret-token",
+                "color": "#5b8def",
+            }
+        )
     )
     repo.upsert_peer_event(
         feed.id,
@@ -314,12 +332,14 @@ def test_feed_error_keeps_last_successful_sync_time(monkeypatch, db_path) -> Non
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     feed = repo.add_feed(
-        SimpleNamespace(**{
-            "label": "Remote partner",
-            "base_url": "https://partner.example.com/api/v2",
-            "token": "secret-token",
-            "color": "#5b8def",
-        })
+        SimpleNamespace(
+            **{
+                "label": "Remote partner",
+                "base_url": "https://partner.example.com/api/v2",
+                "token": "secret-token",
+                "color": "#5b8def",
+            }
+        )
     )
 
     class _OkResponse:
@@ -346,7 +366,9 @@ def test_feed_error_keeps_last_successful_sync_time(monkeypatch, db_path) -> Non
 
     class _FailOpener:
         def open(self, request, timeout=10):
-            raise urllib.error.HTTPError(request.full_url, 503, "Service Unavailable", {}, None)
+            raise urllib.error.HTTPError(
+                request.full_url, 503, "Service Unavailable", {}, None
+            )
 
     monkeypatch.setattr(
         "app.domains.calendar_sharing.service.urllib.request.build_opener",
@@ -368,12 +390,14 @@ def test_peer_feed_sync_rejects_invalid_payload_shape(monkeypatch, db_path) -> N
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     feed = repo.add_feed(
-        SimpleNamespace(**{
-            "label": "Remote partner",
-            "base_url": "https://partner.example.com/api/v2",
-            "token": "secret-token",
-            "color": "#5b8def",
-        })
+        SimpleNamespace(
+            **{
+                "label": "Remote partner",
+                "base_url": "https://partner.example.com/api/v2",
+                "token": "secret-token",
+                "color": "#5b8def",
+            }
+        )
     )
 
     class _BadResponse:
@@ -404,16 +428,20 @@ def test_peer_feed_sync_rejects_invalid_payload_shape(monkeypatch, db_path) -> N
     assert stored_feed.last_error == "invalid_feed_payload"
 
 
-def test_sync_all_feeds_applies_backoff_after_failures(monkeypatch, db_path, caplog) -> None:
+def test_sync_all_feeds_applies_backoff_after_failures(
+    monkeypatch, db_path, caplog
+) -> None:
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     feed = repo.add_feed(
-        SimpleNamespace(**{
-            "label": "Remote partner",
-            "base_url": "https://partner.example.com/api/v2",
-            "token": "secret-token",
-            "color": "#5b8def",
-        })
+        SimpleNamespace(
+            **{
+                "label": "Remote partner",
+                "base_url": "https://partner.example.com/api/v2",
+                "token": "secret-token",
+                "color": "#5b8def",
+            }
+        )
     )
 
     def fail_sync(_feed_id: str):
@@ -431,7 +459,9 @@ def test_sync_all_feeds_applies_backoff_after_failures(monkeypatch, db_path, cap
     assert any("Skipping peer feed" in record.message for record in caplog.records)
 
 
-def test_sync_all_feeds_processes_50_peer_feeds_with_partial_failures(monkeypatch, db_path) -> None:
+def test_sync_all_feeds_processes_50_peer_feeds_with_partial_failures(
+    monkeypatch, db_path
+) -> None:
     repo = CalendarSharingRepository(str(db_path))
     service = CalendarSharingService(repo)
     invalid_feed_count = 0
@@ -446,30 +476,36 @@ def test_sync_all_feeds_processes_50_peer_feeds_with_partial_failures(monkeypatc
             invalid_feed_count += 1
             base_url = f"invalid-peer-{index}"
         repo.add_feed(
-            SimpleNamespace(**{
-                "label": f"Remote partner {index}",
-                "base_url": base_url,
-                "token": f"secret-token-{index}",
-                "color": "#5b8def",
-            })
+            SimpleNamespace(
+                **{
+                    "label": f"Remote partner {index}",
+                    "base_url": base_url,
+                    "token": f"secret-token-{index}",
+                    "color": "#5b8def",
+                }
+            )
         )
 
-    def fake_fetch(feed, _raw_token: str, _from_dt: str, _to_dt: str) -> dict[str, object]:
+    def fake_fetch(
+        feed, _raw_token: str, _from_dt: str, _to_dt: str
+    ) -> dict[str, object]:
         if not feed.base_url.startswith("https://peer-"):
             raise ValueError("invalid_url")
         feed_suffix = feed.base_url.split("https://peer-", 1)[1].split(".", 1)[0]
         return {
-            "entries": [{
-                "id": f"evt_remote_{feed_suffix}",
-                "title": f"Peer planning {feed_suffix}",
-                "description": "Shared from another install",
-                "start_at": "2026-03-26T09:00:00+00:00",
-                "end_at": "2026-03-26T10:00:00+00:00",
-                "all_day": False,
-                "category": "work",
-                "updated_at": "2026-03-25T12:00:00+00:00",
-                "source": "remote-dopaflow",
-            }],
+            "entries": [
+                {
+                    "id": f"evt_remote_{feed_suffix}",
+                    "title": f"Peer planning {feed_suffix}",
+                    "description": "Shared from another install",
+                    "start_at": "2026-03-26T09:00:00+00:00",
+                    "end_at": "2026-03-26T10:00:00+00:00",
+                    "all_day": False,
+                    "category": "work",
+                    "updated_at": "2026-03-25T12:00:00+00:00",
+                    "source": "remote-dopaflow",
+                }
+            ],
         }
 
     monkeypatch.setattr(service, "_fetch_feed_payload", fake_fetch)
@@ -537,7 +573,9 @@ def test_today_schedule_falls_back_to_local_on_transport_error(client) -> None:
             request = httpx.Request("GET", "http://localhost:8001/calendar/range")
             raise httpx.ConnectError("offline", request=request)
 
-    with patch("app.domains.calendar.router._zoescal_client", return_value=_BrokenClient()):
+    with patch(
+        "app.domains.calendar.router._zoescal_client", return_value=_BrokenClient()
+    ):
         response = client.get("/api/v2/calendar/today")
 
     assert response.status_code == 200
@@ -547,23 +585,36 @@ def test_today_schedule_falls_back_to_local_on_transport_error(client) -> None:
 
 
 @patch("app.domains.calendar.router._google_oauth_client")
-def test_google_calendar_oauth_callback_uses_configured_redirect_uri(oauth_client_factory, client, monkeypatch) -> None:
+def test_google_calendar_oauth_callback_uses_configured_redirect_uri(
+    oauth_client_factory, client, monkeypatch
+) -> None:
     monkeypatch.setenv("DOPAFLOW_GOOGLE_CLIENT_ID", "client-id")
     monkeypatch.setenv("DOPAFLOW_GOOGLE_CLIENT_SECRET", "client-secret")
-    monkeypatch.setenv("DOPAFLOW_GOOGLE_REDIRECT_URI", "http://127.0.0.1:8123/custom/callback")
+    monkeypatch.setenv(
+        "DOPAFLOW_GOOGLE_REDIRECT_URI", "http://127.0.0.1:8123/custom/callback"
+    )
 
     token_response = SimpleNamespace(
         status_code=200,
-        json=lambda: {"access_token": "token", "refresh_token": "refresh", "expires_in": 3600},
+        json=lambda: {
+            "access_token": "token",
+            "refresh_token": "refresh",
+            "expires_in": 3600,
+        },
     )
     response_mock = AsyncMock(return_value=token_response)
     oauth_client_factory.return_value.__aenter__.return_value.post = response_mock
 
-    response = client.get("/api/v2/calendar/oauth/callback", params={"code": "test-code"})
+    response = client.get(
+        "/api/v2/calendar/oauth/callback", params={"code": "test-code"}
+    )
 
     assert response.status_code == 200
     assert response.json()["status"] == "connected"
-    assert response_mock.call_args.kwargs["data"]["redirect_uri"] == "http://127.0.0.1:8123/custom/callback"
+    assert (
+        response_mock.call_args.kwargs["data"]["redirect_uri"]
+        == "http://127.0.0.1:8123/custom/callback"
+    )
 
 
 def test_move_event_preserves_duration(client) -> None:

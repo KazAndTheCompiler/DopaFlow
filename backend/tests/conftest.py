@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import sqlite3
-import asyncio
 import tempfile
 from pathlib import Path
 
@@ -164,9 +164,8 @@ def db_path(
     monkeypatch.setenv("DOPAFLOW_DISABLE_BACKGROUND_JOBS", "1")
     monkeypatch.setenv("DOPAFLOW_DISABLE_RATE_LIMITS", "1")
     _reset_database(_shared_db_path)
-    from app.domains.gamification.service import pop_award_counters
-
     from app.core.config import get_settings
+    from app.domains.gamification.service import pop_award_counters
 
     pop_award_counters()
     get_settings.cache_clear()
@@ -183,6 +182,7 @@ def sqlite_db_path(tmp_path: Path) -> Path:
     os.environ["DOPAFLOW_DISABLE_BACKGROUND_JOBS"] = "1"
     os.environ["DOPAFLOW_DISABLE_RATE_LIMITS"] = "1"
     from app.core.config import get_settings
+
     get_settings.cache_clear()
     return path
 

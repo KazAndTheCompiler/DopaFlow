@@ -4,7 +4,9 @@ from unittest.mock import patch
 
 
 def test_execute_command_endpoint_returns_intent(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "add task finish docs"})
+    response = client.post(
+        "/api/v2/commands/execute", json={"text": "add task finish docs"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -20,7 +22,12 @@ def test_command_history_endpoint_returns_logged_command(client) -> None:
     assert response.status_code == 200
     history = response.json()
     assert len(history) >= 1
-    assert history[0]["intent"] in {"habit.list", "task.create", "focus.start", "unknown"}
+    assert history[0]["intent"] in {
+        "habit.list",
+        "task.create",
+        "focus.start",
+        "unknown",
+    }
     assert history[0]["source"] == "text"
 
 
@@ -37,7 +44,10 @@ def test_command_list_endpoint_returns_definitions(client) -> None:
 
 
 def test_execute_journal_command_creates_entry(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "journal today felt clearer after walking"})
+    response = client.post(
+        "/api/v2/commands/execute",
+        json={"text": "journal today felt clearer after walking"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -47,7 +57,10 @@ def test_execute_journal_command_creates_entry(client) -> None:
 
 
 def test_execute_calendar_command_creates_event(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "calendar dentist tomorrow at 14:00 for 45 minutes"})
+    response = client.post(
+        "/api/v2/commands/execute",
+        json={"text": "calendar dentist tomorrow at 14:00 for 45 minutes"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -57,7 +70,9 @@ def test_execute_calendar_command_creates_event(client) -> None:
 
 
 def test_execute_calendar_command_without_time_returns_needs_datetime(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "calendar dentist tomorrow"})
+    response = client.post(
+        "/api/v2/commands/execute", json={"text": "calendar dentist tomorrow"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -66,7 +81,10 @@ def test_execute_calendar_command_without_time_returns_needs_datetime(client) ->
 
 
 def test_execute_command_preserves_voice_source_in_history(client) -> None:
-    execute_response = client.post("/api/v2/commands/execute", json={"text": "journal voice note test", "source": "voice"})
+    execute_response = client.post(
+        "/api/v2/commands/execute",
+        json={"text": "journal voice note test", "source": "voice"},
+    )
     history_response = client.get("/api/v2/commands/history")
 
     assert execute_response.status_code == 200
@@ -75,7 +93,10 @@ def test_execute_command_preserves_voice_source_in_history(client) -> None:
 
 
 def test_execute_command_rejects_unknown_source(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "journal source test", "source": "clipboard"})
+    response = client.post(
+        "/api/v2/commands/execute",
+        json={"text": "journal source test", "source": "clipboard"},
+    )
 
     assert response.status_code == 422
 
@@ -87,7 +108,9 @@ def test_execute_command_rejects_unknown_source(client) -> None:
 
 def test_natural_language_task_no_prefix(client) -> None:
     """NLP engine handles 'buy milk tomorrow' without 'task' prefix."""
-    response = client.post("/api/v2/commands/execute", json={"text": "buy milk tomorrow"})
+    response = client.post(
+        "/api/v2/commands/execute", json={"text": "buy milk tomorrow"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -96,7 +119,9 @@ def test_natural_language_task_no_prefix(client) -> None:
 
 
 def test_execute_command_persists_recurrence_rule(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "every monday water plants"})
+    response = client.post(
+        "/api/v2/commands/execute", json={"text": "every monday water plants"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -106,7 +131,9 @@ def test_execute_command_persists_recurrence_rule(client) -> None:
 
 def test_execute_command_does_not_run_migrations_on_hot_path(client) -> None:
     with patch("app.core.database.run_migrations") as run_migrations_mock:
-        response = client.post("/api/v2/commands/execute", json={"text": "add task finish docs"})
+        response = client.post(
+            "/api/v2/commands/execute", json={"text": "add task finish docs"}
+        )
 
     assert response.status_code == 200
     run_migrations_mock.assert_not_called()
@@ -114,7 +141,9 @@ def test_execute_command_does_not_run_migrations_on_hot_path(client) -> None:
 
 def test_natural_language_focus_no_prefix(client) -> None:
     """NLP engine handles 'start focus for 30 minutes' without prefix."""
-    response = client.post("/api/v2/commands/execute", json={"text": "start focus for 30 minutes"})
+    response = client.post(
+        "/api/v2/commands/execute", json={"text": "start focus for 30 minutes"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -140,7 +169,9 @@ def test_natural_language_greeting(client) -> None:
 
 
 def test_preview_includes_follow_ups(client) -> None:
-    response = client.post("/api/v2/commands/preview", json={"text": "add task buy groceries"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "add task buy groceries"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -149,7 +180,9 @@ def test_preview_includes_follow_ups(client) -> None:
 
 
 def test_preview_includes_tts_response(client) -> None:
-    response = client.post("/api/v2/commands/preview", json={"text": "add task buy groceries"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "add task buy groceries"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -216,9 +249,13 @@ def test_packy_voice_command_empty_text(client) -> None:
     assert body["status"] == "empty"
 
 
-def test_packy_voice_command_uses_db_aware_preview_for_ambiguous_task_complete(client) -> None:
+def test_packy_voice_command_uses_db_aware_preview_for_ambiguous_task_complete(
+    client,
+) -> None:
     client.post("/api/v2/commands/execute", json={"text": "add task review inbox zero"})
-    client.post("/api/v2/commands/execute", json={"text": "add task review sprint plan"})
+    client.post(
+        "/api/v2/commands/execute", json={"text": "add task review sprint plan"}
+    )
 
     response = client.post(
         "/api/v2/packy/voice-command",
@@ -240,7 +277,9 @@ def test_packy_voice_command_uses_db_aware_preview_for_ambiguous_task_complete(c
 
 def test_undo_task_create_removes_task(client) -> None:
     """Create a task, undo it, verify the task is soft-deleted."""
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task undoable groceries"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task undoable groceries"}
+    )
     assert create_res.status_code == 200
     create_body = create_res.json()
     assert create_body["intent"] == "task.create"
@@ -263,10 +302,14 @@ def test_undo_task_create_removes_task(client) -> None:
 
 def test_undo_task_complete_reopens_task(client) -> None:
     """Complete a task, undo it, verify the task is reopened."""
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task to reopen after done"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task to reopen after done"}
+    )
     task_id = create_res.json()["result"]["id"]
 
-    complete_res = client.post("/api/v2/commands/execute", json={"text": "complete to reopen"})
+    complete_res = client.post(
+        "/api/v2/commands/execute", json={"text": "complete to reopen"}
+    )
     assert complete_res.status_code == 200
     assert complete_res.json()["intent"] == "task.complete"
     assert complete_res.json()["status"] == "executed"
@@ -299,7 +342,9 @@ def test_undo_nothing_to_undo(client) -> None:
 
 
 def test_undo_consumes_entry_once(client) -> None:
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task one shot undo"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task one shot undo"}
+    )
     assert create_res.status_code == 200
     assert create_res.json()["status"] == "executed"
 
@@ -315,7 +360,9 @@ def test_undo_consumes_entry_once(client) -> None:
 def test_undo_skips_unsupported_intents(client) -> None:
     """Undo after a non-undoable command returns 'unsupported', not a crash."""
     client.delete("/api/v2/commands/history")
-    journal_res = client.post("/api/v2/commands/execute", json={"text": "journal test note about the weather"})
+    journal_res = client.post(
+        "/api/v2/commands/execute", json={"text": "journal test note about the weather"}
+    )
     assert journal_res.json()["status"] == "executed"
 
     undo_res = client.post("/api/v2/commands/execute", json={"text": "undo"})
@@ -327,7 +374,9 @@ def test_undo_skips_unsupported_intents(client) -> None:
 
 def test_undo_does_not_retry_same_entry_twice(client) -> None:
     """Completed undo should mark the original command entry as spent."""
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task only undo once"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task only undo once"}
+    )
     assert create_res.status_code == 200
 
     first_undo = client.post("/api/v2/commands/execute", json={"text": "undo"})
@@ -347,7 +396,9 @@ def test_undo_does_not_retry_same_entry_twice(client) -> None:
 
 def test_preview_incomplete_calendar_returns_needs_datetime(client) -> None:
     """Calendar without time should show 'needs_datetime' in preview."""
-    response = client.post("/api/v2/commands/preview", json={"text": "calendar dentist tomorrow"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "calendar dentist tomorrow"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -356,7 +407,10 @@ def test_preview_incomplete_calendar_returns_needs_datetime(client) -> None:
 
 
 def test_preview_compound_command_is_unsupported(client) -> None:
-    response = client.post("/api/v2/commands/preview", json={"text": "add task meeting prep and set alarm 9am"})
+    response = client.post(
+        "/api/v2/commands/preview",
+        json={"text": "add task meeting prep and set alarm 9am"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -366,7 +420,10 @@ def test_preview_compound_command_is_unsupported(client) -> None:
 
 
 def test_execute_compound_command_is_unsupported(client) -> None:
-    response = client.post("/api/v2/commands/execute", json={"text": "add task meeting prep and set alarm 9am"})
+    response = client.post(
+        "/api/v2/commands/execute",
+        json={"text": "add task meeting prep and set alarm 9am"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -379,10 +436,14 @@ def test_execute_compound_command_is_unsupported(client) -> None:
 
 
 def test_preview_complete_task_reports_exact_match(client) -> None:
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task preview exact match"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task preview exact match"}
+    )
     assert create_res.status_code == 200
 
-    response = client.post("/api/v2/commands/preview", json={"text": "complete preview exact"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "complete preview exact"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -393,7 +454,9 @@ def test_preview_complete_task_reports_exact_match(client) -> None:
 
 def test_preview_complete_task_reports_ambiguous_match(client) -> None:
     client.post("/api/v2/commands/execute", json={"text": "add task review inbox zero"})
-    client.post("/api/v2/commands/execute", json={"text": "add task review sprint plan"})
+    client.post(
+        "/api/v2/commands/execute", json={"text": "add task review sprint plan"}
+    )
 
     response = client.post("/api/v2/commands/preview", json={"text": "complete review"})
 
@@ -405,7 +468,9 @@ def test_preview_complete_task_reports_ambiguous_match(client) -> None:
 
 
 def test_preview_complete_task_reports_not_found(client) -> None:
-    response = client.post("/api/v2/commands/preview", json={"text": "complete missing task title"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "complete missing task title"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -414,10 +479,14 @@ def test_preview_complete_task_reports_not_found(client) -> None:
 
 
 def test_preview_habit_checkin_reports_exact_match(client) -> None:
-    create_res = client.post("/api/v2/habits/", json={"name": "Hydration", "target": 1, "unit": "glass"})
+    create_res = client.post(
+        "/api/v2/habits/", json={"name": "Hydration", "target": 1, "unit": "glass"}
+    )
     assert create_res.status_code == 200
 
-    response = client.post("/api/v2/commands/preview", json={"text": "check in hydration"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "check in hydration"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -427,10 +496,18 @@ def test_preview_habit_checkin_reports_exact_match(client) -> None:
 
 
 def test_preview_habit_checkin_reports_ambiguous_match(client) -> None:
-    client.post("/api/v2/habits/", json={"name": "Hydration morning", "target": 1, "unit": "glass"})
-    client.post("/api/v2/habits/", json={"name": "Hydration evening", "target": 1, "unit": "glass"})
+    client.post(
+        "/api/v2/habits/",
+        json={"name": "Hydration morning", "target": 1, "unit": "glass"},
+    )
+    client.post(
+        "/api/v2/habits/",
+        json={"name": "Hydration evening", "target": 1, "unit": "glass"},
+    )
 
-    response = client.post("/api/v2/commands/preview", json={"text": "check in hydration"})
+    response = client.post(
+        "/api/v2/commands/preview", json={"text": "check in hydration"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -440,7 +517,9 @@ def test_preview_habit_checkin_reports_ambiguous_match(client) -> None:
 
 
 def test_preview_undo_reports_supported_entry(client) -> None:
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task preview undo target"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task preview undo target"}
+    )
     assert create_res.status_code == 200
 
     response = client.post("/api/v2/commands/preview", json={"text": "undo"})
@@ -468,7 +547,9 @@ def test_preview_undo_reports_unsupported_entry(client) -> None:
 
 def test_execute_incomplete_calendar_returns_needs_datetime(client) -> None:
     """Calendar without time should return 'needs_datetime' on execute."""
-    response = client.post("/api/v2/commands/execute", json={"text": "calendar dentist tomorrow"})
+    response = client.post(
+        "/api/v2/commands/execute", json={"text": "calendar dentist tomorrow"}
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -498,7 +579,9 @@ def test_preview_unknown_not_executable(client) -> None:
 
 def test_command_history_stores_result_json(client) -> None:
     """Command history entries for undoable intents include result data."""
-    create_res = client.post("/api/v2/commands/execute", json={"text": "add task history result check"})
+    create_res = client.post(
+        "/api/v2/commands/execute", json={"text": "add task history result check"}
+    )
     assert create_res.json()["status"] == "executed"
 
     history_res = client.get("/api/v2/commands/history")

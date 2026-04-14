@@ -8,12 +8,12 @@ import logging
 from uuid import uuid4
 
 from app.core.database import get_db, tx
-from app.domains.packy.schemas import PackyLorebookResponse
 from app.domains.packy.schemas import (
     MomentumScore,
     PackyAnswer,
     PackyAskRequest,
     PackyLorebookRequest,
+    PackyLorebookResponse,
     PackyWhisper,
 )
 

@@ -21,7 +21,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
 # Base path for the DopaFlow backend
 # This file is at: backend/app/tools/promptpack.py
 # So we need to go up 3 levels to reach backend/
@@ -475,7 +474,7 @@ class SecuritySweeper:
                 }
 
         if concern == "exception_logging":
-            if "except" in line.lower() and "logger" not in content.lower():
+            if "except" in line.lower() and "logger" not in line.lower():
                 return {
                     "type": "info",
                     "file": str(filepath),
@@ -690,7 +689,7 @@ def cmd_audit(args: argparse.Namespace) -> int:
 
     print(f"\n=== Domain Audit: {args.domain} ===")
     print(f"Path: {result['path']}")
-    print(f"\nFiles found:")
+    print("\nFiles found:")
     for file, found in result["files_found"].items():
         status = "✓" if found else "✗"
         print(f"  {status} {file}")
@@ -713,7 +712,7 @@ def cmd_api_sync(args: argparse.Namespace) -> int:
         print(f"Error: {result['error']}")
         return 1
 
-    print(f"\n=== API Reference Sync ===")
+    print("\n=== API Reference Sync ===")
     print(f"Routers scanned: {result['routers_scanned']}")
     print(f"Endpoints found: {result['endpoints_found']}")
     print(f"Mismatches: {len(result['mismatches'])}")
@@ -761,11 +760,11 @@ def cmd_migration(args: argparse.Namespace) -> int:
         print(f"Error: {result['error']}")
         return 1
 
-    print(f"\n=== Migration Generated ===")
+    print("\n=== Migration Generated ===")
     print(f"Number: {result['migration_number']}")
     print(f"File: {result['filename']}")
     print(f"Path: {result['path']}")
-    print(f"\nEdit the file to add your schema changes.")
+    print("\nEdit the file to add your schema changes.")
 
     return 0
 
@@ -779,11 +778,11 @@ def cmd_tests(args: argparse.Namespace) -> int:
         print(f"Error: {result['error']}")
         return 1
 
-    print(f"\n=== Tests Generated ===")
+    print("\n=== Tests Generated ===")
     print(f"Domain: {result['domain']}")
     print(f"File: {result['test_file']}")
     print(f"Endpoints covered: {result['endpoints_covered']}")
-    print(f"\nEdit the file to implement test cases.")
+    print("\nEdit the file to implement test cases.")
 
     return 0
 

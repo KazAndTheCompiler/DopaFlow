@@ -98,13 +98,13 @@ class TaskImportCandidate(BaseModel):
     due_str: str | None = None
     priority: int = 3
     tags: list[str] = []
-    file_path: str               # vault-relative path (e.g. Tasks/Inbox.md)
-    line_text: str               # original raw line — used to locate and rewrite on confirm
+    file_path: str  # vault-relative path (e.g. Tasks/Inbox.md)
+    line_text: str  # original raw line — used to locate and rewrite on confirm
     line_number: int | None = None
     project_id: str | None = None
     project_name: str | None = None
-    status: str = "importable"   # "importable" | "known" | "skipped"
-    known_task_id: str | None = None   # set when status == "known"
+    status: str = "importable"  # "importable" | "known" | "skipped"
+    known_task_id: str | None = None  # set when status == "known"
 
 
 class TaskImportPreview(BaseModel):

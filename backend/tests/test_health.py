@@ -50,7 +50,9 @@ def test_ops_config_defaults_trust_local_clients_to_false(monkeypatch, db_path) 
     assert payload["trust_local_clients"] is False
 
 
-def test_ops_config_prefers_dopaflow_env_flags_over_legacy(monkeypatch, db_path) -> None:
+def test_ops_config_prefers_dopaflow_env_flags_over_legacy(
+    monkeypatch, db_path
+) -> None:
     monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "false")
     monkeypatch.setenv("ZOESTM_DEV_AUTH", "true")
     monkeypatch.setenv("DOPAFLOW_ENFORCE_AUTH", "true")
@@ -86,7 +88,9 @@ def test_health_payload_prefers_dopaflow_env_flags_over_legacy(monkeypatch) -> N
     assert payload["features"]["local_webhooks"] is True
 
 
-def test_health_logs_missing_journal_table_for_memory_depth(monkeypatch, tmp_path: Path, caplog) -> None:
+def test_health_logs_missing_journal_table_for_memory_depth(
+    monkeypatch, tmp_path: Path, caplog
+) -> None:
     from app.core.config import get_settings
 
     db_path = tmp_path / "health-minimal.sqlite"
@@ -105,7 +109,9 @@ def test_health_logs_missing_journal_table_for_memory_depth(monkeypatch, tmp_pat
 
     assert payload["db"] == "ok"
     assert payload["memory_depth_days"] == 0
-    assert any("Health memory depth unavailable" in record.message for record in caplog.records)
+    assert any(
+        "Health memory depth unavailable" in record.message for record in caplog.records
+    )
 
 
 def test_health_ready_returns_ready(client) -> None:
@@ -115,11 +121,15 @@ def test_health_ready_returns_ready(client) -> None:
     assert response.json() == {"status": "ready", "reason": None}
 
 
-def test_health_ready_returns_503_when_migration_is_pending(monkeypatch, tmp_path: Path) -> None:
+def test_health_ready_returns_503_when_migration_is_pending(
+    monkeypatch, tmp_path: Path
+) -> None:
     db_path = tmp_path / "health-pending.sqlite"
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute("CREATE TABLE _migrations (filename TEXT PRIMARY KEY, checksum TEXT NOT NULL DEFAULT '')")
+        conn.execute(
+            "CREATE TABLE _migrations (filename TEXT PRIMARY KEY, checksum TEXT NOT NULL DEFAULT '')"
+        )
         conn.commit()
     finally:
         conn.close()
@@ -127,7 +137,9 @@ def test_health_ready_returns_503_when_migration_is_pending(monkeypatch, tmp_pat
     migrations_dir = tmp_path / "migrations"
     migrations_dir.mkdir()
     migration = migrations_dir / "001_pending.sql"
-    migration.write_text("CREATE TABLE sample (id INTEGER PRIMARY KEY);\n", encoding="utf-8")
+    migration.write_text(
+        "CREATE TABLE sample (id INTEGER PRIMARY KEY);\n", encoding="utf-8"
+    )
     original = health_service_module._migrations_dir
     health_service_module._migrations_dir = lambda: migrations_dir
     try:

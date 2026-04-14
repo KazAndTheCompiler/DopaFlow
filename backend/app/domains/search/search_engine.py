@@ -13,7 +13,13 @@ def _to_result(row) -> dict:
     return data
 
 
-def search(query: str, db_path: str, types: list[str] | None = None, from_date: str | None = None, to_date: str | None = None) -> list[dict]:
+def search(
+    query: str,
+    db_path: str,
+    types: list[str] | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> list[dict]:
     """
     Search tasks, habits, journal entries, and review cards for query.
     Returns list of result dicts with: id, type, title, snippet, date.

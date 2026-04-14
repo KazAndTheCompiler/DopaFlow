@@ -31,6 +31,7 @@ def _find_yt_dlp() -> list[str] | None:
     if not getattr(sys, "frozen", False):
         try:
             import yt_dlp  # noqa: F401
+
             return [sys.executable, "-m", "yt_dlp"]
         except ImportError:
             pass
@@ -41,6 +42,7 @@ def _resolve_via_api(url: str) -> dict[str, object]:
     """Use the yt-dlp Python API directly (works in PyInstaller bundles)."""
     try:
         from yt_dlp import YoutubeDL  # type: ignore[import-untyped]
+
         ydl_opts = {
             "format": "bestaudio",
             "quiet": True,
@@ -53,7 +55,7 @@ def _resolve_via_api(url: str) -> dict[str, object]:
             if not stream_url and info and info.get("formats"):
                 stream_url = info["formats"][-1].get("url")
             return {"stream_url": stream_url, "error": None}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning("Player yt-dlp API resolution failed for url=%s: %s", url, exc)
         return {"stream_url": None, "error": str(exc)}
 
@@ -66,7 +68,10 @@ class PlayerService:
         if not url:
             return {"stream_url": None, "error": "A URL is required"}
         if not url.startswith(("http://", "https://")):
-            return {"stream_url": None, "error": "Only http and https URLs are supported"}
+            return {
+                "stream_url": None,
+                "error": "Only http and https URLs are supported",
+            }
 
         cmd_prefix = _find_yt_dlp()
         if cmd_prefix:
@@ -80,24 +85,38 @@ class PlayerService:
                 if result.returncode != 0:
                     # Subprocess failed — try Python API as fallback
                     return _resolve_via_api(url)
-                stream_url = result.stdout.strip().splitlines()[0] if result.stdout.strip() else None
+                stream_url = (
+                    result.stdout.strip().splitlines()[0]
+                    if result.stdout.strip()
+                    else None
+                )
                 return {"stream_url": stream_url, "error": None}
             except subprocess.TimeoutExpired:
                 return {"stream_url": None, "error": "yt-dlp timed out"}
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("Player yt-dlp subprocess resolution failed for url=%s: %s", url, exc)
+            except Exception as exc:
+                logger.warning(
+                    "Player yt-dlp subprocess resolution failed for url=%s: %s",
+                    url,
+                    exc,
+                )
                 return {"stream_url": None, "error": str(exc)}
 
         # No yt-dlp binary found — use Python API directly (works in PyInstaller bundles)
         return _resolve_via_api(url)
 
-    def save_queue(self, items: list[dict[str, object]] | None = None) -> dict[str, object]:
+    def save_queue(
+        self, items: list[dict[str, object]] | None = None
+    ) -> dict[str, object]:
         # Normalise: accept list of URLs (str) or dicts
         raw = items or []
         urls: list[str] = []
         seen: set[str] = set()
         for item in raw:
-            url = item if isinstance(item, str) else str(item.get("url") or item.get("src") or "")
+            url = (
+                item
+                if isinstance(item, str)
+                else str(item.get("url") or item.get("src") or "")
+            )
             url = url.strip()
             if url and url not in seen:
                 urls.append(url)
@@ -112,7 +131,10 @@ class PlayerService:
         return {"items": queue, "count": len(queue)}
 
     def next_track(self) -> dict[str, object]:
-        return {"item": self.repository.pop_next(), "remaining": len(self.repository.get_queue())}
+        return {
+            "item": self.repository.pop_next(),
+            "remaining": len(self.repository.get_queue()),
+        }
 
     def enqueue_predownload(self, payload: dict[str, object]) -> dict[str, object]:
         job = self.repository.enqueue_job({"status": "queued", **payload})

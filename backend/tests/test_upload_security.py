@@ -27,14 +27,20 @@ UPLOAD_ENDPOINTS = [
 ]
 
 
-def make_upload(filename: str, content: bytes, content_type: str = "application/octet-stream") -> UploadFile:
-    return UploadFile(filename=filename, file=BytesIO(content), headers={"content-type": content_type})
+def make_upload(
+    filename: str, content: bytes, content_type: str = "application/octet-stream"
+) -> UploadFile:
+    return UploadFile(
+        filename=filename, file=BytesIO(content), headers={"content-type": content_type}
+    )
 
 
 def test_validate_upload_accepts_matching_magic_bytes() -> None:
     file = make_upload("deck.apkg", b"PK\x03\x04payload", "application/octet-stream")
 
-    content, suffix = validate_upload(file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=64)
+    content, suffix = validate_upload(
+        file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=64
+    )
 
     assert content == b"PK\x03\x04payload"
     assert suffix == ".apkg"
@@ -44,7 +50,9 @@ def test_validate_upload_rejects_oversized_file_without_full_read() -> None:
     file = make_upload("big.json", b"{" + b"a" * 32, "application/json")
 
     with pytest.raises(HTTPException) as exc:
-        validate_upload(file, kind="json", allowed_suffixes={".json"}, default_max_bytes=8)
+        validate_upload(
+            file, kind="json", allowed_suffixes={".json"}, default_max_bytes=8
+        )
 
     assert exc.value.status_code == 400
     assert "File too large" in str(exc.value.detail)
@@ -55,7 +63,9 @@ def test_validate_upload_rejects_magic_byte_mismatch() -> None:
     file = make_upload("deck.apkg", b"not-a-zip", "application/octet-stream")
 
     with pytest.raises(HTTPException) as exc:
-        validate_upload(file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=64)
+        validate_upload(
+            file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=64
+        )
 
     assert exc.value.status_code == 400
     assert "does not match apkg format" in str(exc.value.detail)
@@ -77,12 +87,16 @@ def test_validate_upload_rejects_disallowed_content_type() -> None:
     assert "Invalid content-type" in str(exc.value.detail)
 
 
-@pytest.mark.parametrize("filename", ["../deck.apkg", "..\\deck.apkg", "/tmp/deck.apkg", "nested/deck.apkg"])
+@pytest.mark.parametrize(
+    "filename", ["../deck.apkg", "..\\deck.apkg", "/tmp/deck.apkg", "nested/deck.apkg"]
+)
 def test_validate_upload_rejects_path_traversal_and_nested_paths(filename: str) -> None:
     file = make_upload(filename, b"PK\x03\x04payload", "application/octet-stream")
 
     with pytest.raises(HTTPException) as exc:
-        validate_upload(file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=64)
+        validate_upload(
+            file, kind="apkg", allowed_suffixes={".apkg"}, default_max_bytes=64
+        )
 
     assert exc.value.status_code == 400
     assert exc.value.detail == "Invalid filename"
@@ -95,7 +109,9 @@ def _app_with_ops_secret(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("DOPAFLOW_DISABLE_LOCAL_AUDIO", "1")
     monkeypatch.setenv("DOPAFLOW_DISABLE_BACKGROUND_JOBS", "1")
     monkeypatch.setenv("DOPAFLOW_DISABLE_RATE_LIMITS", "1")
-    monkeypatch.setenv("DOPAFLOW_DB_PATH", str(tmp_path / "test-upload-security.sqlite"))
+    monkeypatch.setenv(
+        "DOPAFLOW_DB_PATH", str(tmp_path / "test-upload-security.sqlite")
+    )
     from app.core.config import get_settings
 
     get_settings.cache_clear()
@@ -107,12 +123,22 @@ def _app_with_ops_secret(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return create_app()
 
 
-async def _request_upload(_app, path: str, *, filename: str, content_type: str, params: dict[str, str] | None = None, extra_headers: dict[str, str] | None = None) -> httpx.Response:
+async def _request_upload(
+    _app,
+    path: str,
+    *,
+    filename: str,
+    content_type: str,
+    params: dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> httpx.Response:
     transport = httpx.ASGITransport(app=_app, client=("127.0.0.1", 12345))
     headers = {"Authorization": "Bearer dev-local-key"}
     if extra_headers:
         headers.update(extra_headers)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         return await client.post(
             path,
             params=params,
@@ -123,12 +149,16 @@ async def _request_upload(_app, path: str, *, filename: str, content_type: str, 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("filename", TRAVERSAL_FILENAMES)
-async def test_upload_endpoints_reject_path_traversal_filenames(_app_with_ops_secret, filename: str) -> None:
+async def test_upload_endpoints_reject_path_traversal_filenames(
+    _app_with_ops_secret, filename: str
+) -> None:
     _app = _app_with_ops_secret
     for path, content_type in UPLOAD_ENDPOINTS:
         if path == "/api/v2/review/import-apkg":
             deck_transport = httpx.ASGITransport(app=_app, client=("127.0.0.1", 12345))
-            async with httpx.AsyncClient(transport=deck_transport, base_url="http://testserver") as client:
+            async with httpx.AsyncClient(
+                transport=deck_transport, base_url="http://testserver"
+            ) as client:
                 deck = await client.post(
                     "/api/v2/review/decks",
                     json={"name": "Upload Guard"},
@@ -148,12 +178,16 @@ async def test_upload_endpoints_reject_path_traversal_filenames(_app_with_ops_se
                 filename=filename,
                 content_type=content_type,
             )
-        assert resp.status_code in {400, 422}, f"Expected 400/422 for {path} with filename={filename!r}, got {resp.status_code}: {resp.text}"
+        assert resp.status_code in {400, 422}, (
+            f"Expected 400/422 for {path} with filename={filename!r}, got {resp.status_code}: {resp.text}"
+        )
         assert resp.status_code != 500
 
 
 @pytest.mark.anyio
-async def test_ops_upload_endpoints_reject_path_traversal_filenames(_app_with_ops_secret) -> None:
+async def test_ops_upload_endpoints_reject_path_traversal_filenames(
+    _app_with_ops_secret,
+) -> None:
     _app = _app_with_ops_secret
     ops_endpoints = [
         ("/api/v2/ops/backup/verify", "application/octet-stream"),
@@ -167,5 +201,7 @@ async def test_ops_upload_endpoints_reject_path_traversal_filenames(_app_with_op
             content_type=content_type,
             extra_headers={"X-Ops-Secret": "test-ops-secret"},
         )
-        assert resp.status_code in {400, 422}, f"Expected 400/422 for {path}, got {resp.status_code}: {resp.text}"
+        assert resp.status_code in {400, 422}, (
+            f"Expected 400/422 for {path}, got {resp.status_code}: {resp.text}"
+        )
         assert resp.status_code != 500

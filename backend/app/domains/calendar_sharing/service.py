@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import json
 import logging
 import urllib.error
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode, urljoin
 
 from app.domains.calendar_sharing.repository import CalendarSharingRepository
 from app.domains.calendar_sharing.schemas import (
     PeerFeed,
     PeerFeedCreate,
-    PeerFeedUpdate,
     PeerFeedSyncResult,
+    PeerFeedUpdate,
     ShareToken,
     ShareTokenCreate,
     ShareTokenCreated,
@@ -166,11 +166,18 @@ class CalendarSharingService:
     def _record_feed_failure(self, feed_id: str) -> None:
         now = datetime.now(timezone.utc)
         current = self._feed_backoff.get(feed_id)
-        next_cooldown = 15 * 60 if current is None else min(
-            current[1] * 2,
-            MAX_FEED_BACKOFF_SECONDS,
+        next_cooldown = (
+            15 * 60
+            if current is None
+            else min(
+                current[1] * 2,
+                MAX_FEED_BACKOFF_SECONDS,
+            )
         )
-        self._feed_backoff[feed_id] = (now + timedelta(seconds=next_cooldown), next_cooldown)
+        self._feed_backoff[feed_id] = (
+            now + timedelta(seconds=next_cooldown),
+            next_cooldown,
+        )
 
     def _clear_feed_failure(self, feed_id: str) -> None:
         self._feed_backoff.pop(feed_id, None)

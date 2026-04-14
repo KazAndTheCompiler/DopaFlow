@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 from calendar import monthrange
-from datetime import UTC, datetime, datetime as real_datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from datetime import datetime as real_datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 PRIORITY_MAP = {"!high": 1, "!1": 1, "!med": 2, "!2": 2, "!low": 3, "!3": 3, "!4": 4}
@@ -12,16 +13,45 @@ MAX_LEN = 280
 DEFAULT_HOUR = 9
 DEFAULT_MINUTE = 0
 EVENING_HOUR = 20
-WEEKDAY_NAMES = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+WEEKDAY_NAMES = (
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+)
 MONTH_NAMES = (
-    "january", "february", "march", "april", "may", "june",
-    "july", "august", "september", "october", "november", "december",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
 )
 MONTH_NUMBERS = {name: index + 1 for index, name in enumerate(MONTH_NAMES)}
 TIME_RE = re.compile(r"\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b", flags=re.IGNORECASE)
 PRIORITY_PATTERNS: list[tuple[re.Pattern[str], int]] = [
-    (re.compile(r"\b(?:urgent|asap|right now|critical|must do today)\b", re.IGNORECASE), 1),
-    (re.compile(r"\b(?:when i get a chance|eventually|low priority|no rush)\b", re.IGNORECASE), 3),
+    (
+        re.compile(
+            r"\b(?:urgent|asap|right now|critical|must do today)\b", re.IGNORECASE
+        ),
+        1,
+    ),
+    (
+        re.compile(
+            r"\b(?:when i get a chance|eventually|low priority|no rush)\b",
+            re.IGNORECASE,
+        ),
+        3,
+    ),
     (re.compile(r"\b(?:backlog|maybe|if time|one day|someday)\b", re.IGNORECASE), 4),
 ]
 
@@ -30,7 +60,13 @@ PRIORITY_PATTERNS: list[tuple[re.Pattern[str], int]] = [
 # ---------------------------------------------------------------------------
 RECURRENCE_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Specific weekdays: "every monday", "every tuesday and thursday"
-    (re.compile(r"\bevery\s+((?:(?:and\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*)+)", re.I), "weekly"),
+    (
+        re.compile(
+            r"\bevery\s+((?:(?:and\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*)+)",
+            re.I,
+        ),
+        "weekly",
+    ),
     # "every weekday"
     (re.compile(r"\bevery\s+weekday\b", re.I), "weekday"),
     # "every day" / "daily"
@@ -60,9 +96,18 @@ def _build_rrule(recurrence_type: str, text: str) -> str | None:
         return "FREQ=DAILY;BYHOUR=20;BYMINUTE=0"
     if recurrence_type == "weekly":
         # Extract specific weekdays
-        day_map = {"monday": "MO", "tuesday": "TU", "wednesday": "WE",
-                    "thursday": "TH", "friday": "FR", "saturday": "SA", "sunday": "SU"}
-        days = re.findall(r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text, re.I)
+        day_map = {
+            "monday": "MO",
+            "tuesday": "TU",
+            "wednesday": "WE",
+            "thursday": "TH",
+            "friday": "FR",
+            "saturday": "SA",
+            "sunday": "SU",
+        }
+        days = re.findall(
+            r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)", text, re.I
+        )
         if days:
             byday = ",".join(day_map[d.lower()] for d in days)
             return f"FREQ=WEEKLY;BYDAY={byday}"
@@ -105,7 +150,9 @@ def _parse_recurrence(text: str) -> tuple[str | None, list[str]]:
 
 
 def _parse_time_expr(text: str) -> tuple[int, int] | None:
-    if match := re.search(r"\b(\d{1,2}):(\d{2})\s*(am|pm)\b", text, flags=re.IGNORECASE):
+    if match := re.search(
+        r"\b(\d{1,2}):(\d{2})\s*(am|pm)\b", text, flags=re.IGNORECASE
+    ):
         hour = int(match.group(1))
         minute = int(match.group(2))
         ampm = match.group(3).lower()
@@ -127,7 +174,11 @@ def _parse_time_expr(text: str) -> tuple[int, int] | None:
     return None
 
 
-def _apply_time(base: datetime, explicit_time: tuple[int, int] | None, default_time: tuple[int, int] = (DEFAULT_HOUR, DEFAULT_MINUTE)) -> datetime:
+def _apply_time(
+    base: datetime,
+    explicit_time: tuple[int, int] | None,
+    default_time: tuple[int, int] = (DEFAULT_HOUR, DEFAULT_MINUTE),
+) -> datetime:
     hour, minute = explicit_time or default_time
     return base.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
@@ -143,7 +194,9 @@ def _resolve_this_weekday(now: datetime, weekday_name: str) -> datetime:
     return (now - timedelta(days=now.weekday())) + timedelta(days=target)
 
 
-def _parse_ordinal_day(day_text: str, now: datetime, explicit_time: tuple[int, int] | None) -> datetime | None:
+def _parse_ordinal_day(
+    day_text: str, now: datetime, explicit_time: tuple[int, int] | None
+) -> datetime | None:
     day = int(re.sub(r"(st|nd|rd|th)$", "", day_text, flags=re.IGNORECASE))
     year = now.year
     month = now.month
@@ -162,8 +215,14 @@ def _parse_ordinal_day(day_text: str, now: datetime, explicit_time: tuple[int, i
             return None
 
 
-def _parse_absolute_month_date(date_text: str, now: datetime, explicit_time: tuple[int, int] | None) -> datetime | None:
-    match = re.fullmatch(r"\s*([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,\s*(\d{4}))?\s*", date_text, flags=re.IGNORECASE)
+def _parse_absolute_month_date(
+    date_text: str, now: datetime, explicit_time: tuple[int, int] | None
+) -> datetime | None:
+    match = re.fullmatch(
+        r"\s*([a-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,\s*(\d{4}))?\s*",
+        date_text,
+        flags=re.IGNORECASE,
+    )
     if not match:
         return None
     month = MONTH_NUMBERS.get(match.group(1).lower())
@@ -215,46 +274,93 @@ def _parse_due(text: str, now: datetime) -> tuple[list[datetime], list[str], lis
         candidates.append(value)
         strip_patterns.append(pattern)
 
-    for keyword, delta in (("tomorrow", timedelta(days=1)), ("tmrw", timedelta(days=1)), ("next week", timedelta(days=7))):
+    for keyword, delta in (
+        ("tomorrow", timedelta(days=1)),
+        ("tmrw", timedelta(days=1)),
+        ("next week", timedelta(days=7)),
+    ):
         if keyword in low:
-            add_candidate(_apply_time(now + delta, explicit_time, (0, 0)), re.escape(keyword))
+            add_candidate(
+                _apply_time(now + delta, explicit_time, (0, 0)), re.escape(keyword)
+            )
             if keyword == "next week":
-                ambiguity_hints.append("due date unclear: 'next week' defaulted to next week's local midnight")
+                ambiguity_hints.append(
+                    "due date unclear: 'next week' defaulted to next week's local midnight"
+                )
     if re.search(r"\b(?:tonight|this evening)\b", low):
         base = now if now.hour < 18 else now + timedelta(days=1)
-        add_candidate(_apply_time(base, explicit_time, (EVENING_HOUR, 0)), r"\b(?:tonight|this evening)\b")
+        add_candidate(
+            _apply_time(base, explicit_time, (EVENING_HOUR, 0)),
+            r"\b(?:tonight|this evening)\b",
+        )
     if match := re.search(r"\bin\s+(\d+)\s+days?\b", low):
-        add_candidate(_apply_time(now + timedelta(days=int(match.group(1))), explicit_time), r"\bin\s+\d+\s+days?\b")
+        add_candidate(
+            _apply_time(now + timedelta(days=int(match.group(1))), explicit_time),
+            r"\bin\s+\d+\s+days?\b",
+        )
     if match := re.search(r"\bin\s+(\d+)\s*h(?:ours?)?\b", low):
-        add_candidate(now + timedelta(hours=int(match.group(1))), r"\bin\s+\d+\s*h(?:ours?)?\b")
+        add_candidate(
+            now + timedelta(hours=int(match.group(1))), r"\bin\s+\d+\s*h(?:ours?)?\b"
+        )
     if match := re.search(r"\bin\s+(\d+)\s*min(?:utes?)?\b", low):
-        add_candidate(now + timedelta(minutes=int(match.group(1))), r"\bin\s+\d+\s*min(?:utes?)?\b")
+        add_candidate(
+            now + timedelta(minutes=int(match.group(1))),
+            r"\bin\s+\d+\s*min(?:utes?)?\b",
+        )
     # "every monday" with a due date = first occurrence of that weekday
-    if re.search(r"\bevery\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low):
-        first_day = re.search(r"\bevery\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low)
+    if re.search(
+        r"\bevery\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low
+    ):
+        first_day = re.search(
+            r"\bevery\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+            low,
+        )
         if first_day:
             resolved = _resolve_next_weekday(now, first_day.group(1))
-            add_candidate(_apply_time(resolved, explicit_time), r"")  # Don't strip — handled by recurrence
-    for match in re.finditer(r"\b(?:(this|next|due|by)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b", low):
+            add_candidate(
+                _apply_time(resolved, explicit_time), r""
+            )  # Don't strip — handled by recurrence
+    for match in re.finditer(
+        r"\b(?:(this|next|due|by)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        low,
+    ):
         # Skip if it's part of "every <weekday> [and <weekday>]*" — handled by recurrence
-        prefix_text = low[:match.start()]
+        prefix_text = low[: match.start()]
         if prefix_text.rstrip().endswith("every"):
             continue
         if prefix_text.rstrip().endswith("and"):
             continue
         qualifier = (match.group(1) or "").strip()
         weekday_name = match.group(2)
-        resolved = _resolve_this_weekday(now, weekday_name) if qualifier == "this" else _resolve_next_weekday(now, weekday_name)
-        add_candidate(_apply_time(resolved, explicit_time, (0, 0)), re.escape(match.group(0)))
+        resolved = (
+            _resolve_this_weekday(now, weekday_name)
+            if qualifier == "this"
+            else _resolve_next_weekday(now, weekday_name)
+        )
+        add_candidate(
+            _apply_time(resolved, explicit_time, (0, 0)), re.escape(match.group(0))
+        )
         ambiguity_hints.append(
             f"due date inferred from weekday '{weekday_name}' and defaulted to local midnight"
         )
     for match in re.finditer(r"\b(\d{4}-\d{2}-\d{2})\b", text):
         try:
-            add_candidate(_apply_time(real_datetime.strptime(match.group(1), "%Y-%m-%d").replace(tzinfo=UTC), explicit_time), re.escape(match.group(0)))
+            add_candidate(
+                _apply_time(
+                    real_datetime.strptime(match.group(1), "%Y-%m-%d").replace(
+                        tzinfo=UTC
+                    ),
+                    explicit_time,
+                ),
+                re.escape(match.group(0)),
+            )
         except ValueError:
             pass
-    month_pattern = r"\b(?:" + "|".join(MONTH_NAMES) + r")\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?\b"
+    month_pattern = (
+        r"\b(?:"
+        + "|".join(MONTH_NAMES)
+        + r")\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?\b"
+    )
     for match in re.finditer(month_pattern, low):
         if parsed := _parse_absolute_month_date(match.group(0), now, explicit_time):
             add_candidate(parsed, re.escape(match.group(0)))
@@ -275,8 +381,12 @@ def _clean_title(text: str, strip_patterns: list[str]) -> str:
     title = re.sub(r"\s+", " ", title).strip(" ,;:-")
     edge_fillers = r"(?:by|on|at|due|before|after|for|the|this|next|every|of)"
     while True:
-        next_title = re.sub(rf"^(?:{edge_fillers})\b\s*", "", title, flags=re.IGNORECASE)
-        next_title = re.sub(rf"\s*\b(?:{edge_fillers})$", "", next_title, flags=re.IGNORECASE)
+        next_title = re.sub(
+            rf"^(?:{edge_fillers})\b\s*", "", title, flags=re.IGNORECASE
+        )
+        next_title = re.sub(
+            rf"\s*\b(?:{edge_fillers})$", "", next_title, flags=re.IGNORECASE
+        )
         next_title = re.sub(r"\s+", " ", next_title).strip(" ,;:-")
         if next_title == title:
             return next_title
@@ -295,7 +405,9 @@ def parse(text: str, user_tz: str = "UTC") -> dict[str, object]:
     now = datetime.now(tz)
     due_candidates, due_strip_patterns, ambiguity_hints = _parse_due(text, now)
     due = due_candidates[0].isoformat() if due_candidates else None
-    title = _clean_title(text, priority_strip_patterns + due_strip_patterns + recurrence_strip_patterns)
+    title = _clean_title(
+        text, priority_strip_patterns + due_strip_patterns + recurrence_strip_patterns
+    )
     return {
         "title": title or text,
         "priority": int(priority),

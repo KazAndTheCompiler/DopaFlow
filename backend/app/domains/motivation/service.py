@@ -22,4 +22,8 @@ class MotivationService:
             subprocess.Popen(["say", quote])
             return {"triggered": True, "quote": quote}
         except FileNotFoundError:
-            return {"triggered": False, "quote": quote, "error": "TTS command not available"}
+            return {
+                "triggered": False,
+                "quote": quote,
+                "error": "TTS command not available",
+            }

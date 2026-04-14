@@ -1,6 +1,5 @@
 """Tests for the bounded section manager."""
 
-import pytest
 from app.domains.vault_bridge.section_manager import (
     extract_section,
     inject_section,

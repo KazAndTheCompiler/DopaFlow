@@ -5,7 +5,6 @@ import sqlite3
 import tempfile
 import zipfile
 from datetime import date, timedelta
-from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -165,7 +164,7 @@ def test_review_search_and_session_routes_return_typed_contracts(client) -> None
     assert set(deck) >= {"id", "name", "source_type"}
 
     card_response = client.post(
-        "/api/v2/review/decks/{deck_id}/cards".format(deck_id=deck_id),
+        f"/api/v2/review/decks/{deck_id}/cards",
         json={
             "front": "Typed front",
             "back": "Typed back",
@@ -191,7 +190,7 @@ def test_review_search_and_session_routes_return_typed_contracts(client) -> None
     assert session_payload["card"]["id"] == card_id
 
     answer_response = client.post(
-        "/api/v2/review/session/{deck_id}/answer".format(deck_id=deck_id),
+        f"/api/v2/review/session/{deck_id}/answer",
         params={"card_id": card_id, "rating": "good"},
     )
     assert answer_response.status_code == 200
@@ -247,7 +246,9 @@ def test_review_bulk_and_export_preview_routes_return_typed_contracts(client) ->
 
 
 def test_due_cards_route_supports_limit_and_offset(client) -> None:
-    deck_response = client.post("/api/v2/review/decks", json={"name": "Due Pagination Deck"})
+    deck_response = client.post(
+        "/api/v2/review/decks", json={"name": "Due Pagination Deck"}
+    )
     assert deck_response.status_code == 200
     deck_id = deck_response.json()["id"]
 

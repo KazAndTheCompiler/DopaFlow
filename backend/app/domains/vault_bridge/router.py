@@ -20,7 +20,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.config import Settings, get_settings_dependency
-from app.middleware.auth_scopes import require_scope
 from app.domains.vault_bridge.schemas import (
     TaskImportConfirmRequest,
     TaskImportPreview,
@@ -34,6 +33,7 @@ from app.domains.vault_bridge.schemas import (
     VaultStatus,
 )
 from app.domains.vault_bridge.sync_service import VaultSyncService
+from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(tags=["vault"])
 
@@ -76,7 +76,7 @@ async def update_vault_config(
     """Update vault configuration. Validates vault_path if provided."""
     updates = payload.model_dump(exclude_unset=True)
 
-    if "vault_path" in updates and updates["vault_path"]:
+    if updates.get("vault_path"):
         if not svc.validate_vault_path(updates["vault_path"]):
             raise HTTPException(
                 status_code=422,

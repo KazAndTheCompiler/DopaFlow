@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.core.database import get_db, tx
@@ -55,7 +55,9 @@ def list_goals(db_path: str) -> list[dict]:
 def create_goal(db_path: str, payload: dict) -> dict:
     goal_id = str(uuid4())
     now = _now()
-    milestone_labels = [label.strip() for label in payload.get("milestone_labels", []) if label.strip()]
+    milestone_labels = [
+        label.strip() for label in payload.get("milestone_labels", []) if label.strip()
+    ]
     with tx(db_path) as conn:
         conn.execute(
             """
@@ -112,7 +114,9 @@ def add_milestone(db_path: str, goal_id: str, label: str) -> dict | None:
             """,
             (str(uuid4()), goal_id, label.strip(), position_row["next_position"], now),
         )
-        conn.execute("UPDATE goals SET done = 0, updated_at = ? WHERE id = ?", (now, goal_id))
+        conn.execute(
+            "UPDATE goals SET done = 0, updated_at = ? WHERE id = ?", (now, goal_id)
+        )
         updated = conn.execute(
             "SELECT id, title, description, horizon, done, created_at, updated_at FROM goals WHERE id = ?",
             (goal_id,),
@@ -149,7 +153,10 @@ def complete_milestone(db_path: str, goal_id: str, milestone_id: str) -> dict | 
             """,
             (goal_id,),
         ).fetchone()
-        goal_done = bool(counts["total_count"]) and counts["done_count"] == counts["total_count"]
+        goal_done = (
+            bool(counts["total_count"])
+            and counts["done_count"] == counts["total_count"]
+        )
         conn.execute(
             "UPDATE goals SET done = ?, updated_at = ? WHERE id = ?",
             (1 if goal_done else 0, now, goal_id),

@@ -36,18 +36,34 @@ from app.middleware.auth_scopes import require_scope
 router = APIRouter(tags=["integrations"])
 
 
-async def _repo(settings: Settings = Depends(get_settings_dependency)) -> IntegrationsRepository:
+async def _repo(
+    settings: Settings = Depends(get_settings_dependency),
+) -> IntegrationsRepository:
     return IntegrationsRepository(settings.db_path, settings=settings)
 
 
-@router.post("/gmail/connect", response_model=GmailConnectResult, dependencies=[Depends(require_scope("write:integrations"))])
-async def connect_gmail(payload: GmailConnectRequest, repo: IntegrationsRepository = Depends(_repo)) -> GmailConnectResult:
+@router.post(
+    "/gmail/connect",
+    response_model=GmailConnectResult,
+    dependencies=[Depends(require_scope("write:integrations"))],
+)
+async def connect_gmail(
+    payload: GmailConnectRequest, repo: IntegrationsRepository = Depends(_repo)
+) -> GmailConnectResult:
     if payload.code:
         settings = repo.settings
-        if settings is None or not settings.google_client_id or not settings.google_client_secret:
-            return GmailConnectResult(status="error", message="Google credentials not configured")
+        if (
+            settings is None
+            or not settings.google_client_id
+            or not settings.google_client_secret
+        ):
+            return GmailConnectResult(
+                status="error", message="Google credentials not configured"
+            )
         if not payload.redirect_uri:
-            return GmailConnectResult(status="error", message="Redirect URI is required")
+            return GmailConnectResult(
+                status="error", message="Redirect URI is required"
+            )
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 "https://oauth2.googleapis.com/token",
@@ -63,26 +79,45 @@ async def connect_gmail(payload: GmailConnectRequest, repo: IntegrationsReposito
             return GmailConnectResult(status="error", message="Token exchange failed")
         data = response.json()
         expires_at = (
-            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
+            datetime.datetime.now(datetime.timezone.utc)
+            + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
         ).isoformat()
-        repo.store_token("gmail", data["access_token"], data.get("refresh_token"), expires_at, data.get("scope", ""))
+        repo.store_token(
+            "gmail",
+            data["access_token"],
+            data.get("refresh_token"),
+            expires_at,
+            data.get("scope", ""),
+        )
         return GmailConnectResult(status="connected")
     return repo.connect_gmail(payload)
 
 
-@router.post("/gmail/import", response_model=GmailImportResult, dependencies=[Depends(require_scope("write:integrations"))])
-async def import_gmail_tasks(repo: IntegrationsRepository = Depends(_repo)) -> GmailImportResult:
+@router.post(
+    "/gmail/import",
+    response_model=GmailImportResult,
+    dependencies=[Depends(require_scope("write:integrations"))],
+)
+async def import_gmail_tasks(
+    repo: IntegrationsRepository = Depends(_repo),
+) -> GmailImportResult:
     return repo.import_gmail_tasks_real()
 
 
-@router.get("/gmail/callback", response_model=GmailConnectResult, dependencies=[Depends(require_scope("write:integrations"))])
+@router.get(
+    "/gmail/callback",
+    response_model=GmailConnectResult,
+    dependencies=[Depends(require_scope("write:integrations"))],
+)
 async def gmail_oauth_callback(
     code: str,
     settings: Settings = Depends(get_settings_dependency),
     repo: IntegrationsRepository = Depends(_repo),
 ) -> GmailConnectResult:
     if not settings.google_client_id or not settings.google_client_secret:
-        return GmailConnectResult(status="error", message="Google credentials not configured")
+        return GmailConnectResult(
+            status="error", message="Google credentials not configured"
+        )
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://oauth2.googleapis.com/token",
@@ -98,13 +133,24 @@ async def gmail_oauth_callback(
         return GmailConnectResult(status="error", message="Token exchange failed")
     data = response.json()
     expires_at = (
-        datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
+        datetime.datetime.now(datetime.timezone.utc)
+        + datetime.timedelta(seconds=int(data.get("expires_in", 3600)))
     ).isoformat()
-    repo.store_token("gmail", data["access_token"], data.get("refresh_token"), expires_at, data.get("scope", ""))
+    repo.store_token(
+        "gmail",
+        data["access_token"],
+        data.get("refresh_token"),
+        expires_at,
+        data.get("scope", ""),
+    )
     return GmailConnectResult(status="connected")
 
 
-@router.post("/github/import-issues", response_model=GitHubImportIssuesResult, dependencies=[Depends(require_scope("write:integrations"))])
+@router.post(
+    "/github/import-issues",
+    response_model=GitHubImportIssuesResult,
+    dependencies=[Depends(require_scope("write:integrations"))],
+)
 async def import_github_issues(
     payload: GitHubImportIssuesRequest,
     settings: Settings = Depends(get_settings_dependency),
@@ -117,7 +163,10 @@ async def import_github_issues(
     async with httpx.AsyncClient() as client:
         resp = await client.get(
             f"https://api.github.com/repos/{repo}/issues",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+            },
             params={"state": state, "per_page": 100},
             timeout=15,
         )
@@ -126,9 +175,12 @@ async def import_github_issues(
     if resp.status_code == 404:
         raise HTTPException(status_code=404, detail="Repository not found")
     if not resp.is_success:
-        raise HTTPException(status_code=502, detail=f"GitHub API error: {resp.status_code}")
+        raise HTTPException(
+            status_code=502, detail=f"GitHub API error: {resp.status_code}"
+        )
 
     from app.domains.tasks import repository as tasks_repo
+
     issues = resp.json()
     created = 0
     skipped = 0
@@ -141,34 +193,61 @@ async def import_github_issues(
         if any(t.get("source_external_id") == external_id for t in existing):
             skipped += 1
             continue
-        tasks_repo.create_task(settings.db_path, {
-            "title": issue["title"],
-            "description": issue.get("body") or "",
-            "source_type": "github",
-            "source_external_id": external_id,
-            "tags": [label["name"] for label in issue.get("labels", [])],
-            "priority": 3,
-        })
+        tasks_repo.create_task(
+            settings.db_path,
+            {
+                "title": issue["title"],
+                "description": issue.get("body") or "",
+                "source_type": "github",
+                "source_external_id": external_id,
+                "tags": [label["name"] for label in issue.get("labels", [])],
+                "priority": 3,
+            },
+        )
         created += 1
 
     return GitHubImportIssuesResult(created=created, skipped=skipped, repo=repo)
 
 
-@router.get("/status", response_model=IntegrationsStatus, dependencies=[Depends(require_scope("read:integrations"))])
-async def integrations_status(repo: IntegrationsRepository = Depends(_repo)) -> IntegrationsStatus:
+@router.get(
+    "/status",
+    response_model=IntegrationsStatus,
+    dependencies=[Depends(require_scope("read:integrations"))],
+)
+async def integrations_status(
+    repo: IntegrationsRepository = Depends(_repo),
+) -> IntegrationsStatus:
     return repo.get_status()
 
 
-@router.post("/webhooks/outbox", response_model=WebhookEnqueueResult, dependencies=[Depends(require_scope("write:integrations"))])
-async def enqueue_webhook(payload: WebhookDispatch, repo: IntegrationsRepository = Depends(_repo)) -> WebhookEnqueueResult:
+@router.post(
+    "/webhooks/outbox",
+    response_model=WebhookEnqueueResult,
+    dependencies=[Depends(require_scope("write:integrations"))],
+)
+async def enqueue_webhook(
+    payload: WebhookDispatch, repo: IntegrationsRepository = Depends(_repo)
+) -> WebhookEnqueueResult:
     return repo.enqueue_webhook(payload)
 
 
-@router.get("/outbox/metrics", response_model=OutboxMetrics, dependencies=[Depends(require_scope("read:integrations"))])
-async def outbox_metrics(settings: Settings = Depends(get_settings_dependency)) -> OutboxMetrics:
+@router.get(
+    "/outbox/metrics",
+    response_model=OutboxMetrics,
+    dependencies=[Depends(require_scope("read:integrations"))],
+)
+async def outbox_metrics(
+    settings: Settings = Depends(get_settings_dependency),
+) -> OutboxMetrics:
     return snapshot_metrics(settings)
 
 
-@router.post("/outbox/dispatch", response_model=OutboxDispatchResult, dependencies=[Depends(require_scope("write:integrations"))])
-async def outbox_dispatch(settings: Settings = Depends(get_settings_dependency)) -> OutboxDispatchResult:
+@router.post(
+    "/outbox/dispatch",
+    response_model=OutboxDispatchResult,
+    dependencies=[Depends(require_scope("write:integrations"))],
+)
+async def outbox_dispatch(
+    settings: Settings = Depends(get_settings_dependency),
+) -> OutboxDispatchResult:
     return dispatch_once(settings)

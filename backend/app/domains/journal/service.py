@@ -7,7 +7,7 @@ import os
 import re
 import tempfile
 import zipfile
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.core.config import default_backup_dir
@@ -68,6 +68,8 @@ _PROMPT_BANK = [
     "What deserves follow-up?",
     "What felt true today?",
 ]
+
+
 def extract_wikilinks(body: str) -> list[str]:
     return WIKILINK_PATTERN.findall(body)
 
@@ -102,13 +104,19 @@ def _as_zip(entries: list[JournalEntryRead]) -> bytes:
 class JournalService:
     """Coordinate journaling, wikilinks, tagging, analytics, and backup."""
 
-    def __init__(self, repository: JournalRepository, backup_dir: str | Path | None = None) -> None:
+    def __init__(
+        self, repository: JournalRepository, backup_dir: str | Path | None = None
+    ) -> None:
         self.repository = repository
-        self.backup_dir = Path(backup_dir) if backup_dir is not None else Path(default_backup_dir())
+        self.backup_dir = (
+            Path(backup_dir) if backup_dir is not None else Path(default_backup_dir())
+        )
 
     # ── entry CRUD ────────────────────────────────────────────────────────────
 
-    def list_entries(self, tag: str | None = None, search: str | None = None) -> list[JournalEntryRead]:
+    def list_entries(
+        self, tag: str | None = None, search: str | None = None
+    ) -> list[JournalEntryRead]:
         return self.repository.list_entries(tag=tag, search=search)
 
     def get_entry(self, identifier: str) -> JournalEntryRead | None:
@@ -122,7 +130,9 @@ class JournalService:
         award_gamification("journal_entry", entry.id, logger=logger)
         return entry
 
-    def patch_entry(self, entry_id: str, payload: JournalEntryPatch) -> JournalEntryRead | None:
+    def patch_entry(
+        self, entry_id: str, payload: JournalEntryPatch
+    ) -> JournalEntryRead | None:
         """Partially update an entry. Raises ValueError('locked') if locked."""
         patch = payload.model_dump(exclude_unset=True)
         entry = self.repository.update_entry(entry_id, patch)
@@ -147,7 +157,9 @@ class JournalService:
             return []
         return self.repository.list_versions(entry.date)
 
-    def get_version(self, identifier: str, version_number: int) -> JournalVersionDetail | None:
+    def get_version(
+        self, identifier: str, version_number: int
+    ) -> JournalVersionDetail | None:
         entry = self.repository.get_entry(identifier)
         if not entry:
             return None
@@ -176,7 +188,9 @@ class JournalService:
     def get_auto_tag_stats(self) -> dict[str, int]:
         return self.repository.get_auto_tag_stats()
 
-    def search_rich(self, q: str = "", mood: str | None = None, limit: int = 50) -> list[JournalSearchResult]:
+    def search_rich(
+        self, q: str = "", mood: str | None = None, limit: int = 50
+    ) -> list[JournalSearchResult]:
         return self.repository.search_rich(q=q, mood=mood, limit=limit)
 
     # ── prompts ───────────────────────────────────────────────────────────────
@@ -189,7 +203,9 @@ class JournalService:
         rough_set = {"rough", "😞", "😓", "😢", "😩"}
         emojis = [(e.emoji or "").strip() for e in recent]
         if len(emojis) >= 2 and sum(1 for e in emojis[:3] if e in rough_set) >= 2:
-            prompts.append("What would self-compassion sound like if you wrote to yourself as a friend?")
+            prompts.append(
+                "What would self-compassion sound like if you wrote to yourself as a friend?"
+            )
 
         recent_tags = {t.lower() for e in recent for t in e.tags}
         if "work" in recent_tags or "stress" in recent_tags:
@@ -198,10 +214,14 @@ class JournalService:
         try:
             parsed = datetime.strptime(for_date, "%Y-%m-%d").date()
             if parsed.weekday() == 0:
-                prompts.append("What does a realistic, humane week-ahead plan look like for you?")
+                prompts.append(
+                    "What does a realistic, humane week-ahead plan look like for you?"
+                )
             yesterday = (parsed - timedelta(days=1)).isoformat()
             if all(e.date != yesterday for e in recent):
-                prompts.append("You missed yesterday. What happened in the gap, and what matters from it now?")
+                prompts.append(
+                    "You missed yesterday. What happened in the gap, and what matters from it now?"
+                )
         except ValueError:
             pass
 
@@ -215,13 +235,25 @@ class JournalService:
 
     # ── export ────────────────────────────────────────────────────────────────
 
-    def export_range(self, from_date: str | None, to_date: str | None, fmt: str = "markdown") -> object:
+    def export_range(
+        self, from_date: str | None, to_date: str | None, fmt: str = "markdown"
+    ) -> object:
         """Return entries as markdown text, JSON list, or zip bytes."""
         today = datetime.now(UTC).date()
         end = today if not to_date else datetime.strptime(to_date, "%Y-%m-%d").date()
-        start = (end - timedelta(days=29)) if not from_date else datetime.strptime(from_date, "%Y-%m-%d").date()
+        start = (
+            (end - timedelta(days=29))
+            if not from_date
+            else datetime.strptime(from_date, "%Y-%m-%d").date()
+        )
         all_entries = self.repository.list_entries()
-        entries = [e for e in all_entries if e.date and datetime.strptime(e.date, "%Y-%m-%d").date() >= start and datetime.strptime(e.date, "%Y-%m-%d").date() <= end]
+        entries = [
+            e
+            for e in all_entries
+            if e.date
+            and datetime.strptime(e.date, "%Y-%m-%d").date() >= start
+            and datetime.strptime(e.date, "%Y-%m-%d").date() <= end
+        ]
         entries.sort(key=lambda e: e.date)
         if fmt == "json":
             return [e.model_dump() for e in entries]
@@ -233,7 +265,13 @@ class JournalService:
         start = datetime.strptime(from_date, "%Y-%m-%d").date()
         end = datetime.strptime(to_date, "%Y-%m-%d").date()
         all_entries = self.repository.list_entries()
-        entries = [e for e in all_entries if e.date and datetime.strptime(e.date, "%Y-%m-%d").date() >= start and datetime.strptime(e.date, "%Y-%m-%d").date() <= end]
+        entries = [
+            e
+            for e in all_entries
+            if e.date
+            and datetime.strptime(e.date, "%Y-%m-%d").date() >= start
+            and datetime.strptime(e.date, "%Y-%m-%d").date() <= end
+        ]
         return _as_zip(entries)
 
     # ── templates ─────────────────────────────────────────────────────────────
@@ -247,7 +285,9 @@ class JournalService:
     def create_template(self, payload: JournalTemplateCreate) -> JournalTemplate:
         return self.repository.create_template(payload.name, payload.body, payload.tags)
 
-    def update_template(self, template_id: str, payload: JournalTemplatePatch) -> JournalTemplate | None:
+    def update_template(
+        self, template_id: str, payload: JournalTemplatePatch
+    ) -> JournalTemplate | None:
         patch = payload.model_dump(exclude_unset=True)
         return self.repository.update_template(template_id, patch)
 
@@ -268,9 +308,14 @@ class JournalService:
         target_date = date or datetime.now(UTC).date().isoformat()
         entry = self.repository.get_entry(target_date)
         if not entry:
-            return JournalBackupTriggerResponse(message=f"No entry for {target_date} — backup skipped", backed_up_date=None)
+            return JournalBackupTriggerResponse(
+                message=f"No entry for {target_date} — backup skipped",
+                backed_up_date=None,
+            )
         if not self._database_integrity_ok():
-            logger.warning("Journal backup skipped because database integrity_check failed")
+            logger.warning(
+                "Journal backup skipped because database integrity_check failed"
+            )
             return JournalBackupTriggerResponse(
                 message="Database integrity check failed — backup skipped",
                 backed_up_date=None,
@@ -280,7 +325,9 @@ class JournalService:
         backup_file = self.backup_dir / f"{target_date}.md"
         front_matter = f"---\ndate: {target_date}\ntags: {', '.join(entry.tags)}\nversion: {entry.version}\n---\n\n"
         backup_file.write_text(front_matter + entry.markdown_body, encoding="utf-8")
-        return JournalBackupTriggerResponse(message=f"Backed up {target_date}", backed_up_date=target_date)
+        return JournalBackupTriggerResponse(
+            message=f"Backed up {target_date}", backed_up_date=target_date
+        )
 
     def export_today(self) -> dict:
         today = datetime.now(UTC).date().isoformat()

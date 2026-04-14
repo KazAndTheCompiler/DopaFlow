@@ -28,9 +28,13 @@ class CommandRepository:
             )
             """
         )
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(command_logs)").fetchall()}
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(command_logs)").fetchall()
+        }
         if "source" not in columns:
-            conn.execute("ALTER TABLE command_logs ADD COLUMN source TEXT DEFAULT 'text'")
+            conn.execute(
+                "ALTER TABLE command_logs ADD COLUMN source TEXT DEFAULT 'text'"
+            )
         if "result_json" not in columns:
             conn.execute("ALTER TABLE command_logs ADD COLUMN result_json TEXT")
         if "undone_at" not in columns:
@@ -58,9 +62,24 @@ class CommandRepository:
             CommandRepository._ensure_table(conn)
             conn.execute(
                 "INSERT INTO command_logs(id, text, intent, status, source, error_json, result_json, executed_at) VALUES(?,?,?,?,?,?,?,?)",
-                (cmd_id, text, intent, status, source, error, result_serialised, datetime.now(timezone.utc).isoformat()),
+                (
+                    cmd_id,
+                    text,
+                    intent,
+                    status,
+                    source,
+                    error,
+                    result_serialised,
+                    datetime.now(timezone.utc).isoformat(),
+                ),
             )
-        return {"id": cmd_id, "text": text, "intent": intent, "status": status, "source": source}
+        return {
+            "id": cmd_id,
+            "text": text,
+            "intent": intent,
+            "status": status,
+            "source": source,
+        }
 
     @staticmethod
     def history(db_path: str, limit: int = 100) -> list[dict[str, object]]:

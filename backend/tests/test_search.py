@@ -5,7 +5,9 @@ from app.core.database import tx
 
 def test_search_returns_task_and_journal_matches(client, db_path) -> None:
     with tx(str(db_path)) as conn:
-        conn.execute("INSERT INTO tasks (id, title, description) VALUES ('search_task', 'Searchable task', 'Needle text')")
+        conn.execute(
+            "INSERT INTO tasks (id, title, description) VALUES ('search_task', 'Searchable task', 'Needle text')"
+        )
         conn.execute(
             "INSERT INTO journal_entries (id, markdown_body, emoji, entry_date, tags_json) VALUES ('search_entry', 'Needle journal body', NULL, '2026-03-26', '[]')"
         )
@@ -29,7 +31,9 @@ def test_search_empty_query_is_rejected(client) -> None:
 
 def test_search_type_filter_limits_results(client, db_path) -> None:
     with tx(str(db_path)) as conn:
-        conn.execute("INSERT INTO tasks (id, title) VALUES ('search_task_only', 'Needle task only')")
+        conn.execute(
+            "INSERT INTO tasks (id, title) VALUES ('search_task_only', 'Needle task only')"
+        )
         conn.execute(
             "INSERT INTO journal_entries (id, markdown_body, emoji, entry_date, tags_json) VALUES ('search_journal_only', 'Needle journal only', NULL, '2026-03-26', '[]')"
         )

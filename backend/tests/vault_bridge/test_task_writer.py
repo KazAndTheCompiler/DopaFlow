@@ -1,16 +1,13 @@
 """Tests for the task writer and task reader round-trip."""
 
-import pytest
-from app.domains.tasks.schemas import Task
-from app.domains.vault_bridge.task_writer import (
-    render_task_line,
-    render_task_collection,
-    render_tasks_section,
-)
-from app.domains.vault_bridge.task_reader import parse_task_line, parse_task_collection
 from pathlib import Path
-import tempfile
-import os
+
+from app.domains.tasks.schemas import Task
+from app.domains.vault_bridge.task_reader import parse_task_collection, parse_task_line
+from app.domains.vault_bridge.task_writer import (
+    render_task_collection,
+    render_task_line,
+)
 
 _NOW = "2026-01-01T00:00:00+00:00"
 

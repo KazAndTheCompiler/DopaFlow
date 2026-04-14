@@ -5,13 +5,19 @@ from __future__ import annotations
 import subprocess
 
 from app.domains.alarms.repository import AlarmsRepository
-from app.domains.alarms.schemas import AlarmCreate, AlarmRead, AlarmSchedulerStatus, AlarmTriggerResponse
+from app.domains.alarms.schemas import (
+    AlarmCreate,
+    AlarmRead,
+    AlarmSchedulerStatus,
+    AlarmTriggerResponse,
+)
 
 
 def _speak(text: str) -> None:
     """Fire OS TTS in a background subprocess (non-blocking). Silenced by env flag."""
 
     import os
+
     if os.environ.get("ZOESTM_DISABLE_LOCAL_AUDIO"):
         return
     for cmd in (["spd-say", text], ["say", text], ["espeak", text]):
@@ -63,12 +69,16 @@ class AlarmsService:
 
         alarm = self.repository.get_alarm(identifier)
         if alarm is None:
-            return AlarmTriggerResponse(alarm_id=identifier, fired=False, message="Alarm not found")
+            return AlarmTriggerResponse(
+                alarm_id=identifier, fired=False, message="Alarm not found"
+            )
 
         tts_text = alarm.tts_text or alarm.title
         _speak(tts_text)
         self.repository.touch_alarm(identifier)
-        return AlarmTriggerResponse(alarm_id=identifier, fired=True, message=f"Fired: {tts_text}")
+        return AlarmTriggerResponse(
+            alarm_id=identifier, fired=True, message=f"Fired: {tts_text}"
+        )
 
     def get_scheduler_status(self) -> AlarmSchedulerStatus:
         """Return the background scheduler heartbeat."""

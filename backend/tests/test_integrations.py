@@ -8,7 +8,9 @@ def test_integrations_status_reports_gmail_and_webhook_state(client) -> None:
     body = response.json()
     assert body["gmail_status"] == "not_connected"
     assert body["gmail_connected"] is False
-    assert set(body).issuperset({"webhooks_enabled", "webhook_pending", "webhook_retry_wait", "webhook_sent"})
+    assert set(body).issuperset(
+        {"webhooks_enabled", "webhook_pending", "webhook_retry_wait", "webhook_sent"}
+    )
 
 
 def test_outbox_metrics_endpoint_returns_counts(client) -> None:
@@ -28,7 +30,10 @@ def test_outbox_dispatch_endpoint_returns_result(client) -> None:
 
 
 def test_gmail_connect_returns_typed_status_payload(client) -> None:
-    response = client.post("/api/v2/integrations/gmail/connect", json={"redirect_uri": "http://localhost/callback"})
+    response = client.post(
+        "/api/v2/integrations/gmail/connect",
+        json={"redirect_uri": "http://localhost/callback"},
+    )
 
     assert response.status_code == 200
     body = response.json()

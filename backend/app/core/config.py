@@ -26,6 +26,7 @@ def default_backup_dir() -> str:
 DEFAULT_DB = default_db_path()
 DEFAULT_BACKUP = default_backup_dir()
 
+
 class Settings(BaseSettings):
     """Central runtime settings for backend, desktop, and integrations."""
 

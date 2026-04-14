@@ -8,7 +8,11 @@ AUTH_HEADERS = {"Authorization": "Bearer dev-local-key"}
 
 
 def test_gamification_award_returns_level_payload(client) -> None:
-    response = client.post("/api/v2/gamification/award", json={"source": "task_complete", "source_id": "tsk_1"}, headers=AUTH_HEADERS)
+    response = client.post(
+        "/api/v2/gamification/award",
+        json={"source": "task_complete", "source_id": "tsk_1"},
+        headers=AUTH_HEADERS,
+    )
 
     assert response.status_code == 200
     assert response.json()["total_xp"] == 10
@@ -66,7 +70,10 @@ def test_gamification_award_is_idempotent_per_source_id_per_day(
     assert first.json()["total_xp"] == 10
     assert second.json()["total_xp"] == 10
     assert status.json()["level"]["total_xp"] == 10
-    assert any("Skipping duplicate gamification award" in record.message for record in caplog.records)
+    assert any(
+        "Skipping duplicate gamification award" in record.message
+        for record in caplog.records
+    )
 
 
 def test_gamification_award_counter_tracks_successful_awards_only(client) -> None:
@@ -91,7 +98,12 @@ def test_gamification_award_counter_tracks_successful_awards_only(client) -> Non
 def test_habit_checkins_unlock_streak_three_badge(client) -> None:
     habit = client.post(
         "/api/v2/habits/",
-        json={"name": "Walk", "target_freq": 1, "target_period": "day", "color": "#22c55e"},
+        json={
+            "name": "Walk",
+            "target_freq": 1,
+            "target_period": "day",
+            "color": "#22c55e",
+        },
         headers=AUTH_HEADERS,
     ).json()
     for checkin_date in ("2026-03-24", "2026-03-25", "2026-03-26"):
@@ -148,7 +160,12 @@ def test_gamification_logs_packy_notification_failure_without_failing_award(
 
     habit = client.post(
         "/api/v2/habits/",
-        json={"name": "Stretch", "target_freq": 1, "target_period": "day", "color": "#22c55e"},
+        json={
+            "name": "Stretch",
+            "target_freq": 1,
+            "target_period": "day",
+            "color": "#22c55e",
+        },
         headers=AUTH_HEADERS,
     ).json()
 
@@ -160,4 +177,7 @@ def test_gamification_logs_packy_notification_failure_without_failing_award(
         )
         assert response.status_code == 200
 
-    assert any("Failed to notify Packy about earned badge=streak_3" in record.message for record in caplog.records)
+    assert any(
+        "Failed to notify Packy about earned badge=streak_3" in record.message
+        for record in caplog.records
+    )

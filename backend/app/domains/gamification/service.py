@@ -65,7 +65,15 @@ class GamificationService:
                 earned = newly_earned(badge.id, badge.progress, new_progress)
                 self.repo.update_badge_progress(badge.id, new_progress, earned)
                 if earned:
-                    self._notify_packy(BadgeRead(**{**badge.model_dump(), "progress": round(new_progress, 4), "earned_at": "earned"}))
+                    self._notify_packy(
+                        BadgeRead(
+                            **{
+                                **badge.model_dump(),
+                                "progress": round(new_progress, 4),
+                                "earned_at": "earned",
+                            }
+                        )
+                    )
         _award_counters[source] = _award_counters.get(source, 0) + 1
         return self.repo.get_level()
 

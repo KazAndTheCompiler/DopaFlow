@@ -10,7 +10,13 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from app.core.database import get_db, tx
-from app.domains.calendar_sharing.schemas import PeerFeed, PeerFeedCreate, PeerFeedUpdate, ShareToken, ShareTokenCreated
+from app.domains.calendar_sharing.schemas import (
+    PeerFeed,
+    PeerFeedCreate,
+    PeerFeedUpdate,
+    ShareToken,
+    ShareTokenCreated,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +71,9 @@ class CalendarSharingRepository:
             ).fetchall()
             return [_row_to_share_token(row) for row in rows]
 
-    def create_token(self, label: str, expires_in_days: int | None = None) -> ShareTokenCreated:
+    def create_token(
+        self, label: str, expires_in_days: int | None = None
+    ) -> ShareTokenCreated:
         """Create a new share token."""
 
         raw = secrets.token_urlsafe(32)
@@ -74,7 +82,9 @@ class CalendarSharingRepository:
         now = datetime.now(timezone.utc).isoformat()
         expires_at = None
         if expires_in_days is not None:
-            expires_at = (datetime.now(timezone.utc) + timedelta(days=expires_in_days)).isoformat()
+            expires_at = (
+                datetime.now(timezone.utc) + timedelta(days=expires_in_days)
+            ).isoformat()
 
         with tx(self.db_path) as conn:
             conn.execute(
@@ -137,14 +147,18 @@ class CalendarSharingRepository:
         """Return all active peer feeds."""
 
         with get_db(self.db_path) as conn:
-            rows = conn.execute("SELECT * FROM calendar_peer_feeds ORDER BY created_at DESC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM calendar_peer_feeds ORDER BY created_at DESC"
+            ).fetchall()
             return [_row_to_peer_feed(row) for row in rows]
 
     def get_feed_credentials(self, feed_id: str) -> tuple[PeerFeed, str] | None:
         """Return a peer feed plus its stored bearer token for sync work."""
 
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
+            ).fetchone()
             if row is None:
                 return None
             return (_row_to_peer_feed(row), row["token"])  # type: ignore[index]
@@ -161,7 +175,15 @@ class CalendarSharingRepository:
                 INSERT INTO calendar_peer_feeds (id, label, base_url, token, color, sync_status, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, 'idle', ?, ?)
                 """,
-                (feed_id, payload.label, payload.base_url, payload.token, payload.color, now, now),
+                (
+                    feed_id,
+                    payload.label,
+                    payload.base_url,
+                    payload.token,
+                    payload.color,
+                    now,
+                    now,
+                ),
             )
 
         return PeerFeed(
@@ -180,7 +202,9 @@ class CalendarSharingRepository:
         """Update mutable peer feed fields."""
 
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
+            ).fetchone()
             if not row:
                 return None
 
@@ -198,11 +222,15 @@ class CalendarSharingRepository:
                 updates.append("updated_at = ?")
                 params.append(now)
                 params.append(feed_id)
-                query = f"UPDATE calendar_peer_feeds SET {', '.join(updates)} WHERE id = ?"
+                query = (
+                    f"UPDATE calendar_peer_feeds SET {', '.join(updates)} WHERE id = ?"
+                )
                 conn.execute(query, params)
 
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
+            ).fetchone()
             return _row_to_peer_feed(row) if row else None
 
     def remove_feed(self, feed_id: str) -> bool:
@@ -211,11 +239,17 @@ class CalendarSharingRepository:
         with tx(self.db_path) as conn:
             source_type = f"peer:{feed_id}"
             conn.execute("DELETE FROM sync_conflicts WHERE owner = ?", (source_type,))
-            conn.execute("DELETE FROM calendar_events WHERE source_type = ?", (source_type,))
-            result = conn.execute("DELETE FROM calendar_peer_feeds WHERE id = ?", (feed_id,))
+            conn.execute(
+                "DELETE FROM calendar_events WHERE source_type = ?", (source_type,)
+            )
+            result = conn.execute(
+                "DELETE FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
+            )
             return result.rowcount > 0
 
-    def update_feed_status(self, feed_id: str, status: str, error: str | None = None) -> None:
+    def update_feed_status(
+        self, feed_id: str, status: str, error: str | None = None
+    ) -> None:
         """Update peer feed sync status and error message."""
 
         now = datetime.now(timezone.utc).isoformat()
@@ -242,7 +276,9 @@ class CalendarSharingRepository:
     def upsert_peer_event(self, feed_id: str, entry: dict) -> str:
         """Upsert a calendar event from a peer feed."""
 
-        external_id = entry.get("id") or entry.get("source_id") or entry.get("source_external_id")
+        external_id = (
+            entry.get("id") or entry.get("source_id") or entry.get("source_external_id")
+        )
         if not external_id:
             return "skipped"
 

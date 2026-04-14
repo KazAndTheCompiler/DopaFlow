@@ -93,7 +93,9 @@ def _scope_secret(settings: Settings | None = None) -> str:
     resolved = settings or get_settings()
     secret = resolved.auth_token_secret or resolved.api_key
     if not secret:
-        raise RuntimeError("Scoped bearer tokens require DOPAFLOW_AUTH_TOKEN_SECRET or DOPAFLOW_API_KEY")
+        raise RuntimeError(
+            "Scoped bearer tokens require DOPAFLOW_AUTH_TOKEN_SECRET or DOPAFLOW_API_KEY"
+        )
     return secret
 
 
@@ -153,8 +155,14 @@ def create_scope_token(
         "iat": issued_at,
         "exp": issued_at + ttl_seconds,
     }
-    payload_segment = _b64url_encode(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
-    signature = hmac.new(_scope_secret(resolved).encode("utf-8"), payload_segment.encode("ascii"), hashlib.sha256).digest()
+    payload_segment = _b64url_encode(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
+    signature = hmac.new(
+        _scope_secret(resolved).encode("utf-8"),
+        payload_segment.encode("ascii"),
+        hashlib.sha256,
+    ).digest()
     token = f"dfv1.{payload_segment}.{_b64url_encode(signature)}"
     if persist:
         with tx(resolved) as conn:
@@ -195,31 +203,66 @@ def revoke_scope_token(token_id: str, settings: Settings | None = None) -> bool:
     return result.rowcount > 0
 
 
-def verify_scope_token(token: str, settings: Settings | None = None) -> dict[str, object]:
+def verify_scope_token(
+    token: str, settings: Settings | None = None
+) -> dict[str, object]:
     resolved = settings or get_settings()
     parts = token.split(".")
     if len(parts) != 3 or parts[0] != "dfv1":
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Malformed bearer token"})
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "invalid_token", "message": "Malformed bearer token"},
+        )
     _, payload_segment, signature_segment = parts
-    expected = hmac.new(_scope_secret(resolved).encode("utf-8"), payload_segment.encode("ascii"), hashlib.sha256).digest()
+    expected = hmac.new(
+        _scope_secret(resolved).encode("utf-8"),
+        payload_segment.encode("ascii"),
+        hashlib.sha256,
+    ).digest()
     try:
         given = _b64url_decode(signature_segment)
         payload = json.loads(_b64url_decode(payload_segment))
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Unreadable bearer token"}) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "invalid_token", "message": "Unreadable bearer token"},
+        ) from exc
     if not hmac.compare_digest(given, expected):
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token signature mismatch"})
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "invalid_token",
+                "message": "Bearer token signature mismatch",
+            },
+        )
     if payload.get("iss") != resolved.auth_token_issuer:
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token issuer mismatch"})
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "invalid_token", "message": "Bearer token issuer mismatch"},
+        )
     token_id = payload.get("jti")
     if not isinstance(token_id, str) or not token_id:
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token id is missing"})
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "invalid_token", "message": "Bearer token id is missing"},
+        )
     expires_at = payload.get("exp")
     if not isinstance(expires_at, int) or expires_at <= int(time.time()):
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token expired"})
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "invalid_token", "message": "Bearer token expired"},
+        )
     scopes = payload.get("scopes")
-    if not isinstance(scopes, list) or not all(isinstance(item, str) for item in scopes):
-        raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token scopes are invalid"})
+    if not isinstance(scopes, list) or not all(
+        isinstance(item, str) for item in scopes
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "code": "invalid_token",
+                "message": "Bearer token scopes are invalid",
+            },
+        )
     payload["scopes"] = _normalize_scopes(scopes)
     with tx(resolved) as conn:
         row = conn.execute(
@@ -227,11 +270,26 @@ def verify_scope_token(token: str, settings: Settings | None = None) -> dict[str
             (token_id,),
         ).fetchone()
         if row is None:
-            raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token is unknown"})
+            raise HTTPException(
+                status_code=401,
+                detail={"code": "invalid_token", "message": "Bearer token is unknown"},
+            )
         if row["revoked_at"]:  # type: ignore[index]
-            raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token has been revoked"})
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "code": "invalid_token",
+                    "message": "Bearer token has been revoked",
+                },
+            )
         if row["token_hash"] != _token_hash(token):  # type: ignore[index]
-            raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Bearer token does not match registry"})        
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "code": "invalid_token",
+                    "message": "Bearer token does not match registry",
+                },
+            )
         conn.execute(
             "UPDATE auth_scope_tokens SET last_used_at = ? WHERE id = ?",
             (_now_utc().isoformat(), token_id),
@@ -259,19 +317,33 @@ def require_scope(scope: str):
             value = os.getenv(legacy, "0")
         return value.lower() in {"1", "true", "yes"}
 
-    async def dep(request: Request, authorization: str | None = Header(default=None)) -> bool:
+    async def dep(
+        request: Request, authorization: str | None = Header(default=None)
+    ) -> bool:
         if env_flag("DEV_AUTH"):
             return True
         origin = request.headers.get("origin", "")
         client_host = request.client.host if request.client else ""
         if env_flag("TRUST_LOCAL_CLIENTS"):
-            if client_host in TRUSTED_HOSTS and (origin.startswith("http://127.0.0.1:") or origin.startswith("http://localhost:")):
+            if client_host in TRUSTED_HOSTS and (
+                origin.startswith("http://127.0.0.1:")
+                or origin.startswith("http://localhost:")
+            ):
                 return True
         if not authorization:
-            raise HTTPException(status_code=401, detail={"code": "missing_token", "message": "Missing Authorization header"})
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "code": "missing_token",
+                    "message": "Missing Authorization header",
+                },
+            )
         scheme, _, token = authorization.partition(" ")
         if scheme.lower() != "bearer" or not token.strip():
-            raise HTTPException(status_code=401, detail={"code": "invalid_token", "message": "Expected Bearer token"})
+            raise HTTPException(
+                status_code=401,
+                detail={"code": "invalid_token", "message": "Expected Bearer token"},
+            )
         payload = verify_scope_token(token.strip())
         given_scopes = set(payload["scopes"])
         if scope not in given_scopes:

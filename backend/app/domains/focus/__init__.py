@@ -1,2 +1,1 @@
 """Focus domain."""
-

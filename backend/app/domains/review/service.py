@@ -8,15 +8,13 @@ import re
 import sqlite3
 import tempfile
 import zipfile
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, timedelta
 
 from app.core.gamification_helpers import award as award_gamification
 from app.domains.review.repository import ReviewRepository
 from app.domains.review.schemas import (
     DeckCreate,
     DeckRead,
-    DeckRenameRequest,
-    DeleteResponse,
     NextDueResponse,
     ReviewAnswerResponse,
     ReviewAnswerSession,
@@ -24,17 +22,13 @@ from app.domains.review.schemas import (
     ReviewBulkCardsResponse,
     ReviewCardCreate,
     ReviewCardRead,
-    ReviewDeckBasic,
-    ReviewDeckStats,
     ReviewExportCard,
-    ReviewExportPreviewCard,
     ReviewExportPreviewResponse,
     ReviewHistoryItem,
     ReviewHistoryResponse,
     ReviewImportPreview,
     ReviewImportResult,
     ReviewRating,
-    ReviewSearchCard,
     ReviewSearchResult,
     ReviewSessionEndResponse,
     ReviewSessionQueueCard,
@@ -46,7 +40,6 @@ from app.domains.review.schemas_extra import (
     CardBuryResponse,
     CardSuspendResponse,
     DeckStatsResponse,
-    ReviewSearchResponse,
 )
 
 MIN_EASE = 1.3

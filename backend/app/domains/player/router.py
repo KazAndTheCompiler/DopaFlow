@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.middleware.auth_scopes import require_scope
 from app.domains.player.schemas import (
     PlayerNextTrackResponse,
     PlayerPredownloadJobResponse,
@@ -16,6 +15,7 @@ from app.domains.player.schemas import (
     PlayerResolveUrlResponse,
 )
 from app.domains.player.service import PlayerService
+from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(prefix="/player", tags=["player"])
 _svc = PlayerService()

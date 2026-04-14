@@ -56,13 +56,17 @@ def test_verify_backup_rejects_incompatible_schema(tmp_path: Path) -> None:
     finally:
         conn.close()
 
-    result = OpsService(Settings(db_path=str(tmp_path / "unused.sqlite"))).verify_backup(_sqlite_bytes(restore_db))
+    result = OpsService(
+        Settings(db_path=str(tmp_path / "unused.sqlite"))
+    ).verify_backup(_sqlite_bytes(restore_db))
 
     assert result["valid"] is False
     assert "missing required tables" in str(result["error"]).lower()
 
 
-def test_restore_db_rejects_incompatible_schema_without_touching_live_db(db_path: Path) -> None:
+def test_restore_db_rejects_incompatible_schema_without_touching_live_db(
+    db_path: Path,
+) -> None:
     service = OpsService(Settings(db_path=str(db_path)))
     original_bytes = Path(db_path).read_bytes()
 
@@ -87,8 +91,16 @@ def test_seed_first_run_uses_domain_id_prefixes(db_path: Path) -> None:
 
     assert result["seeded"] is True
     with sqlite3.connect(db_path) as conn:
-        task_ids = [row[0] for row in conn.execute("SELECT id FROM tasks ORDER BY created_at").fetchall()]
-        habit_ids = [row[0] for row in conn.execute("SELECT id FROM habits ORDER BY name").fetchall()]
+        task_ids = [
+            row[0]
+            for row in conn.execute(
+                "SELECT id FROM tasks ORDER BY created_at"
+            ).fetchall()
+        ]
+        habit_ids = [
+            row[0]
+            for row in conn.execute("SELECT id FROM habits ORDER BY name").fetchall()
+        ]
 
     assert len(task_ids) == 2
     assert len(habit_ids) == 2
@@ -96,13 +108,17 @@ def test_seed_first_run_uses_domain_id_prefixes(db_path: Path) -> None:
     assert all(validate_prefix(habit_id_value, "hab") for habit_id_value in habit_ids)
 
 
-def test_ops_export_download_rejects_oversized_payload(client, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ops_export_download_rejects_oversized_payload(
+    client, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from app.domains.ops import router as ops_router_module
 
     monkeypatch.setattr(
         ops_router_module.OpsService,
         "export_payload",
-        lambda self: {"data": "x" * (ops_router_module.MAX_EXPORT_RESPONSE_BYTES + 1024)},
+        lambda self: {
+            "data": "x" * (ops_router_module.MAX_EXPORT_RESPONSE_BYTES + 1024)
+        },
     )
 
     response = client.get("/api/v2/ops/export/download")
@@ -110,7 +126,9 @@ def test_ops_export_download_rejects_oversized_payload(client, monkeypatch: pyte
     assert response.status_code == 413
 
 
-def test_ops_export_zip_rejects_oversized_archive(client, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ops_export_zip_rejects_oversized_archive(
+    client, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from app.domains.ops import router as ops_router_module
 
     monkeypatch.setattr(
@@ -124,13 +142,19 @@ def test_ops_export_zip_rejects_oversized_archive(client, monkeypatch: pytest.Mo
     assert response.status_code == 413
 
 
-def test_export_payload_logs_missing_optional_tables(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_export_payload_logs_missing_optional_tables(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     db_path = tmp_path / "ops-minimal.sqlite"
     conn = sqlite3.connect(db_path)
     try:
         conn.execute("CREATE TABLE tasks (id TEXT PRIMARY KEY, created_at TEXT)")
-        conn.execute("CREATE TABLE habit_checkins (id TEXT PRIMARY KEY, checkin_date TEXT)")
-        conn.execute("CREATE TABLE journal_entries (id TEXT PRIMARY KEY, entry_date TEXT, deleted_at TEXT)")
+        conn.execute(
+            "CREATE TABLE habit_checkins (id TEXT PRIMARY KEY, checkin_date TEXT)"
+        )
+        conn.execute(
+            "CREATE TABLE journal_entries (id TEXT PRIMARY KEY, entry_date TEXT, deleted_at TEXT)"
+        )
         conn.execute("CREATE TABLE review_decks (id TEXT PRIMARY KEY, created_at TEXT)")
         conn.execute("CREATE TABLE review_cards (id TEXT PRIMARY KEY, created_at TEXT)")
         conn.execute("CREATE TABLE alarms (id TEXT PRIMARY KEY, created_at TEXT)")

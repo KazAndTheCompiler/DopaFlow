@@ -63,7 +63,9 @@ def test_multiple_same_day_checkins_can_exceed_100_percent(client) -> None:
 def test_logs_returns_habit_checkins(client) -> None:
     habit = create_habit(client)
     target_date = (date.today() - timedelta(days=1)).isoformat()
-    client.post(f"/api/v2/habits/{habit['id']}/checkin", json={"checkin_date": target_date})
+    client.post(
+        f"/api/v2/habits/{habit['id']}/checkin", json={"checkin_date": target_date}
+    )
 
     response = client.get(f"/api/v2/habits/{habit['id']}/logs")
 
@@ -128,7 +130,9 @@ def test_freeze_and_unfreeze_toggle_freeze_until(client) -> None:
     habit = create_habit(client)
     freeze_until = (date.today() + timedelta(days=3)).isoformat()
 
-    freeze_response = client.patch(f"/api/v2/habits/{habit['id']}/freeze", json={"freeze_until": freeze_until})
+    freeze_response = client.patch(
+        f"/api/v2/habits/{habit['id']}/freeze", json={"freeze_until": freeze_until}
+    )
     unfreeze_response = client.patch(f"/api/v2/habits/{habit['id']}/unfreeze")
 
     assert freeze_response.status_code == 200

@@ -28,7 +28,13 @@ class PlayerRepository:
     def enqueue_job(self, payload: dict[str, object]) -> dict[str, object]:
         if len([j for j in self._jobs if j.get("status") in _ACTIVE_STATES]) >= 100:
             return {"status": "queue_full"}
-        job = {"id": str(uuid.uuid4()), "state": "queued", "attempts": 0, "max_attempts": 5, **payload}
+        job = {
+            "id": str(uuid.uuid4()),
+            "state": "queued",
+            "attempts": 0,
+            "max_attempts": 5,
+            **payload,
+        }
         self._jobs.append(job)
         return job
 

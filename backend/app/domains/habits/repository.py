@@ -43,7 +43,13 @@ def compute_streak(checkin_dates: list[str]) -> tuple[int, int]:
 def _habit_with_stats(conn, row) -> dict[str, Any]:
     """Attach streak and completion statistics to a habit row."""
 
-    logs = [log["checkin_date"] for log in conn.execute("SELECT checkin_date FROM habit_checkins WHERE habit_id = ? ORDER BY checkin_date", (row["id"],)).fetchall()]
+    logs = [
+        log["checkin_date"]
+        for log in conn.execute(
+            "SELECT checkin_date FROM habit_checkins WHERE habit_id = ? ORDER BY checkin_date",
+            (row["id"],),
+        ).fetchall()
+    ]
     current_streak, best_streak = compute_streak(logs)
     last_checkin_date = _date_key(logs[-1]) if logs else None
     period_days = 7 if row["target_period"] == "week" else 1
@@ -51,7 +57,9 @@ def _habit_with_stats(conn, row) -> dict[str, Any]:
     completed = sum(1 for value in logs if _date_key(value) >= window_start)
     target = max(1, row["target_freq"])
     completion_pct = round((completed / target) * 100, 2)
-    today_count = sum(1 for value in logs if _date_key(value) == date.today().isoformat())
+    today_count = sum(
+        1 for value in logs if _date_key(value) == date.today().isoformat()
+    )
     return {
         **dict(row),
         "current_streak": current_streak,
@@ -68,7 +76,9 @@ def list_habits(db_path: str) -> list[dict[str, Any]]:
     """List active habits with computed streak metrics."""
 
     with get_db(db_path) as conn:
-        rows = conn.execute("SELECT * FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC").fetchall()
+        rows = conn.execute(
+            "SELECT * FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC"
+        ).fetchall()
         return [_habit_with_stats(conn, row) for row in rows]
 
 
@@ -76,11 +86,16 @@ def get_habit(db_path: str, habit_identifier: str) -> dict[str, Any] | None:
     """Return one habit by ID."""
 
     with get_db(db_path) as conn:
-        row = conn.execute("SELECT * FROM habits WHERE id = ? AND deleted_at IS NULL", (habit_identifier,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM habits WHERE id = ? AND deleted_at IS NULL",
+            (habit_identifier,),
+        ).fetchone()
         return _habit_with_stats(conn, row) if row else None
 
 
-def add_habit(db_path: str, name: str, target_freq: int, target_period: str, color: str) -> dict[str, Any]:
+def add_habit(
+    db_path: str, name: str, target_freq: int, target_period: str, color: str
+) -> dict[str, Any]:
     """Create a habit row."""
 
     identifier = habit_id()
@@ -95,7 +110,9 @@ def add_habit(db_path: str, name: str, target_freq: int, target_period: str, col
     return created
 
 
-def update_habit(db_path: str, habit_identifier: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+def update_habit(
+    db_path: str, habit_identifier: str, payload: dict[str, Any]
+) -> dict[str, Any] | None:
     """Patch mutable habit fields."""
 
     current = get_habit(db_path, habit_identifier)
@@ -126,11 +143,16 @@ def delete_habit(db_path: str, habit_identifier: str) -> bool:
     """Soft-delete a habit."""
 
     with tx(db_path) as conn:
-        result = conn.execute("UPDATE habits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL", (habit_identifier,))
+        result = conn.execute(
+            "UPDATE habits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
+            (habit_identifier,),
+        )
         return result.rowcount > 0
 
 
-def log_checkin(db_path: str, habit_identifier: str, checkin_date: str | None = None) -> dict[str, Any]:
+def log_checkin(
+    db_path: str, habit_identifier: str, checkin_date: str | None = None
+) -> dict[str, Any]:
     """Insert a check-in event."""
 
     target_date = checkin_date or datetime.now(UTC).isoformat()

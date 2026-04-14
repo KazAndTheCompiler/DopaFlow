@@ -33,9 +33,7 @@ class AlarmsRepository:
         """Return all non-deleted alarms ordered by scheduled time."""
 
         with get_db(self.db_path) as conn:
-            rows = conn.execute(
-                "SELECT * FROM alarms ORDER BY at ASC"
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM alarms ORDER BY at ASC").fetchall()
             return [_row_to_alarm(row) for row in rows]
 
     def list_upcoming(self) -> list[AlarmRead]:
@@ -57,7 +55,9 @@ class AlarmsRepository:
         """Fetch a single alarm by ID."""
 
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM alarms WHERE id = ?", (identifier,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM alarms WHERE id = ?", (identifier,)
+            ).fetchone()
             return _row_to_alarm(row) if row else None
 
     def create_alarm(self, payload: AlarmCreate) -> AlarmRead:
@@ -70,8 +70,15 @@ class AlarmsRepository:
                 INSERT INTO alarms (id, at, title, kind, tts_text, youtube_link, muted)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (new_id, payload.at, payload.title, payload.kind,
-                 payload.tts_text, payload.youtube_link, int(payload.muted)),
+                (
+                    new_id,
+                    payload.at,
+                    payload.title,
+                    payload.kind,
+                    payload.tts_text,
+                    payload.youtube_link,
+                    int(payload.muted),
+                ),
             )
         return self.get_alarm(new_id)  # type: ignore[return-value]
 
@@ -90,9 +97,15 @@ class AlarmsRepository:
                 SET at = ?, title = ?, kind = ?, tts_text = ?, youtube_link = ?, muted = ?
                 WHERE id = ?
                 """,
-                (merged["at"], merged["title"], merged["kind"],
-                 merged.get("tts_text"), merged.get("youtube_link"),
-                 int(merged.get("muted", False)), identifier),
+                (
+                    merged["at"],
+                    merged["title"],
+                    merged["kind"],
+                    merged.get("tts_text"),
+                    merged.get("youtube_link"),
+                    int(merged.get("muted", False)),
+                    identifier,
+                ),
             )
         return self.get_alarm(identifier)
 

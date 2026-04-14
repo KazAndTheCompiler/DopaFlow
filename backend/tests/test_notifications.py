@@ -41,8 +41,12 @@ def test_create_notification_is_immediately_visible_without_duplicates(client) -
 def test_mark_read_updates_unread_count(client) -> None:
     notification = create_notification(client)
 
-    read_response = client.post(f"/api/v2/notifications/{notification['id']}/read", headers=AUTH_HEADERS)
-    unread_response = client.get("/api/v2/notifications/unread-count", headers=AUTH_HEADERS)
+    read_response = client.post(
+        f"/api/v2/notifications/{notification['id']}/read", headers=AUTH_HEADERS
+    )
+    unread_response = client.get(
+        "/api/v2/notifications/unread-count", headers=AUTH_HEADERS
+    )
 
     assert read_response.status_code == 200
     assert read_response.json() == {"ok": True}
@@ -60,7 +64,9 @@ def test_mark_all_read_returns_updated_count_shape(client) -> None:
 
 
 def test_archive_missing_notification_returns_404(client) -> None:
-    response = client.post("/api/v2/notifications/ntf_missing/archive", headers=AUTH_HEADERS)
+    response = client.post(
+        "/api/v2/notifications/ntf_missing/archive", headers=AUTH_HEADERS
+    )
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Notification not found"
@@ -69,7 +75,9 @@ def test_archive_missing_notification_returns_404(client) -> None:
 def test_delete_notification_removes_item(client) -> None:
     notification = create_notification(client)
 
-    delete_response = client.delete(f"/api/v2/notifications/{notification['id']}", headers=AUTH_HEADERS)
+    delete_response = client.delete(
+        f"/api/v2/notifications/{notification['id']}", headers=AUTH_HEADERS
+    )
     list_response = client.get("/api/v2/notifications/", headers=AUTH_HEADERS)
 
     assert delete_response.status_code == 200
@@ -79,7 +87,9 @@ def test_delete_notification_removes_item(client) -> None:
 
 def test_insert_then_query_no_race_duplicates(client) -> None:
     """Regression guard for re-query-after-insert race condition."""
-    created = create_notification(client, title="Race condition test", body="Should appear exactly once")
+    created = create_notification(
+        client, title="Race condition test", body="Should appear exactly once"
+    )
 
     listed = client.get("/api/v2/notifications/", headers=AUTH_HEADERS)
 
