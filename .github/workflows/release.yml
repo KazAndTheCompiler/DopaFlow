@@ -127,10 +127,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-linux
-          path: release/dopaflow-backend-v2
+          path: backend/dist/dopaflow-backend
 
       - name: Fix backend permissions
-        run: chmod +x release/dopaflow-backend-v2/dopaflow-backend
+        run: chmod +x backend/dist/dopaflow-backend/dopaflow-backend
 
       - name: Install desktop
         run: |
@@ -201,7 +201,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: backend-windows
-          path: release\dopaflow-backend-v2
+          path: backend\dist\dopaflow-backend
 
       - name: Install desktop
         run: |
