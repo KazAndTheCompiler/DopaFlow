@@ -92,7 +92,8 @@
       "category": "Office"
     },
     "nsis": {
-      "verifyUpdateCodeSignature": true
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     },
     "publish": [
       {
