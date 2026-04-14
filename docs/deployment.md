@@ -90,6 +90,47 @@ Journal backups are written to `DOPAFLOW_JOURNAL_BACKUP_DIR` by the background s
 
 Migrations run automatically on app startup via `run_migrations()`. Drift detection raises a `RuntimeError` and blocks startup if a previously-applied migration file has been modified.
 
+### Staging Environment
+
+For testing new versions or configuration changes before applying them to production:
+
+```bash
+# Build staging images (from production build)
+docker build -f Dockerfile.backend -t dopaflow-backend:latest .
+docker build -f Dockerfile.frontend -t dopaflow-frontend:latest .
+
+# Start staging (uses ports 3001/8001, separate volume, jobs disabled)
+docker compose -f docker-compose.staging.yml up -d
+
+# Verify staging is running
+curl http://localhost:8001/health/live   # Backend
+curl http://localhost:3001/              # Frontend
+
+# Test backup restoration before applying to production
+python3 scripts/test_backup_restore.py
+
+# When done, tear down staging
+docker compose -f docker-compose.staging.yml down -v
+```
+
+Staging uses isolated ports (3001/8001) and a separate database volume so it does not interfere with the production instance. Background jobs are disabled to avoid conflicts.
+
+### Backup and Restore
+
+Verify your backup strategy works before relying on it:
+
+```bash
+python3 scripts/test_backup_restore.py
+```
+
+For production backups, copy the SQLite database file:
+```bash
+# Stop the container or use sqlite3 online backup to avoid inconsistency
+docker compose exec backend apk add sqlite && \
+docker compose exec backend sqlite3 /data/dopaflow.db ".backup '/tmp/dopaflow.db'" && \
+docker compose cp backend:/tmp/dopaflow.db ./dopaflow-backup-$(date +%Y%m%d).db
+```
+
 ---
 
 ## Production Mode Notes
