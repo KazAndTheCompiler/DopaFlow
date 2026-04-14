@@ -23,7 +23,7 @@ import csv
 import io
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.habits import repository, service

@@ -65,12 +65,12 @@ from app.domains.tasks.schemas import (
     TaskUpdate,
     UpdatedCountResponse,
 )
-from app.middleware.auth_scopes import require_scope
-from app.services.event_stream import publish_invalidation
-from app.services.upload_security import validate_upload
-from app.services.quick_add import parse
 from app.domains.tasks.service import complete_task as complete_task_service
 from app.domains.tasks.service import import_tasks_csv
+from app.middleware.auth_scopes import require_scope
+from app.services.event_stream import publish_invalidation
+from app.services.quick_add import parse
+from app.services.upload_security import validate_upload
 
 router = APIRouter(tags=["tasks"])
 

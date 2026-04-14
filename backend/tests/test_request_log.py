@@ -1,7 +1,6 @@
 """Tests for RequestLogMiddleware."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 
 def test_request_id_header_echoed_on_every_response(_app, client) -> None:

@@ -54,7 +54,9 @@ class JournalBackupScheduler:
                     f"version: {entry.version}\n"
                     f"---\n\n"
                 )
-                backup_file.write_text(front_matter + entry.markdown_body, encoding="utf-8")
+                backup_file.write_text(
+                    front_matter + entry.markdown_body, encoding="utf-8"
+                )
             current += timedelta(days=1)
 
     async def start(self) -> None:
@@ -68,7 +70,9 @@ class JournalBackupScheduler:
 
         while self.running:
             now = datetime.now()
-            next_backup = (now + timedelta(days=1)).replace(hour=23, minute=59, second=0, microsecond=0)
+            next_backup = (now + timedelta(days=1)).replace(
+                hour=23, minute=59, second=0, microsecond=0
+            )
             await asyncio.sleep((next_backup - now).total_seconds())
             if self.running:
                 await self.backup_missed_days()

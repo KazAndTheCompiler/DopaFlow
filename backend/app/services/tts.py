@@ -30,7 +30,10 @@ def _speak_macos(text: str) -> None:
 
 def _speak_windows(text: str) -> None:
     safe = text.replace('"', "'")
-    script = 'Add-Type -AssemblyName System.Speech; ' f'(New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("{safe}")'
+    script = (
+        "Add-Type -AssemblyName System.Speech; "
+        f'(New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak("{safe}")'
+    )
     subprocess.run(["powershell", "-Command", script], timeout=30, check=False)
 
 

@@ -74,7 +74,7 @@ def _compute_correlations(
                 "SELECT name FROM habits WHERE deleted_at IS NULL"
             ).fetchall()
             habit_names = [h["name"] for h in habits]
-    except Exception:  # noqa: BLE001
+    except Exception:
         habit_names = []
 
     for name in habit_names:
@@ -233,7 +233,9 @@ def _build_nutrition_summary(nutrition: dict) -> DigestNutritionSummary:
 
 class DigestService:
     @staticmethod
-    def daily_digest(target_date: date | None = None, *, settings: Settings) -> DailyDigestResponse:
+    def daily_digest(
+        target_date: date | None = None, *, settings: Settings
+    ) -> DailyDigestResponse:
         """Build daily digest for a single day."""
         target_date = target_date or datetime.now(UTC).date()
         repo = DigestRepository(settings)
@@ -286,7 +288,9 @@ class DigestService:
         )
 
     @staticmethod
-    def weekly_digest(week_start: date | None = None, *, settings: Settings) -> WeeklyDigestResponse:
+    def weekly_digest(
+        week_start: date | None = None, *, settings: Settings
+    ) -> WeeklyDigestResponse:
         """Build weekly digest with Pearson correlation analysis."""
         if not week_start:
             today = datetime.now(UTC).date()

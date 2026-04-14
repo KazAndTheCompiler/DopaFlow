@@ -18,10 +18,18 @@ BADGE_REGISTRY: dict[str, BadgeDefinition] = {
     "tasks_100": BadgeDefinition(stat_key="tasks_done", target=100, label="100 Tasks"),
     "streak_3": BadgeDefinition(stat_key="best_streak", target=3, label="3 Day Streak"),
     "streak_7": BadgeDefinition(stat_key="best_streak", target=7, label="7 Day Streak"),
-    "streak_30": BadgeDefinition(stat_key="best_streak", target=30, label="30 Day Streak"),
-    "focus_1h": BadgeDefinition(stat_key="focus_minutes", target=60, label="1 Hour Focused"),
-    "focus_10h": BadgeDefinition(stat_key="focus_minutes", target=600, label="10 Hours Focused"),
-    "journal_7": BadgeDefinition(stat_key="journal_streak", target=7, label="7 Journal Days"),
+    "streak_30": BadgeDefinition(
+        stat_key="best_streak", target=30, label="30 Day Streak"
+    ),
+    "focus_1h": BadgeDefinition(
+        stat_key="focus_minutes", target=60, label="1 Hour Focused"
+    ),
+    "focus_10h": BadgeDefinition(
+        stat_key="focus_minutes", target=600, label="10 Hours Focused"
+    ),
+    "journal_7": BadgeDefinition(
+        stat_key="journal_streak", target=7, label="7 Journal Days"
+    ),
     "review_50": BadgeDefinition(stat_key="cards_rated", target=50, label="50 Reviews"),
     "level_5": BadgeDefinition(stat_key="level", target=5, label="Level 5"),
     "level_10": BadgeDefinition(stat_key="level", target=10, label="Level 10"),

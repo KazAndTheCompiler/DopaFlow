@@ -24,7 +24,9 @@ def checkin(db_path: str, habit_id: str, target_date: str | None = None) -> dict
     """Record a habit check-in and award XP."""
 
     habit = repository.log_checkin(db_path, habit_id, target_date)
-    checkin_source_id = f"{habit_id}:{habit.get('last_checkin_date') or target_date or 'unknown'}"
+    checkin_source_id = (
+        f"{habit_id}:{habit.get('last_checkin_date') or target_date or 'unknown'}"
+    )
     award_gamification("habit_checkin", checkin_source_id, logger=logger)
     current_streak = int(habit.get("current_streak", 0))
     if current_streak > 0 and current_streak % 7 == 0:

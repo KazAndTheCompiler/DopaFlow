@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import pathlib
 import sqlite3
-from hashlib import sha256
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
-
-import importlib.util
+from hashlib import sha256
 
 import sqlparse
 from fastapi import HTTPException
@@ -30,7 +29,9 @@ def _migrations_dir() -> pathlib.Path:
     return pathlib.Path(__file__).parent.parent.parent / "migrations"
 
 
-def _connect(db_path: str, turso_url: str | None = None, turso_token: str | None = None):
+def _connect(
+    db_path: str, turso_url: str | None = None, turso_token: str | None = None
+):
     if turso_url:
         if libsql is None:
             raise ImportError(
@@ -124,11 +125,12 @@ def _ensure_migrations_table(conn) -> None:
     )
 
     columns = {
-        row[1]
-        for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()
+        row[1] for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()
     }
     if "checksum" not in columns:
-        conn.execute("ALTER TABLE _migrations ADD COLUMN checksum TEXT NOT NULL DEFAULT ''")
+        conn.execute(
+            "ALTER TABLE _migrations ADD COLUMN checksum TEXT NOT NULL DEFAULT ''"
+        )
 
 
 def _apply_migration_sql(conn, sql: str) -> None:

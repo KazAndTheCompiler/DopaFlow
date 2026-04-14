@@ -15,7 +15,13 @@ from app.middleware.auth_scopes import require_scope
 router = APIRouter(tags=["alarms"])
 
 
-@router.post("/alarms/{alarm_id}/trigger-audio", response_model=AlarmAudioTriggerResponse, dependencies=[Depends(require_scope("write:alarms"))])
-async def trigger_alarm_audio(alarm_id: str, settings: Settings = Depends(get_settings_dependency)) -> AlarmAudioTriggerResponse:
+@router.post(
+    "/alarms/{alarm_id}/trigger-audio",
+    response_model=AlarmAudioTriggerResponse,
+    dependencies=[Depends(require_scope("write:alarms"))],
+)
+async def trigger_alarm_audio(
+    alarm_id: str, settings: Settings = Depends(get_settings_dependency)
+) -> AlarmAudioTriggerResponse:
     """Speak the alarm label and return a resolved YouTube stream URL."""
     return AlarmAudioTriggerResponse(**handle_alarm_audio(settings.db_path, alarm_id))

@@ -52,7 +52,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if self.settings.enforce_auth:
             api_key = request.headers.get("x-api-key", "")
             expected_api_key = getattr(self.settings, "api_key", "") or ""
-            if not api_key or not expected_api_key or not compare_digest(api_key, expected_api_key):
+            if (
+                not api_key
+                or not expected_api_key
+                or not compare_digest(api_key, expected_api_key)
+            ):
                 return Response("Unauthorized", status_code=401)
 
         return await call_next(request)

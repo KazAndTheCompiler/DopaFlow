@@ -5,7 +5,8 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import date as date_mod, datetime, timedelta, timezone
+from datetime import date as date_mod
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from app.core.database import get_db, tx
@@ -23,16 +24,106 @@ logger = logging.getLogger(__name__)
 _VALID_MEALS = {"breakfast", "lunch", "dinner", "snack"}
 _GOAL_DEFAULTS = {"daily_kj": 9000, "protein_g": 120, "carbs_g": 250, "fat_g": 70}
 _PRESET_FOODS = [
-    {"id": "preset_water_glass", "name": "Water", "kj": 0, "unit": "glass", "protein_g": 0, "carbs_g": 0, "fat_g": 0, "meal_label": "snack"},
-    {"id": "preset_coffee_cup", "name": "Coffee", "kj": 8, "unit": "cup", "protein_g": 0.3, "carbs_g": 0, "fat_g": 0, "meal_label": "breakfast"},
-    {"id": "preset_tea_cup", "name": "Tea", "kj": 4, "unit": "cup", "protein_g": 0, "carbs_g": 0, "fat_g": 0, "meal_label": "breakfast"},
-    {"id": "preset_milk_100ml", "name": "Milk", "kj": 250, "unit": "100 ml", "protein_g": 3.4, "carbs_g": 4.8, "fat_g": 3.5, "meal_label": "breakfast"},
-    {"id": "preset_sugar_tsp", "name": "Sugar", "kj": 80, "unit": "tsp", "protein_g": 0, "carbs_g": 5, "fat_g": 0, "meal_label": "breakfast"},
-    {"id": "preset_bread_slice", "name": "Bread slice", "kj": 330, "unit": "slice", "protein_g": 3.2, "carbs_g": 14.2, "fat_g": 1.1, "meal_label": "lunch"},
-    {"id": "preset_butter_pat", "name": "Butter", "kj": 150, "unit": "pat", "protein_g": 0.1, "carbs_g": 0, "fat_g": 4.1, "meal_label": "lunch"},
-    {"id": "preset_cheese_slice", "name": "Cheese slice", "kj": 290, "unit": "slice", "protein_g": 5.2, "carbs_g": 0.2, "fat_g": 5.6, "meal_label": "lunch"},
-    {"id": "preset_ham_slice", "name": "Ham slice", "kj": 120, "unit": "slice", "protein_g": 3.7, "carbs_g": 0.3, "fat_g": 1.8, "meal_label": "lunch"},
-    {"id": "preset_basic_sandwich", "name": "Basic sandwich", "kj": 1150, "unit": "sandwich", "protein_g": 15.5, "carbs_g": 28, "fat_g": 12.6, "meal_label": "lunch"},
+    {
+        "id": "preset_water_glass",
+        "name": "Water",
+        "kj": 0,
+        "unit": "glass",
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 0,
+        "meal_label": "snack",
+    },
+    {
+        "id": "preset_coffee_cup",
+        "name": "Coffee",
+        "kj": 8,
+        "unit": "cup",
+        "protein_g": 0.3,
+        "carbs_g": 0,
+        "fat_g": 0,
+        "meal_label": "breakfast",
+    },
+    {
+        "id": "preset_tea_cup",
+        "name": "Tea",
+        "kj": 4,
+        "unit": "cup",
+        "protein_g": 0,
+        "carbs_g": 0,
+        "fat_g": 0,
+        "meal_label": "breakfast",
+    },
+    {
+        "id": "preset_milk_100ml",
+        "name": "Milk",
+        "kj": 250,
+        "unit": "100 ml",
+        "protein_g": 3.4,
+        "carbs_g": 4.8,
+        "fat_g": 3.5,
+        "meal_label": "breakfast",
+    },
+    {
+        "id": "preset_sugar_tsp",
+        "name": "Sugar",
+        "kj": 80,
+        "unit": "tsp",
+        "protein_g": 0,
+        "carbs_g": 5,
+        "fat_g": 0,
+        "meal_label": "breakfast",
+    },
+    {
+        "id": "preset_bread_slice",
+        "name": "Bread slice",
+        "kj": 330,
+        "unit": "slice",
+        "protein_g": 3.2,
+        "carbs_g": 14.2,
+        "fat_g": 1.1,
+        "meal_label": "lunch",
+    },
+    {
+        "id": "preset_butter_pat",
+        "name": "Butter",
+        "kj": 150,
+        "unit": "pat",
+        "protein_g": 0.1,
+        "carbs_g": 0,
+        "fat_g": 4.1,
+        "meal_label": "lunch",
+    },
+    {
+        "id": "preset_cheese_slice",
+        "name": "Cheese slice",
+        "kj": 290,
+        "unit": "slice",
+        "protein_g": 5.2,
+        "carbs_g": 0.2,
+        "fat_g": 5.6,
+        "meal_label": "lunch",
+    },
+    {
+        "id": "preset_ham_slice",
+        "name": "Ham slice",
+        "kj": 120,
+        "unit": "slice",
+        "protein_g": 3.7,
+        "carbs_g": 0.3,
+        "fat_g": 1.8,
+        "meal_label": "lunch",
+    },
+    {
+        "id": "preset_basic_sandwich",
+        "name": "Basic sandwich",
+        "kj": 1150,
+        "unit": "sandwich",
+        "protein_g": 15.5,
+        "carbs_g": 28,
+        "fat_g": 12.6,
+        "meal_label": "lunch",
+    },
 ]
 
 
@@ -116,7 +207,9 @@ class NutritionRepository:
                 ),
             )
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM nutrition_entries WHERE id = ?", (identifier,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM nutrition_entries WHERE id = ?", (identifier,)
+            ).fetchone()
         return _row_to_food(row)
 
     def log_from_food(self, payload: LogEntryCreate) -> FoodItemRead:
@@ -150,7 +243,9 @@ class NutritionRepository:
                 ),
             )
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM nutrition_entries WHERE id = ?", (identifier,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM nutrition_entries WHERE id = ?", (identifier,)
+            ).fetchone()
         return _row_to_food(row)
 
     def get_log(self, date: str | None = None) -> dict:
@@ -213,8 +308,18 @@ class NutritionRepository:
                 """,
                 (f"{target}%",),
             ).fetchall()
-        days = [{"date": row["entry_date"], "total_kj": round(float(row["total_kj"] or 0), 1)} for row in rows]
-        return {"month": target, "days": days, "total_kj": round(sum(d["total_kj"] for d in days), 1)}
+        days = [
+            {
+                "date": row["entry_date"],
+                "total_kj": round(float(row["total_kj"] or 0), 1),
+            }
+            for row in rows
+        ]
+        return {
+            "month": target,
+            "days": days,
+            "total_kj": round(sum(d["total_kj"] for d in days), 1),
+        }
 
     def get_summary(self, date: str) -> dict:
         """Return daily totals with goal progress percentages."""
@@ -227,16 +332,26 @@ class NutritionRepository:
             "carbs_g": log["carbs_g"],
             "fat_g": log["fat_g"],
             "goal_progress": {
-                "daily_kj": round((log["total_kj"] / goals["daily_kj"]) * 100, 1) if goals["daily_kj"] else 0.0,
-                "protein_g": round((log["protein_g"] / goals["protein_g"]) * 100, 1) if goals["protein_g"] else 0.0,
-                "carbs_g": round((log["carbs_g"] / goals["carbs_g"]) * 100, 1) if goals["carbs_g"] else 0.0,
-                "fat_g": round((log["fat_g"] / goals["fat_g"]) * 100, 1) if goals["fat_g"] else 0.0,
+                "daily_kj": round((log["total_kj"] / goals["daily_kj"]) * 100, 1)
+                if goals["daily_kj"]
+                else 0.0,
+                "protein_g": round((log["protein_g"] / goals["protein_g"]) * 100, 1)
+                if goals["protein_g"]
+                else 0.0,
+                "carbs_g": round((log["carbs_g"] / goals["carbs_g"]) * 100, 1)
+                if goals["carbs_g"]
+                else 0.0,
+                "fat_g": round((log["fat_g"] / goals["fat_g"]) * 100, 1)
+                if goals["fat_g"]
+                else 0.0,
             },
         }
 
     def delete_log_entry(self, identifier: str) -> bool:
         with tx(self.db_path) as conn:
-            result = conn.execute("DELETE FROM nutrition_entries WHERE id = ?", (identifier,))
+            result = conn.execute(
+                "DELETE FROM nutrition_entries WHERE id = ?", (identifier,)
+            )
         return result.rowcount > 0
 
     def delete_entry(self, identifier: str) -> bool:
@@ -276,7 +391,9 @@ class NutritionRepository:
     def get_food(self, food_id: str) -> FoodLibraryItem | None:
         self._ensure_presets()
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM nutrition_foods WHERE id = ?", (food_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM nutrition_foods WHERE id = ?", (food_id,)
+            ).fetchone()
         if not row:
             return None
         r = dict(row)
@@ -316,7 +433,9 @@ class NutritionRepository:
     def delete_food(self, food_id: str) -> bool | None:
         """Returns None if not found, False if preset (protected), True if deleted."""
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT is_preset FROM nutrition_foods WHERE id = ?", (food_id,)).fetchone()
+            row = conn.execute(
+                "SELECT is_preset FROM nutrition_foods WHERE id = ?", (food_id,)
+            ).fetchone()
         if not row:
             return None
         if row["is_preset"]:
@@ -335,7 +454,11 @@ class NutritionRepository:
             try:
                 goals[row["key"]] = int(float(row["value"]))
             except Exception:
-                logger.exception("Failed to parse nutrition goal value for key=%s, value=%s", row["key"], row["value"])
+                logger.exception(
+                    "Failed to parse nutrition goal value for key=%s, value=%s",
+                    row["key"],
+                    row["value"],
+                )
         return goals
 
     def set_goals(self, payload: NutritionGoals) -> dict:
@@ -359,12 +482,24 @@ class NutritionRepository:
         goals = self.get_goals()
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["date", "total_kj", "protein_g", "carbs_g", "fat_g", "goal_kj", "adherence_pct"])
+        writer.writerow(
+            [
+                "date",
+                "total_kj",
+                "protein_g",
+                "carbs_g",
+                "fat_g",
+                "goal_kj",
+                "adherence_pct",
+            ]
+        )
         current = start
         while current <= end:
             summary = self.get_summary(current.isoformat())
             goal_kj = goals.get("daily_kj")
-            adherence = round((summary["total_kj"] / goal_kj) * 100, 1) if goal_kj else None
+            adherence = (
+                round((summary["total_kj"] / goal_kj) * 100, 1) if goal_kj else None
+            )
             writer.writerow(
                 [
                     current.isoformat(),

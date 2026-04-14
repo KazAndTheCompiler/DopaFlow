@@ -22,16 +22,16 @@ _TAG_RE = re.compile(r"#([\w-]+)")
 class TaskCandidate:
     """Parsed task data from a vault file, not yet committed to DB."""
 
-    file_path: str                       # relative to vault root
+    file_path: str  # relative to vault root
     title: str
     done: bool
     dopaflow_id: str | None = None
-    due_str: str | None = None           # ISO date string or None
+    due_str: str | None = None  # ISO date string or None
     priority: int = 3
     tags: list[str] = field(default_factory=list)
-    project_id: str | None = None        # from file frontmatter
-    project_name: str | None = None      # from file frontmatter
-    line_text: str = ""                  # original raw line (for ID rewrite on import)
+    project_id: str | None = None  # from file frontmatter
+    project_name: str | None = None  # from file frontmatter
+    line_text: str = ""  # original raw line (for ID rewrite on import)
     line_number: int | None = None
 
 
@@ -90,7 +90,9 @@ def parse_task_line(
     )
 
 
-def parse_task_file(abs_path: Path, vault_root: Path, *, require_dopaflow: bool = True) -> list[TaskCandidate]:
+def parse_task_file(
+    abs_path: Path, vault_root: Path, *, require_dopaflow: bool = True
+) -> list[TaskCandidate]:
     """Parse all task lines from a markdown task file.
 
     When ``require_dopaflow`` is True, only DopaFlow-owned task collection files

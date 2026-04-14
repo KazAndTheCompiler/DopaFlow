@@ -8,14 +8,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from app.core.config import Settings, get_settings_dependency
-from app.middleware.auth_scopes import require_scope
 from app.domains.search.schemas import SearchResponse
 from app.domains.search.search_engine import search
+from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(prefix="/search", tags=["search"])
 
 
-@router.get("", response_model=SearchResponse, dependencies=[Depends(require_scope("read:search"))])
+@router.get(
+    "",
+    response_model=SearchResponse,
+    dependencies=[Depends(require_scope("read:search"))],
+)
 async def run_search(
     q: str = Query(...),
     types: str | None = Query(default=None),

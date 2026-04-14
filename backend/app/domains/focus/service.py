@@ -63,6 +63,8 @@ def _restore_from_db(db_path: str) -> None:
         state.elapsed_seconds = 0
     except Exception:
         logger.exception("Failed to restore focus state from DB")
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -96,9 +98,6 @@ def start(db_path: str, minutes: int, task_id: str | None = None) -> FocusStatus
     state.task_id = task_id
     return get_status()
 
-
-def pause() -> FocusStatus:
-    """Pause the active Pomodoro."""
 
 def pause(db_path: str) -> FocusStatus:
     """Pause the active Pomodoro."""

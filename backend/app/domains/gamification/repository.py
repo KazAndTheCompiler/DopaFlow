@@ -7,7 +7,11 @@ from datetime import UTC, date, datetime, timedelta
 
 from app.core.database import get_db, tx
 from app.domains.gamification.schemas import BadgeRead, PlayerLevelRead
-from app.domains.gamification.xp_engine import level_for, level_progress, xp_to_next_level
+from app.domains.gamification.xp_engine import (
+    level_for,
+    level_progress,
+    xp_to_next_level,
+)
 
 _stats_cache: dict[str, tuple[float, dict]] = {}
 
@@ -87,16 +91,23 @@ class GamificationRepository:
                 """,
                 (xp,),
             )
-            row = conn.execute("SELECT total_xp FROM player_level WHERE id = 1").fetchone()
+            row = conn.execute(
+                "SELECT total_xp FROM player_level WHERE id = 1"
+            ).fetchone()
         return int(row["total_xp"]) if row else 0
 
     def set_level(self, level: int) -> None:
         with tx(self.db_path) as conn:
-            conn.execute("UPDATE player_level SET level = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1", (level,))
+            conn.execute(
+                "UPDATE player_level SET level = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
+                (level,),
+            )
 
     def get_level(self) -> PlayerLevelRead:
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT total_xp, updated_at FROM player_level WHERE id = 1").fetchone()
+            row = conn.execute(
+                "SELECT total_xp, updated_at FROM player_level WHERE id = 1"
+            ).fetchone()
         total_xp = int(row["total_xp"]) if row else 0
         return PlayerLevelRead(
             total_xp=total_xp,
@@ -111,7 +122,9 @@ class GamificationRepository:
             rows = conn.execute("SELECT * FROM badges ORDER BY id ASC").fetchall()
         return [BadgeRead(**dict(row)) for row in rows]
 
-    def update_badge_progress(self, badge_id: str, progress: float, earned: bool) -> None:
+    def update_badge_progress(
+        self, badge_id: str, progress: float, earned: bool
+    ) -> None:
         with tx(self.db_path) as conn:
             conn.execute(
                 """
@@ -131,14 +144,29 @@ class GamificationRepository:
                 return stats
         with get_db(self.db_path) as conn:
             tasks_done = int(
-                conn.execute("SELECT COUNT(*) FROM tasks WHERE deleted_at IS NULL AND (done = 1 OR status = 'done')").fetchone()[0]
+                conn.execute(
+                    "SELECT COUNT(*) FROM tasks WHERE deleted_at IS NULL AND (done = 1 OR status = 'done')"
+                ).fetchone()[0]
             )
             focus_minutes = int(
-                conn.execute("SELECT COALESCE(SUM(duration_minutes), 0) FROM focus_sessions WHERE status = 'completed'").fetchone()[0]
+                conn.execute(
+                    "SELECT COALESCE(SUM(duration_minutes), 0) FROM focus_sessions WHERE status = 'completed'"
+                ).fetchone()[0]
             )
-            cards_rated = int(conn.execute("SELECT COALESCE(SUM(reviews_done), 0) FROM review_cards").fetchone()[0])
-            journal_dates = [str(row["entry_date"]) for row in conn.execute("SELECT entry_date FROM journal_entries WHERE deleted_at IS NULL").fetchall()]
-            habit_rows = conn.execute("SELECT habit_id, checkin_date FROM habit_checkins ORDER BY checkin_date ASC").fetchall()
+            cards_rated = int(
+                conn.execute(
+                    "SELECT COALESCE(SUM(reviews_done), 0) FROM review_cards"
+                ).fetchone()[0]
+            )
+            journal_dates = [
+                str(row["entry_date"])
+                for row in conn.execute(
+                    "SELECT entry_date FROM journal_entries WHERE deleted_at IS NULL"
+                ).fetchall()
+            ]
+            habit_rows = conn.execute(
+                "SELECT habit_id, checkin_date FROM habit_checkins ORDER BY checkin_date ASC"
+            ).fetchall()
         stats = {
             "tasks_done": tasks_done,
             "best_streak": _best_habit_streak(habit_rows),

@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from app.domains.calendar.repository import CalendarRepository
-from app.domains.calendar.schemas import CalendarEvent, CalendarEventCreate, GoogleSyncRequest, MoveEventRequest, SyncConflict
+from app.domains.calendar.schemas import (
+    CalendarEvent,
+    CalendarEventCreate,
+    GoogleSyncRequest,
+    MoveEventRequest,
+    SyncConflict,
+)
 
 
 class CalendarService:
@@ -20,7 +26,9 @@ class CalendarService:
     ) -> list[CalendarEvent]:
         """Return events with optional date-range and category filters."""
 
-        return self.repository.list_events(from_dt=from_dt, until_dt=until_dt, category=category)
+        return self.repository.list_events(
+            from_dt=from_dt, until_dt=until_dt, category=category
+        )
 
     def get_event(self, identifier: str) -> CalendarEvent | None:
         """Fetch a single event."""
@@ -42,19 +50,25 @@ class CalendarService:
 
         return self.repository.delete_event(identifier)
 
-    def move_event(self, identifier: str, payload: MoveEventRequest) -> dict[str, object]:
+    def move_event(
+        self, identifier: str, payload: MoveEventRequest
+    ) -> dict[str, object]:
         """Move an event by delta_minutes; optionally shift conflicting events forward."""
         from datetime import timedelta
+
         event = self.get_event(identifier)
         if event is None:
             return {"moved": False, "error": "Event not found"}
         delta = timedelta(minutes=payload.delta_minutes)
         new_start = event.start_at + delta
         new_end = event.end_at + delta
-        self.update_event(identifier, {"start_at": new_start.isoformat(), "end_at": new_end.isoformat()})
+        self.update_event(
+            identifier,
+            {"start_at": new_start.isoformat(), "end_at": new_end.isoformat()},
+        )
         adjusted: list[str] = []
         if payload.auto_adjust:
-            duration = event.end_at - event.start_at
+            _duration = event.end_at - event.start_at
             overlapping = self.repository.list_events(
                 from_dt=new_start.isoformat(),
                 until_dt=new_end.isoformat(),
@@ -67,7 +81,13 @@ class CalendarService:
                 other_duration = other.end_at - other.start_at
                 bumped_start = new_end
                 bumped_end = bumped_start + other_duration
-                self.update_event(other.id, {"start_at": bumped_start.isoformat(), "end_at": bumped_end.isoformat()})
+                self.update_event(
+                    other.id,
+                    {
+                        "start_at": bumped_start.isoformat(),
+                        "end_at": bumped_end.isoformat(),
+                    },
+                )
                 adjusted.append(other.id)
         updated = self.get_event(identifier)
         return {"moved": True, "event": updated, "adjusted": adjusted}
@@ -82,7 +102,9 @@ class CalendarService:
 
         return self.repository.list_conflicts()
 
-    def resolve_conflict(self, identifier: int, repair_hint: str) -> SyncConflict | None:
+    def resolve_conflict(
+        self, identifier: int, repair_hint: str
+    ) -> SyncConflict | None:
         """Resolve a single sync conflict."""
 
         return self.repository.resolve_conflict(identifier, repair_hint)

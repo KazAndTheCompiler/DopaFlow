@@ -82,10 +82,15 @@ def test_materialize_recurring_tasks_logs_and_swallows_failures(
 
     scheduler._materialize_recurring_tasks()
 
-    assert any("Failed to materialize recurring tasks" in record.message for record in caplog.records)
+    assert any(
+        "Failed to materialize recurring tasks" in record.message
+        for record in caplog.records
+    )
 
 
-def test_start_scheduler_uses_single_instance_when_called_twice(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_start_scheduler_uses_single_instance_when_called_twice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     created: list[object] = []
 
     class FakeScheduler:
@@ -185,7 +190,9 @@ def test_sync_peer_feeds_skips_backed_off_feed(monkeypatch):
         scheduler._feed_backoff["feed-1"] = time.time() + 3600
         scheduler._feed_backoff_duration["feed-1"] = 60.0
 
-        svc = _make_sync_mocks([feed], {"feed-1": SimpleNamespace(status="ok", events_imported=0)})
+        svc = _make_sync_mocks(
+            [feed], {"feed-1": SimpleNamespace(status="ok", events_imported=0)}
+        )
 
         _patch_sync_dependencies(monkeypatch, svc)
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 from datetime import date, timedelta
 
 from app.core.database import get_db
@@ -82,13 +81,17 @@ class InsightsRepository:
             f"{focus_sessions} focus sessions ({focus_mins}m total)",
             f"{journal_entries} journal entries written",
         ]
-        return WeeklyDigest(title=f"Week of {date.today().strftime('%b %d')}", highlights=highlights)
+        return WeeklyDigest(
+            title=f"Week of {date.today().strftime('%b %d')}", highlights=highlights
+        )
 
     def correlations(self) -> list[CorrelationInsight]:
         """Return sample habit-mood correlation insights."""
 
         with get_db(self.db_path) as conn:
-            habits = conn.execute("SELECT id, name FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 5").fetchall()
+            habits = conn.execute(
+                "SELECT id, name FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 5"
+            ).fetchall()
             if not habits:
                 return []
 
@@ -107,7 +110,9 @@ class InsightsRepository:
                     SELECT COALESCE(AVG(duration_minutes), 0)
                     FROM focus_sessions
                     WHERE DATE(started_at) IN ({})
-                    """.format(",".join("?" for _ in checked_days)) if checked_days else "SELECT 0",
+                    """.format(",".join("?" for _ in checked_days))
+                    if checked_days
+                    else "SELECT 0",
                     tuple(sorted(checked_days)),
                 ).fetchone()[0]
                 unchecked_days = [day for day in days if day not in checked_days]
@@ -116,12 +121,20 @@ class InsightsRepository:
                     SELECT COALESCE(AVG(duration_minutes), 0)
                     FROM focus_sessions
                     WHERE DATE(started_at) IN ({})
-                    """.format(",".join("?" for _ in unchecked_days)) if unchecked_days else "SELECT 0",
+                    """.format(",".join("?" for _ in unchecked_days))
+                    if unchecked_days
+                    else "SELECT 0",
                     tuple(unchecked_days),
                 ).fetchone()[0]
                 _focus_gap = float(checked_focus or 0) - float(unchecked_focus or 0)
                 pearson_r = round(len(checked_days) / 30.0, 2)
-                interpretation = "High" if pearson_r > 0.6 else "Moderate" if pearson_r > 0.3 else "Low"
+                interpretation = (
+                    "High"
+                    if pearson_r > 0.6
+                    else "Moderate"
+                    if pearson_r > 0.3
+                    else "Low"
+                )
                 insights.append(
                     CorrelationInsight(
                         metric=f"{habit['name']} check-in rate",

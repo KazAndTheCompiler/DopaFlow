@@ -8,7 +8,12 @@ from urllib.parse import urlencode
 
 from app.core.config import Settings
 from app.core.database import get_db, tx
-from app.domains.integrations.schemas import GmailConnectRequest, GmailImportResult, IntegrationsStatus, WebhookDispatch
+from app.domains.integrations.schemas import (
+    GmailConnectRequest,
+    GmailImportResult,
+    IntegrationsStatus,
+    WebhookDispatch,
+)
 
 
 class IntegrationsRepository:
@@ -23,7 +28,10 @@ class IntegrationsRepository:
 
         client_id = self.settings.google_client_id if self.settings else None
         if not client_id:
-            return {"status": "unconfigured", "message": "Set GOOGLE_CLIENT_ID in environment"}
+            return {
+                "status": "unconfigured",
+                "message": "Set GOOGLE_CLIENT_ID in environment",
+            }
         params = {
             "client_id": client_id,
             "redirect_uri": payload.redirect_uri,
@@ -34,7 +42,10 @@ class IntegrationsRepository:
         }
         if payload.state:
             params["state"] = payload.state
-        return {"status": "redirect", "url": f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"}
+        return {
+            "status": "redirect",
+            "url": f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}",
+        }
 
     def import_gmail_tasks(self) -> GmailImportResult:
         """Return the current Gmail import status."""
@@ -66,7 +77,9 @@ class IntegrationsRepository:
 
     def get_token(self, provider: str) -> dict[str, object] | None:
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM oauth_tokens WHERE provider = ?", (provider,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM oauth_tokens WHERE provider = ?", (provider,)
+            ).fetchone()
         return dict(row) if row else None
 
     def import_gmail_tasks_real(self) -> GmailImportResult:

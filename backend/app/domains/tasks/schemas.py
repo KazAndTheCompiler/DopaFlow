@@ -38,7 +38,7 @@ class Task(BaseModel):
     source_external_id: str | None = None
     source_instance_id: str | None = None
     project_id: str | None = None
-    dependencies: list["TaskDependency"] = Field(default_factory=list)
+    dependencies: list[TaskDependency] = Field(default_factory=list)
     created_at: str
     updated_at: str
 

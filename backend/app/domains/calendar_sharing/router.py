@@ -7,8 +7,7 @@ import logging
 import socket
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi import Header
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.calendar_sharing.repository import CalendarSharingRepository
@@ -32,7 +31,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sharing", tags=["calendar_sharing"])
 
 
-async def _svc(settings: Settings = Depends(get_settings_dependency)) -> CalendarSharingService:
+async def _svc(
+    settings: Settings = Depends(get_settings_dependency),
+) -> CalendarSharingService:
     """Build a CalendarSharingService wired to the real database."""
 
     return CalendarSharingService(CalendarSharingRepository(settings.db_path))
@@ -41,11 +42,15 @@ async def _svc(settings: Settings = Depends(get_settings_dependency)) -> Calenda
 def _validate_remote_base_url(base_url: str) -> str:
     parsed = urlparse(base_url)
     if parsed.scheme not in {"http", "https"}:
-        raise HTTPException(status_code=422, detail="Only http:// and https:// URLs are allowed")
+        raise HTTPException(
+            status_code=422, detail="Only http:// and https:// URLs are allowed"
+        )
     if not parsed.netloc:
         raise HTTPException(status_code=422, detail="Base URL must include a host")
     if parsed.username or parsed.password:
-        raise HTTPException(status_code=422, detail="Embedded credentials are not allowed")
+        raise HTTPException(
+            status_code=422, detail="Embedded credentials are not allowed"
+        )
     hostname = parsed.hostname
     if not hostname:
         raise HTTPException(status_code=422, detail="Base URL host is invalid")
@@ -55,10 +60,14 @@ def _validate_remote_base_url(base_url: str) -> str:
     try:
         addresses = {
             info[4][0]
-            for info in socket.getaddrinfo(hostname, parsed.port or None, type=socket.SOCK_STREAM)
+            for info in socket.getaddrinfo(
+                hostname, parsed.port or None, type=socket.SOCK_STREAM
+            )
         }
     except OSError as exc:
-        raise HTTPException(status_code=422, detail=f"Could not resolve host: {exc}") from exc
+        raise HTTPException(
+            status_code=422, detail=f"Could not resolve host: {exc}"
+        ) from exc
     for address in addresses:
         ip = ipaddress.ip_address(address)
         if (
@@ -69,7 +78,10 @@ def _validate_remote_base_url(base_url: str) -> str:
             or ip.is_reserved
             or ip.is_unspecified
         ):
-            raise HTTPException(status_code=422, detail="Private or local network targets are not allowed")
+            raise HTTPException(
+                status_code=422,
+                detail="Private or local network targets are not allowed",
+            )
     return base_url.rstrip("/")
 
 
@@ -88,7 +100,11 @@ async def require_share_token(
     return share_token
 
 
-@router.get("/tokens", response_model=list[ShareToken], dependencies=[Depends(require_scope("share:calendar"))])
+@router.get(
+    "/tokens",
+    response_model=list[ShareToken],
+    dependencies=[Depends(require_scope("share:calendar"))],
+)
 async def list_tokens(
     svc: CalendarSharingService = Depends(_svc),
 ) -> list[ShareToken]:
@@ -97,7 +113,12 @@ async def list_tokens(
     return svc.list_tokens()
 
 
-@router.post("/tokens", response_model=ShareTokenCreated, status_code=201, dependencies=[Depends(require_scope("share:calendar"))])
+@router.post(
+    "/tokens",
+    response_model=ShareTokenCreated,
+    status_code=201,
+    dependencies=[Depends(require_scope("share:calendar"))],
+)
 async def create_token(
     payload: ShareTokenCreate,
     svc: CalendarSharingService = Depends(_svc),
@@ -109,7 +130,11 @@ async def create_token(
     return token
 
 
-@router.delete("/tokens/{token_id}", response_model=ShareTokenRevocation, dependencies=[Depends(require_scope("share:calendar"))])
+@router.delete(
+    "/tokens/{token_id}",
+    response_model=ShareTokenRevocation,
+    dependencies=[Depends(require_scope("share:calendar"))],
+)
 async def revoke_token(
     token_id: str,
     svc: CalendarSharingService = Depends(_svc),
@@ -122,7 +147,11 @@ async def revoke_token(
     return ShareTokenRevocation(revoked=True)
 
 
-@router.get("/tokens/{token_id}/invite", response_model=ShareTokenInvite, dependencies=[Depends(require_scope("share:calendar"))])
+@router.get(
+    "/tokens/{token_id}/invite",
+    response_model=ShareTokenInvite,
+    dependencies=[Depends(require_scope("share:calendar"))],
+)
 async def get_invite_string(
     token_id: str,
     request: Request,
@@ -145,7 +174,11 @@ async def get_invite_string(
     return ShareTokenInvite(connection_string=connection_string, label=token.label)
 
 
-@router.get("/feeds", response_model=list[PeerFeed], dependencies=[Depends(require_scope("read:calendar"))])
+@router.get(
+    "/feeds",
+    response_model=list[PeerFeed],
+    dependencies=[Depends(require_scope("read:calendar"))],
+)
 async def list_feeds(
     svc: CalendarSharingService = Depends(_svc),
 ) -> list[PeerFeed]:
@@ -154,14 +187,21 @@ async def list_feeds(
     return svc.list_feeds()
 
 
-@router.post("/feeds", response_model=PeerFeed, status_code=201, dependencies=[Depends(require_scope("write:calendar"))])
+@router.post(
+    "/feeds",
+    response_model=PeerFeed,
+    status_code=201,
+    dependencies=[Depends(require_scope("write:calendar"))],
+)
 async def add_feed(
     payload: PeerFeedCreate,
     svc: CalendarSharingService = Depends(_svc),
 ) -> PeerFeed:
     """Add a peer feed subscription."""
 
-    payload = payload.model_copy(update={"base_url": _validate_remote_base_url(payload.base_url)})
+    payload = payload.model_copy(
+        update={"base_url": _validate_remote_base_url(payload.base_url)}
+    )
 
     # Test pull to validate token
     feed = svc.add_feed(payload)
@@ -169,13 +209,20 @@ async def add_feed(
     if result.status == "error":
         # Rollback: remove the feed
         svc.remove_feed(feed.id)
-        raise HTTPException(status_code=422, detail=f"Initial sync failed: {result.detail or result.status}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Initial sync failed: {result.detail or result.status}",
+        )
 
     await publish_invalidation("calendar")
     return feed
 
 
-@router.patch("/feeds/{feed_id}", response_model=PeerFeed, dependencies=[Depends(require_scope("write:calendar"))])
+@router.patch(
+    "/feeds/{feed_id}",
+    response_model=PeerFeed,
+    dependencies=[Depends(require_scope("write:calendar"))],
+)
 async def update_feed(
     feed_id: str,
     patch: PeerFeedUpdate,
@@ -190,7 +237,11 @@ async def update_feed(
     return feed
 
 
-@router.delete("/feeds/{feed_id}", response_model=PeerFeedRemoval, dependencies=[Depends(require_scope("write:calendar"))])
+@router.delete(
+    "/feeds/{feed_id}",
+    response_model=PeerFeedRemoval,
+    dependencies=[Depends(require_scope("write:calendar"))],
+)
 async def remove_feed(
     feed_id: str,
     svc: CalendarSharingService = Depends(_svc),
@@ -203,7 +254,11 @@ async def remove_feed(
     return PeerFeedRemoval(removed=True)
 
 
-@router.post("/feeds/{feed_id}/sync", response_model=PeerFeedSyncResult, dependencies=[Depends(require_scope("write:calendar"))])
+@router.post(
+    "/feeds/{feed_id}/sync",
+    response_model=PeerFeedSyncResult,
+    dependencies=[Depends(require_scope("write:calendar"))],
+)
 async def sync_feed(
     feed_id: str,
     svc: CalendarSharingService = Depends(_svc),

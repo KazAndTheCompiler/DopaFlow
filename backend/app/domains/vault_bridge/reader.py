@@ -18,7 +18,7 @@ def _hash(content: str) -> str:
 class JournalCandidate:
     """Parsed data from a vault journal note, not yet committed to DB."""
 
-    file_path: str        # relative to vault root
+    file_path: str  # relative to vault root
     file_hash: str
     dopaflow_id: str | None
     date: str | None

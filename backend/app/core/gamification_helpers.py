@@ -9,7 +9,9 @@ from app.domains.gamification.repository import GamificationRepository
 from app.domains.gamification.service import GamificationService
 
 
-def award(source: str, source_id: str | None = None, *, logger: logging.Logger | None = None) -> None:
+def award(
+    source: str, source_id: str | None = None, *, logger: logging.Logger | None = None
+) -> None:
     _log = logger or logging.getLogger(__name__)
     try:
         db = get_settings().db_path

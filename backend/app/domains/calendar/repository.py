@@ -10,7 +10,14 @@ import httpx
 
 from app.core.database import get_db, tx
 from app.core.id_gen import event_id
-from app.domains.calendar.schemas import CalendarEvent, CalendarEventCreate, ConflictReason, GoogleSyncRequest, SyncConflict, SyncStatus
+from app.domains.calendar.schemas import (
+    CalendarEvent,
+    CalendarEventCreate,
+    ConflictReason,
+    GoogleSyncRequest,
+    SyncConflict,
+    SyncStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +46,7 @@ def _row_to_event(row: object) -> CalendarEvent:
 
 def _row_to_conflict(row: object) -> SyncConflict:
     """Convert a SQLite Row to SyncConflict."""
+
     def _json(val: object) -> object:
         return json.loads(val) if val else None
 
@@ -55,7 +63,9 @@ def _row_to_conflict(row: object) -> SyncConflict:
         repair_hint=row["repair_hint"],  # type: ignore[index]
         blocking_severity=str(row["blocking_severity"]),  # type: ignore[index]
         detected_at=datetime.fromisoformat(str(row["detected_at"])),  # type: ignore[index]
-        resolved_at=datetime.fromisoformat(str(row["resolved_at"])) if row["resolved_at"] else None,  # type: ignore[index]
+        resolved_at=datetime.fromisoformat(str(row["resolved_at"]))
+        if row["resolved_at"]
+        else None,  # type: ignore[index]
         resolved_by=row["resolved_by"],  # type: ignore[index]
     )
 
@@ -66,7 +76,9 @@ class CalendarRepository:
     def __init__(self, db_path: str) -> None:
         self.db_path = db_path
 
-    def store_google_token(self, access_token: str, refresh_token: str | None, expires_at: str) -> None:
+    def store_google_token(
+        self, access_token: str, refresh_token: str | None, expires_at: str
+    ) -> None:
         with tx(self.db_path) as conn:
             conn.execute(
                 """
@@ -84,7 +96,9 @@ class CalendarRepository:
 
     def get_google_token(self) -> dict[str, object] | None:
         with get_db(self.db_path) as conn:
-            row = conn.execute("SELECT * FROM oauth_tokens WHERE provider = 'google_calendar'").fetchone()
+            row = conn.execute(
+                "SELECT * FROM oauth_tokens WHERE provider = 'google_calendar'"
+            ).fetchone()
         return dict(row) if row else None
 
     def list_events(
@@ -136,12 +150,19 @@ class CalendarRepository:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'local_only', ?, ?)
                 """,
                 (
-                    new_id, payload.title, payload.description,
-                    str(payload.start_at), str(payload.end_at),
-                    int(payload.all_day), payload.category,
-                    payload.recurrence, payload.source_type,
-                    payload.source_external_id, payload.source_instance_id,
-                    now, now,
+                    new_id,
+                    payload.title,
+                    payload.description,
+                    str(payload.start_at),
+                    str(payload.end_at),
+                    int(payload.all_day),
+                    payload.category,
+                    payload.recurrence,
+                    payload.source_type,
+                    payload.source_external_id,
+                    payload.source_instance_id,
+                    now,
+                    now,
                 ),
             )
         return self.get_event(new_id)  # type: ignore[return-value]
@@ -164,11 +185,15 @@ class CalendarRepository:
                 WHERE id = ?
                 """,
                 (
-                    merged["title"], merged.get("description"),
-                    str(merged["start_at"]), str(merged["end_at"]),
+                    merged["title"],
+                    merged.get("description"),
+                    str(merged["start_at"]),
+                    str(merged["end_at"]),
                     int(merged.get("all_day", False)),
-                    merged.get("category"), merged.get("recurrence"),
-                    now, identifier,
+                    merged.get("category"),
+                    merged.get("recurrence"),
+                    now,
+                    identifier,
                 ),
             )
         return self.get_event(identifier)
@@ -177,7 +202,9 @@ class CalendarRepository:
         """Hard-delete a calendar event."""
 
         with tx(self.db_path) as conn:
-            result = conn.execute("DELETE FROM calendar_events WHERE id = ?", (identifier,))
+            result = conn.execute(
+                "DELETE FROM calendar_events WHERE id = ?", (identifier,)
+            )
             return result.rowcount > 0
 
     def list_conflicts(self) -> list[SyncConflict]:
@@ -189,7 +216,9 @@ class CalendarRepository:
             ).fetchall()
             return [_row_to_conflict(row) for row in rows]
 
-    def resolve_conflict(self, identifier: int, repair_hint: str) -> SyncConflict | None:
+    def resolve_conflict(
+        self, identifier: int, repair_hint: str
+    ) -> SyncConflict | None:
         """Mark a conflict as resolved."""
 
         now = datetime.now(timezone.utc).isoformat()
@@ -200,7 +229,9 @@ class CalendarRepository:
             )
             if result.rowcount == 0:
                 return None
-            row = conn.execute("SELECT * FROM sync_conflicts WHERE id = ?", (identifier,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM sync_conflicts WHERE id = ?", (identifier,)
+            ).fetchone()
             return _row_to_conflict(row)
 
     def sync_google(self, payload: GoogleSyncRequest) -> dict[str, object]:
@@ -211,7 +242,9 @@ class CalendarRepository:
             return {"status": "not_connected", "note": "complete OAuth flow first"}
 
         params = {
-            "timeMin": f"{payload.fetch_from}T00:00:00Z" if payload.fetch_from else None,
+            "timeMin": f"{payload.fetch_from}T00:00:00Z"
+            if payload.fetch_from
+            else None,
             "singleEvents": "true",
             "orderBy": "startTime",
             "maxResults": "50",
@@ -232,7 +265,9 @@ class CalendarRepository:
             try:
                 start = item.get("start", {})
                 end = item.get("end", {})
-                start_at = start.get("dateTime") or f"{start.get('date')}T00:00:00+00:00"
+                start_at = (
+                    start.get("dateTime") or f"{start.get('date')}T00:00:00+00:00"
+                )
                 end_at = end.get("dateTime") or f"{end.get('date')}T00:00:00+00:00"
                 with tx(self.db_path) as conn:
                     now = datetime.now(timezone.utc).isoformat()
@@ -260,5 +295,8 @@ class CalendarRepository:
                     )
                 imported += 1
             except Exception:
-                logger.exception("Failed to import Google Calendar event: %s", item.get("summary", "unknown"))
+                logger.exception(
+                    "Failed to import Google Calendar event: %s",
+                    item.get("summary", "unknown"),
+                )
         return {"status": "synced", "imported": imported}

@@ -81,24 +81,25 @@ def parse_quick_add(text: str, user_tz: str = "UTC") -> dict[str, Any]:
         working = re.sub(r"\btoday\b", "", working, flags=re.IGNORECASE).strip()
     elif "tomorrow" in lowered_no_tags:
         due_at = _to_utc_iso(
-            (now + timedelta(days=1))
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+            (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
         )
         working = re.sub(r"\btomorrow\b", "", working, flags=re.IGNORECASE).strip()
     elif match := re.search(r"in (\d+) days", lowered_no_tags):
         due_at = _to_utc_iso(
-            (now + timedelta(days=int(match.group(1))))
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+            (now + timedelta(days=int(match.group(1)))).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
         )
         working = re.sub(r"in \d+ days", "", working, flags=re.IGNORECASE).strip()
     elif "next week" in lowered_no_tags:
         due_at = _to_utc_iso(
-            (now + timedelta(days=7))
-            .replace(hour=0, minute=0, second=0, microsecond=0)
+            (now + timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0)
         )
         working = re.sub(r"next week", "", working, flags=re.IGNORECASE).strip()
         ambiguity = True
-        ambiguity_hints.append("due date unclear: 'next week' defaulted to next week's local midnight")
+        ambiguity_hints.append(
+            "due date unclear: 'next week' defaulted to next week's local midnight"
+        )
     else:
         for weekday in (
             "monday",
@@ -111,8 +112,9 @@ def parse_quick_add(text: str, user_tz: str = "UTC") -> dict[str, Any]:
         ):
             if weekday in lowered_no_tags:
                 due_at = _to_utc_iso(
-                    _weekday_target(weekday, now)
-                    .replace(hour=0, minute=0, second=0, microsecond=0)
+                    _weekday_target(weekday, now).replace(
+                        hour=0, minute=0, second=0, microsecond=0
+                    )
                 )
                 working = re.sub(weekday, "", working, flags=re.IGNORECASE).strip()
                 ambiguity = True
@@ -127,7 +129,8 @@ def parse_quick_add(text: str, user_tz: str = "UTC") -> dict[str, Any]:
     elif any(token in lowered_no_tags for token in ["every week", "weekly"]):
         recurrence_rule = "FREQ=WEEKLY"
     elif match := re.search(
-        r"every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)", lowered_no_tags
+        r"every (monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
+        lowered_no_tags,
     ):
         recurrence_rule = f"FREQ=WEEKLY;BYDAY={match.group(1)[:2].upper()}"
 

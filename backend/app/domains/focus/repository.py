@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from app.core.database import get_db, tx
 from app.core.id_gen import focus_id
-from app.domains.focus.schemas import FocusSessionRead, FocusStats, FocusRecommendation
+from app.domains.focus.schemas import FocusRecommendation, FocusSessionRead, FocusStats
 
 
 def create_session(db_path: str, task_id: str | None, duration_minutes: int) -> str:

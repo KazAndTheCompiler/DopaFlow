@@ -17,7 +17,9 @@ def create_apkg(deck: dict, cards: list[dict]) -> tuple[str, bytes]:
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(
             "collection.anki2/collection.conf",
-            json.dumps({"creator": "zoesTM", "version": 11, "nextID": len(cards) + 1000}),
+            json.dumps(
+                {"creator": "zoesTM", "version": 11, "nextID": len(cards) + 1000}
+            ),
         )
 
         csv_buffer = io.StringIO()

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
-from app.domains.vault_bridge.frontmatter import deserialize_frontmatter, serialize_frontmatter
+from app.domains.vault_bridge.frontmatter import (
+    deserialize_frontmatter,
+    serialize_frontmatter,
+)
 
 
 class TestSerializeFrontmatter:
@@ -156,11 +157,11 @@ Body"""
 
     def test_quoted_values_have_quotes_removed(self) -> None:
         """Quoted string values have quotes stripped."""
-        text = '''---
+        text = """---
 title: "Work: Deep Session"
 author: "Jane Doe"
 ---
-Body'''
+Body"""
 
         fields, body = deserialize_frontmatter(text)
 

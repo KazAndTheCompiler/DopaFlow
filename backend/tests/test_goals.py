@@ -34,8 +34,12 @@ def test_list_goals_returns_created_goal(client) -> None:
 def test_complete_final_milestone_marks_goal_done(client) -> None:
     goal = create_goal(client)
 
-    first = client.post(f"/api/v2/goals/{goal['id']}/milestones/{goal['milestones'][0]['id']}/complete")
-    second = client.post(f"/api/v2/goals/{goal['id']}/milestones/{goal['milestones'][1]['id']}/complete")
+    first = client.post(
+        f"/api/v2/goals/{goal['id']}/milestones/{goal['milestones'][0]['id']}/complete"
+    )
+    second = client.post(
+        f"/api/v2/goals/{goal['id']}/milestones/{goal['milestones'][1]['id']}/complete"
+    )
 
     assert first.status_code == 200
     assert second.status_code == 200
@@ -45,13 +49,20 @@ def test_complete_final_milestone_marks_goal_done(client) -> None:
 
 def test_add_milestone_resets_done_state(client) -> None:
     goal = create_goal(client, milestone_labels=["Only one"])
-    client.post(f"/api/v2/goals/{goal['id']}/milestones/{goal['milestones'][0]['id']}/complete")
+    client.post(
+        f"/api/v2/goals/{goal['id']}/milestones/{goal['milestones'][0]['id']}/complete"
+    )
 
-    response = client.post(f"/api/v2/goals/{goal['id']}/milestones", json={"label": "Polish UX"})
+    response = client.post(
+        f"/api/v2/goals/{goal['id']}/milestones", json={"label": "Polish UX"}
+    )
 
     assert response.status_code == 200
     assert response.json()["done"] is False
-    assert [milestone["label"] for milestone in response.json()["milestones"]] == ["Only one", "Polish UX"]
+    assert [milestone["label"] for milestone in response.json()["milestones"]] == [
+        "Only one",
+        "Polish UX",
+    ]
 
 
 def test_delete_goal_removes_it(client) -> None:

@@ -32,14 +32,21 @@ def _startup_security_warnings() -> list[str]:
     if _env_flag("DOPAFLOW_DEV_AUTH", "ZOESTM_DEV_AUTH"):
         warnings.append("DOPAFLOW_DEV_AUTH=1 enables dev auth bypass")
     if _trust_local_clients_enabled():
-        warnings.append("DOPAFLOW_TRUST_LOCAL_CLIENTS=1 trusts localhost clients without real tokens")
-    if os.getenv("WEBHOOK_SIGNING_KEY", "dev-key-change-in-prod") == "dev-key-change-in-prod":
+        warnings.append(
+            "DOPAFLOW_TRUST_LOCAL_CLIENTS=1 trusts localhost clients without real tokens"
+        )
+    if (
+        os.getenv("WEBHOOK_SIGNING_KEY", "dev-key-change-in-prod")
+        == "dev-key-change-in-prod"
+    ):
         warnings.append("WEBHOOK_SIGNING_KEY is using the default development value")
     if environment == "production":
         if _env_flag("DOPAFLOW_DEV_AUTH", "ZOESTM_DEV_AUTH"):
             warnings.append("Production mode with DOPAFLOW_DEV_AUTH=1 is unsafe")
         if _trust_local_clients_enabled():
-            warnings.append("Production mode with DOPAFLOW_TRUST_LOCAL_CLIENTS=1 is unsafe")
+            warnings.append(
+                "Production mode with DOPAFLOW_TRUST_LOCAL_CLIENTS=1 is unsafe"
+            )
     return warnings
 
 
@@ -72,7 +79,7 @@ class HealthService:
                 logger.warning("Health memory depth unavailable: %s", exc)
                 memory_depth_days = 0
             conn.close()
-        except Exception:  # noqa: BLE001
+        except Exception:
             db_status = "error"
 
         return {
@@ -82,10 +89,17 @@ class HealthService:
                 "webhooks": os.getenv("ENABLE_WEBHOOK_HTTP_DELIVERY", "0") == "1",
                 "dev_auth": _env_flag("DOPAFLOW_DEV_AUTH", "ZOESTM_DEV_AUTH"),
                 "ai_commands": bool(os.getenv("ANTHROPIC_API_KEY")),
-                "local_audio": not _env_flag("DOPAFLOW_DISABLE_LOCAL_AUDIO", "ZOESTM_DISABLE_LOCAL_AUDIO"),
+                "local_audio": not _env_flag(
+                    "DOPAFLOW_DISABLE_LOCAL_AUDIO", "ZOESTM_DISABLE_LOCAL_AUDIO"
+                ),
                 "trust_local_clients": _trust_local_clients_enabled(),
-                "enforce_auth": _env_flag("DOPAFLOW_ENFORCE_AUTH", "ZOESTM_ENFORCE_AUTH"),
-                "local_webhooks": _env_flag("DOPAFLOW_ALLOW_LOCAL_WEBHOOK_TARGETS", "ZOESTM_ALLOW_LOCAL_WEBHOOK_TARGETS"),
+                "enforce_auth": _env_flag(
+                    "DOPAFLOW_ENFORCE_AUTH", "ZOESTM_ENFORCE_AUTH"
+                ),
+                "local_webhooks": _env_flag(
+                    "DOPAFLOW_ALLOW_LOCAL_WEBHOOK_TARGETS",
+                    "ZOESTM_ALLOW_LOCAL_WEBHOOK_TARGETS",
+                ),
             },
             "db": db_status,
             "memory_depth_days": memory_depth_days,
@@ -112,7 +126,9 @@ class HealthService:
                 user_version = int((row[0] if row else 0) or 0)
                 applied = {
                     row[0]: row[1]
-                    for row in conn.execute("SELECT filename, checksum FROM _migrations").fetchall()
+                    for row in conn.execute(
+                        "SELECT filename, checksum FROM _migrations"
+                    ).fetchall()
                 }
         except sqlite3.Error as exc:
             return {"status": "not_ready", "reason": f"database unavailable: {exc}"}

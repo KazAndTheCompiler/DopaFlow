@@ -160,7 +160,7 @@ async def trigger_alarm(
         result = svc.trigger_alarm(identifier)
         await publish_invalidation("alarms")
         return result
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.exception("trigger_alarm failed for identifier=%s", identifier)
         raise HTTPException(status_code=500, detail="Alarm trigger failed") from exc
 

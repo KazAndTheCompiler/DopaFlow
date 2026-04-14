@@ -10,7 +10,10 @@ from app.domains.commands.service import CommandService
 def test_detect_command_word_recognizes_explicit_prefixes() -> None:
     assert CommandService.detect_command_word("task buy milk tomorrow") == "task"
     assert CommandService.detect_command_word("journal today was rough") == "journal"
-    assert CommandService.detect_command_word("calendar dentist tomorrow at 14:00") == "calendar"
+    assert (
+        CommandService.detect_command_word("calendar dentist tomorrow at 14:00")
+        == "calendar"
+    )
 
 
 def test_detect_command_word_returns_none_without_prefix() -> None:
@@ -28,15 +31,20 @@ def test_voice_preview_route_exists_on_commands_router() -> None:
 @pytest.mark.anyio
 async def test_voice_preview_works_without_prefix(monkeypatch) -> None:
     """NLP engine handles intent classification — no prefix required."""
+    from fastapi import FastAPI
+
     from app.domains.commands import router as commands_router_module
     from app.domains.commands.router import router
-    from fastapi import FastAPI
 
     class DummyResult:
         transcript = "buy milk tomorrow"
 
     monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "true")
-    monkeypatch.setattr(commands_router_module, "transcribe_upload", lambda file, lang="en-US": DummyResult())
+    monkeypatch.setattr(
+        commands_router_module,
+        "transcribe_upload",
+        lambda file, lang="en-US": DummyResult(),
+    )
 
     app = FastAPI()
     app.include_router(router, prefix="/api/v2")
@@ -86,16 +94,23 @@ def test_preview_marks_calendar_command_needs_datetime_without_time() -> None:
 
 
 @pytest.mark.anyio
-async def test_voice_preview_returns_needs_datetime_for_calendar_without_time(monkeypatch) -> None:
+async def test_voice_preview_returns_needs_datetime_for_calendar_without_time(
+    monkeypatch,
+) -> None:
+    from fastapi import FastAPI
+
     from app.domains.commands import router as commands_router_module
     from app.domains.commands.router import router
-    from fastapi import FastAPI
 
     class DummyResult:
         transcript = "calendar dentist tomorrow"
 
     monkeypatch.setenv("DOPAFLOW_DEV_AUTH", "true")
-    monkeypatch.setattr(commands_router_module, "transcribe_upload", lambda file, lang="en-US": DummyResult())
+    monkeypatch.setattr(
+        commands_router_module,
+        "transcribe_upload",
+        lambda file, lang="en-US": DummyResult(),
+    )
 
     app = FastAPI()
     app.include_router(router, prefix="/api/v2")

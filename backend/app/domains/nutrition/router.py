@@ -25,7 +25,6 @@ from datetime import date as date_mod
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.config import Settings, get_settings_dependency
-from app.middleware.auth_scopes import require_scope
 from app.domains.nutrition.repository import NutritionRepository
 from app.domains.nutrition.schemas import (
     DailyTotals,
@@ -39,6 +38,7 @@ from app.domains.nutrition.schemas import (
     NutritionMonthlyResponse,
     NutritionSummaryResponse,
 )
+from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(prefix="/nutrition", tags=["nutrition"])
 

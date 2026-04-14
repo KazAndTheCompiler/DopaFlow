@@ -1,2 +1,1 @@
 """Packy domain."""
-

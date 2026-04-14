@@ -29,9 +29,13 @@ def _row_to_project(row) -> dict[str, Any]:
 def list_projects(db_path: str, include_archived: bool = False) -> list[dict[str, Any]]:
     with get_db(db_path) as conn:
         if include_archived:
-            rows = conn.execute("SELECT * FROM projects ORDER BY sort_order ASC, name ASC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM projects ORDER BY sort_order ASC, name ASC"
+            ).fetchall()
         else:
-            rows = conn.execute("SELECT * FROM projects WHERE archived = 0 ORDER BY sort_order ASC, name ASC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM projects WHERE archived = 0 ORDER BY sort_order ASC, name ASC"
+            ).fetchall()
     return [_row_to_project(r) for r in rows]
 
 
@@ -48,7 +52,8 @@ def create_project(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("color", "#6366f1"),
                 payload.get("icon", "▣"),
                 payload.get("sort_order", 0),
-                now, now,
+                now,
+                now,
             ),
         )
     with get_db(db_path) as conn:
@@ -56,27 +61,41 @@ def create_project(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
     return _row_to_project(row)
 
 
-def update_project(db_path: str, project_identifier: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+def update_project(
+    db_path: str, project_identifier: str, patch: dict[str, Any]
+) -> dict[str, Any] | None:
     allowed = {"name", "color", "icon", "archived", "sort_order"}
     fields = {k: v for k, v in patch.items() if k in allowed}
     if not fields:
         with get_db(db_path) as conn:
-            row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_identifier,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM projects WHERE id = ?", (project_identifier,)
+            ).fetchone()
         return _row_to_project(row) if row else None
     fields["updated_at"] = _iso_now()
     set_clause = ", ".join(f"{k} = ?" for k in fields)
     with tx(db_path) as conn:
-        conn.execute(f"UPDATE projects SET {set_clause} WHERE id = ?", (*fields.values(), project_identifier))
+        conn.execute(
+            f"UPDATE projects SET {set_clause} WHERE id = ?",
+            (*fields.values(), project_identifier),
+        )
     with get_db(db_path) as conn:
-        row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_identifier,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM projects WHERE id = ?", (project_identifier,)
+        ).fetchone()
     return _row_to_project(row) if row else None
 
 
 def delete_project(db_path: str, project_identifier: str) -> bool:
     """Delete project and unlink tasks (set project_id = NULL)."""
     with tx(db_path) as conn:
-        conn.execute("UPDATE tasks SET project_id = NULL WHERE project_id = ?", (project_identifier,))
-        result = conn.execute("DELETE FROM projects WHERE id = ?", (project_identifier,))
+        conn.execute(
+            "UPDATE tasks SET project_id = NULL WHERE project_id = ?",
+            (project_identifier,),
+        )
+        result = conn.execute(
+            "DELETE FROM projects WHERE id = ?", (project_identifier,)
+        )
     return result.rowcount > 0
 
 

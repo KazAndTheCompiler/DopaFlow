@@ -60,7 +60,14 @@ class VaultIndexRepository:
                     sync_status='idle',
                     snapshot_body=COALESCE(excluded.snapshot_body, vault_file_index.snapshot_body)
                 """,
-                (entity_type, entity_id, file_path, file_hash, direction, snapshot_body),
+                (
+                    entity_type,
+                    entity_id,
+                    file_path,
+                    file_hash,
+                    direction,
+                    snapshot_body,
+                ),
             )
         return self.get_by_file_path(file_path)  # type: ignore[return-value]
 

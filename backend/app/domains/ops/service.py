@@ -22,14 +22,21 @@ logger = logging.getLogger(__name__)
 
 
 class OpsService:
-    REQUIRED_RESTORE_TABLES = frozenset({"_migrations", "tasks", "habits", "journal_entries"})
+    REQUIRED_RESTORE_TABLES = frozenset(
+        {"_migrations", "tasks", "habits", "journal_entries"}
+    )
 
     def __init__(self, settings: Settings):
         self.settings = settings
 
     def _inspect_backup(self, content: bytes) -> dict[str, object]:
         if content[:16] != b"SQLite format 3\x00":
-            return {"valid": False, "tables": [], "migration_version": None, "error": "Not a valid SQLite database"}
+            return {
+                "valid": False,
+                "tables": [],
+                "migration_version": None,
+                "error": "Not a valid SQLite database",
+            }
 
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         try:
@@ -47,17 +54,29 @@ class OpsService:
                         "migration_version": None,
                         "error": f"SQLite integrity check failed: {integrity_result}",
                     }
-                tables = [r[0] for r in dbh.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").fetchall()]
+                tables = [
+                    r[0]
+                    for r in dbh.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+                    ).fetchall()
+                ]
                 missing_tables = sorted(self.REQUIRED_RESTORE_TABLES.difference(tables))
                 try:
-                    row = dbh.execute("SELECT filename FROM _migrations ORDER BY filename DESC LIMIT 1").fetchone()
+                    row = dbh.execute(
+                        "SELECT filename FROM _migrations ORDER BY filename DESC LIMIT 1"
+                    ).fetchone()
                     migration_version = row[0] if row else None
-                except Exception:  # noqa: BLE001
+                except Exception:
                     migration_version = None
             finally:
                 dbh.close()
-        except Exception as exc:  # noqa: BLE001
-            return {"valid": False, "tables": [], "migration_version": None, "error": str(exc)}
+        except Exception as exc:
+            return {
+                "valid": False,
+                "tables": [],
+                "migration_version": None,
+                "error": str(exc),
+            }
         finally:
             try:
                 Path(tmp.name).unlink()
@@ -71,7 +90,12 @@ class OpsService:
                 "migration_version": migration_version,
                 "error": f"Backup missing required tables: {', '.join(missing_tables)}",
             }
-        return {"valid": True, "tables": tables, "migration_version": migration_version, "error": None}
+        return {
+            "valid": True,
+            "tables": tables,
+            "migration_version": migration_version,
+            "error": None,
+        }
 
     # ── metadata helpers ──────────────────────────────────────────────────────
 
@@ -89,18 +113,24 @@ class OpsService:
     def _get_metadata(self, key: str) -> str | None:
         try:
             with get_db(self.settings) as conn:
-                row = conn.execute("SELECT value FROM ops_metadata WHERE key=?", (key,)).fetchone()
+                row = conn.execute(
+                    "SELECT value FROM ops_metadata WHERE key=?", (key,)
+                ).fetchone()
             return row["value"] if row else None
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
 
-    def _optional_rows(self, conn: sqlite3.Connection, sql: str, *, table_name: str) -> list[dict[str, object]]:
+    def _optional_rows(
+        self, conn: sqlite3.Connection, sql: str, *, table_name: str
+    ) -> list[dict[str, object]]:
         try:
             return [dict(row) for row in conn.execute(sql).fetchall()]
         except sqlite3.OperationalError as exc:
             if "no such table" not in str(exc).lower():
                 raise
-            logger.warning("Optional ops export table %s is unavailable: %s", table_name, exc)
+            logger.warning(
+                "Optional ops export table %s is unavailable: %s", table_name, exc
+            )
             return []
 
     @staticmethod
@@ -116,7 +146,9 @@ class OpsService:
         with get_db(self.settings) as conn:
             tasks = int(conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0])
             habits = int(conn.execute("SELECT COUNT(*) FROM habits").fetchone()[0])
-            journal_entries = int(conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0])
+            journal_entries = int(
+                conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0]
+            )
         return {"tasks": tasks, "habits": habits, "journal_entries": journal_entries}
 
     def get_sync_status(self) -> dict[str, object]:
@@ -128,7 +160,9 @@ class OpsService:
         entry_count = 0
         try:
             with get_db(self.settings) as conn:
-                entry_count = int(conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0])
+                entry_count = int(
+                    conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0]
+                )
         except sqlite3.OperationalError as exc:
             if "no such table" not in str(exc).lower():
                 raise
@@ -143,8 +177,12 @@ class OpsService:
     def get_config(self) -> dict[str, object]:
         dev_auth = self._env_flag("DOPAFLOW_DEV_AUTH", "ZOESTM_DEV_AUTH")
         enforce_auth = self._env_flag("DOPAFLOW_ENFORCE_AUTH", "ZOESTM_ENFORCE_AUTH")
-        trust_local = self._env_flag("DOPAFLOW_TRUST_LOCAL_CLIENTS", "ZOESTM_TRUST_LOCAL_CLIENTS")
-        webhook_http_delivery = os.getenv("ENABLE_WEBHOOK_HTTP_DELIVERY", "0").lower() in {"1", "true", "yes"}
+        trust_local = self._env_flag(
+            "DOPAFLOW_TRUST_LOCAL_CLIENTS", "ZOESTM_TRUST_LOCAL_CLIENTS"
+        )
+        webhook_http_delivery = os.getenv(
+            "ENABLE_WEBHOOK_HTTP_DELIVERY", "0"
+        ).lower() in {"1", "true", "yes"}
         return {
             "dev_auth": dev_auth,
             "enforce_auth": enforce_auth,
@@ -157,12 +195,41 @@ class OpsService:
 
     def export_payload(self) -> dict[str, object]:
         with get_db(self.settings) as conn:
-            tasks = [dict(r) for r in conn.execute("SELECT * FROM tasks ORDER BY created_at").fetchall()]
-            habits = [dict(r) for r in conn.execute("SELECT * FROM habit_checkins ORDER BY checkin_date").fetchall()]
-            journal = [dict(r) for r in conn.execute("SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date").fetchall()]
-            decks = [dict(r) for r in conn.execute("SELECT * FROM review_decks ORDER BY created_at").fetchall()]
-            cards = [dict(r) for r in conn.execute("SELECT * FROM review_cards ORDER BY created_at").fetchall()]
-            nutrition = self._optional_rows(conn, "SELECT * FROM nutrition_log ORDER BY date", table_name="nutrition_log")
+            tasks = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM tasks ORDER BY created_at"
+                ).fetchall()
+            ]
+            habits = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM habit_checkins ORDER BY checkin_date"
+                ).fetchall()
+            ]
+            journal = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date"
+                ).fetchall()
+            ]
+            decks = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM review_decks ORDER BY created_at"
+                ).fetchall()
+            ]
+            cards = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM review_cards ORDER BY created_at"
+                ).fetchall()
+            ]
+            nutrition = self._optional_rows(
+                conn,
+                "SELECT * FROM nutrition_log ORDER BY date",
+                table_name="nutrition_log",
+            )
             cmd_logs = self._optional_rows(
                 conn,
                 "SELECT * FROM command_logs ORDER BY executed_at DESC LIMIT 500",
@@ -181,18 +248,54 @@ class OpsService:
 
     def export_all_zip(self) -> bytes:
         with get_db(self.settings) as conn:
-            tasks = [dict(r) for r in conn.execute("SELECT * FROM tasks ORDER BY created_at").fetchall()]
-            habits = [dict(r) for r in conn.execute("SELECT * FROM habit_checkins ORDER BY checkin_date").fetchall()]
-            journal = [dict(r) for r in conn.execute("SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date").fetchall()]
-            alarms = [dict(r) for r in conn.execute("SELECT * FROM alarms ORDER BY created_at").fetchall()]
-            nutrition = self._optional_rows(conn, "SELECT * FROM nutrition_log ORDER BY date", table_name="nutrition_log")
+            tasks = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM tasks ORDER BY created_at"
+                ).fetchall()
+            ]
+            habits = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM habit_checkins ORDER BY checkin_date"
+                ).fetchall()
+            ]
+            journal = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date"
+                ).fetchall()
+            ]
+            alarms = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM alarms ORDER BY created_at"
+                ).fetchall()
+            ]
+            nutrition = self._optional_rows(
+                conn,
+                "SELECT * FROM nutrition_log ORDER BY date",
+                table_name="nutrition_log",
+            )
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as arc:
-            arc.writestr("tasks.json", json.dumps(tasks, indent=2, sort_keys=True, default=str))
-            arc.writestr("habits.json", json.dumps(habits, indent=2, sort_keys=True, default=str))
-            arc.writestr("journal.json", json.dumps(journal, indent=2, sort_keys=True, default=str))
-            arc.writestr("alarms.json", json.dumps(alarms, indent=2, sort_keys=True, default=str))
-            arc.writestr("nutrition.json", json.dumps(nutrition, indent=2, sort_keys=True, default=str))
+            arc.writestr(
+                "tasks.json", json.dumps(tasks, indent=2, sort_keys=True, default=str)
+            )
+            arc.writestr(
+                "habits.json", json.dumps(habits, indent=2, sort_keys=True, default=str)
+            )
+            arc.writestr(
+                "journal.json",
+                json.dumps(journal, indent=2, sort_keys=True, default=str),
+            )
+            arc.writestr(
+                "alarms.json", json.dumps(alarms, indent=2, sort_keys=True, default=str)
+            )
+            arc.writestr(
+                "nutrition.json",
+                json.dumps(nutrition, indent=2, sort_keys=True, default=str),
+            )
             arc.writestr("export_date.txt", datetime.now(UTC).isoformat())
         return buffer.getvalue()
 
@@ -208,7 +311,7 @@ class OpsService:
             source = sqlite3.connect(str(db_path))
             try:
                 source.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             target = sqlite3.connect(tmp.name)
             try:
@@ -230,7 +333,12 @@ class OpsService:
             raise ValueError(str(inspected["error"]))
 
         db_path = Path(self.settings.db_path)
-        tmp = tempfile.NamedTemporaryFile(dir=str(db_path.parent), prefix=f"{db_path.stem}-restore-", suffix=".db", delete=False)
+        tmp = tempfile.NamedTemporaryFile(
+            dir=str(db_path.parent),
+            prefix=f"{db_path.stem}-restore-",
+            suffix=".db",
+            delete=False,
+        )
         try:
             tmp.write(content)
             tmp.flush()
@@ -271,13 +379,21 @@ class OpsService:
                 "INSERT INTO tasks(id, title, due_at, priority) VALUES(?,?,?,?)",
                 (task_id(), "Set up your first habit", f"{today}T18:00:00Z", 2),
             )
-            conn.execute("INSERT INTO habits(id, name) VALUES(?,?)", (habit_id(), "Morning check-in"))
-            conn.execute("INSERT INTO habits(id, name) VALUES(?,?)", (habit_id(), "Evening wind-down"))
+            conn.execute(
+                "INSERT INTO habits(id, name) VALUES(?,?)",
+                (habit_id(), "Morning check-in"),
+            )
+            conn.execute(
+                "INSERT INTO habits(id, name) VALUES(?,?)",
+                (habit_id(), "Evening wind-down"),
+            )
         return {"seeded": True, "message": "Sample data added"}
 
     # ── import ────────────────────────────────────────────────────────────────
 
-    def import_data(self, package: str, checksum: str, dry_run: bool = False) -> dict[str, object]:
+    def import_data(
+        self, package: str, checksum: str, dry_run: bool = False
+    ) -> dict[str, object]:
         calc = hashlib.sha256(package.encode("utf-8")).hexdigest()
         if calc != checksum:
             raise ValueError("Checksum mismatch")
@@ -288,6 +404,7 @@ class OpsService:
         habits = parsed.get("habits", [])
         if not dry_run:
             import uuid
+
             with tx(self.settings) as conn:
                 for t in tasks:
                     title = (t.get("title") or "").strip()
@@ -295,7 +412,12 @@ class OpsService:
                         continue
                     conn.execute(
                         "INSERT OR IGNORE INTO tasks(id, title, due_at, priority) VALUES(?,?,?,?)",
-                        (t.get("id") or str(uuid.uuid4()), title, t.get("due_at"), int(t.get("priority") or 2)),
+                        (
+                            t.get("id") or str(uuid.uuid4()),
+                            title,
+                            t.get("due_at"),
+                            int(t.get("priority") or 2),
+                        ),
                     )
                 for h in habits:
                     habit_id = (h.get("habit_id") or "").strip()
@@ -307,6 +429,11 @@ class OpsService:
                         )
         return {
             "status": "ok",
-            "summary": {"tasks": len(tasks), "habits": len(habits), "dry_run": dry_run, "applied": not dry_run},
+            "summary": {
+                "tasks": len(tasks),
+                "habits": len(habits),
+                "dry_run": dry_run,
+                "applied": not dry_run,
+            },
             "conflicts": [],
         }

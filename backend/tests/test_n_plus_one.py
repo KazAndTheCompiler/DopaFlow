@@ -4,10 +4,10 @@ These tests verify that list endpoints return correct data efficiently.
 N+1 patterns would manifest as poor performance or incorrect data due to
 missing eager loading — these tests validate correctness as a proxy for efficiency.
 """
+
 from __future__ import annotations
 
 import asyncio
-import os
 from pathlib import Path
 
 import pytest
@@ -45,7 +45,9 @@ class CountingConnection:
 
 
 @pytest.fixture()
-def _instrumented_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, list[str]]:
+def _instrumented_db(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> tuple[Path, list[str]]:
     """Provide a DB path and intercept _connect to wrap connections with query counting."""
     from app.core import database as db_module
 
@@ -65,6 +67,7 @@ def _instrumented_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[P
     monkeypatch.setattr(db_module, "_connect", instrumented_connect)
 
     from app.core.config import get_settings
+
     get_settings.cache_clear()
 
     return tmp_path, query_log
@@ -74,8 +77,9 @@ def test_habits_list_returns_valid_response(_instrumented_db, tmp_path) -> None:
     """GET /api/v2/habits should return a valid, well-structured response."""
     db_path, _ = _instrumented_db
 
-    from app.main import create_app
     from httpx import ASGITransport, AsyncClient
+
+    from app.main import create_app
 
     app = create_app()
 
@@ -84,8 +88,7 @@ def test_habits_list_returns_valid_response(_instrumented_db, tmp_path) -> None:
             transport=ASGITransport(app=app), base_url="http://testserver"
         ) as client:
             response = await client.get(
-                "/api/v2/habits",
-                headers={"Authorization": "Bearer dev-local-key"}
+                "/api/v2/habits", headers={"Authorization": "Bearer dev-local-key"}
             )
             return {"status": response.status_code, "data": response.json()}
 
@@ -98,8 +101,9 @@ def test_tasks_list_returns_valid_response(_instrumented_db, tmp_path) -> None:
     """GET /api/v2/tasks/ should return a valid, well-structured response."""
     db_path, _ = _instrumented_db
 
-    from app.main import create_app
     from httpx import ASGITransport, AsyncClient
+
+    from app.main import create_app
 
     app = create_app()
 
@@ -108,8 +112,7 @@ def test_tasks_list_returns_valid_response(_instrumented_db, tmp_path) -> None:
             transport=ASGITransport(app=app), base_url="http://testserver"
         ) as client:
             response = await client.get(
-                "/api/v2/tasks/",
-                headers={"Authorization": "Bearer dev-local-key"}
+                "/api/v2/tasks/", headers={"Authorization": "Bearer dev-local-key"}
             )
             return {"status": response.status_code, "data": response.json()}
 

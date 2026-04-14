@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 
 import pytest
 
@@ -47,7 +47,9 @@ def test_control_pauses_active_session(client) -> None:
 def test_control_completed_ends_active_session(client) -> None:
     start_session(client)
 
-    response = client.post("/api/v2/focus/sessions/control", json={"action": "completed"})
+    response = client.post(
+        "/api/v2/focus/sessions/control", json={"action": "completed"}
+    )
     history = client.get("/api/v2/focus/history")
 
     assert response.status_code == 200
@@ -67,14 +69,21 @@ def test_complete_focus_logs_gamification_failure_without_failing_session(
     def explode_award(self, source: str, source_id: str | None = None):
         raise RuntimeError("xp unavailable")
 
-    monkeypatch.setattr(gamification_helpers.GamificationService, "award", explode_award)
+    monkeypatch.setattr(
+        gamification_helpers.GamificationService, "award", explode_award
+    )
     caplog.set_level(logging.ERROR, logger="app.domains.focus.service")
 
-    response = client.post("/api/v2/focus/sessions/control", json={"action": "completed"})
+    response = client.post(
+        "/api/v2/focus/sessions/control", json={"action": "completed"}
+    )
 
     assert response.status_code == 200
     assert response.json()["status"] == "idle"
-    assert any("Failed to award gamification for source=focus_session" in record.message for record in caplog.records)
+    assert any(
+        "Failed to award gamification for source=focus_session" in record.message
+        for record in caplog.records
+    )
 
 
 def test_status_endpoint_returns_current_focus_state(client) -> None:
@@ -149,7 +158,9 @@ def test_state_restore_after_simulated_restart(client) -> None:
     service.state.status = service.PomodoroStatus.idle
     service.state.log_id = None
 
-    response = client.post("/api/v2/focus/sessions/control", json={"action": "completed"})
+    response = client.post(
+        "/api/v2/focus/sessions/control", json={"action": "completed"}
+    )
     sessions = client.get("/api/v2/focus/sessions").json()
 
     assert response.status_code == 200

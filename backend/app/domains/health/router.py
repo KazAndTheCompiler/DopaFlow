@@ -5,7 +5,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Response, status
 
 from app.core.config import Settings, get_settings_dependency
-from app.domains.health.schemas import HealthLiveResponse, HealthReadinessResponse, HealthResponse
+from app.domains.health.schemas import (
+    HealthLiveResponse,
+    HealthReadinessResponse,
+    HealthResponse,
+)
 from app.domains.health.service import HealthService
 
 router = APIRouter(prefix="/health", tags=["health"])

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import os
 import tempfile
 
@@ -51,7 +50,12 @@ def test_saving_same_date_updates_entry_and_increments_version(client) -> None:
 
     response = client.post(
         "/api/v2/journal/entries",
-        json={"date": "2026-03-25", "markdown_body": "Updated body", "emoji": None, "tags": ["daily", "updated"]},
+        json={
+            "date": "2026-03-25",
+            "markdown_body": "Updated body",
+            "emoji": None,
+            "tags": ["daily", "updated"],
+        },
     )
 
     assert response.status_code == 201
@@ -73,14 +77,18 @@ def test_delete_entry_removes_it_from_reads(client) -> None:
 
 def test_graph_and_backlinks_return_wikilink_structure(client) -> None:
     target = create_entry(client, date="2026-03-24", markdown_body="Target day")
-    source = create_entry(client, date="2026-03-25", markdown_body="Links to [[2026-03-24]]")
+    source = create_entry(
+        client, date="2026-03-25", markdown_body="Links to [[2026-03-24]]"
+    )
 
     graph_response = client.get("/api/v2/journal/graph")
     backlinks_response = client.get("/api/v2/journal/2026-03-24/backlinks")
 
     assert graph_response.status_code == 200
     assert any(node["id"] == "2026-03-24" for node in graph_response.json()["nodes"])
-    assert any(edge["source"] == source["id"] for edge in graph_response.json()["edges"])
+    assert any(
+        edge["source"] == source["id"] for edge in graph_response.json()["edges"]
+    )
     assert backlinks_response.json() == [source["id"]]
     assert target["id"].startswith("jrn_")
 
@@ -89,11 +97,15 @@ def test_backup_status_and_trigger_create_markdown_backup(client, tmp_path) -> N
     create_entry(client)
 
     status_response = client.get("/api/v2/journal/backup-status")
-    trigger_response = client.post("/api/v2/journal/backup/trigger", params={"date": "2026-03-25"})
+    trigger_response = client.post(
+        "/api/v2/journal/backup/trigger", params={"date": "2026-03-25"}
+    )
 
     assert status_response.status_code == 200
     assert trigger_response.status_code == 200
-    backup_file = tmp_path / ".local" / "share" / "DopaFlow" / "journal-backup" / "2026-03-25.md"
+    backup_file = (
+        tmp_path / ".local" / "share" / "DopaFlow" / "journal-backup" / "2026-03-25.md"
+    )
     assert backup_file.exists()
     assert "Daily note" in backup_file.read_text(encoding="utf-8")
 
@@ -129,7 +141,9 @@ def test_trigger_backup_skips_when_integrity_check_fails(
     monkeypatch.setattr(journal_service, "get_db", lambda _db_path: FakeContext())
     caplog.set_level(logging.WARNING, logger="app.domains.journal.service")
 
-    response = client.post("/api/v2/journal/backup/trigger", params={"date": "2026-03-25"})
+    response = client.post(
+        "/api/v2/journal/backup/trigger", params={"date": "2026-03-25"}
+    )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -137,9 +151,13 @@ def test_trigger_backup_skips_when_integrity_check_fails(
         "backed_up_date": None,
         "status": "skipped_integrity_fail",
     }
-    backup_file = tmp_path / ".local" / "share" / "DopaFlow" / "journal-backup" / "2026-03-25.md"
+    backup_file = (
+        tmp_path / ".local" / "share" / "DopaFlow" / "journal-backup" / "2026-03-25.md"
+    )
     assert not backup_file.exists()
-    assert any("database integrity_check failed" in record.message for record in caplog.records)
+    assert any(
+        "database integrity_check failed" in record.message for record in caplog.records
+    )
 
 
 def test_create_entry_logs_gamification_failure_without_failing_save(
@@ -152,17 +170,27 @@ def test_create_entry_logs_gamification_failure_without_failing_save(
     def explode_award(self, source: str, source_id: str | None = None):
         raise RuntimeError("xp unavailable")
 
-    monkeypatch.setattr(gamification_helpers.GamificationService, "award", explode_award)
+    monkeypatch.setattr(
+        gamification_helpers.GamificationService, "award", explode_award
+    )
     caplog.set_level(logging.ERROR, logger="app.domains.journal.service")
 
     response = client.post(
         "/api/v2/journal/entries",
-        json={"date": "2026-03-26", "markdown_body": "Logged anyway", "emoji": "🙂", "tags": ["daily"]},
+        json={
+            "date": "2026-03-26",
+            "markdown_body": "Logged anyway",
+            "emoji": "🙂",
+            "tags": ["daily"],
+        },
     )
 
     assert response.status_code == 201
     assert response.json()["id"].startswith("jrn_")
-    assert any("Failed to award gamification for source=journal_entry" in record.message for record in caplog.records)
+    assert any(
+        "Failed to award gamification for source=journal_entry" in record.message
+        for record in caplog.records
+    )
 
 
 def test_journal_template_apply_and_export_today_return_typed_shapes(client) -> None:
@@ -185,7 +213,9 @@ def test_journal_template_apply_and_export_today_return_typed_shapes(client) -> 
     assert set(export_body) == {"path", "entry_count"}
 
 
-def test_export_range_closes_zip_buffer_on_failure(monkeypatch: pytest.MonkeyPatch, db_path) -> None:
+def test_export_range_closes_zip_buffer_on_failure(
+    monkeypatch: pytest.MonkeyPatch, db_path
+) -> None:
     from app.core.config import Settings
     from app.domains.journal.repository import JournalRepository
     from app.domains.journal.schemas import JournalEntryCreate
@@ -211,7 +241,10 @@ def test_export_range_closes_zip_buffer_on_failure(monkeypatch: pytest.MonkeyPat
             tags=["daily"],
         )
     )
-    monkeypatch.setattr("app.domains.journal.service.tempfile.NamedTemporaryFile", tracking_named_temporary_file)
+    monkeypatch.setattr(
+        "app.domains.journal.service.tempfile.NamedTemporaryFile",
+        tracking_named_temporary_file,
+    )
     monkeypatch.setattr("app.domains.journal.service.zipfile.ZipFile.writestr", explode)
 
     with pytest.raises(RuntimeError, match="zip failed"):

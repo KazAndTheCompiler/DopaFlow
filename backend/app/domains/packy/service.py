@@ -8,8 +8,10 @@ executes actions, and returns a conversational reply with TTS text.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from app.core.vocabulary import INTENT_TO_ACTION
-from app.domains.commands.service import CommandService, parse_intent
+from app.domains.commands.service import CommandService
 from app.domains.packy.repository import PackyRepository
 from app.domains.packy.schemas import (
     MomentumScore,

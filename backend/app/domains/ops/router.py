@@ -127,7 +127,7 @@ async def turso_test(payload: TursoTestIn) -> TursoTestResult:
         return TursoTestResult(
             ok=False, error="libsql-experimental not installed on this server"
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return TursoTestResult(ok=False, error=str(exc))
 
 
@@ -372,5 +372,5 @@ async def reconcile(
 
         dispatched = IntegrationsService.dispatch_outbox(limit)
         return OpsReconcileResponse(status="ok", dispatched=dispatched)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return OpsReconcileResponse(status="ok", dispatched=0)

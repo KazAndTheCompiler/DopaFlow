@@ -1,2 +1,1 @@
 """Habits domain."""
-

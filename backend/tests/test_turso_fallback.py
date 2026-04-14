@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
-import sqlite3
 
 from app.core.config import Settings
 from app.core.database import get_db, run_migrations, tx
@@ -16,7 +16,9 @@ def test_run_migrations_works_without_turso(tmp_path: Path) -> None:
 
     assert db_path.exists()
     with get_db(str(db_path)) as conn:
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()}
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(_migrations)").fetchall()
+        }
         assert "checksum" in columns
 
 
@@ -108,7 +110,9 @@ def test_run_migrations_supports_trigger_bodies_with_semicolons(tmp_path: Path) 
     assert row[0] == 1
 
 
-def test_apply_migration_sql_preserves_trigger_bodies_for_non_sqlite_connections() -> None:
+def test_apply_migration_sql_preserves_trigger_bodies_for_non_sqlite_connections() -> (
+    None
+):
     from app.core import database as database_module
 
     sql = """
@@ -159,7 +163,9 @@ def test_run_migrations_rejects_modified_applied_migration(tmp_path: Path) -> No
     migrations_dir = tmp_path / "migrations"
     migrations_dir.mkdir()
     migration = migrations_dir / "001_example.sql"
-    migration.write_text("CREATE TABLE sample (id INTEGER PRIMARY KEY);\n", encoding="utf-8")
+    migration.write_text(
+        "CREATE TABLE sample (id INTEGER PRIMARY KEY);\n", encoding="utf-8"
+    )
 
     from app.core import database as database_module
 
@@ -182,7 +188,9 @@ def test_run_migrations_is_idempotent_across_full_suite(tmp_path: Path) -> None:
 
     run_migrations(str(db_path))
     with get_db(str(db_path)) as conn:
-        first_migration_count = conn.execute("SELECT COUNT(*) FROM _migrations").fetchone()[0]
+        first_migration_count = conn.execute(
+            "SELECT COUNT(*) FROM _migrations"
+        ).fetchone()[0]
         first_tables = {
             row[0]
             for row in conn.execute(
@@ -192,7 +200,9 @@ def test_run_migrations_is_idempotent_across_full_suite(tmp_path: Path) -> None:
 
     run_migrations(str(db_path))
     with get_db(str(db_path)) as conn:
-        second_migration_count = conn.execute("SELECT COUNT(*) FROM _migrations").fetchone()[0]
+        second_migration_count = conn.execute(
+            "SELECT COUNT(*) FROM _migrations"
+        ).fetchone()[0]
         second_tables = {
             row[0]
             for row in conn.execute(
@@ -217,7 +227,9 @@ def test_run_migrations_is_idempotent_on_in_memory_database() -> None:
     run_migrations(db_path)
 
 
-def test_get_db_fails_fast_when_sqlite_setup_breaks(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_db_fails_fast_when_sqlite_setup_breaks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     from app.core import database as database_module
 
     class BrokenConnection:
@@ -227,7 +239,9 @@ def test_get_db_fails_fast_when_sqlite_setup_breaks(monkeypatch: pytest.MonkeyPa
         def close(self) -> None:
             return None
 
-    monkeypatch.setattr(database_module, "_connect", lambda *args, **kwargs: BrokenConnection())
+    monkeypatch.setattr(
+        database_module, "_connect", lambda *args, **kwargs: BrokenConnection()
+    )
 
     with pytest.raises(RuntimeError, match="Database connection setup failed"):
         with get_db("/tmp/unused.sqlite3"):
@@ -242,7 +256,8 @@ def test_get_db_raises_clear_import_error_when_turso_dependency_is_missing(
     monkeypatch.setattr(database_module, "libsql", None)
 
     with pytest.raises(
-        ImportError, match="Install libsql-experimental to use Turso: pip install libsql-experimental"
+        ImportError,
+        match="Install libsql-experimental to use Turso: pip install libsql-experimental",
     ):
         with get_db("/tmp/unused.sqlite3", turso_url="libsql://example.turso.io"):
             pass
@@ -269,7 +284,9 @@ def test_run_migrations_fails_fast_when_health_check_breaks(
         def close(self) -> None:
             return None
 
-    monkeypatch.setattr(database_module, "_connect", lambda *args, **kwargs: BrokenHealthConnection())
+    monkeypatch.setattr(
+        database_module, "_connect", lambda *args, **kwargs: BrokenHealthConnection()
+    )
 
     with pytest.raises(RuntimeError, match="Database health check failed"):
         run_migrations("/tmp/unused.sqlite3")
@@ -283,13 +300,13 @@ def test_tx_does_not_log_expected_value_errors(
     run_migrations(str(db_path))
     caplog.set_level("DEBUG", logger="dopaflow.db")
 
-    with pytest.raises(ValueError, match="expected"):
-        with tx(str(db_path)):
-            raise ValueError("expected")
+    with pytest.raises(ValueError, match="expected"), tx(str(db_path)):
+        raise ValueError("expected")
 
     assert not any(record.levelname == "ERROR" for record in caplog.records)
     assert any(
-        record.levelname == "DEBUG" and "Transaction rolled back for expected error" in record.message
+        record.levelname == "DEBUG"
+        and "Transaction rolled back for expected error" in record.message
         for record in caplog.records
     )
 
@@ -302,12 +319,12 @@ def test_tx_logs_unexpected_errors(
     run_migrations(str(db_path))
     caplog.set_level("ERROR", logger="dopaflow.db")
 
-    with pytest.raises(RuntimeError, match="unexpected"):
-        with tx(str(db_path)):
-            raise RuntimeError("unexpected")
+    with pytest.raises(RuntimeError, match="unexpected"), tx(str(db_path)):
+        raise RuntimeError("unexpected")
 
     assert any(
-        record.levelname == "ERROR" and "Transaction failed, rolling back" in record.message
+        record.levelname == "ERROR"
+        and "Transaction failed, rolling back" in record.message
         for record in caplog.records
     )
 

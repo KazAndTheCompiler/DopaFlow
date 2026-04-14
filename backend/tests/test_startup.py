@@ -149,7 +149,9 @@ def test_task_time_routes_require_task_scopes(db_path) -> None:
             key = (route.path, method)
             if key not in secured_routes:
                 continue
-            assert route.dependencies, f"{route.path} {method} is missing auth scope dependencies"
+            assert route.dependencies, (
+                f"{route.path} {method} is missing auth scope dependencies"
+            )
 
 
 def test_health_returns_ok(client) -> None:
@@ -219,8 +221,10 @@ def test_no_route_returns_500_on_get(db_path, client) -> None:
             continue
         operation_id = get_spec.get("operationId", "unknown")
         try:
-            response = client.get(path, headers={"Authorization": "Bearer dev-local-key"})
-        except Exception as exc:  # noqa: BLE001
+            response = client.get(
+                path, headers={"Authorization": "Bearer dev-local-key"}
+            )
+        except Exception as exc:
             failures.append(
                 {
                     "path": path,
@@ -259,6 +263,7 @@ def test_lifespan_uses_public_scheduler_stop_api(db_path) -> None:
         patch.object(app_main.backup_scheduler, "stop"),
         patch("app.main.stop_scheduler") as stop_scheduler_mock,
     ):
+
         async def drive() -> None:
             async with app_main.lifespan(app_main.create_app()):
                 pass

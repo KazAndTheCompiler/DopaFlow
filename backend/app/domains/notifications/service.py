@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from app.domains.notifications.repository import NotificationsRepository
-from app.domains.notifications.schemas import Notification, NotificationCreate, NotificationLevel, UnreadCount
+from app.domains.notifications.schemas import (
+    Notification,
+    NotificationCreate,
+    NotificationLevel,
+    UnreadCount,
+)
 
 
 class NotificationsService:

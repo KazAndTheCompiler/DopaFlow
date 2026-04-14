@@ -16,9 +16,9 @@ Run from repo root:
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
-import asyncio
 
 os.environ.setdefault("DOPAFLOW_DEV_AUTH", "1")
 os.environ.setdefault("DOPAFLOW_DISABLE_LOCAL_AUDIO", "1")
@@ -204,7 +204,7 @@ def test_journal_create():
 
 
 def test_voice_module():
-    from app.services.speech_to_text import transcribe_upload, SpeechToTextResult
+    from app.services.speech_to_text import transcribe_upload
 
     assert callable(transcribe_upload)
 

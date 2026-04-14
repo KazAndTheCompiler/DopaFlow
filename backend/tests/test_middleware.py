@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
+import sqlite3
 from pathlib import Path
 
 import httpx
 import pytest
-import sqlite3
 from fastapi import FastAPI
 
 from app.middleware.auth import AuthMiddleware
@@ -62,9 +62,13 @@ def build_app(db_path: str, *, packaged: bool = False) -> FastAPI:
     return app
 
 
-async def request(app: FastAPI, method: str, path: str, *, headers: dict[str, str] | None = None) -> httpx.Response:
+async def request(
+    app: FastAPI, method: str, path: str, *, headers: dict[str, str] | None = None
+) -> httpx.Response:
     transport = httpx.ASGITransport(app=app, client=("203.0.113.10", 12345))
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         return await client.request(method, path, headers=headers)
 
 
@@ -77,7 +81,9 @@ async def request_from(
     headers: dict[str, str] | None = None,
 ) -> httpx.Response:
     transport = httpx.ASGITransport(app=app, client=(client_host, 12345))
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         return await client.request(method, path, headers=headers)
 
 
@@ -85,7 +91,9 @@ async def request_from(
 async def test_auth_with_correct_api_key_returns_200(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
-    response = await request(app, "GET", "/secure", headers={"x-api-key": "dev-local-key"})
+    response = await request(
+        app, "GET", "/secure", headers={"x-api-key": "dev-local-key"}
+    )
 
     assert response.status_code == 200
 
@@ -94,7 +102,9 @@ async def test_auth_with_correct_api_key_returns_200(tmp_path: Path) -> None:
 async def test_auth_with_wrong_api_key_returns_401(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
-    response = await request(app, "GET", "/secure", headers={"x-api-key": "wrong-token"})
+    response = await request(
+        app, "GET", "/secure", headers={"x-api-key": "wrong-token"}
+    )
 
     assert response.status_code == 401
 
@@ -109,10 +119,14 @@ async def test_auth_with_no_api_key_returns_401(tmp_path: Path) -> None:
 
 
 @pytest.mark.anyio
-async def test_auth_with_malformed_authorization_header_returns_401(tmp_path: Path) -> None:
+async def test_auth_with_malformed_authorization_header_returns_401(
+    tmp_path: Path,
+) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
-    response = await request(app, "GET", "/secure", headers={"Authorization": "Token dev-local-key"})
+    response = await request(
+        app, "GET", "/secure", headers={"Authorization": "Token dev-local-key"}
+    )
 
     assert response.status_code == 401
 
@@ -157,7 +171,9 @@ async def test_health_live_is_exempt_from_auth(tmp_path: Path) -> None:
 async def test_single_authorized_request_is_not_rate_limited(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
-    response = await request(app, "GET", "/secure", headers={"x-api-key": "dev-local-key"})
+    response = await request(
+        app, "GET", "/secure", headers={"x-api-key": "dev-local-key"}
+    )
 
     assert response.status_code == 200
 
@@ -189,7 +205,9 @@ async def test_command_path_uses_separate_rate_limit_bucket(tmp_path: Path) -> N
 
 
 @pytest.mark.anyio
-async def test_rate_limit_returns_503_when_storage_backend_is_unavailable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_rate_limit_returns_503_when_storage_backend_is_unavailable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
     def explode_connect(self) -> sqlite3.Connection:
@@ -197,14 +215,18 @@ async def test_rate_limit_returns_503_when_storage_backend_is_unavailable(tmp_pa
 
     monkeypatch.setattr(RateLimitMiddleware, "_connect", explode_connect)
 
-    response = await request(app, "GET", "/secure", headers={"x-api-key": "dev-local-key"})
+    response = await request(
+        app, "GET", "/secure", headers={"x-api-key": "dev-local-key"}
+    )
 
     assert response.status_code == 503
     assert response.json()["code"] == "rate_limit_unavailable"
 
 
 @pytest.mark.anyio
-async def test_packaged_build_ignores_disable_rate_limits_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+async def test_packaged_build_ignores_disable_rate_limits_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"), packaged=True)
     monkeypatch.setenv("DOPAFLOW_DISABLE_RATE_LIMITS", "1")
     with caplog.at_level("WARNING", logger="app.middleware.rate_limit"):
@@ -216,17 +238,25 @@ async def test_packaged_build_ignores_disable_rate_limits_flag(tmp_path: Path, m
             statuses.append(response.status_code)
 
         assert 429 in statuses
-        assert any("DOPAFLOW_DISABLE_RATE_LIMITS is set but ignored in packaged build" in r.message for r in caplog.records)
+        assert any(
+            "DOPAFLOW_DISABLE_RATE_LIMITS is set but ignored in packaged build"
+            in r.message
+            for r in caplog.records
+        )
 
 
 @pytest.mark.anyio
-async def test_rate_limit_ignores_spoofed_forwarded_ip_from_untrusted_client(tmp_path: Path) -> None:
+async def test_rate_limit_ignores_spoofed_forwarded_ip_from_untrusted_client(
+    tmp_path: Path,
+) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
     headers = {"x-api-key": "dev-local-key", "x-forwarded-for": "198.51.100.77"}
     statuses = []
 
     for _ in range(65):
-        response = await request_from(app, "GET", "/secure", client_host="203.0.113.10", headers=headers)
+        response = await request_from(
+            app, "GET", "/secure", client_host="203.0.113.10", headers=headers
+        )
         statuses.append(response.status_code)
 
     assert 429 in statuses
@@ -236,7 +266,9 @@ async def test_rate_limit_ignores_spoofed_forwarded_ip_from_untrusted_client(tmp
 async def test_security_headers_are_applied_to_api_responses(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
-    response = await request(app, "GET", "/secure", headers={"x-api-key": "dev-local-key"})
+    response = await request(
+        app, "GET", "/secure", headers={"x-api-key": "dev-local-key"}
+    )
 
     assert response.status_code == 200
     assert response.headers["Content-Security-Policy"] == (
@@ -249,14 +281,19 @@ async def test_security_headers_are_applied_to_api_responses(tmp_path: Path) -> 
     )
     assert response.headers["X-Frame-Options"] == "DENY"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
-    assert response.headers["Permissions-Policy"] == "camera=(), microphone=(self), geolocation=()"
+    assert (
+        response.headers["Permissions-Policy"]
+        == "camera=(), microphone=(self), geolocation=()"
+    )
     assert response.headers["Cross-Origin-Opener-Policy"] == "same-origin"
     assert response.headers["X-Permitted-Cross-Domain-Policies"] == "none"
     assert response.headers["X-Request-ID"]
 
 
 @pytest.mark.anyio
-async def test_remote_request_cannot_bypass_auth_with_spoofed_app_origin(tmp_path: Path) -> None:
+async def test_remote_request_cannot_bypass_auth_with_spoofed_app_origin(
+    tmp_path: Path,
+) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
     response = await request_from(
@@ -271,7 +308,9 @@ async def test_remote_request_cannot_bypass_auth_with_spoofed_app_origin(tmp_pat
 
 
 @pytest.mark.anyio
-async def test_loopback_request_requires_api_key_without_trust_flag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_loopback_request_requires_api_key_without_trust_flag(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.delenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", raising=False)
     monkeypatch.delenv("ZOESTM_TRUST_LOCAL_CLIENTS", raising=False)
     app = build_app(str(tmp_path / "rate-limit.db"))
@@ -282,7 +321,9 @@ async def test_loopback_request_requires_api_key_without_trust_flag(tmp_path: Pa
 
 
 @pytest.mark.anyio
-async def test_loopback_request_can_bypass_api_key_when_trust_flag_enabled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_loopback_request_can_bypass_api_key_when_trust_flag_enabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", "true")
     app = build_app(str(tmp_path / "rate-limit.db"))
 
@@ -292,7 +333,9 @@ async def test_loopback_request_can_bypass_api_key_when_trust_flag_enabled(tmp_p
 
 
 @pytest.mark.anyio
-async def test_loopback_request_accepts_legacy_trust_flag_as_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_loopback_request_accepts_legacy_trust_flag_as_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.delenv("DOPAFLOW_TRUST_LOCAL_CLIENTS", raising=False)
     monkeypatch.setenv("ZOESTM_TRUST_LOCAL_CLIENTS", "true")
     app = build_app(str(tmp_path / "rate-limit.db"))
@@ -306,18 +349,35 @@ async def test_loopback_request_accepts_legacy_trust_flag_as_fallback(tmp_path: 
 async def test_request_log_preserves_incoming_request_id(tmp_path: Path) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
 
-    response = await request(app, "GET", "/secure", headers={"x-api-key": "dev-local-key", "x-request-id": "req-123"})
+    response = await request(
+        app,
+        "GET",
+        "/secure",
+        headers={"x-api-key": "dev-local-key", "x-request-id": "req-123"},
+    )
 
     assert response.status_code == 200
     assert response.headers["X-Request-ID"] == "req-123"
 
 
 @pytest.mark.anyio
-async def test_request_log_logs_exception_context(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+async def test_request_log_logs_exception_context(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     app = build_app(str(tmp_path / "rate-limit.db"))
     caplog.set_level("ERROR", logger="dopaflow.slow_requests")
 
     with pytest.raises(RuntimeError, match="boom"):
-        await request(app, "GET", "/boom", headers={"x-api-key": "dev-local-key", "x-request-id": "req-error"})
+        await request(
+            app,
+            "GET",
+            "/boom",
+            headers={"x-api-key": "dev-local-key", "x-request-id": "req-error"},
+        )
 
-    assert any("request_error" in record.message and "req-error" in record.message and "/boom" in record.message for record in caplog.records)
+    assert any(
+        "request_error" in record.message
+        and "req-error" in record.message
+        and "/boom" in record.message
+        for record in caplog.records
+    )

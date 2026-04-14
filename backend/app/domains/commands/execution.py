@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
-from typing import Callable
 
 from app.core.config import Settings
 from app.domains.commands.repository import CommandRepository
@@ -226,7 +226,9 @@ def execute_single(
                 emoji=extracted.get("emoji"),
                 tags=list(extracted.get("tags") or []),
             )
-            result = JournalService(JournalRepository(Settings(db_path=db_path))).save_entry(payload)
+            result = JournalService(
+                JournalRepository(Settings(db_path=db_path))
+            ).save_entry(payload)
             result_dict = result.model_dump()
             CommandRepository.add_log(
                 db_path, text, intent, "executed", source=source, result=result_dict
@@ -391,7 +393,7 @@ def execute_single(
                 result={"action": "log_nutrition", "text": extracted.get("text", text)},
             )
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         CommandRepository.add_log(
             db_path, text, intent, "failed", str(exc), source=source
         )
@@ -507,7 +509,7 @@ def _undo_entry(
                     "reply": f'Undone. Reopened task: "{result.get("title", "")}".',
                     "undone": entry,
                 }
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return {
             "text": text,
             "intent": "undo",

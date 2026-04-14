@@ -36,7 +36,9 @@ def test_list_projects_returns_created_project(client) -> None:
 def test_patch_project_updates_archived_state(client) -> None:
     project = create_project(client)
 
-    response = client.patch(f"/api/v2/projects/{project['id']}", json={"archived": True})
+    response = client.patch(
+        f"/api/v2/projects/{project['id']}", json={"archived": True}
+    )
 
     assert response.status_code == 200
     assert response.json()["archived"] is True
@@ -55,7 +57,9 @@ def test_delete_project_returns_deleted_ack(client) -> None:
 
 def test_task_counts_returns_project_id_mapping(client) -> None:
     project = create_project(client)
-    client.post("/api/v2/tasks/", json={"title": "Wire router", "project_id": project["id"]})
+    client.post(
+        "/api/v2/tasks/", json={"title": "Wire router", "project_id": project["id"]}
+    )
 
     response = client.get("/api/v2/projects/task-counts")
 

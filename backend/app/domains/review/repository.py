@@ -14,8 +14,6 @@ from app.domains.review.schemas import (
     DeckCreate,
     DeckRead,
     ReviewActiveSession,
-    ReviewApkgImportResult,
-    ReviewBulkCardsResponse,
     ReviewCardCreate,
     ReviewCardRead,
     ReviewDeckBasic,
@@ -23,15 +21,12 @@ from app.domains.review.schemas import (
     ReviewExportCard,
     ReviewExportPreviewCard,
     ReviewExportPreviewResponse,
+    ReviewHistoryItem,
     ReviewImportPreview,
     ReviewImportResult,
     ReviewRating,
     ReviewSearchCard,
-    ReviewSessionEndResponse,
     ReviewSessionLog,
-    ReviewSessionQueueCard,
-    ReviewSessionStart,
-    ReviewSessionState,
 )
 
 _DEFAULT_DECK_ID = "deck_default"

@@ -27,4 +27,3 @@ class InsightsService:
         """Return trend correlations."""
 
         return self.repository.correlations()
-

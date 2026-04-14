@@ -11,9 +11,9 @@ import calendar
 import re
 from datetime import UTC, datetime, timedelta
 
-from app.domains.commands.repository import CommandRepository
 from app.domains.commands.execution import detect_actionable_chain, execute_command
-from app.services import quick_add, nlp
+from app.domains.commands.repository import CommandRepository
+from app.services import nlp, quick_add
 
 COMMAND_WORD_ALIASES: tuple[tuple[str, str], ...] = (
     ("add task", "task"),

@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import sqlite3
+from pathlib import Path
 
 
 class MigrationRunner:
@@ -31,7 +30,9 @@ class MigrationRunner:
             )
             applied = {
                 row[0]
-                for row in connection.execute("SELECT version FROM schema_migrations").fetchall()
+                for row in connection.execute(
+                    "SELECT version FROM schema_migrations"
+                ).fetchall()
             }
             for migration_path in sorted(self.migrations_dir.glob("*.sql")):
                 if migration_path.name in applied:
@@ -42,4 +43,3 @@ class MigrationRunner:
                     (migration_path.name,),
                 )
             connection.commit()
-

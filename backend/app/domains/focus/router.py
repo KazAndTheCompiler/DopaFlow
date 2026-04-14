@@ -85,7 +85,11 @@ async def control_session(
     if action == "running":
         return service.resume(db_path)
     if action in {"completed", "stopped"}:
-        return service.complete(db_path) if action == "completed" else service.stop(db_path)
+        return (
+            service.complete(db_path)
+            if action == "completed"
+            else service.stop(db_path)
+        )
     return service.get_status()
 
 
@@ -97,11 +101,12 @@ async def control_session(
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def start_focus(payload: dict | None = None, db_path: str = Depends(_db_path)) -> FocusStatus:
+async def start_focus(
+    payload: dict | None = None, db_path: str = Depends(_db_path)
+) -> FocusStatus:
     payload = payload or {}
     return service.start(
-        db_path,
-        int(payload.get("duration_minutes", 25)), payload.get("task_id")
+        db_path, int(payload.get("duration_minutes", 25)), payload.get("task_id")
     )
 
 

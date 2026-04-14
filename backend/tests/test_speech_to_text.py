@@ -9,7 +9,9 @@ from app.services.speech_to_text import transcribe_upload
 
 
 def make_upload(filename: str, content: bytes, content_type: str) -> UploadFile:
-    return UploadFile(filename=filename, file=BytesIO(content), headers={"content-type": content_type})
+    return UploadFile(
+        filename=filename, file=BytesIO(content), headers={"content-type": content_type}
+    )
 
 
 def test_transcribe_upload_rejects_non_audio_content_type() -> None:
