@@ -7,10 +7,6 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-async function apiClient(path: string, init?: RequestInit) {
-  const { apiClient: client } = await import('./client');
-  return client(path, init);
-}
 
 describe('focus API', () => {
   it('listFocusSessions calls correct endpoint', async () => {
@@ -35,7 +31,7 @@ describe('focus API', () => {
       }),
     );
     const { startFocusSession } = await import('./focus');
-    await startFocusSession({ duration: 25 });
+    await startFocusSession({ duration_minutes: 25 });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toContain('/focus/sessions');
@@ -222,10 +218,10 @@ describe('alarms API', () => {
       }),
     );
     const { createAlarm } = await import('./alarms');
-    await createAlarm({ time: '09:00', label: 'Morning' });
+    await createAlarm({ at: '09:00', title: 'Morning' });
     const call = mockFetch.mock.calls[0];
     const body = JSON.parse(call[1].body as string);
-    expect(body.time).toBe('09:00');
+    expect(body.at).toBe('09:00');
   });
 
   it('deleteAlarm sends DELETE request', async () => {
@@ -340,7 +336,7 @@ describe('integrations API', () => {
     );
     const { getIntegrationsStatus } = await import('./integrations');
     const result = await getIntegrationsStatus();
-    expect((result as Record<string, unknown>).gmail).toBeTruthy();
+    expect((result as unknown as Record<string, unknown>).gmail).toBeTruthy();
   });
 });
 
@@ -383,7 +379,7 @@ describe('packy API', () => {
     );
     const { getPackyWhisper } = await import('./packy');
     const result = await getPackyWhisper();
-    expect((result as Record<string, unknown>).transcript).toBe('hello');
+    expect((result as unknown as Record<string, unknown>).transcript).toBe('hello');
   });
 
   it('updatePackyLorebook posts with lore payload', async () => {
@@ -409,7 +405,7 @@ describe('packy API', () => {
     );
     const { getPackyMomentum } = await import('./packy');
     const result = await getPackyMomentum();
-    expect((result as Record<string, unknown>).score).toBe(80);
+    expect(result.score).toBe(80);
   });
 });
 
@@ -645,7 +641,7 @@ describe('vault API', () => {
     );
     const { getVaultStatus } = await import('./vault');
     const result = await getVaultStatus();
-    expect((result as Record<string, unknown>).connected).toBe(true);
+    expect((result as unknown as Record<string, unknown>).connected).toBe(true);
   });
 
   it('updateVaultConfig sends PATCH', async () => {
@@ -656,7 +652,7 @@ describe('vault API', () => {
       }),
     );
     const { updateVaultConfig } = await import('./vault');
-    await updateVaultConfig({ enabled: true });
+    await updateVaultConfig({ vault_enabled: true });
     const [, options] = mockFetch.mock.calls[0];
     expect(options.method).toBe('PATCH');
   });
@@ -707,7 +703,7 @@ describe('vault API', () => {
     );
     const { previewTaskImport } = await import('./vault');
     const result = await previewTaskImport();
-    expect((result as Record<string, unknown>).status).toBe('ok');
+    expect((result as unknown as Record<string, unknown>).status).toBe('ok');
   });
 });
 
@@ -786,7 +782,7 @@ describe('tasks API', () => {
     );
     const { quickAddTask } = await import('./tasks');
     const result = await quickAddTask({ text: 'Buy milk tomorrow' });
-    expect(result.preview).toBe('Buy milk');
+    expect((result as unknown as Record<string, unknown>).preview).toBe('Buy milk');
     const [, options] = mockFetch.mock.calls[0];
     const body = JSON.parse(options.body as string);
     expect(body.text).toBe('Buy milk tomorrow');

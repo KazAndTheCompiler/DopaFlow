@@ -25,6 +25,7 @@ export default defineConfig({
         "src/App.tsx",
         "src/surfaces/**",
         "src/shell/**",
+        "src/components/**",
         "src/styles.css",
       ],
       thresholds: {
