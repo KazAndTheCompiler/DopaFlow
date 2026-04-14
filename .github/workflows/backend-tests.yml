@@ -54,7 +54,6 @@ jobs:
         run: |
           cd backend
           python -c "
-          from fastapi.openapi.spec import OpenAPI
           from app.main import create_app
           app = create_app()
           spec = app.openapi()
@@ -105,7 +104,7 @@ jobs:
       - name: Start backend and verify health
         run: |
           cd backend
-          timeout 15 python -c "
+          timeout 30 python3 -c "
           import uvicorn, threading, time, urllib.request
           from app.main import app
           def run():
@@ -141,7 +140,7 @@ jobs:
       - name: Run load test
         run: |
           cd backend
-          timeout 30 python -c "
+          timeout 30 python3 -c "
           import uvicorn, threading, time, urllib.request
           from app.main import app
           def run():
