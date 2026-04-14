@@ -114,14 +114,12 @@ describe('apiClient', () => {
 
     it('retries on 503 then returns successful response', async () => {
       const data = { ok: true };
-      mockFetch
-        .mockResolvedValueOnce(new Response(null, { status: 503 }))
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify(data), {
-            status: 200,
-            headers: { 'content-type': 'application/json' },
-          }),
-        );
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 503 })).mockResolvedValueOnce(
+        new Response(JSON.stringify(data), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
 
       const result = await apiClient('/test');
       expect(result).toEqual(data);

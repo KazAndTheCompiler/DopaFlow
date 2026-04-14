@@ -13,11 +13,11 @@ function extractParamsFromHash(): { code?: string; state?: string } {
   const state = params.get('state');
   const result: { code?: string; state?: string } = {};
   if (code) {
- result.code = code;
-}
+    result.code = code;
+  }
   if (state) {
- result.state = state;
-}
+    result.state = state;
+  }
   return result;
 }
 
@@ -40,7 +40,11 @@ export default function AuthCallbackView(): JSX.Element {
       });
       return;
     }
-    const dopaflow = (globalThis as { dopaflow?: { on: (channel: string, callback: (payload: unknown) => void) => () => void } }).dopaflow;
+    const dopaflow = (
+      globalThis as {
+        dopaflow?: { on: (channel: string, callback: (payload: unknown) => void) => () => void };
+      }
+    ).dopaflow;
     const cleanup = dopaflow?.on('deep-link', (rawUrl: unknown) => {
       if (processedRef.current) {
         return;
@@ -66,9 +70,7 @@ export default function AuthCallbackView(): JSX.Element {
         fontFamily: 'sans-serif',
       }}
     >
-      <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>
-        Completing sign in…
-      </div>
+      <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Completing sign in…</div>
     </div>
   );
 }

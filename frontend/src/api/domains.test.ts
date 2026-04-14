@@ -7,7 +7,6 @@ beforeEach(() => {
   mockFetch.mockReset();
 });
 
-
 describe('focus API', () => {
   it('listFocusSessions calls correct endpoint', async () => {
     mockFetch.mockResolvedValueOnce(
@@ -25,10 +24,18 @@ describe('focus API', () => {
 
   it('startFocusSession posts to correct endpoint', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'sess_1', started_at: '2024-01-01T09:00:00Z', duration_minutes: 25, status: 'active' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          id: 'sess_1',
+          started_at: '2024-01-01T09:00:00Z',
+          duration_minutes: 25,
+          status: 'active',
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { startFocusSession } = await import('./focus');
     await startFocusSession({ duration_minutes: 25 });
@@ -40,10 +47,18 @@ describe('focus API', () => {
 
   it('controlFocusSession posts with action payload', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'sess_1', started_at: '2024-01-01T09:00:00Z', duration_minutes: 25, status: 'active' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          id: 'sess_1',
+          started_at: '2024-01-01T09:00:00Z',
+          duration_minutes: 25,
+          status: 'active',
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { controlFocusSession } = await import('./focus');
     await controlFocusSession({ action: 'pause' });
@@ -88,17 +103,20 @@ describe('goals API', () => {
 
   it('createGoal posts with payload', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        id: 'goal_1',
-        title: 'Learn Rust',
-        horizon: 'year',
-        milestones: [],
-        created_at: '2024-01-01T00:00:00Z',
-        done: false,
-      }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          id: 'goal_1',
+          title: 'Learn Rust',
+          horizon: 'year',
+          milestones: [],
+          created_at: '2024-01-01T00:00:00Z',
+          done: false,
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { createGoal } = await import('./goals');
     await createGoal({ title: 'Learn Rust', horizon: 'year' });
@@ -212,10 +230,13 @@ describe('alarms API', () => {
 
   it('createAlarm posts with payload', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'alarm_1', at: '09:00', title: 'Morning', kind: 'daily' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ id: 'alarm_1', at: '09:00', title: 'Morning', kind: 'daily' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { createAlarm } = await import('./alarms');
     await createAlarm({ at: '09:00', title: 'Morning' });
@@ -225,9 +246,7 @@ describe('alarms API', () => {
   });
 
   it('deleteAlarm sends DELETE request', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(null, { status: 204 }),
-    );
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const { deleteAlarm } = await import('./alarms');
     await deleteAlarm('alarm_1');
     expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -343,10 +362,13 @@ describe('integrations API', () => {
 describe('packy API', () => {
   it('askPacky posts with text payload', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ intent: 'task_create', extracted_data: {}, reply_text: 'Done!' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ intent: 'task_create', extracted_data: {}, reply_text: 'Done!' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { askPacky } = await import('./packy');
     const result = await askPacky({ text: 'Create a task' });
@@ -358,10 +380,13 @@ describe('packy API', () => {
 
   it('sendVoiceCommand includes auto_execute', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ intent: 'habit_checkin', reply_text: 'Checked in', extracted_data: {} }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ intent: 'habit_checkin', reply_text: 'Checked in', extracted_data: {} }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { sendVoiceCommand } = await import('./packy');
     await sendVoiceCommand('Check in habit', {}, true);
@@ -384,10 +409,13 @@ describe('packy API', () => {
 
   it('updatePackyLorebook posts with lore payload', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: 'ok', session_id: 's1', persisted: true, id: 'lore_1' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ status: 'ok', session_id: 's1', persisted: true, id: 'lore_1' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { updatePackyLorebook } = await import('./packy');
     await updatePackyLorebook({ headline: 'Focus', body: 'Did 25 minutes' });
@@ -443,12 +471,24 @@ describe('commands API', () => {
 
   it('getCommandList returns commands', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        commands: [{ id: 'cmd_1', name: 'Create Task', description: 'Creates a task', category: 'tasks', example: 'create task', text: '/task' }],
-      }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          commands: [
+            {
+              id: 'cmd_1',
+              name: 'Create Task',
+              description: 'Creates a task',
+              category: 'tasks',
+              example: 'create task',
+              text: '/task',
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { getCommandList } = await import('./commands');
     const result = await getCommandList();
@@ -486,14 +526,25 @@ describe('search API', () => {
 
   it('search returns formatted results', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({
-        query: 'meeting',
-        results: [{ id: 'evt_1', type: 'event', title: 'Team meeting', snippet: 'Weekly sync', date: '2024-01-01' }],
-        total: 1,
-      }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          query: 'meeting',
+          results: [
+            {
+              id: 'evt_1',
+              type: 'event',
+              title: 'Team meeting',
+              snippet: 'Weekly sync',
+              date: '2024-01-01',
+            },
+          ],
+          total: 1,
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { search } = await import('./search');
     const result = await search('meeting');
@@ -576,10 +627,13 @@ describe('sharing API', () => {
 
   it('createShareToken posts with label and expiry', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'tok_2', label: 'Family', token: 'xyz', expires_at: '2025-01-01' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ id: 'tok_2', label: 'Family', token: 'xyz', expires_at: '2025-01-01' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { createShareToken } = await import('./sharing');
     await createShareToken('Family', 60);
@@ -605,10 +659,13 @@ describe('sharing API', () => {
 
   it('listPeerFeeds returns feeds', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify([{ id: 'feed_1', label: 'Home', base_url: 'http://localhost' }]), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify([{ id: 'feed_1', label: 'Home', base_url: 'http://localhost' }]),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { listPeerFeeds } = await import('./sharing');
     const result = await listPeerFeeds();
@@ -684,9 +741,7 @@ describe('vault API', () => {
   });
 
   it('resolveVaultConflict sends POST with file path', async () => {
-    mockFetch.mockResolvedValueOnce(
-      new Response(null, { status: 204 }),
-    );
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const { resolveVaultConflict } = await import('./vault');
     await resolveVaultConflict('journal/2024-01.md');
     const [url, options] = mockFetch.mock.calls[0];
@@ -873,10 +928,13 @@ describe('tasks API', () => {
 
   it('stopTaskTimer sends POST', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: 'log_1', task_id: 'task_1', stopped_at: '2024-01-01T10:00:00Z' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ id: 'log_1', task_id: 'task_1', stopped_at: '2024-01-01T10:00:00Z' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { stopTaskTimer } = await import('./tasks');
     await stopTaskTimer('task_1');
@@ -986,10 +1044,20 @@ describe('review API', () => {
 
   it('getDeckStats returns stats for deck', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ deck_id: 'deck_1', deck_name: 'Main', total_cards: 10, due_cards: 3, suspended_count: 1, average_interval: 5 }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({
+          deck_id: 'deck_1',
+          deck_name: 'Main',
+          total_cards: 10,
+          due_cards: 3,
+          suspended_count: 1,
+          average_interval: 5,
+        }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { getDeckStats } = await import('./review');
     const result = await getDeckStats('deck_1');
@@ -1086,10 +1154,13 @@ describe('journal API', () => {
 
   it('getJournalBackupStatus returns backup info', async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ backup_path: '/backup/journal', last_backup_at: '2024-01-01T00:00:00Z' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+      new Response(
+        JSON.stringify({ backup_path: '/backup/journal', last_backup_at: '2024-01-01T00:00:00Z' }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      ),
     );
     const { getJournalBackupStatus } = await import('./journal');
     const result = await getJournalBackupStatus();
