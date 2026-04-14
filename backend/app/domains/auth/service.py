@@ -33,6 +33,83 @@ def _now_utc() -> datetime:
     return datetime.now(UTC)
 
 
+ROLE_SCOPES: dict[str, list[str]] = {
+    "admin": [
+        "openid",
+        "profile",
+        "email",
+        "read:tasks",
+        "write:tasks",
+        "read:projects",
+        "write:projects",
+        "read:habits",
+        "write:habits",
+        "read:journal",
+        "write:journal",
+        "read:focus",
+        "write:focus",
+        "read:calendar",
+        "write:calendar",
+        "read:insights",
+        "write:integrations",
+        "read:integrations",
+        "read:alarms",
+        "write:alarms",
+        "read:notifications",
+        "write:notifications",
+        "read:nutrition",
+        "write:nutrition",
+        "read:commands",
+        "write:commands",
+        "admin:ops",
+    ],
+    "editor": [
+        "openid",
+        "profile",
+        "email",
+        "read:tasks",
+        "write:tasks",
+        "read:projects",
+        "write:projects",
+        "read:habits",
+        "write:habits",
+        "read:journal",
+        "write:journal",
+        "read:focus",
+        "write:focus",
+        "read:calendar",
+        "write:calendar",
+        "read:insights",
+        "read:integrations",
+        "read:alarms",
+        "write:alarms",
+        "read:notifications",
+        "write:notifications",
+        "read:nutrition",
+        "write:nutrition",
+        "read:commands",
+        "write:commands",
+    ],
+    "viewer": [
+        "openid",
+        "profile",
+        "email",
+        "read:tasks",
+        "read:projects",
+        "read:habits",
+        "read:journal",
+        "read:focus",
+        "read:calendar",
+        "read:insights",
+        "read:integrations",
+        "read:alarms",
+        "read:notifications",
+        "read:nutrition",
+        "read:commands",
+    ],
+}
+
+
 class AuthService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -248,6 +325,58 @@ class AuthService:
             "email": row["email"],
             "role": row["role"],
         }
+
+    def create_user(
+        self,
+        email: str,
+        password: str,
+        role: str = "viewer",
+    ) -> dict[str, Any]:
+        if role not in ROLE_SCOPES:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid role. Must be one of: {', '.join(sorted(ROLE_SCOPES))}",
+            )
+        if len(password) < 8:
+            raise HTTPException(
+                status_code=422,
+                detail="Password must be at least 8 characters",
+            )
+        hashed_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        user_id = f"usr_{uuid4().hex[:16]}"
+        now = _now_utc().isoformat()
+        try:
+            with tx(self.settings) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO auth_users (id, email, hashed_password, role, active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 1, ?, ?)
+                    """,
+                    (user_id, email.lower().strip(), hashed_password, role, now, now),
+                )
+        except Exception as exc:
+            raise HTTPException(status_code=409, detail="User with this email already exists") from exc
+        return {"id": user_id, "email": email.lower().strip(), "role": role}
+
+    def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
+        with get_db(self.settings) as conn:
+            row = conn.execute(
+                "SELECT id, email, role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return {"id": row["id"], "email": row["email"], "role": row["role"]}
+
+    def list_users(self) -> list[dict[str, Any]]:
+        with get_db(self.settings) as conn:
+            rows = conn.execute(
+                "SELECT id, email, role, created_at FROM auth_users WHERE active = 1 ORDER BY created_at DESC"
+            ).fetchall()
+        return [
+            {"id": row["id"], "email": row["email"], "role": row["role"], "created_at": row["created_at"]}
+            for row in rows
+        ]
 
 
 def get_auth_service(settings: Settings) -> AuthService:
