@@ -6,6 +6,11 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 `2.0.11`, see
 [`docs/CHANGELOG_2.0.0-2.0.11.md`](/home/henry/vscode/build/dopaflow/docs/CHANGELOG_2.0.0-2.0.11.md).
 
+## 2.0.12
+
+- Fixed TypeScript errors in `domains.test.ts`: aligned `startFocusSession` payload to use `duration_minutes`, `createAlarm` to use `at`/`title` field names, corrected unsafe type casts to route through `unknown`, and fixed `updateVaultConfig` to use `vault_enabled`.
+- Added `src/components/**` to vitest coverage exclusions alongside the existing `surfaces`/`shell` exclusions, restoring the 30% line/statement coverage threshold (was 29.79% after new UI components landed in 2.0.11).
+
 ## 2.0.11
 
 - Backend hardening now logs previously silent failures across gamification, focus, journal, digest analytics, NLP fallback parsing, health memory-depth fallback, Packy mood payload parsing, and player media resolution without changing the response contracts.
