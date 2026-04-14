@@ -113,7 +113,7 @@ jobs:
               uvicorn.run(app, host=\"127.0.0.1\", port=18765, log_level=\"error\")
           t = threading.Thread(target=run, daemon=True)
           t.start()
-          time.sleep(8)
+          time.sleep(10)
           try:
               r = urllib.request.urlopen('http://127.0.0.1:18765/health/live', timeout=5)
               print('health/live:', r.status)
