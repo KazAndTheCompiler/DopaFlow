@@ -21,6 +21,8 @@ env/
 .mypy_cache/
 .ruff_cache/
 requirements-dev.txt
+coverage.xml
+*.xml
 
 # --- Database ---
 *.db
