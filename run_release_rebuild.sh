@@ -148,6 +148,12 @@ install_release() {
   rm -rf "$UNPACKED_DIR"
   cp -a "$ROOT/desktop/dist/linux-unpacked" "$UNPACKED_DIR"
   chmod +x "$UNPACKED_DIR/$DESKTOP_BIN_NAME"
+  # Inject the locally-built backend (overrides any stub bundled at package time)
+  if [[ -x "$BACKEND_BUILD_DIR/dopaflow-backend" ]]; then
+    cp -a "$BACKEND_BUILD_DIR/." "$UNPACKED_DIR/resources/dopaflow-backend/"
+    mkdir -p "$UNPACKED_DIR/resources/dopaflow-backend/shared"
+    cp -a "$ROOT/shared/version.json" "$UNPACKED_DIR/resources/dopaflow-backend/shared/version.json"
+  fi
 }
 
 launch_release() {
