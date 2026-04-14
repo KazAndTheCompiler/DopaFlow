@@ -22,6 +22,7 @@ env/
 .ruff_cache/
 requirements-dev.txt
 coverage.xml
+.coverage
 *.xml
 
 # --- Database ---
