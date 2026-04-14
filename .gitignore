@@ -48,6 +48,7 @@ build/
 # --- Backend build output ---
 backend/build/
 backend/dist/
+openapi_current.json
 
 # --- OS junk ---
 .DS_Store
