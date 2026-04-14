@@ -127,8 +127,10 @@ test.describe('Daily loop regression', () => {
             start_at: `${todayISO}T14:00:00Z`,
             end_at: `${todayISO}T14:30:00Z`,
             all_day: false,
-            source: 'local',
+            sync_status: 'local_only',
+            provider_readonly: false,
             created_at: `${todayISO}T07:00:00Z`,
+            updated_at: `${todayISO}T07:00:00Z`,
           },
         ]),
       ),
@@ -322,7 +324,15 @@ test.describe('Daily loop regression', () => {
     await page.route(`${apiBase}/journal/**`, async (route) => {
       if (route.request().method() === 'POST') {
         journalPosts.push(route.request().postDataJSON() as Record<string, unknown>);
-        await route.fulfill(json({ id: 'jrn_shutdown', markdown_body: 'Closed with intent.' }));
+        await route.fulfill(
+          json({
+            id: 'jrn_shutdown',
+            markdown_body: 'Closed with intent.',
+            date: todayISO,
+            tags: ['shutdown'],
+            version: 1,
+          }),
+        );
         return;
       }
       await route.fulfill(json([]));
