@@ -1,6 +1,6 @@
 const path = require("node:path");
 const Store = require("electron-store").default;
-const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain, shell, screen } = require("electron");
+const { app, BrowserWindow, Tray, Menu, Notification, globalShortcut, ipcMain, shell, screen, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const AutoLaunch = require("electron-auto-launch");
 const pkg = require("./package.json");
@@ -214,6 +214,14 @@ app.whenReady().then(() => {
     windowRuntime.ensureMainWindow();
     windowRuntime.flushPendingDeepLinks(pendingDeepLinks);
     notificationRuntime.start();
+  });
+  runtime.on("crash", (error) => {
+    const detail = error instanceof Error ? error.message : String(error ?? "unknown");
+    dialog.showErrorBox(
+      "DopaFlow backend failed to start",
+      `The backend process exited unexpectedly.\n\n${detail}\n\nCheck the application logs for more details.`,
+    );
+    app.quit();
   });
 
   tray = new Tray(path.join(__dirname, "assets", "icon.png"));
