@@ -143,6 +143,8 @@ export async function loginWithRedirect(clientId: string, redirectUri: string, s
   const state = generateState();
   sessionStorage.setItem(STATE_KEY, state);
   sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
+  sessionStorage.setItem('dopaflow_client_id', clientId);
+  sessionStorage.setItem('dopaflow_redirect_uri', redirectUri);
   const baseUrl = API_BASE_URL.replace('/api/v2', '');
   const params = new URLSearchParams({
     response_type: 'code',
@@ -153,13 +155,16 @@ export async function loginWithRedirect(clientId: string, redirectUri: string, s
     code_challenge: challenge,
     code_challenge_method: 'S256',
   });
-  window.location.href = `${baseUrl}/authorize?${params}`;
+  const authUrl = `${baseUrl}/authorize?${params}`;
+  const popup = window.open(authUrl, 'dopaflow-auth', 'width=600,height=700,left=100,top=100');
+  if (!popup) {
+    window.location.href = authUrl;
+  }
 }
 
-export async function handleCallback(): Promise<boolean> {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const state = params.get('state');
+export async function handleCallback(extraParams?: { code?: string; state?: string }): Promise<boolean> {
+  const code = extraParams?.code ?? new URLSearchParams(window.location.search).get('code');
+  const state = extraParams?.state ?? new URLSearchParams(window.location.search).get('state');
   const storedState = sessionStorage.getItem(STATE_KEY);
   const verifier = sessionStorage.getItem(CODE_VERIFIER_KEY);
   if (!code || !state || !verifier || state !== storedState) {
@@ -186,14 +191,34 @@ export async function handleCallback(): Promise<boolean> {
     });
     clearTokens();
     if (!res.ok) {
- return false;
-}
+      return false;
+    }
     const tokens = (await res.json()) as AuthTokens;
     storeTokens(tokens);
     return true;
   } catch {
     clearTokens();
     return false;
+  }
+}
+
+export function handleDeepLinkUrl(rawUrl: string): void {
+  try {
+    const parsed = new URL(rawUrl);
+    const code = parsed.searchParams.get('code');
+    const state = parsed.searchParams.get('state');
+    if (code || state) {
+      const params: { code?: string; state?: string } = {};
+      if (code) {
+ params.code = code;
+}
+      if (state) {
+ params.state = state;
+}
+      void handleCallback(params);
+    }
+  } catch {
+    // ignore malformed URL
   }
 }
 

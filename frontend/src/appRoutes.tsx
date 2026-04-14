@@ -27,6 +27,7 @@ const InsightsView = lazy(() => import('@surfaces/insights'));
 const GoalsView = lazy(() => import('@surfaces/goals'));
 const CommandsView = lazy(() => import('@surfaces/commands'));
 const SettingsView = lazy(() => import('@surfaces/settings'));
+const AuthCallbackView = lazy(() => import('@surfaces/auth-callback'));
 
 function wrapSurface(Surface: LazyExoticComponent<ComponentType>): ComponentType {
   return function WrappedSurface(): JSX.Element {
@@ -59,6 +60,7 @@ const InsightsSurface = wrapSurface(InsightsView);
 const GoalsSurface = wrapSurface(GoalsView);
 const CommandsSurface = wrapSurface(CommandsView);
 const SettingsSurface = wrapSurface(SettingsView);
+const AuthCallbackSurface = wrapSurface(AuthCallbackView);
 
 export type RouteIntentAction =
   | 'open-task-create'
@@ -116,6 +118,7 @@ export const APP_ROUTE_IDS = [
   'commands',
   'shutdown',
   'settings',
+  'auth-callback',
 ] as const;
 
 export type AppRoute = (typeof APP_ROUTE_IDS)[number];
@@ -191,6 +194,7 @@ export const routeRegistry = [
   { id: 'commands', label: 'Commands', icon: 'CM', surface: CommandsSurface, showInSidebar: true },
   { id: 'shutdown', label: 'Shutdown', icon: 'SD', surface: TodaySurface, showInSidebar: true },
   { id: 'settings', label: 'Settings', icon: 'ST', surface: SettingsSurface, showInSidebar: true },
+  { id: 'auth-callback', label: 'Auth callback', icon: 'AU', surface: AuthCallbackSurface },
 ] as const satisfies readonly AppRouteMeta[];
 
 const routeIds = new Set<AppRoute>(routeRegistry.map((route) => route.id));

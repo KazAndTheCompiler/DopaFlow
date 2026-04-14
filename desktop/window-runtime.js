@@ -1,6 +1,7 @@
 const path = require("node:path");
 
-const SAFE_HASH_ROUTE = /^#\/[a-z0-9/_-]*$/i;
+const SAFE_HASH_ROUTE = /^#\/[a-z0-9\/_-]*$/i;
+const AUTH_CALLBACK_RE = /^#\/auth\/callback(?:\?.*)?$/i;
 const WINDOW_BOUNDS_KEY = "windowBounds";
 
 function normalizeRoutePath(routePath) {
@@ -36,7 +37,13 @@ function normalizeDeepLink(rawUrl) {
       return "#/today";
     }
     const route = `#/${routeSegments.join("/")}`;
-    return SAFE_HASH_ROUTE.test(route) ? route : null;
+    if (!SAFE_HASH_ROUTE.test(route)) {
+      return null;
+    }
+    if (routeSegments[0] === "auth" && routeSegments[1] === "callback" && parsed.search) {
+      return `${route}${parsed.search}`;
+    }
+    return route;
   } catch {
     return null;
   }
@@ -219,6 +226,13 @@ class WindowRuntime {
     return this.mainWindow;
   }
 
+  flushPendingDeepLinks(pendingDeepLinks) {
+    for (const url of pendingDeepLinks) {
+      this.openDeepLink(url);
+    }
+    pendingDeepLinks.length = 0;
+  }
+
   getMainWindow() {
     return this.mainWindow && !this.mainWindow.isDestroyed() ? this.mainWindow : null;
   }
@@ -261,6 +275,9 @@ class WindowRuntime {
     const window = this.focusMainWindow();
     if (safeRoute) {
       this.loadRoute(window, safeRoute);
+      if (safeRoute.startsWith("#/auth/callback")) {
+        this.sendToAll("deep-link", rawUrl);
+      }
     }
     return window;
   }
