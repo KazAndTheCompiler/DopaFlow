@@ -85,9 +85,7 @@ class MetricsStore:
                     if self._latency.count > 0
                     else 0.0
                 ),
-                "slow_count": sum(
-                    1 for _ in self._latency.buckets if _ >= 200
-                ),
+                "slow_count": sum(1 for _ in self._latency.buckets if _ >= 200),
             },
         }
 

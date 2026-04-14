@@ -17,12 +17,16 @@ def test_missing_db_bootstrap(tmp_path: Path) -> bool:
     db_path = tmp_path / "new.db"
     env = {**os.environ, "DOPAFLOW_DB_PATH": str(db_path)}
     result = subprocess.run(
-        [sys.executable, "-c", """
+        [
+            sys.executable,
+            "-c",
+            """
 import sys; sys.path.insert(0, '.')
 from app.main import create_app
 app = create_app()
 print('App created successfully')
-"""],
+""",
+        ],
         cwd="backend",
         env=env,
         capture_output=True,
@@ -43,7 +47,10 @@ def test_db_corruption_recovery(tmp_path: Path) -> bool:
     db_path.write_text("this is not a sqlite database at all")
     env = {**os.environ, "DOPAFLOW_DB_PATH": str(db_path)}
     result = subprocess.run(
-        [sys.executable, "-c", """
+        [
+            sys.executable,
+            "-c",
+            """
 import sys; sys.path.insert(0, '.')
 from app.main import create_app
 try:
@@ -51,7 +58,8 @@ try:
     print('App created - UNEXPECTED (should fail on corrupt DB)')
 except Exception as e:
     print(f'Expected error: {type(e).__name__}: {e}')
-"""],
+""",
+        ],
         cwd="backend",
         env=env,
         capture_output=True,
@@ -63,7 +71,9 @@ except Exception as e:
         or "RuntimeError" in result.stdout
         or "Error" in result.stdout
     )
-    has_error_in_stderr = "SQLite connection setup failed" in result.stderr or "Error" in result.stderr
+    has_error_in_stderr = (
+        "SQLite connection setup failed" in result.stderr or "Error" in result.stderr
+    )
     ok = (result.returncode != 0) and (has_expected_error or has_error_in_stderr)
     print(f"  DB corruption handling: {'PASS' if ok else 'FAIL'}")
     if not ok:
@@ -87,12 +97,18 @@ def test_drift_blocks_startup(tmp_path: Path) -> bool:
     env = {**os.environ, "DOPAFLOW_DB_PATH": db_path_str}
 
     bootstrap = subprocess.run(
-        [sys.executable, "-c", """
+        [
+            sys.executable,
+            "-c",
+            """
 import sys; sys.path.insert(0, '.')
 from app.core.database import run_migrations
-run_migrations('""" + db_path_str + """')
+run_migrations('"""
+            + db_path_str
+            + """')
 print('Bootstrap OK')
-"""],
+""",
+        ],
         cwd="backend",
         env=env,
         capture_output=True,
@@ -107,11 +123,16 @@ print('Bootstrap OK')
     try:
         env2 = {**os.environ, "DOPAFLOW_DB_PATH": db_path_str}
         drift_result = subprocess.run(
-            [sys.executable, "-c", """
+            [
+                sys.executable,
+                "-c",
+                """
 import sys; sys.path.insert(0, '.')
 from app.core.database import run_migrations
 try:
-    run_migrations('""" + db_path_str + """')
+    run_migrations('"""
+                + db_path_str
+                + """')
     print('No error raised - FAIL')
 except RuntimeError as e:
     if 'drift' in str(e).lower():
@@ -120,7 +141,8 @@ except RuntimeError as e:
         print(f'WRONG_ERROR: {{type(e).__name__}}: {{e}}')
 except Exception as e:
     print(f'OTHER_ERROR: {{type(e).__name__}}: {{e}}')
-"""],
+""",
+            ],
             cwd="backend",
             env=env2,
             capture_output=True,
@@ -142,7 +164,10 @@ def test_partial_migration_failure(tmp_path: Path) -> bool:
     db_path = tmp_path / "partial.db"
     env = {**os.environ, "DOPAFLOW_DB_PATH": str(db_path)}
     result = subprocess.run(
-        [sys.executable, "-c", """
+        [
+            sys.executable,
+            "-c",
+            """
 import sys; sys.path.insert(0, '.')
 from app.main import create_app
 try:
@@ -150,7 +175,8 @@ try:
     print('OK')
 except Exception as e:
     print(f'Error: {type(e).__name__}: {e}')
-"""],
+""",
+        ],
         cwd="backend",
         env=env,
         capture_output=True,
