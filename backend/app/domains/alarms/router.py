@@ -69,7 +69,7 @@ def resolve_alarm_url(
     try:
         return PlayerService().resolve_url(target)
     except Exception:
-        raise HTTPException(status_code=422, detail="Failed to resolve URL")
+        raise HTTPException(status_code=422, detail="Failed to resolve URL") from None
 
 
 @router.get(

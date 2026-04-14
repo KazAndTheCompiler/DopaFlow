@@ -13,6 +13,9 @@ on:
       - "backend/**"
       - ".github/workflows/backend-tests.yml"
 
+permissions:
+  contents: read
+
 jobs:
   backend-quality:
     name: Backend Quality

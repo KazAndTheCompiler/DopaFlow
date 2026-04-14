@@ -79,7 +79,7 @@ class HealthService:
                 logger.warning("Health memory depth unavailable: %s", exc)
                 memory_depth_days = 0
             conn.close()
-        except Exception:
+        except sqlite3.Error:
             db_status = "error"
 
         return {
