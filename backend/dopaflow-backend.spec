@@ -15,6 +15,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(BACKEND_ROOT / 'migrations'), 'migrations'),
+        (str(BACKEND_ROOT.parent / 'shared'), 'shared'),
     ],
     hiddenimports=[
         'uvicorn.logging',
