@@ -141,6 +141,19 @@ docker compose cp backend:/tmp/dopaflow.db ./dopaflow-backup-$(date +%Y%m%d).db
 - **Rate limiting**: 120 requests/minute per IP (configurable in code).
 - **Background jobs**: APScheduler runs inside the backend container. With multiple replicas, jobs would run on each instance — use `DOPAFLOW_DISABLE_BACKGROUND_JOBS=true` when running multiple instances.
 
+### Scaling
+
+**Single-instance (default)**: SQLite on a single server handles 1-10 concurrent users comfortably on a 2vCPU/4GB machine.
+
+**Vertical scaling**: Increase CPU/memory of the host. The app is mostly I/O-bound on SQLite so fast storage (SSD) matters more than CPU.
+
+**Horizontal read scaling (advanced)**: With Turso (libSQL), you can add read replicas. Set `DOPAFLOW_TURSO_URL` to the primary and use `DOPAFLOW_TURSO_READ_ONLY=true` on read-only instances. All writable instances must have `DISABLE_BACKGROUND_JOBS=false`; read-only instances should have `DISABLE_BACKGROUND_JOBS=true` to avoid duplicate scheduled tasks.
+
+**What does not scale horizontally with SQLite:**
+- Write operations — SQLite is single-writer; multiple backend instances writing to the same file will cause lock errors
+- Background jobs — APScheduler has no coordination; jobs would fire on every replica
+- File-based sessions — user sessions stored in the SQLite DB work fine for single-instance
+
 ---
 
 ## Docker Reference
