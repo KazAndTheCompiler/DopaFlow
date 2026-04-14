@@ -1,14 +1,14 @@
-"""OIDC auth service: code exchange, token issuance, PKCE, refresh rotation."""
+"""OIDC auth service: code exchange, token issuance, PKCE, refresh rotation, introspection."""
 
 from __future__ import annotations
 
 import hashlib
-import secrets
 import time
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+import bcrypt
 from fastapi import HTTPException
 
 from app.core.config import Settings
@@ -21,7 +21,7 @@ from app.middleware.auth_scopes import create_scope_token, verify_scope_token
 
 ACCESS_TOKEN_TTL = 900
 REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30
-AUTH_CODE_TTL = 60
+AUTH_CODE_TTL = 600
 ID_TOKEN_TTL = ACCESS_TOKEN_TTL
 
 
@@ -31,6 +31,14 @@ def _token_hash(token: str) -> str:
 
 def _now_utc() -> datetime:
     return datetime.now(UTC)
+
+
+def _hash_password(password: str) -> bytes:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12))
+
+
+def _verify_password(password: str, hashed: bytes) -> bool:
+    return bcrypt.checkpw(password.encode("utf-8"), hashed)
 
 
 ROLE_SCOPES: dict[str, list[str]] = {
@@ -114,6 +122,24 @@ class AuthService:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
+    def get_client(self, client_id: str) -> dict[str, Any] | None:
+        with get_db(self.settings) as conn:
+            row = conn.execute(
+                "SELECT * FROM auth_clients WHERE client_id = ? AND active = 1",
+                (client_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return dict(row)
+
+    def validate_client_redirect(self, client_id: str, redirect_uri: str) -> dict[str, Any]:
+        client = self.get_client(client_id)
+        if not client:
+            raise HTTPException(status_code=401, detail="Unknown client_id")
+        if client["redirect_uri"] != redirect_uri:
+            raise HTTPException(status_code=400, detail="redirect_uri mismatch — must match registered URI")
+        return client
+
     def authenticate_user(self, email: str, password: str) -> dict[str, Any]:
         with tx(self.settings) as conn:
             row = conn.execute(
@@ -122,9 +148,10 @@ class AuthService:
             ).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="Invalid credentials")
-        stored_hash = row["hashed_password"]
-        password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
-        if not secrets.compare_digest(password_hash, stored_hash):
+        try:
+            if not _verify_password(password, row["hashed_password"]):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+        except (ValueError, TypeError):
             raise HTTPException(status_code=401, detail="Invalid credentials")
         return {"id": row["id"], "email": row["email"], "role": row["role"]}
 
@@ -136,7 +163,9 @@ class AuthService:
         scope: str,
         user_id: str,
         email: str,
+        state: str,
     ) -> str:
+        self.validate_client_redirect(client_id, redirect_uri)
         code = f"ac_{uuid4().hex[:32]}"
         code_hash = _token_hash(code)
         verifier_hash = _token_hash(code_verifier)
@@ -147,10 +176,10 @@ class AuthService:
             conn.execute(
                 """
                 INSERT INTO auth_oidc_codes
-                    (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, used_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                    (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, used_at, state)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
                 """,
-                (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at),
+                (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, state),
             )
         return code
 
@@ -285,6 +314,36 @@ class AuthService:
             "scope": scope,
         }
 
+    def introspect_token(self, token: str) -> dict[str, Any]:
+        try:
+            payload = verify_scope_token(token, settings=self.settings)
+        except Exception:
+            return {"active": False}
+        now = int(time.time())
+        exp = payload.get("exp", 0)
+        if exp <= now:
+            return {"active": False}
+        user_id = payload["sub"]
+        scopes = payload.get("scopes", [])
+        with get_db(self.settings) as conn:
+            user_row = conn.execute(
+                "SELECT email, role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
+        if not user_row:
+            return {"active": False}
+        return {
+            "active": True,
+            "sub": user_id,
+            "email": user_row["email"],
+            "role": user_row["role"],
+            "scope": " ".join(scopes),
+            "client_id": payload.get("iss"),
+            "exp": exp,
+            "iat": payload.get("iat"),
+            "token_type": "Bearer",
+        }
+
     def revoke_token(self, token: str, token_hint: str | None = None) -> bool:
         token_hash = _token_hash(token)
         now = _now_utc().isoformat()
@@ -342,7 +401,7 @@ class AuthService:
                 status_code=422,
                 detail="Password must be at least 8 characters",
             )
-        hashed_password = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        hashed_password = _hash_password(password)
         user_id = f"usr_{uuid4().hex[:16]}"
         now = _now_utc().isoformat()
         try:
@@ -357,6 +416,57 @@ class AuthService:
         except Exception as exc:
             raise HTTPException(status_code=409, detail="User with this email already exists") from exc
         return {"id": user_id, "email": email.lower().strip(), "role": role}
+
+    def create_client(
+        self,
+        client_id: str,
+        client_name: str,
+        redirect_uri: str,
+        scope: str = "openid profile email",
+        pkce_required: bool = True,
+    ) -> dict[str, Any]:
+        client_secret = f"cs_{uuid4().hex[:48]}"
+        client_secret_hash = _token_hash(client_secret)
+        client_db_id = f"ocl_{uuid4().hex[:16]}"
+        now = _now_utc().isoformat()
+        try:
+            with tx(self.settings) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO auth_clients (id, client_id, client_secret_hash, client_name, redirect_uri, scope, pkce_required, active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                    """,
+                    (client_db_id, client_id, client_secret_hash, client_name, redirect_uri, scope, 1 if pkce_required else 0, now, now),
+                )
+        except Exception as exc:
+            raise HTTPException(status_code=409, detail="Client ID already registered") from exc
+        return {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "client_name": client_name,
+            "redirect_uri": redirect_uri,
+            "scope": scope,
+            "pkce_required": pkce_required,
+        }
+
+    def list_clients(self) -> list[dict[str, Any]]:
+        with get_db(self.settings) as conn:
+            rows = conn.execute(
+                "SELECT id, client_id, client_name, redirect_uri, scope, pkce_required, active, created_at FROM auth_clients ORDER BY created_at DESC"
+            ).fetchall()
+        return [
+            {
+                "id": row["id"],
+                "client_id": row["client_id"],
+                "client_name": row["client_name"],
+                "redirect_uri": row["redirect_uri"],
+                "scope": row["scope"],
+                "pkce_required": bool(row["pkce_required"]),
+                "active": bool(row["active"]),
+                "created_at": row["created_at"],
+            }
+            for row in rows
+        ]
 
     def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
         with get_db(self.settings) as conn:

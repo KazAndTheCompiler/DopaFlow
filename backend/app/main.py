@@ -319,6 +319,7 @@ button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; b
             scope=scope,
             user_id=user["id"],
             email=user["email"],
+            state=state,
         )
         separator = "&" if "?" in redirect_uri else "?"
         return RedirectResponse(

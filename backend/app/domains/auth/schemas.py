@@ -112,3 +112,41 @@ class UserReadFull(BaseModel):
 
 class UserList(BaseModel):
     users: list[UserReadFull]
+
+
+class TokenIntrospectionRequest(BaseModel):
+    token: str = Field(min_length=1)
+    token_hint: Literal["access_token", "refresh_token"] | None = None
+
+
+class TokenIntrospectionResponse(BaseModel):
+    active: bool
+    sub: str | None = None
+    email: str | None = None
+    role: str | None = None
+    scope: str | None = None
+    client_id: str | None = None
+    exp: int | None = None
+    iat: int | None = None
+    token_type: str | None = None
+
+
+class ClientCreate(BaseModel):
+    client_id: str = Field(min_length=1, max_length=128)
+    client_name: str = Field(min_length=1, max_length=256)
+    redirect_uri: str = Field(min_length=1, max_length=2048)
+    scope: str = Field(default="openid profile email", max_length=1024)
+    pkce_required: bool = Field(default=True)
+
+
+class ClientRead(BaseModel):
+    client_id: str
+    client_secret: str | None = None
+    client_name: str
+    redirect_uri: str
+    scope: str
+    pkce_required: bool
+
+
+class ClientList(BaseModel):
+    clients: list[ClientRead]

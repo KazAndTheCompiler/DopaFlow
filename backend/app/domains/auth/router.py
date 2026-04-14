@@ -8,8 +8,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.auth.schemas import (
+    ClientCreate,
+    ClientList,
+    ClientRead,
     RevokeRequest,
     RevokeResponse,
+    TokenIntrospectionRequest,
+    TokenIntrospectionResponse,
     TokenRequest,
     TokenResponse,
     UserCreate,
@@ -120,3 +125,62 @@ async def list_users(
 async def list_roles() -> dict:
     from app.domains.auth.service import ROLE_SCOPES
     return {"roles": dict(ROLE_SCOPES)}
+
+
+@router.post("/introspect", response_model=TokenIntrospectionResponse)
+async def introspect(
+    request: TokenIntrospectionRequest,
+    svc: AuthService = Depends(get_auth_service),
+) -> TokenIntrospectionResponse:
+    result = svc.introspect_token(request.token)
+    return TokenIntrospectionResponse(**result)
+
+
+@router.post(
+    "/clients",
+    response_model=ClientRead,
+    dependencies=[Depends(require_scope("admin:ops"))],
+)
+async def create_client(
+    payload: ClientCreate,
+    svc: AuthService = Depends(get_auth_service),
+) -> ClientRead:
+    client = svc.create_client(
+        client_id=payload.client_id,
+        client_name=payload.client_name,
+        redirect_uri=payload.redirect_uri,
+        scope=payload.scope,
+        pkce_required=payload.pkce_required,
+    )
+    return ClientRead(
+        client_id=client["client_id"],
+        client_secret=client.get("client_secret"),
+        client_name=client["client_name"],
+        redirect_uri=client["redirect_uri"],
+        scope=client["scope"],
+        pkce_required=client["pkce_required"],
+    )
+
+
+@router.get(
+    "/clients",
+    response_model=ClientList,
+    dependencies=[Depends(require_scope("admin:ops"))],
+)
+async def list_clients(
+    svc: AuthService = Depends(get_auth_service),
+) -> ClientList:
+    clients = svc.list_clients()
+    return ClientList(
+        clients=[
+            ClientRead(
+                client_id=c["client_id"],
+                client_secret=None,
+                client_name=c["client_name"],
+                redirect_uri=c["redirect_uri"],
+                scope=c["scope"],
+                pkce_required=c["pkce_required"],
+            )
+            for c in clients
+        ]
+    )
