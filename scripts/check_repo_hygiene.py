@@ -20,6 +20,7 @@ IGNORED_SCAN_ROOTS = {
     REPO_ROOT / "desktop" / "dist",
     REPO_ROOT / "node_modules",
     REPO_ROOT / "tools" / "mcp" / "node-tooling-bridge" / "vendor",
+    REPO_ROOT / ".gitnexus",
 }
 IGNORED_PATTERN_FILES = {
     REPO_ROOT / "scripts" / "check_repo_hygiene.py",
