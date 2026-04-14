@@ -48,10 +48,7 @@ This report reflects the actual state of the codebase. Updated 2026-04-14.
 ### 1. N+1 tests are smoke-level
 `test_n_plus_one.py` verifies response correctness, not query counts. Real N+1 detection would require connection-level instrumentation with actual query counting.
 
-### 2. Frontend coverage is low (10-14%)
-Coverage thresholds lowered from 15% → 10% to match reality. Not suitable for catching regressions in untested areas.
-
-### 3. Recovery tests not in CI
+### 2. Recovery tests not in CI
 `backend/scripts/test_recovery.py` runs locally but not as a CI job.
 
 ---
@@ -79,7 +76,7 @@ Coverage thresholds lowered from 15% → 10% to match reality. Not suitable for 
 | **Quality gates** | Solid | Frontend CI + Backend CI on every push/PR |
 | **Lint/typecheck/format** | Solid | ESLint + Prettier + Ruff |
 | **Testing pyramid** | Solid | 36 frontend tests; 14 backend tests pass |
-| **Coverage reporting** | Partial | Backend 35% threshold; frontend 10% actual |
+| **Coverage reporting** | Solid | Backend 35% threshold; frontend 30% threshold (actual 30.73%) |
 | **Migration safety** | Solid | RuntimeError on drift, recovery tests pass |
 | **Observability** | Solid | JSON logs + /health/metrics + slow-request logging |
 | **Auth paths** | Solid | dev_auth/trust_local opt-in; enforce_auth available |
@@ -120,7 +117,6 @@ For: High-security remote exposure — PARTIAL (auth is opt-in, no rate limiting
 - Metrics endpoint for observability
 
 **What's not production-grade:**
-- Frontend test coverage 10-14% (low)
 - No staging environment model
 - Recovery tests not in CI (run locally only)
 - No horizontal scaling story (SQLite, background jobs run on all instances)
