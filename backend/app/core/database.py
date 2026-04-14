@@ -56,6 +56,11 @@ def _resolve_db_config(
     return settings_or_db_path, turso_url, turso_token
 
 
+def _replica_url_for_settings(settings: Settings) -> str | None:
+    """Return the replica URL if configured, otherwise None."""
+    return getattr(settings, "turso_replica_url", None)
+
+
 def _prepare_sqlite_connection(conn: sqlite3.Connection) -> None:
     try:
         conn.execute("PRAGMA journal_mode=WAL")
@@ -250,5 +255,37 @@ def tx(
         else:
             logger.exception("Transaction failed, rolling back")
         raise
+    finally:
+        conn.close()
+
+
+@contextmanager
+def get_db_readonly(
+    settings: Settings,
+) -> Generator[sqlite3.Connection, None, None]:
+    """Yield a read-only database connection.
+
+    Uses turso_replica_url if configured, falling back to the primary
+    turso_url or local SQLite. Use this for read-heavy paths that do
+    not need write access — it allows horizontal read scaling via
+    Turso replicas.
+    """
+
+    replica_url = _replica_url_for_settings(settings)
+    turso_url = replica_url if replica_url else settings.turso_url
+    turso_token = settings.turso_token if settings.turso_url else None
+
+    if turso_url:
+        if libsql is None:
+            raise ImportError(
+                "Install libsql-experimental to use Turso: pip install libsql-experimental"
+            )
+        conn = libsql.connect(turso_url, auth_token=turso_token)
+    else:
+        conn = sqlite3.connect(settings.db_path)
+
+    _prepare_connection(conn)
+    try:
+        yield conn
     finally:
         conn.close()
