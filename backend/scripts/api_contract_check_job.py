@@ -39,7 +39,9 @@ def main() -> None:
             print(f"  - {change}")
         print("\nIf these changes are intentional, update the baseline:")
         print("  git checkout main")
-        print("  python -c \"from app.main import create_app; import json; json.dump(create_app().openapi(), open('openapi_baseline.json', 'w'), indent=2)\"")
+        print(
+            "  python -c \"from app.main import create_app; import json; json.dump(create_app().openapi(), open('openapi_baseline.json', 'w'), indent=2)\""
+        )
         print("  git commit -m 'chore: update OpenAPI baseline'")
         sys.exit(1)
     else:
