@@ -61,42 +61,71 @@ For a full architecture breakdown, see [`docs/architecture-overview.md`](docs/ar
 
 ---
 
+## Status
+
+**Best for:**
+- Local self-hosting (Docker, single server)
+- Single-user offline-first workflows
+- Developers and contributors
+
+**Not designed for:**
+- Multi-user hosted SaaS
+- Horizontal scaling across multiple servers (SQLite is single-writer)
+- Zero-config enterprise deployment
+
+**For production exposure beyond localhost:** set `DOPAFLOW_ENFORCE_AUTH=true` in your `.env` and configure a strong `DOPAFLOW_API_KEY`.
+
+---
+
 ## Quick start
+
+**Use this if:** you want to run DopaFlow locally and see if it fits your workflow.
+
+### Option A — Docker (fastest, no setup)
+
+```bash
+cp .env.example .env
+docker compose up --build
+# open http://localhost:3000
+```
+
+Everything in one command. No Python, no Node, no manual config. The Docker path is the recommended first try.
+
+### Option B — Local development
+
+Two terminals:
+
+```bash
+# Terminal 1: backend
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp ../.env.example ../.env
+uvicorn app.main:app --reload
+
+# Terminal 2: frontend
+cd frontend
+npm install
+npm run dev
+# open http://localhost:5173
+```
+
+Frontend (`5173`) proxies `/api/*` to backend (`8000`).
+
+### Option C — Desktop package
+
+```bash
+cd desktop
+npm ci && npm test
+npm run dist:stable:linux
+```
+
+Requires Python 3.11 or 3.12 and Node 18+.
 
 ### Requirements
 
 - Node 18+
-- Python 3.11–3.12 (3.13 unsupported due to binary wheel constraints)
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate    # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-cp ../.env.example ../.env  # edit as needed
-uvicorn app.main:app --reload
-```
-
-Frontend runs on `http://localhost:5173`, backend on `http://localhost:8000`.
-
-### Desktop (packaged)
-
-```bash
-cd desktop
-npm ci
-npm test
-npm run dist:stable:linux
-```
+- Python 3.11 or 3.12 (run `make doctor` to verify)
 
 ---
 
@@ -116,7 +145,7 @@ make lint             # lint all projects (backend + frontend)
 make lint-backend     # lint backend with ruff
 make lint-frontend    # lint frontend with ESLint
 make format           # format code (prettier + ruff)
-make format:check     # check formatting without modifying
+make format-check     # check formatting without modifying
 make validate         # run all quality checks (lint + typecheck + backend tests)
 make typecheck        # TypeScript typecheck frontend
 make build            # build frontend production bundle

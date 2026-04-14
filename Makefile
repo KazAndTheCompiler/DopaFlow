@@ -90,7 +90,12 @@ validate: lint-backend lint-frontend typecheck test-backend ## Run all quality c
 doctor: ## Check environment readiness
 	@echo "Checking environment..."
 	@node --version && echo "  Node.js OK" || echo "  Node.js MISSING (need 18+)"
-	@$(PYTHON) --version && echo "  Python OK" || echo "  Python MISSING (need 3.11-3.12)"
+	@PYTHON_VERSION=$$($(PYTHON) -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")') && \
+	  if [ "$$PYTHON_VERSION" = "3.11" ] || [ "$$PYTHON_VERSION" = "3.12" ]; then \
+	    echo "  Python $$PYTHON_VERSION OK"; \
+	  else \
+	    echo "  Python $$PYTHON_VERSION — supported: 3.11 or 3.12 only"; \
+	  fi
 	@test -d $(FRONTEND_DIR)/node_modules && echo "  frontend deps OK" || echo "  frontend deps MISSING (run: cd frontend && npm install)"
 	@test -f $(BACKEND_DIR)/requirements.txt && echo "  backend requirements OK" || echo "  backend requirements MISSING"
 
