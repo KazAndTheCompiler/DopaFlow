@@ -37,6 +37,7 @@
     },
     "files": [
       "main.js",
+      "ipc-validation.js",
       "backend-runtime.js",
       "notification-runtime.js",
       "window-runtime.js",
