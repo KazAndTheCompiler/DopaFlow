@@ -320,7 +320,8 @@ def require_scope(scope: str):
     async def dep(
         request: Request, authorization: str | None = Header(default=None)
     ) -> bool:
-        if env_flag("DEV_AUTH"):
+        settings = get_settings()
+        if env_flag("DEV_AUTH") and not settings.production:
             return True
         origin = request.headers.get("origin", "")
         client_host = request.client.host if request.client else ""

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pathlib
 from functools import lru_cache
 
+from pydantic import model_validator
 from platformdirs import user_data_dir as _platform_user_data_dir
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -61,6 +62,15 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
     )
+
+    @model_validator(mode="after")
+    def reject_dev_auth_in_production(self) -> Settings:
+        if self.dev_auth and self.production:
+            raise ValueError(
+                "dev_auth=True is not permitted when production=True. "
+                "Either unset DOPAFLOW_DEV_AUTH or set DOPAFLOW_PRODUCTION=false."
+            )
+        return self
 
 
 @lru_cache
