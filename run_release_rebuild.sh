@@ -184,9 +184,13 @@ launch_release() {
     SNAP_REAL_HOME="" \
     SNAP_CONTEXT="" \
     ./AppRun \
+    --no-sandbox \
     --disable-gpu \
+    --disable-gpu-sandbox \
     --disable-software-rasterizer \
     --disable-dev-shm-usage \
+    --use-gl=egl \
+    --in-process-gpu \
     >"$LAUNCH_LOG" 2>&1 &
   local pid=$!
   echo "Launched DopaFlow (pid $pid)"

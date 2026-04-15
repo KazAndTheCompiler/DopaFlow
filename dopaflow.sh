@@ -32,9 +32,13 @@ nohup env \
   XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-}" \
   DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}" \
   ./AppRun \
+  --no-sandbox \
   --disable-gpu \
+  --disable-gpu-sandbox \
   --disable-software-rasterizer \
   --disable-dev-shm-usage \
+  --use-gl=egl \
+  --in-process-gpu \
   >"$LOG" 2>&1 &
 
 echo "DopaFlow v$VERSION launched (pid $!)"
