@@ -158,10 +158,15 @@ export default function CalendarEisenhowerView({
   for (const event of events) {
     const urgent = isUrgent(event);
     const important = isImportant(event);
-    if (urgent && important) q1.push(event);
-    else if (!urgent && important) q2.push(event);
-    else if (urgent && !important) q3.push(event);
-    else q4.push(event);
+    if (urgent && important) {
+ q1.push(event);
+} else if (!urgent && important) {
+ q2.push(event);
+} else if (urgent && !important) {
+ q3.push(event);
+} else {
+ q4.push(event);
+}
   }
 
   const sort = (arr: CalendarEvent[]): void => {
