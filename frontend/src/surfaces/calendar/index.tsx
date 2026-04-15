@@ -12,6 +12,8 @@ import {
   type CalendarTab,
 } from './CalendarViewShared';
 import { buildCalendarViewModel } from './calendarViewModel';
+import CalendarEisenhowerView from './CalendarEisenhowerView';
+import CalendarKanbanView from './CalendarKanbanView';
 import DayView from './DayView';
 import MonthView from './MonthView';
 import WeekView from './WeekView';
@@ -392,6 +394,20 @@ export default function CalendarView(): JSX.Element {
             onScheduleTask={handleScheduleTask}
           />
         </div>
+      )}
+
+      {tab === 'kanban' && (
+        <CalendarKanbanView
+          events={filteredEvents}
+          onEventClick={(event) => handleEventClick(event.id)}
+        />
+      )}
+
+      {tab === 'eisenhower' && (
+        <CalendarEisenhowerView
+          events={filteredEvents}
+          onEventClick={(event) => handleEventClick(event.id)}
+        />
       )}
 
       <CalendarEventModal
