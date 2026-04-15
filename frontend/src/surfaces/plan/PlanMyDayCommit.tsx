@@ -98,7 +98,7 @@ export function Commit({
               <span style={{ flex: 1, fontSize: 'var(--text-sm)', fontWeight: 500 }}>
                 {task.title}
               </span>
-              {task.estimated_minutes != null && (
+              {task.estimated_minutes !== null && task.estimated_minutes !== undefined && (
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
                   {task.estimated_minutes}m
                 </span>

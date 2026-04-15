@@ -80,7 +80,7 @@ export default function TodayView(): JSX.Element {
         (task) =>
           !task.done &&
           Boolean(task.due_at) &&
-          task.due_at!.slice(0, 10) < selectedDateIso &&
+          (task.due_at as string).slice(0, 10) < selectedDateIso &&
           (!activeProjectId || task.project_id === activeProjectId),
       ),
     [activeProjectId, tasks.tasks, selectedDateIso],

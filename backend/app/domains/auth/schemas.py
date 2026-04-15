@@ -58,7 +58,9 @@ class TokenRequest(BaseModel):
                     "code, redirect_uri, and client_id are required for authorization_code grant"
                 )
             if not self.code_verifier:
-                raise ValueError("code_verifier is required for authorization_code grant")
+                raise ValueError(
+                    "code_verifier is required for authorization_code grant"
+                )
         elif self.grant_type == "refresh_token":
             if not self.refresh_token:
                 raise ValueError("refresh_token is required for refresh_token grant")

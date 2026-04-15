@@ -132,7 +132,9 @@ class AuthService:
             return None
         return dict(row)
 
-    def validate_client_redirect(self, client_id: str, redirect_uri: str) -> dict[str, Any]:
+    def validate_client_redirect(
+        self, client_id: str, redirect_uri: str
+    ) -> dict[str, Any]:
         client = self.get_client(client_id)
         if not client:
             raise HTTPException(status_code=401, detail="invalid_client")
@@ -179,7 +181,17 @@ class AuthService:
                     (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, used_at, state)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
                 """,
-                (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, state),
+                (
+                    code_hash,
+                    verifier_hash,
+                    client_id,
+                    redirect_uri,
+                    scope,
+                    user_id,
+                    email,
+                    expires_at,
+                    state,
+                ),
             )
         return code
 
@@ -249,9 +261,7 @@ class AuthService:
             "scope": scope,
         }
 
-    def _create_refresh_token(
-        self, user_id: str, email: str, scope: str
-    ) -> str:
+    def _create_refresh_token(self, user_id: str, email: str, scope: str) -> str:
         token = f"rt_{uuid4().hex[:48]}"
         token_hash = _token_hash(token)
         expires_at = datetime.fromtimestamp(
@@ -418,7 +428,9 @@ class AuthService:
                     (user_id, email.lower().strip(), hashed_password, role, now, now),
                 )
         except Exception as exc:
-            raise HTTPException(status_code=409, detail="User with this email already exists") from exc
+            raise HTTPException(
+                status_code=409, detail="User with this email already exists"
+            ) from exc
         return {"id": user_id, "email": email.lower().strip(), "role": role}
 
     def create_client(
@@ -440,10 +452,22 @@ class AuthService:
                     INSERT INTO auth_clients (id, client_id, client_secret_hash, client_name, redirect_uri, scope, pkce_required, active, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
                     """,
-                    (client_db_id, client_id, client_secret_hash, client_name, redirect_uri, scope, 1 if pkce_required else 0, now, now),
+                    (
+                        client_db_id,
+                        client_id,
+                        client_secret_hash,
+                        client_name,
+                        redirect_uri,
+                        scope,
+                        1 if pkce_required else 0,
+                        now,
+                        now,
+                    ),
                 )
         except Exception as exc:
-            raise HTTPException(status_code=409, detail="Client ID already registered") from exc
+            raise HTTPException(
+                status_code=409, detail="Client ID already registered"
+            ) from exc
         return {
             "client_id": client_id,
             "client_secret": client_secret,
@@ -488,7 +512,12 @@ class AuthService:
                 "SELECT id, email, role, created_at FROM auth_users WHERE active = 1 ORDER BY created_at DESC"
             ).fetchall()
         return [
-            {"id": row["id"], "email": row["email"], "role": row["role"], "created_at": row["created_at"]}
+            {
+                "id": row["id"],
+                "email": row["email"],
+                "role": row["role"],
+                "created_at": row["created_at"],
+            }
             for row in rows
         ]
 
