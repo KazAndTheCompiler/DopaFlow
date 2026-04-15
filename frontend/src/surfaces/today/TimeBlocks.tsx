@@ -271,7 +271,7 @@ export function TimeBlocks({ sessions, events, onRescheduleEvent }: TimeBlocksPr
           ) : (
             blocks.map((block) => {
               const isDragging = dragTopPct?.id === block.id;
-              const top = isDragging ? dragTopPct!.pct : block.top;
+              const top = isDragging && dragTopPct ? dragTopPct.pct : block.top;
               const canDrag = block.kind === 'event' && !!onRescheduleEvent;
               return (
                 <div

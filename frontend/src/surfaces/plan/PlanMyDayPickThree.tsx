@@ -142,7 +142,7 @@ export function PickThree({
               >
                 {task.title}
               </span>
-              {task.estimated_minutes != null && (
+              {task.estimated_minutes !== null && task.estimated_minutes !== undefined && (
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
                   {task.estimated_minutes}m
                 </span>

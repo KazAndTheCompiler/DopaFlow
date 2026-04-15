@@ -22,12 +22,6 @@ export default function JournalView(): JSX.Element {
       : false,
   );
 
-  if (journal.loading) {
-    return <JournalSurfaceSkeleton />;
-  }
-
-  const activeEntry = journal.entries.find((e) => e.date === selectedDate);
-
   useEffect(() => {
     return () => {
       const todayEntry = journal.entries.find((e) => e.date === today);
@@ -35,7 +29,7 @@ export default function JournalView(): JSX.Element {
         journal.exportToday().catch(() => {});
       }
     };
-  }, [journal.entries, journal.exportToday, today]);
+  }, [journal, today]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -46,6 +40,12 @@ export default function JournalView(): JSX.Element {
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
+
+  if (journal.loading) {
+    return <JournalSurfaceSkeleton />;
+  }
+
+  const activeEntry = journal.entries.find((e) => e.date === selectedDate);
 
   const handleExportToday = async () => {
     try {

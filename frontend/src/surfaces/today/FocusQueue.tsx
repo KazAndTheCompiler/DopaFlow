@@ -140,11 +140,14 @@ export function FocusQueue({
     return [...pending].sort((left, right) => {
       const leftIndex = orderIndex.get(left.id);
       const rightIndex = orderIndex.get(right.id);
-      if (leftIndex != null || rightIndex != null) {
-        if (leftIndex == null) {
+      if (
+        (leftIndex !== null && leftIndex !== undefined) ||
+        (rightIndex !== null && rightIndex !== undefined)
+      ) {
+        if (leftIndex === null || leftIndex === undefined) {
           return 1;
         }
-        if (rightIndex == null) {
+        if (rightIndex === null || rightIndex === undefined) {
           return -1;
         }
         return leftIndex - rightIndex;

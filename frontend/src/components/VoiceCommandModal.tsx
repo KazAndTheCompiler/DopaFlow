@@ -64,7 +64,7 @@ const ROUTE_SUGGESTIONS: Record<string, Record<string, string[]>> = {
 // ---------------------------------------------------------------------------
 
 function formatEntityValue(key: string, value: unknown): string {
-  if (value == null || (Array.isArray(value) && value.length === 0)) {
+  if (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) {
     return '';
   }
   if (key === 'priority' && typeof value === 'number') {
@@ -110,7 +110,7 @@ function formatEntityValue(key: string, value: unknown): string {
 }
 
 function shouldShowEntity(key: string, value: unknown): boolean {
-  if (value == null || value === '' || value === false) {
+  if (value === null || value === undefined || value === '' || value === false) {
     return false;
   }
   if (Array.isArray(value) && value.length === 0) {

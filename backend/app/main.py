@@ -266,13 +266,24 @@ button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; b
         code_challenge_method: str = "S256",
     ):
         if response_type != "code":
-            return JSONResponse(status_code=400, content={"detail": "response_type must be 'code'"})
+            return JSONResponse(
+                status_code=400, content={"detail": "response_type must be 'code'"}
+            )
         if code_challenge_method != "S256":
-            return JSONResponse(status_code=400, content={"detail": "code_challenge_method must be 'S256'"})
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "code_challenge_method must be 'S256'"},
+            )
         if len(state) < 16:
-            return JSONResponse(status_code=400, content={"detail": "state must be at least 16 characters"})
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "state must be at least 16 characters"},
+            )
         if len(code_challenge) < 43:
-            return JSONResponse(status_code=400, content={"detail": "code_challenge must be at least 43 characters"})
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "code_challenge must be at least 43 characters"},
+            )
         return HTMLResponse(
             content=_login_page_html(
                 client_id=client_id,
@@ -296,7 +307,10 @@ button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; b
         scope: str = "openid profile email",
     ):
         if code_challenge_method != "S256":
-            return JSONResponse(status_code=400, content={"detail": "code_challenge_method must be 'S256'"})
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "code_challenge_method must be 'S256'"},
+            )
         try:
             user = svc.authenticate_user(email, password)
         except HTTPException:

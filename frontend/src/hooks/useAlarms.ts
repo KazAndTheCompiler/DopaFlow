@@ -44,7 +44,7 @@ export function useAlarms(): UseAlarmsResult {
         return;
       }
       firedRef.current.add(alarm.id);
-      if (alarm.kind === 'tts' || alarm.kind == null) {
+      if (alarm.kind === 'tts' || alarm.kind === null || alarm.kind === undefined) {
         const text = alarm.tts_text || alarm.title;
         speak(text);
       }
@@ -129,7 +129,7 @@ export function useAlarms(): UseAlarmsResult {
           if (
             !firedRef.current.has(alarm.id) &&
             !alarm.muted &&
-            (alarm.kind === 'tts' || alarm.kind == null) &&
+            (alarm.kind === 'tts' || alarm.kind === null || alarm.kind === undefined) &&
             document.visibilityState === 'visible'
           ) {
             firedRef.current.add(alarm.id);
@@ -150,7 +150,7 @@ export function useAlarms(): UseAlarmsResult {
       window.removeEventListener(getInvalidationEventName('alarms'), handleInvalidate);
       clearScheduledTimeouts();
     };
-  }, [refresh]);
+  }, [refresh, clearScheduledTimeouts]);
 
   return {
     alarms,
@@ -170,7 +170,11 @@ export function useAlarms(): UseAlarmsResult {
     trigger: async (id: string) => {
       await triggerAlarm(id);
       const alarm = alarms.find((item) => item.id === id);
-      if (alarm && !alarm.muted && (alarm.kind === 'tts' || alarm.kind == null)) {
+      if (
+        alarm &&
+        !alarm.muted &&
+        (alarm.kind === 'tts' || alarm.kind === null || alarm.kind === undefined)
+      ) {
         firedRef.current.add(alarm.id);
         speak(alarm.tts_text || alarm.title);
       }

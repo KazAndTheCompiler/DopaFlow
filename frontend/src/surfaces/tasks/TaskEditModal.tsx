@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Button from '@ds/primitives/Button';
 import Input from '@ds/primitives/Input';
@@ -120,7 +120,10 @@ export default function TaskEditModal({
       status: task.status,
       dueAt: task.due_at ? task.due_at.slice(0, 10) : '',
       tagsRaw: task.tags.join(', '),
-      estimatedMinutes: task.estimated_minutes != null ? String(task.estimated_minutes) : '',
+      estimatedMinutes:
+        task.estimated_minutes !== null && task.estimated_minutes !== undefined
+          ? String(task.estimated_minutes)
+          : '',
       subtasks: task.subtasks ?? [],
       recurrenceRule: task.recurrence_rule ?? '',
       projectId: task.project_id ?? '',
@@ -134,7 +137,11 @@ export default function TaskEditModal({
     setStatus(task.status);
     setDueAt(task.due_at ? task.due_at.slice(0, 10) : '');
     setTagsRaw(task.tags.join(', '));
-    setEstimatedMinutes(task.estimated_minutes != null ? String(task.estimated_minutes) : '');
+    setEstimatedMinutes(
+      task.estimated_minutes !== null && task.estimated_minutes !== undefined
+        ? String(task.estimated_minutes)
+        : '',
+    );
     setSubtasks(task.subtasks ?? []);
     setRecurrenceRule(task.recurrence_rule ?? '');
     setProjectId(task.project_id ?? '');
@@ -184,16 +191,12 @@ export default function TaskEditModal({
     title,
   ]);
 
-  if (!task) {
-    return null;
-  }
-
-  const handleRequestClose = (): void => {
+  const handleRequestClose = useCallback((): void => {
     if (isDirty && !window.confirm('Discard changes?')) {
       return;
     }
     onClose();
-  };
+  }, [isDirty, onClose]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -205,7 +208,11 @@ export default function TaskEditModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDirty, onClose]);
+  }, [handleRequestClose]);
+
+  if (!task) {
+    return null;
+  }
 
   const handleSave = async (): Promise<void> => {
     if (!title.trim()) {

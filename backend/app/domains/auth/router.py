@@ -126,13 +126,22 @@ async def list_users(
 ) -> UserList:
     users = svc.list_users()
     return UserList(
-        users=[UserReadFull(id=u["id"], email=u["email"], role=u["role"], created_at=u.get("created_at")) for u in users]
+        users=[
+            UserReadFull(
+                id=u["id"],
+                email=u["email"],
+                role=u["role"],
+                created_at=u.get("created_at"),
+            )
+            for u in users
+        ]
     )
 
 
 @router.get("/roles")
 async def list_roles() -> dict:
     from app.domains.auth.service import ROLE_SCOPES
+
     return {"roles": dict(ROLE_SCOPES)}
 
 
