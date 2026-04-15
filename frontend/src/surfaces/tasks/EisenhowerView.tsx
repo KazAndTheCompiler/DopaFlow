@@ -2,9 +2,16 @@ import type { Task } from '../../../../shared/types';
 
 interface EisenhowerViewProps {
   quadrants: { q1: Task[]; q2: Task[]; q3: Task[]; q4: Task[] };
+  onEdit?: (task: Task) => void;
 }
 
-function cell(title: string, cue: string, tasks: Task[], tone: string): JSX.Element {
+function cell(
+  title: string,
+  cue: string,
+  tasks: Task[],
+  tone: string,
+  onEdit?: (task: Task) => void,
+): JSX.Element {
   return (
     <section
       style={{
@@ -61,17 +68,32 @@ function cell(title: string, cue: string, tasks: Task[], tone: string): JSX.Elem
           </div>
         ) : (
           tasks.map((task) => (
-            <div
+            <button
               key={task.id}
+              onClick={() => onEdit?.(task)}
               style={{
                 fontSize: 'var(--text-sm)',
                 padding: '0.6rem 0.7rem',
                 borderRadius: '12px',
                 background: 'var(--surface-2)',
+                border: 'none',
+                textAlign: 'left',
+                cursor: onEdit ? 'pointer' : 'default',
+                width: '100%',
+                color: 'inherit',
+                transition: 'background 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                if (onEdit) {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--surface-3, color-mix(in srgb, var(--surface-2) 80%, var(--accent) 20%))';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)';
               }}
             >
               {task.title}
-            </div>
+            </button>
           ))
         )}
       </div>
@@ -79,7 +101,7 @@ function cell(title: string, cue: string, tasks: Task[], tone: string): JSX.Elem
   );
 }
 
-export default function EisenhowerView({ quadrants }: EisenhowerViewProps): JSX.Element {
+export default function EisenhowerView({ quadrants, onEdit }: EisenhowerViewProps): JSX.Element {
   return (
     <div
       style={{
@@ -88,10 +110,10 @@ export default function EisenhowerView({ quadrants }: EisenhowerViewProps): JSX.
         gap: '1rem',
       }}
     >
-      {cell('Q1 · Do', 'urgent + important', quadrants.q1, 'var(--state-overdue)')}
-      {cell('Q2 · Schedule', 'important, not urgent', quadrants.q2, 'var(--accent)')}
-      {cell('Q3 · Delegate', 'urgent, lower leverage', quadrants.q3, 'var(--state-warn)')}
-      {cell('Q4 · Eliminate', 'noise or drift', quadrants.q4, 'var(--text-secondary)')}
+      {cell('Q1 · Do', 'urgent + important', quadrants.q1, 'var(--state-overdue)', onEdit)}
+      {cell('Q2 · Schedule', 'important, not urgent', quadrants.q2, 'var(--accent)', onEdit)}
+      {cell('Q3 · Delegate', 'urgent, lower leverage', quadrants.q3, 'var(--state-warn)', onEdit)}
+      {cell('Q4 · Eliminate', 'noise or drift', quadrants.q4, 'var(--text-secondary)', onEdit)}
     </div>
   );
 }

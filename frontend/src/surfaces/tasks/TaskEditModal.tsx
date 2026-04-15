@@ -321,22 +321,6 @@ export default function TaskEditModal({
   return (
     <Modal open={true} title="Edit task" onClose={handleRequestClose}>
       <div style={{ display: 'grid', gap: '1rem' }}>
-        {packyHint && (
-          <div
-            style={{
-              padding: '0.65rem 0.9rem',
-              borderRadius: '12px',
-              background: 'var(--accent)12',
-              border: '1px solid var(--accent)30',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-secondary)',
-              lineHeight: 1.5,
-            }}
-          >
-            <span style={{ fontWeight: 600, color: 'var(--accent)' }}>Packy · </span>
-            {packyHint}
-          </div>
-        )}
         <div style={sectionCard}>
           <p style={sectionTitle}>Core</p>
           <label style={fieldLabel}>Title</label>
@@ -676,6 +660,25 @@ export default function TaskEditModal({
             </Button>
           </div>
         </div>
+
+        {packyHint && (
+          <div
+            style={{
+              padding: '0.5rem 0.75rem',
+              borderRadius: '10px',
+              background: 'color-mix(in srgb, var(--accent) 6%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: 'var(--accent)', marginRight: '0.3rem' }}>
+              Tip:
+            </span>
+            {packyHint}
+          </div>
+        )}
 
         <div
           style={{

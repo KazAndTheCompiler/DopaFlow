@@ -252,7 +252,7 @@ export default function TasksView({ initialView = 'list' }: TasksViewProps): JSX
             onStatusChange={(id, status) => void tasks.update(id, { status })}
           />
         ) : (
-          <EisenhowerView quadrants={quadrants} />
+          <EisenhowerView quadrants={quadrants} onEdit={(task) => setEditingTask(task)} />
         )}
         <TaskEditModal
           task={editingTask}
@@ -353,9 +353,6 @@ export default function TasksView({ initialView = 'list' }: TasksViewProps): JSX
         </div>
       </section>
       <TaskCreateBar
-        onVoiceExecuted={() => {
-          void tasks.refresh();
-        }}
         onCreate={async (text) => {
           const task = await tasks.createQuickTask(text);
           if (activeProjectId) {

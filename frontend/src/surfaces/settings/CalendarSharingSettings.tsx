@@ -293,9 +293,20 @@ export default function CalendarSharingSettings(): JSX.Element {
               lineHeight: 1.6,
             }}
           >
-            This is the foundation for future user-to-user calendar sharing. Today it supports
-            deliberate, token-based sharing between trusted DopaFlow installs, so the flow needs to
-            feel polished now and stay safe when broader sharing lands later.
+            Token-based sharing between trusted DopaFlow installs. Imported events are stored as
+            read-only copies in your local SQLite database (
+            <code
+              style={{
+                background: 'var(--surface)',
+                padding: '0.1em 0.3em',
+                borderRadius: '4px',
+                fontSize: '0.9em',
+              }}
+            >
+              ~/.local/share/DopaFlow/db.sqlite
+            </code>
+            ). No external servers are involved — all sync is direct between installs over HTTPS.
+            Removing a peer feed deletes the imported events from your database.
           </p>
         </div>
         <div
