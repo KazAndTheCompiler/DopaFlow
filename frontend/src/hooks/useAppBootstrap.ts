@@ -14,9 +14,12 @@ export function useAppBootstrap(): UseAppBootstrapResult {
     try {
       await materializeRecurringTasks(168);
     } catch (caughtError) {
-      const nextError =
-        caughtError instanceof Error ? caughtError : new Error('Failed to bootstrap app');
-      setError(nextError);
+      // Only show the error screen for genuine network failures (backend unreachable).
+      // HTTP 4xx/5xx means the server responded — don't block the whole app.
+      const msg = caughtError instanceof Error ? caughtError.message : '';
+      if (msg.startsWith('network_error:')) {
+        setError(caughtError instanceof Error ? caughtError : new Error('Failed to bootstrap app'));
+      }
     }
   }, []);
 
