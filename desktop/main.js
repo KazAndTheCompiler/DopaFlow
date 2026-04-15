@@ -36,6 +36,7 @@ const runtime = new BackendRuntime({
   args: backendArgs,
   env: backendEnv,
   healthUrl: "http://127.0.0.1:8000/health/ready",
+  healthTimeoutMs: 90_000,
 });
 
 const releaseChannel = pkg.dopaflowReleaseChannel === "stable" ? "stable" : "dev";

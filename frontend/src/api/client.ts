@@ -3,7 +3,7 @@ import { fire } from '../app/toastService';
 const defaultApiBaseUrl =
   typeof window !== 'undefined' && /^https?:\/\//.test(window.location.origin)
     ? `${window.location.origin}/api/v2`
-    : `${window.location.protocol}//127.0.0.1:8000/api/v2`;
+    : 'http://127.0.0.1:8000/api/v2';
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? defaultApiBaseUrl;
 

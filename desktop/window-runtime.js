@@ -207,9 +207,7 @@ class WindowRuntime {
         window.maximize();
       }
       window.show();
-      if (!this.isPackaged) {
-        window.webContents.openDevTools();
-      }
+      window.webContents.openDevTools();
     });
 
     this.loadRoute(window, route);

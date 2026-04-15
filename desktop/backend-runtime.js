@@ -13,12 +13,13 @@ class BackendRuntime extends EventEmitter {
     this.env = options.env ?? null;
     this.restartDelayMs = options.restartDelayMs ?? 2000;
     this.healthUrl = options.healthUrl ?? "http://127.0.0.1:8000/health";
+    this.healthTimeoutMs = options.healthTimeoutMs ?? 10000;
     this.restartTimer = null;
     this.startGeneration = 0;
     this.shouldRestart = true;
   }
 
-  waitForHealth(timeoutMs = 10000) {
+  waitForHealth(timeoutMs = this.healthTimeoutMs ?? 10000) {
     /** Poll the backend health endpoint until it responds or the timeout elapses. */
     const startedAt = Date.now();
 
