@@ -5,10 +5,12 @@ import { showToast } from '@ds/primitives/Toast';
 import {
   checkInHabit,
   createHabit,
+  deleteHabit,
   freezeHabit,
   getHabitLogs,
   listHabits,
   unfreezeHabit,
+  updateHabit,
 } from '@api/index';
 import { getInvalidationEventName } from './useSSE';
 
@@ -18,6 +20,8 @@ export interface UseHabitsResult {
   error: string | null;
   refresh: () => Promise<void>;
   create: (habit: Partial<Habit>) => Promise<Habit>;
+  update: (habitId: string, patch: Partial<Habit>) => Promise<void>;
+  remove: (habitId: string) => Promise<void>;
   checkIn: (habitId: string, moodScore?: number) => Promise<void>;
   freeze: (habitId: string, days: number) => Promise<void>;
   unfreeze: (habitId: string) => Promise<void>;
@@ -107,6 +111,15 @@ export function useHabits(): UseHabitsResult {
         await refresh(); // rollback via real data
         showToast('Check-in failed.', 'error');
       }
+    },
+    update: async (habitId: string, patch: Partial<Habit>) => {
+      const result = await updateHabit(habitId, patch);
+      setHabits((prev) => prev.map((h) => (h.id === habitId ? result : h)));
+    },
+    remove: async (habitId: string) => {
+      await deleteHabit(habitId);
+      setHabits((prev) => prev.filter((h) => h.id !== habitId));
+      showToast('Habit removed.', 'success');
     },
     freeze,
     unfreeze,
