@@ -93,6 +93,13 @@ internal/
 .continue/
 .aider/
 .opencode/
+.mcp.json
+AGENTS.md
+docs/internal/
+
+# --- Vendored binaries (install at build time, never track in git) ---
+desktop/vendor-runtime/
+tools/mcp/node-tooling-bridge/vendor/
 tools/mcp/node-tooling-bridge/.venv/
 tools/mcp/node-tooling-bridge/vendor/
 
