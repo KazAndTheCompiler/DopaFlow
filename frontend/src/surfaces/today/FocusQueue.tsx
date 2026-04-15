@@ -9,6 +9,7 @@ export interface FocusQueueProps {
   activeSession?: FocusSession | undefined;
   onStartFocus: (taskId: string, durationMinutes?: number) => void;
   onComplete: (taskId: string) => void;
+  onEdit?: (task: Task) => void;
 }
 
 type TaskId = Task['id'];
@@ -111,6 +112,7 @@ export function FocusQueue({
   activeSession,
   onStartFocus,
   onComplete,
+  onEdit,
 }: FocusQueueProps): JSX.Element {
   const todayISO = localDateISO();
   const storageKey = `${FOCUS_QUEUE_ORDER_PREFIX}${todayISO}`;
@@ -385,7 +387,13 @@ export function FocusQueue({
                 }}
               >
                 {priorityDot(task.priority)}
-                <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: '0.1rem' }}>
+                <div
+                  style={{ flex: 1, minWidth: 0, display: 'grid', gap: '0.1rem', cursor: onEdit ? 'pointer' : 'inherit' }}
+                  onClick={() => onEdit?.(task)}
+                  role={onEdit ? 'button' : undefined}
+                  tabIndex={onEdit ? 0 : undefined}
+                  onKeyDown={onEdit ? (e) => e.key === 'Enter' && onEdit(task) : undefined}
+                >
                   <span
                     style={{
                       fontSize: 'var(--text-sm)',

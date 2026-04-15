@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DragEvent } from 'react';
 
+import type { Task } from '../../../../shared/types';
 import {
   useAppCalendar,
   useAppFocus,
@@ -16,6 +17,7 @@ import DailyQuote from '../../components/DailyQuote';
 import FocusQueue from './FocusQueue';
 import HabitsToday from './HabitsToday';
 import MomentumCard from './MomentumCard';
+import TaskEditModal from '../tasks/TaskEditModal';
 import TimeBlocks from './TimeBlocks';
 import { TodayHeaderPanel } from './TodayHeaderPanel';
 import { TodaySurfaceSkeleton } from '@ds/primitives/Skeleton';
@@ -32,6 +34,7 @@ export default function TodayView(): JSX.Element {
   const packy = useAppPacky();
   const [dayOffset, setDayOffset] = useState<number>(0);
   const [focusQueueIds, setFocusQueueIds] = useState<string[]>([]);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [quote, setQuote] = useState<string>('');
   const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() =>
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -197,6 +200,7 @@ export default function TodayView(): JSX.Element {
             activeSession={focus.activeSession}
             onStartFocus={(taskId, mins) => void focus.start(taskId, mins ?? 25)}
             onComplete={(taskId) => void tasks.complete(taskId)}
+            onEdit={(task) => setEditingTask(task)}
           />
         </div>
 
@@ -220,12 +224,27 @@ export default function TodayView(): JSX.Element {
           minWidth: 0,
         }}
       >
-        <BacklogColumn tasks={backlog} onComplete={(id) => void tasks.complete(id)} draggable />
+        <BacklogColumn
+          tasks={backlog}
+          onComplete={(id) => void tasks.complete(id)}
+          onEdit={(task) => setEditingTask(task)}
+          draggable
+        />
 
         <HabitsToday habits={habits.habits} onCheckIn={habits.checkIn} />
 
         <ContextCard weeklyDigest={insights.weeklyDigest} correlations={insights.correlations} />
       </aside>
+      <TaskEditModal
+        task={editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={async (id, patch) => {
+          await tasks.update(id, patch);
+        }}
+        onDelete={async (id) => {
+          await tasks.remove(id);
+        }}
+      />
     </div>
   );
 }
