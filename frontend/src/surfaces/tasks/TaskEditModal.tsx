@@ -71,7 +71,7 @@ export default function TaskEditModal({
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderOffset, setReminderOffset] = useState<number>(0);
+  const [reminderAt, setReminderAt] = useState<string>('');
   const [packyHint, setPackyHint] = useState<string>('');
   const [initialSnapshot, setInitialSnapshot] = useState<TaskEditSnapshot | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -141,7 +141,7 @@ export default function TaskEditModal({
     setNewSubtaskTitle('');
     setConfirmDelete(false);
     setReminderEnabled(false);
-    setReminderOffset(0);
+    setReminderAt('');
     setInitialSnapshot(nextSnapshot);
     setIsDirty(false);
   }, [task]);
@@ -163,7 +163,7 @@ export default function TaskEditModal({
       projectId,
       dependencies: dependencies.map((dep) => dep.id),
       reminderEnabled,
-      reminderOffset,
+      reminderOffset: 0,
     };
     setIsDirty(JSON.stringify(nextSnapshot) !== JSON.stringify(initialSnapshot));
   }, [
@@ -176,7 +176,7 @@ export default function TaskEditModal({
     projectId,
     recurrenceRule,
     reminderEnabled,
-    reminderOffset,
+    reminderAt,
     status,
     subtasks,
     tagsRaw,
@@ -234,13 +234,10 @@ export default function TaskEditModal({
         patch.recurrence_rule = recurrenceRule;
       }
       await onSave(task.id, patch);
-      if (reminderEnabled && dueAt) {
-        const dueDate = new Date(dueAt);
-        dueDate.setHours(23, 59, 0, 0);
-        const fireAt = new Date(dueDate.getTime() - reminderOffset * 60_000);
+      if (reminderEnabled && reminderAt) {
         await createAlarm({
           title: title.trim(),
-          at: fireAt.toISOString(),
+          at: new Date(reminderAt).toISOString(),
           kind: 'tts',
           tts_text: `Reminder: ${title.trim()}`,
         });
@@ -548,28 +545,29 @@ export default function TaskEditModal({
               <input
                 type="checkbox"
                 checked={reminderEnabled}
-                onChange={(e) => setReminderEnabled(e.currentTarget.checked)}
+                onChange={(e) => {
+                  const on = e.currentTarget.checked;
+                  setReminderEnabled(on);
+                  if (on && !reminderAt) {
+                    // default to due date at 9am, or 1 hour from now
+                    const base = dueAt ? new Date(`${dueAt}T09:00`) : new Date(Date.now() + 3_600_000);
+                    const pad = (n: number): string => String(n).padStart(2, '0');
+                    setReminderAt(
+                      `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`,
+                    );
+                  }
+                }}
                 style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
               />
               Remind me
             </label>
             {reminderEnabled && (
-              <select
-                value={reminderOffset}
-                onChange={(e) => setReminderOffset(Number(e.currentTarget.value))}
-                style={selectStyle}
-              >
-                <option value={0}>At due time</option>
-                <option value={15}>15 min before</option>
-                <option value={30}>30 min before</option>
-                <option value={60}>1 hour before</option>
-                <option value={120}>2 hours before</option>
-              </select>
-            )}
-            {reminderEnabled && !dueAt && (
-              <span style={{ fontSize: '11px', color: 'var(--state-warn)' }}>
-                Set a due date to enable reminder
-              </span>
+              <input
+                type="datetime-local"
+                value={reminderAt}
+                onChange={(e) => setReminderAt(e.currentTarget.value)}
+                style={{ ...selectStyle, minWidth: '13rem' }}
+              />
             )}
           </div>
         </div>

@@ -3,6 +3,7 @@ import type { Task } from '../../../../shared/types';
 export interface BacklogColumnProps {
   tasks: Task[];
   onComplete: (id: string) => void;
+  onEdit?: (task: Task) => void;
   draggable?: boolean;
 }
 
@@ -22,6 +23,7 @@ function priorityColor(priority: number): string {
 export function BacklogColumn({
   tasks,
   onComplete,
+  onEdit,
   draggable = false,
 }: BacklogColumnProps): JSX.Element {
   return (
@@ -171,7 +173,13 @@ export function BacklogColumn({
                   marginTop: '1px',
                 }}
               />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{ flex: 1, minWidth: 0, cursor: onEdit ? 'pointer' : 'inherit' }}
+                onClick={() => onEdit?.(task)}
+                role={onEdit ? 'button' : undefined}
+                tabIndex={onEdit ? 0 : undefined}
+                onKeyDown={onEdit ? (e) => e.key === 'Enter' && onEdit(task) : undefined}
+              >
                 <span
                   style={{
                     display: 'block',
