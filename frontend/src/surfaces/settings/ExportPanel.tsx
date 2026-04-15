@@ -7,8 +7,7 @@ interface ExportItem {
   label: string;
   description: string;
   filename: string;
-  url: string;
-  headers?: Record<string, string>;
+  path: string;
 }
 
 const EXPORTS: ExportItem[] = [
@@ -16,30 +15,29 @@ const EXPORTS: ExportItem[] = [
     id: 'all',
     label: 'Everything (ZIP)',
     description: 'Tasks, habits, journal, alarms, nutrition in one archive',
-    filename: 'zoestm-export.zip',
-    url: `${API_BASE_URL}/ops/export/all`,
-    headers: { 'X-Token-Scopes': 'admin:ops' },
+    filename: 'dopaflow-export.zip',
+    path: '/ops/export/all',
   },
   {
     id: 'tasks',
     label: 'Tasks (CSV)',
     description: 'All tasks with status, priority, tags, subtasks',
     filename: 'tasks.csv',
-    url: `${API_BASE_URL}/tasks/export/csv`,
+    path: '/tasks/export/csv',
   },
   {
     id: 'journal',
     label: 'Journal (ZIP)',
     description: 'All journal entries as Markdown files',
     filename: 'journal.zip',
-    url: `${API_BASE_URL}/journal/export/zip`,
+    path: '/journal/export/zip',
   },
   {
     id: 'nutrition',
     label: 'Nutrition (CSV)',
     description: 'Full food log with macros',
     filename: 'nutrition.csv',
-    url: `${API_BASE_URL}/nutrition/export/csv`,
+    path: '/nutrition/export/csv',
   },
 ];
 
@@ -71,10 +69,15 @@ export default function ExportPanel(): JSX.Element {
     setError(null);
     setLastDownload(null);
     try {
-      const res = await fetch(item.url, item.headers ? { headers: item.headers } : undefined);
+      const res = await fetch(`${API_BASE_URL}${item.path}`);
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        throw new Error(`${res.status} ${text.slice(0, 120)}`);
+        let hint = '';
+        if (res.status === 401 || res.status === 403) {
+          hint =
+            ' — auth required. Start the backend with DOPAFLOW_TRUST_LOCAL_CLIENTS=1 for local use.';
+        }
+        throw new Error(`${res.status} ${text.slice(0, 120)}${hint}`);
       }
       const blob = await res.blob();
       const filename = inferFilename(item, res);

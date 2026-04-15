@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 
 import Button from '@ds/primitives/Button';
 import VoiceButton from '@ds/primitives/VoiceButton';
-import VoiceCommandModal from '../../components/VoiceCommandModal';
 import { quickAddTask } from '@api/index';
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition';
 
 export interface TaskCreateBarProps {
   onCreate: (text: string) => Promise<void>;
-  onVoiceExecuted?: () => void;
 }
 
 interface ParsePreview {
@@ -18,7 +16,7 @@ interface ParsePreview {
   tags?: string[];
 }
 
-export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps): JSX.Element {
+export function TaskCreateBar({ onCreate }: TaskCreateBarProps): JSX.Element {
   const [value, setValue] = useState<string>('');
   const [preview, setPreview] = useState<ParsePreview | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -146,11 +144,6 @@ export function TaskCreateBar({ onCreate, onVoiceExecuted }: TaskCreateBarProps)
           onToggle={() => (listening ? stop() : start())}
           size="sm"
           title="Speak a task"
-        />
-        <VoiceCommandModal
-          initialCommandWord="task"
-          route="tasks"
-          {...(onVoiceExecuted ? { onExecuted: onVoiceExecuted } : {})}
         />
         <Button onClick={handleAdd} disabled={!value.trim() && !listening}>
           Add

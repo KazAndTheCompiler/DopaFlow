@@ -44,16 +44,17 @@ export function JarvisOverlay({ visible }: JarvisOverlayProps): JSX.Element | nu
     <div
       style={{
         position: 'fixed',
-        inset: 0,
+        bottom: '1.5rem',
+        right: '1.5rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 9999,
+        zIndex: 200,
         pointerEvents: 'none',
         animation: 'fadeIn 200ms ease',
       }}
     >
-      <div style={{ position: 'relative', width: 200, height: 200 }}>
+      <div style={{ position: 'relative', width: 64, height: 64 }}>
         {error ? (
           <div
             style={{

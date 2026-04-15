@@ -84,7 +84,34 @@ export function GmailConnect(): JSX.Element {
   };
 
   return (
-    <div style={{ display: 'grid', gap: '0.75rem', justifyItems: 'start' }}>
+    <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <div
+        style={{
+          padding: '0.7rem 0.85rem',
+          borderRadius: '12px',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-subtle)',
+          display: 'grid',
+          gap: '0.35rem',
+        }}
+      >
+        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>What Gmail sync does</span>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          Connects via Google OAuth. DopaFlow reads your Gmail labels and imports flagged emails as
+          tasks or journal entries. The OAuth token is stored in the local SQLite database at{' '}
+          <code
+            style={{
+              background: 'var(--surface)',
+              padding: '0.1em 0.3em',
+              borderRadius: '4px',
+              fontSize: '0.9em',
+            }}
+          >
+            ~/.local/share/DopaFlow/db.sqlite
+          </code>{' '}
+          — no files are written elsewhere. Revoking access removes the token from the database.
+        </span>
+      </div>
       {status ? (
         <div
           style={{
@@ -98,7 +125,7 @@ export function GmailConnect(): JSX.Element {
           {status.message}
         </div>
       ) : null}
-      <Button onClick={() => void handleConnect()} disabled={loading}>
+      <Button onClick={() => void handleConnect()} disabled={loading} style={{ justifySelf: 'start' }}>
         {loading ? 'Connecting…' : 'Connect Gmail'}
       </Button>
     </div>
