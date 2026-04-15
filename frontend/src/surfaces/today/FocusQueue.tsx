@@ -388,7 +388,13 @@ export function FocusQueue({
               >
                 {priorityDot(task.priority)}
                 <div
-                  style={{ flex: 1, minWidth: 0, display: 'grid', gap: '0.1rem', cursor: onEdit ? 'pointer' : 'inherit' }}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'grid',
+                    gap: '0.1rem',
+                    cursor: onEdit ? 'pointer' : 'inherit',
+                  }}
                   onClick={() => onEdit?.(task)}
                   role={onEdit ? 'button' : undefined}
                   tabIndex={onEdit ? 0 : undefined}

@@ -85,7 +85,8 @@ function cell(
               }}
               onMouseEnter={(e) => {
                 if (onEdit) {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--surface-3, color-mix(in srgb, var(--surface-2) 80%, var(--accent) 20%))';
+                  (e.currentTarget as HTMLElement).style.background =
+                    'var(--surface-3, color-mix(in srgb, var(--surface-2) 80%, var(--accent) 20%))';
                 }
               }}
               onMouseLeave={(e) => {

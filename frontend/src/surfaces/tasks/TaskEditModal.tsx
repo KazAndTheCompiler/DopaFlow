@@ -550,7 +550,9 @@ export default function TaskEditModal({
                   setReminderEnabled(on);
                   if (on && !reminderAt) {
                     // default to due date at 9am, or 1 hour from now
-                    const base = dueAt ? new Date(`${dueAt}T09:00`) : new Date(Date.now() + 3_600_000);
+                    const base = dueAt
+                      ? new Date(`${dueAt}T09:00`)
+                      : new Date(Date.now() + 3_600_000);
                     const pad = (n: number): string => String(n).padStart(2, '0');
                     setReminderAt(
                       `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`,
