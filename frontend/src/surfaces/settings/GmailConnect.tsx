@@ -104,10 +104,11 @@ export function GmailConnect(): JSX.Element {
         }}
       >
         <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600 }}>What Gmail sync does</span>
-        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+        <span
+          style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}
+        >
           Connects via Google OAuth. DopaFlow reads your Gmail labels and imports flagged emails as
-          tasks or journal entries. The OAuth token is stored in the local SQLite database at{' '}
-          <br />
+          tasks or journal entries. The OAuth token is stored in the local SQLite database at <br />
           <strong>Requires setup:</strong> The server needs{' '}
           <code
             style={{
@@ -139,7 +140,8 @@ export function GmailConnect(): JSX.Element {
           >
             Google Cloud Console
           </a>{' '}
-          → APIs & Services → Credentials. The OAuth token is also stored in the local SQLite database at{' '}
+          → APIs & Services → Credentials. The OAuth token is also stored in the local SQLite
+          database at{' '}
           <code
             style={{
               background: 'var(--surface)',
@@ -166,7 +168,11 @@ export function GmailConnect(): JSX.Element {
           {status.message}
         </div>
       ) : null}
-      <Button onClick={() => void handleConnect()} disabled={loading} style={{ justifySelf: 'start' }}>
+      <Button
+        onClick={() => void handleConnect()}
+        disabled={loading}
+        style={{ justifySelf: 'start' }}
+      >
         {loading ? 'Connecting…' : 'Connect Gmail'}
       </Button>
     </div>

@@ -44,9 +44,7 @@ export default function CalendarKanbanView({
   events,
   onEventClick,
 }: CalendarKanbanViewProps): JSX.Element {
-  const byCategory = new Map<string, CalendarEvent[]>(
-    CATEGORY_COLUMNS.map((col) => [col.id, []]),
-  );
+  const byCategory = new Map<string, CalendarEvent[]>(CATEGORY_COLUMNS.map((col) => [col.id, []]));
 
   for (const event of events) {
     const cat = eventCategory(event);
@@ -146,7 +144,8 @@ export default function CalendarKanbanView({
                     transition: 'background 120ms ease',
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = `color-mix(in srgb, ${col.color} 10%, var(--surface-2))`;
+                    (e.currentTarget as HTMLButtonElement).style.background =
+                      `color-mix(in srgb, ${col.color} 10%, var(--surface-2))`;
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)';

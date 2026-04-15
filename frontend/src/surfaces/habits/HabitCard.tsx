@@ -124,11 +124,11 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
             onBlur={handleRenameCommit}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
- handleRenameCommit();
-}
+                handleRenameCommit();
+              }
               if (e.key === 'Escape') {
- setRenaming(false);
-}
+                setRenaming(false);
+              }
             }}
             style={{
               flex: 1,
@@ -151,8 +151,9 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
         <button
           title="Rename habit"
           onClick={() => {
- setRenameDraft(habit.name); setRenaming(true);
-}}
+            setRenameDraft(habit.name);
+            setRenaming(true);
+          }}
           style={{
             border: 'none',
             background: 'none',

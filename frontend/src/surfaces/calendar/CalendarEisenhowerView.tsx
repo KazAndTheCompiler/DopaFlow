@@ -5,8 +5,7 @@ const URGENT_HOURS = 48; // events starting within this many hours are "urgent"
 const IMPORTANT_CATEGORIES = new Set(['work', 'focus']);
 
 function isUrgent(event: CalendarEvent): boolean {
-  const hoursUntilStart =
-    (new Date(event.start_at).getTime() - Date.now()) / (1000 * 60 * 60);
+  const hoursUntilStart = (new Date(event.start_at).getTime() - Date.now()) / (1000 * 60 * 60);
   return hoursUntilStart <= URGENT_HOURS;
 }
 
@@ -159,14 +158,14 @@ export default function CalendarEisenhowerView({
     const urgent = isUrgent(event);
     const important = isImportant(event);
     if (urgent && important) {
- q1.push(event);
-} else if (!urgent && important) {
- q2.push(event);
-} else if (urgent && !important) {
- q3.push(event);
-} else {
- q4.push(event);
-}
+      q1.push(event);
+    } else if (!urgent && important) {
+      q2.push(event);
+    } else if (urgent && !important) {
+      q3.push(event);
+    } else {
+      q4.push(event);
+    }
   }
 
   const sort = (arr: CalendarEvent[]): void => {
@@ -225,8 +224,7 @@ export default function CalendarEisenhowerView({
           lineHeight: 1.5,
         }}
       >
-        Urgency = starts within 48 h · Importance = Work or Focus category. Click any event to
-        edit.
+        Urgency = starts within 48 h · Importance = Work or Focus category. Click any event to edit.
       </div>
       <div
         style={{
