@@ -125,6 +125,8 @@ jobs:
           npm run build
 
       - name: Run frontend release E2E tests
+        env:
+          DOPAFLOW_PLAYWRIGHT_LD_LIBRARY_PATH: ""
         run: |
           cd frontend
           npm run test:e2e:release

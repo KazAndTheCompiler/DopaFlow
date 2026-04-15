@@ -400,15 +400,19 @@ class CommandService:
             "follow_ups": parsed.get("follow_ups", []),
             "tts_response": parsed.get("tts_response", ""),
         }
-        compound_parts = detect_actionable_chain(text, parser=parse_intent)
-        if compound_parts is not None:
-            preview["would_execute"] = False
-            preview["status"] = "unsupported"
-            preview["message"] = (
-                "Multiple actions in one command are disabled for now. Say one concrete action at a time."
-            )
-            preview["parts"] = compound_parts
-            return preview
+        # Only check for compound commands when NLP returned unknown.
+        # If NLP already resolved an intent (e.g. task.create), trust it —
+        # "add task buy milk and bread" is one task, not a compound command.
+        if intent == "unknown":
+            compound_parts = detect_actionable_chain(text, parser=parse_intent)
+            if compound_parts is not None:
+                preview["would_execute"] = False
+                preview["status"] = "unsupported"
+                preview["message"] = (
+                    "Multiple actions in one command are disabled for now. Say one concrete action at a time."
+                )
+                preview["parts"] = compound_parts
+                return preview
         if intent == "unknown":
             preview["message"] = (
                 "I didn't catch that. Try something like 'add task buy milk' or 'start focus'."

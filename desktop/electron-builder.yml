@@ -21,7 +21,7 @@ extraResources:
   - from: "../frontend/dist"
     to: "frontend/dist"
     filter: ["**/*"]
-  - from: "../release/dopaflow-backend-v2"
+  - from: "../backend/dist/dopaflow-backend"
     to: "dopaflow-backend"
     filter: ["**/*"]
 
