@@ -21,24 +21,32 @@ mkdir -p runtime-state
 LOG="runtime-state/launch.log"
 : >"$LOG"
 
+# Kill any stale processes — orphaned backends hold port 8000 and cause new
+# Electron launches to crash (port conflict → backend exits → app.quit()).
+pkill -f "dopaflow-desktop" 2>/dev/null || true
+pkill -f "dopaflow-backend" 2>/dev/null || true
+
+# Clear stale Electron singleton lock so re-launches don't silently exit.
+USER_DATA="${HOME}/.config/dopaflow-desktop"
+rm -f "$USER_DATA/SingletonLock" "$USER_DATA/SingletonSocket" "$USER_DATA/SingletonCookie"
+
 nohup env \
   PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
   LD_LIBRARY_PATH="/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu" \
   LIBVA_DRIVER_NAME=dummy \
-  ELECTRON_DISABLE_GPU=1 \
   HOME="$HOME" \
   DISPLAY="${DISPLAY:-}" \
+  WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
   XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" \
+  XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-}" \
   XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-}" \
   DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}" \
   ./AppRun \
   --no-sandbox \
+  --ozone-platform=x11 \
   --disable-gpu \
-  --disable-gpu-sandbox \
   --disable-software-rasterizer \
   --disable-dev-shm-usage \
-  --use-gl=egl \
-  --in-process-gpu \
   >"$LOG" 2>&1 &
 
 echo "DopaFlow v$VERSION launched (pid $!)"

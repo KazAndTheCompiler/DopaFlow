@@ -64,7 +64,7 @@ export function bulkDeleteTask(ids: string[]): Promise<{ updated: number }> {
 export function materializeRecurringTasks(windowHours = 168): Promise<{ created: number }> {
   return apiClient<{ created: number }>(
     `/tasks/materialize-recurring?window_hours=${windowHours}`,
-    { method: 'POST' },
+    { method: 'POST', headers: { 'Content-Type': 'text/plain' } },
   );
 }
 

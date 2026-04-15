@@ -289,7 +289,13 @@ async def materialize_recurring(
 ) -> CreatedCountResponse:
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
-        payload = await request.json()
+        body = await request.body()
+        payload = {}
+        if body.strip():
+            try:
+                payload = await request.json()
+            except Exception:
+                payload = {}
         raw_window_hours = payload.get("window_hours")
         if raw_window_hours is not None:
             try:
