@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - develop
+      - dev
     paths:
       - "backend/**"
       - ".github/workflows/backend-tests.yml"
