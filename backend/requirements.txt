@@ -7,7 +7,7 @@ uvicorn[standard]==0.44.0
 httpx==0.28.0
 apscheduler==3.11.2
 certifi==2026.2.25
-cryptography==45.0.1
+cryptography==46.0.7
 aiohttp==3.13.5
 libsql-experimental==0.0.34
 python-multipart>=0.0.6
