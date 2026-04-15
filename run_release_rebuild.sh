@@ -168,29 +168,21 @@ launch_release() {
     ELECTRON_DISABLE_GPU=1 \
     HOME="$HOME" \
     DISPLAY="${DISPLAY:-}" \
+    WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
     XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-}" \
+    XDG_SESSION_TYPE="${XDG_SESSION_TYPE:-}" \
     XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-}" \
     DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-}" \
-    SNAP="" \
-    SNAP_NAME="" \
-    SNAP_REVISION="" \
-    SNAP_ARCH="" \
-    SNAP_COMMON="" \
-    SNAP_USER_COMMON="" \
-    SNAP_DATA="" \
-    SNAP_USER_DATA="" \
-    SNAP_INSTANCE_NAME="" \
-    SNAP_INSTANCE_KEY="" \
-    SNAP_REAL_HOME="" \
-    SNAP_CONTEXT="" \
+    SNAP="" SNAP_NAME="" SNAP_REVISION="" SNAP_ARCH="" \
+    SNAP_COMMON="" SNAP_USER_COMMON="" SNAP_DATA="" \
+    SNAP_USER_DATA="" SNAP_INSTANCE_NAME="" SNAP_INSTANCE_KEY="" \
+    SNAP_REAL_HOME="" SNAP_CONTEXT="" \
     ./AppRun \
     --no-sandbox \
+    --ozone-platform=x11 \
     --disable-gpu \
-    --disable-gpu-sandbox \
     --disable-software-rasterizer \
     --disable-dev-shm-usage \
-    --use-gl=egl \
-    --in-process-gpu \
     >"$LAUNCH_LOG" 2>&1 &
   local pid=$!
   echo "Launched DopaFlow (pid $pid)"
