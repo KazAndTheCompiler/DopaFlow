@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+APPIMAGE=$(find desktop/dist -name "*.AppImage" | head -1)
+if [ -z "$APPIMAGE" ]; then
+  echo "ERROR: No AppImage found in desktop/dist/. Build likely failed before this step."
+  exit 1
+fi
+echo "Verifying: $APPIMAGE"
+
 if [[ $# -gt 1 ]]; then
   echo "Usage: $0 [/path/to/DopaFlow-*.AppImage]" >&2
   exit 1

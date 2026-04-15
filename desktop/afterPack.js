@@ -142,34 +142,44 @@ function copyBundledRuntimeLibs(appOutDir) {
 }
 
 exports.default = async function afterPack(context) {
-  if (context.electronPlatformName !== 'linux') return;
+  try {
+    if (!context || !context.electronPlatformName) {
+      console.warn('[afterPack] electronPlatformName is not available; skipping afterPack hook');
+      return;
+    }
 
-  copyBundledRuntimeLibs(context.appOutDir);
+    if (context.electronPlatformName !== 'linux') return;
 
-  const appRunPath = path.join(context.appOutDir, 'AppRun');
+    copyBundledRuntimeLibs(context.appOutDir);
 
-  const appRun = [
-    '#!/bin/bash',
-    '# Custom AppRun - normalizes the host environment before Electron starts.',
-    '',
-    'THIS="$0"',
-    '',
-    'if [ -z "$APPDIR" ]; then',
-    '  APPDIR="$(dirname "$(readlink -f "${THIS}")")"',
-    'fi',
-    '',
-    'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${APPDIR}:${APPDIR}/usr/sbin"',
-    'export LD_LIBRARY_PATH="${APPDIR}/usr/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"',
-    'export XDG_DATA_DIRS="${APPDIR}/usr/share/:${XDG_DATA_DIRS}:/usr/share/gnome/:/usr/local/share/:/usr/share/"',
-    'unset SNAP SNAP_NAME SNAP_REVISION SNAP_ARCH SNAP_COMMON SNAP_USER_COMMON SNAP_DATA SNAP_USER_DATA SNAP_INSTANCE_NAME SNAP_INSTANCE_KEY SNAP_REAL_HOME SNAP_CONTEXT',
-    '',
-    '# Use direct exec (not ld-linux --library-path) so /proc/self/exe resolves correctly',
-    '# for Electron resource discovery (icudtl.dat etc.). LD_LIBRARY_PATH handles lib lookup.',
-    '# --no-sandbox is required: Chromium SUID sandbox check fires before JS starts.',
-    'exec "${APPDIR}/dopaflow-desktop" --no-sandbox --disable-setuid-sandbox "$@"',
-    '',
-  ].join('\n');
+    const appRunPath = path.join(context.appOutDir, 'AppRun');
 
-  fs.writeFileSync(appRunPath, appRun, { encoding: 'utf8', mode: 0o755 });
-  console.log('[afterPack] Wrote custom AppRun');
+    const appRun = [
+      '#!/bin/bash',
+      '# Custom AppRun - normalizes the host environment before Electron starts.',
+      '',
+      'THIS="$0"',
+      '',
+      'if [ -z "$APPDIR" ]; then',
+      '  APPDIR="$(dirname "$(readlink -f "${THIS}")")"',
+      'fi',
+      '',
+      'export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${APPDIR}:${APPDIR}/usr/sbin"',
+      'export LD_LIBRARY_PATH="${APPDIR}/usr/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"',
+      'export XDG_DATA_DIRS="${APPDIR}/usr/share/:${XDG_DATA_DIRS}:/usr/share/gnome/:/usr/local/share/:/usr/share/"',
+      'unset SNAP SNAP_NAME SNAP_REVISION SNAP_ARCH SNAP_COMMON SNAP_USER_COMMON SNAP_DATA SNAP_USER_DATA SNAP_INSTANCE_NAME SNAP_INSTANCE_KEY SNAP_REAL_HOME SNAP_CONTEXT',
+      '',
+      '# Use direct exec (not ld-linux --library-path) so /proc/self/exe resolves correctly',
+      '# for Electron resource discovery (icudtl.dat etc.). LD_LIBRARY_PATH handles lib lookup.',
+      '# --no-sandbox is required: Chromium SUID sandbox check fires before JS starts.',
+      'exec "${APPDIR}/dopaflow-desktop" --no-sandbox --disable-setuid-sandbox "$@"',
+      '',
+    ].join('\n');
+
+    fs.writeFileSync(appRunPath, appRun, { encoding: 'utf8', mode: 0o755 });
+    console.log('[afterPack] Wrote custom AppRun');
+  } catch (error) {
+    console.error('[afterPack] Error:', error.message);
+    throw error;
+  }
 };
