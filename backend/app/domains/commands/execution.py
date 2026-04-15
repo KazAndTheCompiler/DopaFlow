@@ -72,7 +72,9 @@ def execute_command(
             "confidence": parsed["confidence"],
         }
 
-    compound_parts = detect_actionable_chain(text, parser=parser)
+    # Only detect compound commands when NLP returned unknown intent.
+    # A resolved intent (e.g. task.create) takes precedence over "and" splitting.
+    compound_parts = detect_actionable_chain(text, parser=parser) if intent == "unknown" else None
     if compound_parts is not None:
         CommandRepository.add_log(
             db_path,
