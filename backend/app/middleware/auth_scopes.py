@@ -327,7 +327,9 @@ def require_scope(scope: str):
         client_host = request.client.host if request.client else ""
         if env_flag("TRUST_LOCAL_CLIENTS"):
             if client_host in TRUSTED_HOSTS and (
-                origin.startswith("http://127.0.0.1:")
+                not origin  # packaged Electron (file://) sends no Origin
+                or origin == "null"  # some browsers send literal "null" for file:// pages
+                or origin.startswith("http://127.0.0.1:")
                 or origin.startswith("http://localhost:")
             ):
                 return True
