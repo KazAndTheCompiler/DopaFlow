@@ -46,6 +46,20 @@ export async function unfreezeHabit(habitId: string): Promise<Habit> {
   );
 }
 
+export async function updateHabit(habitId: string, payload: Partial<Habit>): Promise<Habit> {
+  return parseApiSchema<Habit>(
+    habitSchema,
+    await apiClient<unknown>(`/habits/${habitId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function deleteHabit(habitId: string): Promise<void> {
+  await apiClient<unknown>(`/habits/${habitId}`, { method: 'DELETE' });
+}
+
 export function getHabitLogs(
   habitId: string,
 ): Promise<{ habit_id: string; checkin_date: string }[]> {

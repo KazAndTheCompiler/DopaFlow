@@ -13,6 +13,17 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
   const isFrozen = habit.freeze_until ? new Date(habit.freeze_until) > new Date() : false;
   const [isHovered, setIsHovered] = useState(false);
   const [showFreezeMenu, setShowFreezeMenu] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleRenameCommit = (): void => {
+    const trimmed = renameDraft.trim();
+    if (trimmed && trimmed !== habit.name) {
+      void habits.update(habit.id, { name: trimmed }).then(() => onRefresh?.());
+    }
+    setRenaming(false);
+  };
 
   // Progress ring dimensions and calculations
   const ringRadius = 16;
@@ -105,11 +116,87 @@ export function HabitCard({ habit, onCheckIn, onRefresh }: HabitCardProps): JSX.
             flexShrink: 0,
           }}
         />
-        <strong
-          style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        {renaming ? (
+          <input
+            autoFocus
+            value={renameDraft}
+            onChange={(e) => setRenameDraft(e.currentTarget.value)}
+            onBlur={handleRenameCommit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameCommit();
+              if (e.key === 'Escape') setRenaming(false);
+            }}
+            style={{
+              flex: 1,
+              padding: '0.15rem 0.4rem',
+              borderRadius: '6px',
+              border: '1px solid var(--accent)',
+              background: 'var(--surface-2)',
+              color: 'var(--text)',
+              fontSize: 'var(--text-sm)',
+              fontWeight: 600,
+            }}
+          />
+        ) : (
+          <strong
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {habit.name}
+          </strong>
+        )}
+        <button
+          title="Rename habit"
+          onClick={() => { setRenameDraft(habit.name); setRenaming(true); }}
+          style={{
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            fontSize: '0.7rem',
+            color: 'var(--text-muted)',
+            padding: '2px 4px',
+            borderRadius: '4px',
+            flexShrink: 0,
+          }}
         >
-          {habit.name}
-        </strong>
+          ✎
+        </button>
+        {confirmDelete ? (
+          <button
+            title="Confirm delete"
+            onClick={() => void habits.remove(habit.id).then(() => onRefresh?.())}
+            style={{
+              border: 'none',
+              background: 'color-mix(in srgb, var(--state-overdue) 15%, transparent)',
+              cursor: 'pointer',
+              fontSize: '0.65rem',
+              color: 'var(--state-overdue)',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              flexShrink: 0,
+              fontWeight: 700,
+            }}
+          >
+            confirm
+          </button>
+        ) : (
+          <button
+            title="Delete habit"
+            onClick={() => setConfirmDelete(true)}
+            onBlur={() => setConfirmDelete(false)}
+            style={{
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              color: 'var(--text-muted)',
+              padding: '2px 4px',
+              borderRadius: '4px',
+              flexShrink: 0,
+            }}
+          >
+            ✕
+          </button>
+        )}
         {/* Progress ring */}
         <svg
           width="36"
