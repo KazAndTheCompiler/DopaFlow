@@ -85,7 +85,7 @@ export function useAlarms(): UseAlarmsResult {
 
   // Register service worker and request notification permission
   useEffect(() => {
-    if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+    if (window.location.protocol === 'file:' || window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
       return;
     }
 
@@ -108,7 +108,7 @@ export function useAlarms(): UseAlarmsResult {
 
   // Listen for messages from service worker
   useEffect(() => {
-    if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+    if (window.location.protocol === 'file:' || window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
       return;
     }
 
