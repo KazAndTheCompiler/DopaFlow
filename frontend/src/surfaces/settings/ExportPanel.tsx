@@ -10,36 +10,40 @@ interface ExportItem {
   path: string;
 }
 
-const EXPORTS: ExportItem[] = [
-  {
-    id: 'all',
-    label: 'Everything (ZIP)',
-    description: 'Tasks, habits, journal, alarms, nutrition in one archive',
-    filename: 'dopaflow-export.zip',
-    path: '/ops/export/all',
-  },
-  {
-    id: 'tasks',
-    label: 'Tasks (CSV)',
-    description: 'All tasks with status, priority, tags, subtasks',
-    filename: 'tasks.csv',
-    path: '/tasks/export/csv',
-  },
-  {
-    id: 'journal',
-    label: 'Journal (ZIP)',
-    description: 'All journal entries as Markdown files',
-    filename: 'journal.zip',
-    path: '/journal/export/zip',
-  },
-  {
-    id: 'nutrition',
-    label: 'Nutrition (CSV)',
-    description: 'Full food log with macros',
-    filename: 'nutrition.csv',
-    path: '/nutrition/export/csv',
-  },
-];
+function buildExports(): ExportItem[] {
+  const toDate = new Date().toISOString().slice(0, 10);
+  const fromDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return [
+    {
+      id: 'all',
+      label: 'Everything (ZIP)',
+      description: 'Tasks, habits, journal, alarms, nutrition in one archive',
+      filename: 'dopaflow-export.zip',
+      path: '/ops/export/all',
+    },
+    {
+      id: 'tasks',
+      label: 'Tasks (CSV)',
+      description: 'All tasks with status, priority, tags, subtasks',
+      filename: 'tasks.csv',
+      path: '/tasks/export/csv',
+    },
+    {
+      id: 'journal',
+      label: 'Journal (ZIP)',
+      description: 'All journal entries as Markdown files (last 12 months)',
+      filename: 'journal.zip',
+      path: `/journal/export/zip?from=${fromDate}&to=${toDate}`,
+    },
+    {
+      id: 'nutrition',
+      label: 'Nutrition (CSV)',
+      description: 'Full food log with macros (last 12 months)',
+      filename: 'nutrition.csv',
+      path: `/nutrition/export/csv?from=${fromDate}&to=${toDate}`,
+    },
+  ];
+}
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -58,6 +62,8 @@ function inferFilename(item: ExportItem, response: Response): string {
   const match = disposition.match(/filename="?([^"]+)"?/i);
   return match?.[1]?.trim() || item.filename;
 }
+
+const EXPORTS = buildExports();
 
 export default function ExportPanel(): JSX.Element {
   const [loading, setLoading] = useState<string | null>(null);

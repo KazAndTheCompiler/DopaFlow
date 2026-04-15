@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Badge, PlayerLevel } from '../../../shared/types/gamification';
 import { getGamificationStatus } from '@api/gamification';
+import { getInvalidationEventName } from './useSSE';
 
 export interface UseGamificationResult {
   level: PlayerLevel | undefined;
@@ -58,6 +59,21 @@ export function useGamification(onBadgeEarned?: (badge: Badge) => void): UseGami
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  // Re-fetch XP whenever tasks, habits, focus, or journal change
+  useEffect(() => {
+    const handler = (): void => {
+      void refresh();
+    };
+    const events: Array<ReturnType<typeof getInvalidationEventName>> = [
+      getInvalidationEventName('tasks'),
+      getInvalidationEventName('habits'),
+    ];
+    events.forEach((name) => window.addEventListener(name, handler));
+    return () => {
+      events.forEach((name) => window.removeEventListener(name, handler));
+    };
   }, [refresh]);
 
   return {

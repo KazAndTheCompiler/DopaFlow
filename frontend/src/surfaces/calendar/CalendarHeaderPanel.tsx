@@ -100,6 +100,8 @@ export function CalendarHeaderPanel({
           <CalendarTabButton id="week" label="Week" activeTab={tab} onSelect={onSelectTab} />
           <CalendarTabButton id="day" label="Day" activeTab={tab} onSelect={onSelectTab} />
           <CalendarTabButton id="month" label="Month" activeTab={tab} onSelect={onSelectTab} />
+          <CalendarTabButton id="kanban" label="Kanban" activeTab={tab} onSelect={onSelectTab} />
+          <CalendarTabButton id="eisenhower" label="Eisenhower" activeTab={tab} onSelect={onSelectTab} />
         </div>
       </div>
 

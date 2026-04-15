@@ -72,7 +72,15 @@ export function GmailConnect(): JSX.Element {
         window.location.href = result.url;
         return;
       }
-      throw new Error(result.message ?? 'Gmail connection failed.');
+      if ((result as { status?: string }).status === 'unconfigured') {
+        setStatus({
+          type: 'error',
+          message:
+            'Gmail sync is not configured on this server. To enable it, the server needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables set (Google OAuth credentials from Google Cloud Console). This is a one-time server-side setup.',
+        });
+      } else {
+        throw new Error(result.message ?? 'Gmail connection failed.');
+      }
     } catch (error) {
       setStatus({
         type: 'error',
@@ -99,6 +107,39 @@ export function GmailConnect(): JSX.Element {
         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
           Connects via Google OAuth. DopaFlow reads your Gmail labels and imports flagged emails as
           tasks or journal entries. The OAuth token is stored in the local SQLite database at{' '}
+          <br />
+          <strong>Requires setup:</strong> The server needs{' '}
+          <code
+            style={{
+              background: 'var(--surface)',
+              padding: '0.1em 0.3em',
+              borderRadius: '4px',
+              fontSize: '0.9em',
+            }}
+          >
+            GOOGLE_CLIENT_ID
+          </code>{' '}
+          and{' '}
+          <code
+            style={{
+              background: 'var(--surface)',
+              padding: '0.1em 0.3em',
+              borderRadius: '4px',
+              fontSize: '0.9em',
+            }}
+          >
+            GOOGLE_CLIENT_SECRET
+          </code>{' '}
+          set as environment variables. Get them from{' '}
+          <a
+            href="https://console.cloud.google.com/"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: 'var(--accent)' }}
+          >
+            Google Cloud Console
+          </a>{' '}
+          → APIs & Services → Credentials. The OAuth token is also stored in the local SQLite database at{' '}
           <code
             style={{
               background: 'var(--surface)',
