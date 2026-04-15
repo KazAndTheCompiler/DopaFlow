@@ -5,6 +5,7 @@ import Button from '@ds/primitives/Button';
 import { Skeleton } from '@ds/primitives/Skeleton';
 import type { Habit, Task } from '@shared/types';
 import { useAppHabits, useAppTasks } from '../../app/AppContexts';
+import TaskEditModal from '../tasks/TaskEditModal';
 import { apiClient } from '../../api/client';
 
 interface JournalSearchResult {
@@ -55,6 +56,7 @@ export default function SearchView(): JSX.Element {
   const [journalResults, setJournalResults] = useState<JournalSearchResult[]>([]);
   const [journalLoading, setJournalLoading] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(0);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -151,8 +153,8 @@ export default function SearchView(): JSX.Element {
   );
 
   const handleSelect = (result: FlatResult): void => {
-    if (result.type === 'task') {
-      window.location.hash = '#/tasks';
+    if (result.type === 'task' && result.data) {
+      setEditingTask(result.data as Task);
     } else if (result.type === 'habit') {
       window.location.hash = '#/habits';
     } else {
@@ -369,6 +371,16 @@ export default function SearchView(): JSX.Element {
           ))}
         </div>
       )}
+      <TaskEditModal
+        task={editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={async (id, patch) => {
+          await tasks.update(id, patch);
+        }}
+        onDelete={async (id) => {
+          await tasks.remove(id);
+        }}
+      />
     </div>
   );
 }
