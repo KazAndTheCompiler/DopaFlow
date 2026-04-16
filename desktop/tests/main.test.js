@@ -128,12 +128,14 @@ async function loadMain({ backendChild, platform = "linux", gotLock = true, main
       return electron;
     }
     if (request === "electron-store") {
-      return class Store {
-        get() {
-          return undefined;
-        }
+      return {
+        default: class Store {
+          get() {
+            return undefined;
+          }
 
-        set() {}
+          set() {}
+        },
       };
     }
     if (request === "electron-updater") {
