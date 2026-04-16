@@ -15,6 +15,8 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(BACKEND_ROOT / 'migrations'), 'migrations'),
+        (str(BACKEND_ROOT / 'alembic'), 'alembic'),
+        (str(BACKEND_ROOT / 'alembic.ini'), 'alembic.ini'),
         (str(BACKEND_ROOT.parent / 'shared'), 'shared'),
     ],
     hiddenimports=[
@@ -41,6 +43,13 @@ a = Analysis(
         'multipart',
         'starlette.formparsers',
         'starlette.requests',
+        'alembic',
+        'alembic.command',
+        'alembic.config',
+        'alembic.migration',
+        'alembic.operations',
+        'alembic.script',
+        'sqlalchemy',
     ],
     hookspath=[],
     hooksconfig={},

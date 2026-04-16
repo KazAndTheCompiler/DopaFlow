@@ -91,7 +91,7 @@ def _reset_database(path: Path) -> None:
             """
         ).fetchall()
         tables = [row[0] for row in table_rows]
-        preserved = {"badges", "player_level"}
+        preserved = {"badges", "player_level", "alembic_version"}
         for table in tables:
             if table in preserved:
                 continue

@@ -72,12 +72,12 @@ def execute_command(
             "confidence": parsed["confidence"],
         }
 
-    # Only detect compound commands when NLP returned unknown intent.
-    # A resolved intent (e.g. task.create) takes precedence over "and" splitting.
-    compound_parts = detect_actionable_chain(text, parser=parser) if intent == "unknown" else None
+    # Always detect compound commands — "add task X and set alarm Y" has two
+    # actionable intents even when NLP classifies the whole thing as task.create.
+    # "add task buy milk and bread" won't match because "bread" isn't actionable.
+    compound_parts = detect_actionable_chain(text, parser=parser)
     if compound_parts is not None:
-        CommandRepository.add_log(
-            db_path,
+        CommandRepository(db_path).add_log(
             text,
             "compound",
             "unsupported",
@@ -117,8 +117,9 @@ def execute_single(
 
     try:
         if intent == "task.create":
-            from app.domains.tasks import repository as task_repo
+            from app.domains.tasks.repository import TaskRepository
 
+            task_repo = TaskRepository(db_path)
             task_payload: dict[str, object] = {
                 "title": extracted.get("title") or text,
                 "due_at": extracted.get("due_at"),
@@ -128,18 +129,19 @@ def execute_single(
             recurrence_rule = extracted.get("recurrence_rule") or extracted.get("rrule")
             if recurrence_rule:
                 task_payload["recurrence_rule"] = recurrence_rule
-            result = task_repo.create_task(db_path, task_payload)
+            result = task_repo.create_task(task_payload)
             undo_result = {"id": result.id, "title": result.title}
-            CommandRepository.add_log(
-                db_path, text, intent, "executed", source=source, result=undo_result
+            CommandRepository(db_path).add_log(
+                text, intent, "executed", source=source, result=undo_result
             )
             return _response(text, intent, parsed, result=result)
 
         if intent == "task.complete":
-            from app.domains.tasks import repository as task_repo
+            from app.domains.tasks.repository import TaskRepository
 
+            task_repo = TaskRepository(db_path)
             query = (extracted.get("query") or "").strip().lower()
-            open_tasks = task_repo.list_tasks(db_path, done=False)
+            open_tasks = task_repo.list_tasks(done=False)
             open_tasks_dicts = [t.model_dump() for t in open_tasks]
             exact_matches = [
                 task
@@ -149,10 +151,10 @@ def execute_single(
 
             if len(exact_matches) == 1:
                 match = exact_matches[0]
-                result = task_repo.complete_task(db_path, match.id)
+                result = task_repo.complete_task(match.id)
                 undo_result = {"id": match.id, "title": match.title}
-                CommandRepository.add_log(
-                    db_path, text, intent, "executed", source=source, result=undo_result
+                CommandRepository(db_path).add_log(
+                    text, intent, "executed", source=source, result=undo_result
                 )
                 return _response(
                     text,
@@ -165,10 +167,10 @@ def execute_single(
             fuzzy = nlp.fuzzy_task_match(query, open_tasks_dicts, min_score=0.35)
             if len(fuzzy) == 1:
                 match = fuzzy[0]
-                result = task_repo.complete_task(db_path, match["id"])
+                result = task_repo.complete_task(match["id"])
                 undo_result = {"id": match["id"], "title": match.get("title", "")}
-                CommandRepository.add_log(
-                    db_path, text, intent, "executed", source=source, result=undo_result
+                CommandRepository(db_path).add_log(
+                    text, intent, "executed", source=source, result=undo_result
                 )
                 return _response(
                     text,
@@ -190,7 +192,7 @@ def execute_single(
                     "reply": f"I found {len(fuzzy)} matching tasks. Which one?",
                 }
 
-            CommandRepository.add_log(db_path, text, intent, "not_found", source=source)
+            CommandRepository(db_path).add_log(text, intent, "not_found", source=source)
             return {
                 "text": text,
                 "intent": intent,
@@ -200,10 +202,11 @@ def execute_single(
             }
 
         if intent == "task.list":
-            from app.domains.tasks import repository as task_repo
+            from app.domains.tasks.repository import TaskRepository
 
-            tasks = task_repo.list_tasks(db_path, done=False)
-            CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+            task_repo = TaskRepository(db_path)
+            tasks = task_repo.list_tasks(done=False)
+            CommandRepository(db_path).add_log(text, intent, "executed", source=source)
             return _response(
                 text,
                 intent,
@@ -232,8 +235,8 @@ def execute_single(
                 JournalRepository(Settings(db_path=db_path))
             ).save_entry(payload)
             result_dict = result.model_dump()
-            CommandRepository.add_log(
-                db_path, text, intent, "executed", source=source, result=result_dict
+            CommandRepository(db_path).add_log(
+                text, intent, "executed", source=source, result=result_dict
             )
             return _response(text, intent, parsed, result=result_dict)
 
@@ -243,8 +246,7 @@ def execute_single(
             from app.domains.calendar.service import CalendarService
 
             if not extracted.get("start_at") or not extracted.get("end_at"):
-                CommandRepository.add_log(
-                    db_path,
+                CommandRepository(db_path).add_log(
                     text,
                     intent,
                     "incomplete",
@@ -277,8 +279,8 @@ def execute_single(
                 "id": event_dict.get("id", ""),
                 "title": event_dict.get("title", ""),
             }
-            CommandRepository.add_log(
-                db_path, text, intent, "executed", source=source, result=undo_result
+            CommandRepository(db_path).add_log(
+                text, intent, "executed", source=source, result=undo_result
             )
             return _response(text, intent, parsed, result=event_dict)
 
@@ -286,10 +288,11 @@ def execute_single(
             from app.domains.focus import service as focus_svc
 
             result = focus_svc.start(
+                db_path,
                 int(extracted.get("duration_minutes") or 25),
                 str(extracted.get("task_id")) if extracted.get("task_id") else None,
             )
-            CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+            CommandRepository(db_path).add_log(text, intent, "executed", source=source)
             return _response(text, intent, parsed, result=result)
 
         if intent == "alarm.create":
@@ -305,11 +308,11 @@ def execute_single(
                         "kind": "alarm",
                     },
                 )
-                CommandRepository.add_log(
-                    db_path, text, intent, "executed", source=source
+                CommandRepository(db_path).add_log(
+                    text, intent, "executed", source=source
                 )
                 return _response(text, intent, parsed, result=result)
-            CommandRepository.add_log(db_path, text, intent, "error", source=source)
+            CommandRepository(db_path).add_log(text, intent, "error", source=source)
             return {
                 "text": text,
                 "intent": intent,
@@ -319,9 +322,10 @@ def execute_single(
             }
 
         if intent == "habit.checkin":
-            from app.domains.habits import repository as habit_repo
+            from app.domains.habits.repository import HabitRepository
 
-            habits = habit_repo.list_habits(db_path)
+            habit_repo = HabitRepository(db_path)
+            habits = habit_repo.list_habits()
             habit_name = (extracted.get("habit_name") or "").strip().lower()
             matched = [
                 habit
@@ -329,9 +333,11 @@ def execute_single(
                 if habit_name in (habit.get("name") or "").lower()
             ]
             if len(matched) == 1:
-                result = habit_repo.checkin(db_path, matched[0]["id"])
-                CommandRepository.add_log(
-                    db_path, text, intent, "executed", source=source
+                from app.domains.habits import service as habit_svc
+
+                result = habit_svc.checkin(habit_repo, matched[0]["id"])
+                CommandRepository(db_path).add_log(
+                    text, intent, "executed", source=source
                 )
                 return _response(
                     text,
@@ -370,24 +376,25 @@ def execute_single(
             }
 
         if intent == "habit.list":
-            from app.domains.habits import repository as habit_repo
+            from app.domains.habits.repository import HabitRepository
 
-            habits = habit_repo.list_habits(db_path)
-            CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+            habit_repo = HabitRepository(db_path)
+            habits = habit_repo.list_habits()
+            CommandRepository(db_path).add_log(text, intent, "executed", source=source)
             return _response(text, intent, parsed, result={"habits": habits})
 
         if intent == "review.start":
-            CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+            CommandRepository(db_path).add_log(text, intent, "executed", source=source)
             return _response(text, intent, parsed, result={"action": "open_review"})
 
         if intent == "search":
-            CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+            CommandRepository(db_path).add_log(text, intent, "executed", source=source)
             return _response(
                 text, intent, parsed, result={"query": extracted.get("query", text)}
             )
 
         if intent == "nutrition.log":
-            CommandRepository.add_log(db_path, text, intent, "executed", source=source)
+            CommandRepository(db_path).add_log(text, intent, "executed", source=source)
             return _response(
                 text,
                 intent,
@@ -396,8 +403,8 @@ def execute_single(
             )
 
     except Exception as exc:
-        CommandRepository.add_log(
-            db_path, text, intent, "failed", str(exc), source=source
+        CommandRepository(db_path).add_log(
+            text, intent, "failed", str(exc), source=source
         )
         return {
             "text": text,
@@ -407,7 +414,7 @@ def execute_single(
             "reply": "Something went wrong. Try again?",
         }
 
-    CommandRepository.add_log(db_path, text, intent, "ok", source=source)
+    CommandRepository(db_path).add_log(text, intent, "ok", source=source)
     return _response(text, intent, parsed)
 
 
@@ -439,7 +446,7 @@ def _response(
 
 def _handle_undo(db_path: str, text: str, source: str) -> dict[str, object]:
     """Undo the most recent supported command that has not already been undone."""
-    history = CommandRepository.history(db_path, limit=10)
+    history = CommandRepository(db_path).history(limit=10)
     for entry in history:
         if entry.get("status") != "executed" or entry.get("intent") == "undo":
             continue
@@ -461,14 +468,14 @@ def _undo_entry(
     intent = str(entry.get("intent", ""))
     try:
         if intent == "task.create":
-            from app.domains.tasks import repository as task_repo
+            from app.domains.tasks.repository import TaskRepository
 
             result = entry.get("result")
             if isinstance(result, dict) and result.get("id"):
-                task_repo.delete_task(db_path, result["id"])
-                CommandRepository.mark_undone(db_path, str(entry["id"]))
-                CommandRepository.add_log(
-                    db_path, text, "undo", "executed", source=source
+                TaskRepository(db_path).delete_task(result["id"])
+                CommandRepository(db_path).mark_undone(str(entry["id"]))
+                CommandRepository(db_path).add_log(
+                    text, "undo", "executed", source=source
                 )
                 return {
                     "text": text,
@@ -483,9 +490,9 @@ def _undo_entry(
             result = entry.get("result")
             if isinstance(result, dict) and result.get("id"):
                 CalendarRepository(db_path).delete_event(result["id"])
-                CommandRepository.mark_undone(db_path, str(entry["id"]))
-                CommandRepository.add_log(
-                    db_path, text, "undo", "executed", source=source
+                CommandRepository(db_path).mark_undone(str(entry["id"]))
+                CommandRepository(db_path).add_log(
+                    text, "undo", "executed", source=source
                 )
                 return {
                     "text": text,
@@ -495,14 +502,14 @@ def _undo_entry(
                     "undone": entry,
                 }
         elif intent == "task.complete":
-            from app.domains.tasks import repository as task_repo
+            from app.domains.tasks.repository import TaskRepository
 
             result = entry.get("result")
             if isinstance(result, dict) and result.get("id"):
-                task_repo.uncomplete_task(db_path, result["id"])
-                CommandRepository.mark_undone(db_path, str(entry["id"]))
-                CommandRepository.add_log(
-                    db_path, text, "undo", "executed", source=source
+                TaskRepository(db_path).uncomplete_task(result["id"])
+                CommandRepository(db_path).mark_undone(str(entry["id"]))
+                CommandRepository(db_path).add_log(
+                    text, "undo", "executed", source=source
                 )
                 return {
                     "text": text,

@@ -4,21 +4,18 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from app.core.database import get_db
+from app.core.base_repository import BaseRepository
 from app.domains.insights.schemas import CorrelationInsight, WeeklyDigest
 from app.domains.packy.schemas import MomentumScore
 
 
-class InsightsRepository:
+class InsightsRepository(BaseRepository):
     """Aggregate read models spanning tasks, habits, mood, and notifications."""
-
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
 
     def momentum(self) -> MomentumScore:
         """Return a current momentum score."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             tasks_done = int(
                 conn.execute(
                     "SELECT COUNT(*) FROM tasks WHERE done = 1 AND updated_at >= datetime('now', '-7 days')"
@@ -47,7 +44,7 @@ class InsightsRepository:
     def weekly_digest(self) -> WeeklyDigest:
         """Return a weekly digest summary from live activity data."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             tasks_done = int(
                 conn.execute(
                     "SELECT COUNT(*) FROM tasks WHERE done = 1 AND updated_at >= datetime('now', '-7 days')"
@@ -88,7 +85,7 @@ class InsightsRepository:
     def correlations(self) -> list[CorrelationInsight]:
         """Return sample habit-mood correlation insights."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             habits = conn.execute(
                 "SELECT id, name FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 5"
             ).fetchall()

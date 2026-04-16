@@ -7,33 +7,20 @@
 
 from __future__ import annotations
 
-import json
-
 from fastapi import APIRouter, Depends
 
 from app.core.config import Settings, get_settings_dependency
-from app.core.database import get_db
 from app.domains.boards.eisenhower import sort_into_quadrants
 from app.domains.boards.schemas import BoardColumns, EisenhowerView, MatrixData
+from app.domains.tasks.repository import TaskRepository
 from app.middleware.auth_scopes import require_scope
 
 router = APIRouter(prefix="/boards", tags=["boards"])
 
 
 def _load_tasks(settings: Settings) -> list[dict[str, object]]:
-    with get_db(settings) as conn:
-        rows = conn.execute(
-            "SELECT * FROM tasks WHERE deleted_at IS NULL AND done = 0 ORDER BY updated_at DESC"
-        ).fetchall()
-    tasks: list[dict[str, object]] = []
-    for row in rows:
-        task = dict(row)
-        task["done"] = bool(task.get("done"))
-        task["dependencies"] = []
-        task["tags"] = json.loads(task.get("tags_json") or "[]")
-        task["subtasks"] = json.loads(task.get("subtasks_json") or "[]")
-        tasks.append(task)
-    return tasks
+    repo = TaskRepository(settings)
+    return repo.list_active_undone()
 
 
 @router.get(

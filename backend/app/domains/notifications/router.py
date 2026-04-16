@@ -14,7 +14,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.config import Settings, get_settings_dependency
-from app.domains.notifications import repository
+from app.domains.notifications.repository import NotificationRepository
 from app.domains.notifications.schemas import (
     Notification,
     NotificationCreate,
@@ -27,8 +27,8 @@ from app.middleware.auth_scopes import require_scope
 router = APIRouter(tags=["notifications"])
 
 
-async def _db_path(settings: Settings = Depends(get_settings_dependency)) -> str:
-    return settings.db_path
+def _repo(settings: Settings = Depends(get_settings_dependency)) -> NotificationRepository:
+    return NotificationRepository(settings)
 
 
 @router.get(
@@ -40,11 +40,9 @@ async def list_notifications(
     archived: bool = Query(default=False),
     level: str | None = Query(default=None),
     limit: int = Query(default=50),
-    db_path: str = Depends(_db_path),
+    repo: NotificationRepository = Depends(_repo),
 ) -> list[Notification]:
-    return repository.list_notifications(
-        db_path, archived=archived, level=level, limit=limit
-    )
+    return repo.list_notifications(archived=archived, level=level, limit=limit)
 
 
 @router.post(
@@ -53,10 +51,9 @@ async def list_notifications(
     dependencies=[Depends(require_scope("write:notifications"))],
 )
 async def create_notification(
-    payload: NotificationCreate, db_path: str = Depends(_db_path)
+    payload: NotificationCreate, repo: NotificationRepository = Depends(_repo)
 ) -> Notification:
-    return repository.create_notification(
-        db_path,
+    return repo.create_notification(
         payload.level,
         payload.title,
         payload.body,
@@ -70,9 +67,9 @@ async def create_notification(
     dependencies=[Depends(require_scope("write:notifications"))],
 )
 async def mark_read(
-    identifier: str, db_path: str = Depends(_db_path)
+    identifier: str, repo: NotificationRepository = Depends(_repo)
 ) -> NotificationMutationResult:
-    if not repository.mark_read(db_path, identifier):
+    if not repo.mark_read(identifier):
         raise HTTPException(status_code=404, detail="Notification not found")
     return NotificationMutationResult()
 
@@ -82,8 +79,8 @@ async def mark_read(
     response_model=UnreadCount,
     dependencies=[Depends(require_scope("write:notifications"))],
 )
-async def mark_all_read(db_path: str = Depends(_db_path)) -> UnreadCount:
-    return UnreadCount(count=repository.mark_all_read(db_path))
+async def mark_all_read(repo: NotificationRepository = Depends(_repo)) -> UnreadCount:
+    return UnreadCount(count=repo.mark_all_read())
 
 
 @router.post(
@@ -92,9 +89,9 @@ async def mark_all_read(db_path: str = Depends(_db_path)) -> UnreadCount:
     dependencies=[Depends(require_scope("write:notifications"))],
 )
 async def archive_notification(
-    identifier: str, db_path: str = Depends(_db_path)
+    identifier: str, repo: NotificationRepository = Depends(_repo)
 ) -> NotificationMutationResult:
-    if not repository.archive(db_path, identifier):
+    if not repo.archive(identifier):
         raise HTTPException(status_code=404, detail="Notification not found")
     return NotificationMutationResult()
 
@@ -105,9 +102,9 @@ async def archive_notification(
     dependencies=[Depends(require_scope("write:notifications"))],
 )
 async def delete_notification(
-    identifier: str, db_path: str = Depends(_db_path)
+    identifier: str, repo: NotificationRepository = Depends(_repo)
 ) -> NotificationDeleteResult:
-    if not repository.delete_notification(db_path, identifier):
+    if not repo.delete_notification(identifier):
         raise HTTPException(status_code=404, detail="Notification not found")
     return NotificationDeleteResult()
 
@@ -117,5 +114,5 @@ async def delete_notification(
     response_model=UnreadCount,
     dependencies=[Depends(require_scope("read:notifications"))],
 )
-async def unread_count(db_path: str = Depends(_db_path)) -> UnreadCount:
-    return UnreadCount(count=repository.unread_count(db_path))
+async def unread_count(repo: NotificationRepository = Depends(_repo)) -> UnreadCount:
+    return UnreadCount(count=repo.unread_count())

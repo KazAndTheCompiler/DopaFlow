@@ -153,3 +153,14 @@ class ClientRead(BaseModel):
 
 class ClientList(BaseModel):
     clients: list[ClientRead]
+
+
+class OIDCProviderRead(BaseModel):
+    name: str
+    issuer_url: str
+    scopes: str
+    default_role: str
+
+
+class OIDCProviderList(BaseModel):
+    providers: list[OIDCProviderRead]

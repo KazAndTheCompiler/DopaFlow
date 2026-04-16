@@ -6,6 +6,7 @@ import importlib.util
 import logging
 import pathlib
 import sqlite3
+import warnings
 from collections.abc import Generator
 from contextlib import contextmanager
 from hashlib import sha256
@@ -156,7 +157,14 @@ def run_migrations(
     turso_url: str | None = None,
     turso_token: str | None = None,
 ) -> None:
-    """Apply all pending SQL migrations in order."""
+    """Apply all pending SQL migrations in order.
+
+    .. deprecated::
+        This custom migration runner will be removed once all existing databases
+        have been migrated to Alembic. New schema changes should use Alembic
+        revisions (``alembic revision``) instead of adding SQL files to
+        ``migrations/``.
+    """
 
     db_path, turso_url, turso_token = _resolve_db_config(
         settings_or_db_path,
@@ -215,7 +223,19 @@ def get_db(
     turso_url: str | None = None,
     turso_token: str | None = None,
 ) -> Generator[sqlite3.Connection, None, None]:
-    """Yield a SQLite connection with WAL and foreign keys enabled."""
+    """Yield a SQLite connection with WAL and foreign keys enabled.
+
+    .. deprecated::
+        Use ``BaseRepository.get_db()`` or ``BaseRepository.get_db_readonly()``
+        instead of calling this function directly. Bare ``get_db()`` will be
+        removed in a future version.
+    """
+    warnings.warn(
+        "Direct get_db() usage is deprecated. Use BaseRepository.get_db() or "
+        "BaseRepository.get_db_readonly() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     db_path, turso_url, turso_token = _resolve_db_config(
         settings_or_db_path,
@@ -236,7 +256,17 @@ def tx(
     turso_url: str | None = None,
     turso_token: str | None = None,
 ) -> Generator[sqlite3.Connection, None, None]:
-    """Yield a connection inside an explicit transaction."""
+    """Yield a connection inside an explicit transaction.
+
+    .. deprecated::
+        Use ``BaseRepository.tx()`` instead of calling this function directly.
+        Bare ``tx()`` will be removed in a future version.
+    """
+    warnings.warn(
+        "Direct tx() usage is deprecated. Use BaseRepository.tx() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
     db_path, turso_url, turso_token = _resolve_db_config(
         settings_or_db_path,

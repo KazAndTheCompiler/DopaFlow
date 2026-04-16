@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from app.core.database import get_db, tx
+from app.core.base_repository import BaseRepository
 from app.core.id_gen import event_id
 from app.domains.calendar.schemas import (
     CalendarEvent,
@@ -70,16 +70,13 @@ def _row_to_conflict(row: object) -> SyncConflict:
     )
 
 
-class CalendarRepository:
+class CalendarRepository(BaseRepository):
     """Read and write local calendar events and sync metadata."""
-
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
 
     def store_google_token(
         self, access_token: str, refresh_token: str | None, expires_at: str
     ) -> None:
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT INTO oauth_tokens (provider, access_token, refresh_token, expires_at, scope, stored_at)
@@ -95,7 +92,7 @@ class CalendarRepository:
             )
 
     def get_google_token(self) -> dict[str, object] | None:
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT * FROM oauth_tokens WHERE provider = 'google_calendar'"
             ).fetchone()
@@ -109,7 +106,7 @@ class CalendarRepository:
     ) -> list[CalendarEvent]:
         """Return events with optional date-range and category filters."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             query = "SELECT * FROM calendar_events WHERE 1=1"
             params: list[object] = []
             if from_dt:
@@ -128,7 +125,7 @@ class CalendarRepository:
     def get_event(self, identifier: str) -> CalendarEvent | None:
         """Fetch a single event by ID or google_event_id."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT * FROM calendar_events WHERE id = ? OR google_event_id = ?",
                 (identifier, identifier),
@@ -140,7 +137,7 @@ class CalendarRepository:
 
         new_id = event_id()
         now = datetime.now(timezone.utc).isoformat()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT INTO calendar_events
@@ -176,7 +173,7 @@ class CalendarRepository:
         merged = existing.model_dump()
         merged.update({k: v for k, v in patch.items() if v is not None})
         now = datetime.now(timezone.utc).isoformat()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 UPDATE calendar_events
@@ -201,7 +198,7 @@ class CalendarRepository:
     def delete_event(self, identifier: str) -> bool:
         """Hard-delete a calendar event."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             result = conn.execute(
                 "DELETE FROM calendar_events WHERE id = ?", (identifier,)
             )
@@ -210,7 +207,7 @@ class CalendarRepository:
     def list_conflicts(self) -> list[SyncConflict]:
         """Return unresolved sync conflicts."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 "SELECT * FROM sync_conflicts WHERE resolved_at IS NULL ORDER BY detected_at DESC"
             ).fetchall()
@@ -222,7 +219,7 @@ class CalendarRepository:
         """Mark a conflict as resolved."""
 
         now = datetime.now(timezone.utc).isoformat()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             result = conn.execute(
                 "UPDATE sync_conflicts SET repair_hint = ?, resolved_at = ?, resolved_by = 'user' WHERE id = ?",
                 (repair_hint, now, identifier),
@@ -269,7 +266,7 @@ class CalendarRepository:
                     start.get("dateTime") or f"{start.get('date')}T00:00:00+00:00"
                 )
                 end_at = end.get("dateTime") or f"{end.get('date')}T00:00:00+00:00"
-                with tx(self.db_path) as conn:
+                with self.tx() as conn:
                     now = datetime.now(timezone.utc).isoformat()
                     conn.execute(
                         """

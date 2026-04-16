@@ -18,7 +18,9 @@ from app.core.version import APP_VERSION
 from app.domains.alarms.audio_router import router as alarm_audio_router
 from app.domains.alarms.router import router as alarms_router
 from app.domains.auth.oidc import build_discovery
+from app.domains.auth.oidc_router import router as oidc_external_router
 from app.domains.auth.router import router as auth_router
+from app.domains.auth.repository import AuthRepository
 from app.domains.auth.service import AuthService
 from app.domains.boards.router import router as boards_router
 from app.domains.calendar.router import router as calendar_router
@@ -61,6 +63,65 @@ API_PREFIX = "/api/v2"
 backup_scheduler = JournalBackupScheduler()
 logger = logging.getLogger("dopaflow.main")
 
+
+def _stamp_alembic_if_needed(settings) -> None:
+    """Stamp Alembic at head if the alembic_version table is missing.
+
+    This is a one-time operation for existing databases that were
+    created by the custom SQL migration runner. After stamping,
+    future schema changes go through Alembic.
+
+    Uses direct SQL rather than command.stamp() to avoid env.py
+    path resolution issues during startup.
+    """
+    import sqlite3
+
+    # Check if alembic_version exists
+    if settings.turso_url:
+        return  # Skip stamping for Turso (handled separately)
+
+    try:
+        conn = sqlite3.connect(settings.db_path)
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        if "alembic_version" in tables:
+            conn.close()
+            return
+
+        # Create the alembic_version table and stamp at head
+        conn.execute(
+            "CREATE TABLE alembic_version "
+            "(version_num VARCHAR(32) NOT NULL, "
+            "CONSTRAINT pk_alembic_version PRIMARY KEY (version_num))"
+        )
+        # Read the latest revision from alembic/versions/
+        from pathlib import Path
+        versions_dir = Path(__file__).resolve().parent.parent / "alembic" / "versions"
+        latest_rev = None
+        if versions_dir.exists():
+            for f in sorted(versions_dir.glob("*.py")):
+                # Parse revision from file
+                for line in f.read_text().splitlines():
+                    if line.startswith("revision:"):
+                        latest_rev = line.split("=")[1].strip().strip("'\"")
+                        break
+        if latest_rev:
+            conn.execute(
+                "INSERT INTO alembic_version (version_num) VALUES (?)",
+                (latest_rev,),
+            )
+            conn.commit()
+            logger.info("Alembic stamped at revision %s", latest_rev)
+        else:
+            logger.warning("No Alembic revisions found, skipping stamp")
+        conn.close()
+    except Exception:
+        logger.warning("Alembic stamp skipped (non-critical)", exc_info=True)
+
 _DOMAIN_ROUTERS = [
     (tasks_router, "/tasks"),
     (projects_router, "/projects"),
@@ -92,6 +153,7 @@ _AUXILIARY_ROUTERS = (
     (auth_router, API_PREFIX),
     (events_router, API_PREFIX),
     (meta_router, API_PREFIX),
+    (oidc_external_router, API_PREFIX),
     (ops_router, API_PREFIX),
     (vault_router, API_PREFIX),
 )
@@ -172,6 +234,17 @@ def create_app() -> FastAPI:
         settings.db_path, turso_url=settings.turso_url, turso_token=settings.turso_token
     )
 
+    # Stamp Alembic if not already stamped (dual-phase: custom runner
+    # applies SQL migrations, then we mark Alembic as up-to-date).
+    try:
+        _stamp_alembic_if_needed(settings)
+    except Exception:
+        logger.warning("Alembic stamp skipped (non-critical)", exc_info=True)
+
+    # Seed env-var-configured OIDC provider into the database
+    if settings.oidc_issuer_url:
+        AuthService(AuthRepository(settings), settings).register_env_provider()
+
     app = FastAPI(
         title="DopaFlow API",
         version=APP_VERSION,
@@ -218,8 +291,25 @@ def create_app() -> FastAPI:
         code_challenge: str,
         code_challenge_method: str,
         error: str | None = None,
+        providers: list | None = None,
     ) -> str:
         error_block = f'<p class="error">{error}</p>' if error else ""
+        provider_block = ""
+        if providers:
+            provider_buttons = ""
+            for p in providers:
+                login_url = (
+                    f"/api/v2/auth/oidc/login/{p['name']}"
+                    f"?client_id={client_id}&redirect_uri={redirect_uri}"
+                    f"&scope={scope}&state={state}"
+                    f"&code_challenge={code_challenge}&code_challenge_method=S256"
+                )
+                display_name = p["name"].replace("-", " ").replace("_", " ").title()
+                provider_buttons += f'<a href="{login_url}" class="oidc-btn">Sign in with {display_name}</a>\n'
+            provider_block = f"""<div class="oidc-providers">
+{provider_buttons}
+</div>
+<div class="separator"><span>or</span></div>"""
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -230,13 +320,20 @@ body {{ font-family: sans-serif; max-width: 400px; margin: 60px auto; padding: 0
 h1 {{ margin-bottom: 24px; }}
 label {{ display: block; margin-bottom: 4px; font-weight: 500; }}
 input[type=email], input[type=password] {{ width: 100%; padding: 8px; margin-bottom: 16px; box-sizing: border-box; }}
-button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer; }}
+button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; }}
 .error {{ color: #dc2626; margin-bottom: 12px; }}
+.oidc-providers {{ margin-bottom: 16px; }}
+.oidc-btn {{ display: block; width: 100%; padding: 10px 20px; background: #1e40af; color: white; text-align: center; text-decoration: none; border-radius: 4px; margin-bottom: 8px; box-sizing: border-box; }}
+.oidc-btn:hover {{ background: #1e3a8a; }}
+.separator {{ text-align: center; margin: 16px 0; position: relative; }}
+.separator::before {{ content: ''; position: absolute; left: 0; top: 50%; width: 100%; border-top: 1px solid #d1d5db; }}
+.separator span {{ background: white; padding: 0 12px; position: relative; color: #6b7280; }}
 </style>
 </head>
 <body>
 <h1>Sign in to DopaFlow</h1>
 {error_block}
+{provider_block}
 <form method="post" action="/authorize">
 <input type="hidden" name="state" value="{state}">
 <input type="hidden" name="code_challenge" value="{code_challenge}">
@@ -253,7 +350,7 @@ button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; b
 </body>
 </html>"""
 
-    svc = AuthService(settings)
+    svc = AuthService(AuthRepository(settings), settings)
 
     @app.get("/authorize", tags=["auth"])
     async def authorize_get(
@@ -292,6 +389,7 @@ button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; b
                 scope=scope,
                 code_challenge=code_challenge,
                 code_challenge_method=code_challenge_method,
+                providers=svc.get_enabled_providers(),
             )
         )
 
