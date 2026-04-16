@@ -95,7 +95,7 @@ def _row_to_task(row) -> Task:
         source_type=row["source_type"],
         source_external_id=row["source_external_id"],
         source_instance_id=row["source_instance_id"],
-        project_id=row["project_id"] if "project_id" in row.keys() else None,
+        project_id=row["project_id"] if "project_id" in row else None,  # noqa: SIM401
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )

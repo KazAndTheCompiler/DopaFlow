@@ -87,7 +87,7 @@ def _row_to_entry(row: object) -> JournalEntryRead:
         auto_tags = json.loads(row["auto_tags_json"] or "[]")  # type: ignore[index]
     except Exception:
         logger.exception(
-            "Failed to parse auto_tags_json: %s", row["auto_tags_json"] if "auto_tags_json" in row.keys() else "N/A"
+            "Failed to parse auto_tags_json: %s", row["auto_tags_json"] if "auto_tags_json" in row else "N/A"  # noqa: SIM401
         )
     return JournalEntryRead(
         id=row["id"],  # type: ignore[index]

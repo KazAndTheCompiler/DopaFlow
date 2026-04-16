@@ -132,7 +132,18 @@ def test_habit_create():
     return body["id"]
 
 
-def test_habit_checkin(hab_id):
+def test_habit_checkin():
+    _, hbody = rp(
+        "/api/v2/habits/",
+        "POST",
+        {
+            "name": "Morning walk",
+            "target_freq": 1,
+            "target_period": "day",
+            "color": "#22c55e",
+        },
+    )
+    hab_id = hbody["id"]
     status, body = rp(f"/api/v2/habits/{hab_id}/checkin", "POST", {})
     assert status == 200, f"checkin failed: {body}"
     assert body["current_streak"] >= 1
@@ -252,7 +263,6 @@ def run(name, fn, *args, **kwargs):
 def main():
     print("\n=== DopaFlow Backend Smoke Tests ===\n")
 
-    habit_id = None
     passed = 0
     failed = 0
 
@@ -276,17 +286,12 @@ def main():
     else:
         failed += 1
 
-    try:
-        habit_id = test_habit_create()
-        print("  ✓ Habit create")
+    if run("Habit create", test_habit_create):
         passed += 1
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"  FAIL Habit create: {e}")
+    else:
         failed += 1
 
-    if run("Habit checkin", test_habit_checkin, habit_id):
+    if run("Habit checkin", test_habit_checkin):
         passed += 1
     else:
         failed += 1

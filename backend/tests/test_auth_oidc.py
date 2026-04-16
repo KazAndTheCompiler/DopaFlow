@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import pytest
+from fastapi import HTTPException
 
 from app.core.config import Settings
-from app.core.database import get_db, run_migrations
+from app.core.database import run_migrations
 from app.domains.auth.repository import AuthRepository
 from app.domains.auth.service import AuthService
 
@@ -34,6 +35,7 @@ def svc(settings):
 def _seed_provider(svc, settings):
     """Insert a test OIDC provider into the DB."""
     from datetime import UTC, datetime
+
     from app.core.database import tx
     now = datetime.now(UTC).isoformat()
     with tx(settings) as conn:
@@ -93,7 +95,7 @@ class TestGetOrCreateUserByOidc:
             email="carol@example.com",
             default_role="viewer",
         )
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException):
             svc.authenticate_user("carol@example.com", "anything")
 
     def test_updates_email_on_change(self, svc):
@@ -147,6 +149,7 @@ class TestGetEnabledProviders:
 
     def test_excludes_disabled(self, svc, settings):
         from datetime import UTC, datetime
+
         from app.core.database import tx
         now = datetime.now(UTC).isoformat()
         with tx(settings) as conn:
