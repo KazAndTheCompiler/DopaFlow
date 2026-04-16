@@ -179,8 +179,9 @@ async def import_github_issues(
             status_code=502, detail=f"GitHub API error: {resp.status_code}"
         )
 
-    from app.domains.tasks import repository as tasks_repo
+    from app.domains.tasks.repository import TaskRepository
 
+    task_repo = TaskRepository(settings.db_path)
     issues = resp.json()
     created = 0
     skipped = 0
@@ -189,12 +190,11 @@ async def import_github_issues(
             skipped += 1
             continue
         external_id = f"github_issue_{issue['number']}"
-        existing = tasks_repo.list_tasks(settings.db_path, search=None)
+        existing = task_repo.list_tasks(search=None)
         if any(t.get("source_external_id") == external_id for t in existing):
             skipped += 1
             continue
-        tasks_repo.create_task(
-            settings.db_path,
+        task_repo.create_task(
             {
                 "title": issue["title"],
                 "description": issue.get("body") or "",

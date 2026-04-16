@@ -370,7 +370,7 @@ class TestPackyVoiceCommandMode:
     ) -> None:
         """Voice command with auto_execute=true must execute and write to database."""
         from app.domains.packy.schemas import PackyVoiceCommand
-        from app.domains.tasks.repository import list_tasks
+        from app.domains.tasks.repository import TaskRepository
 
         # Execute a task.create command
         res = packy_service.voice_command(
@@ -386,7 +386,7 @@ class TestPackyVoiceCommandMode:
         assert res.execution_result.get("status") == "executed"
 
         # Verify task was actually written to database
-        tasks = list_tasks(str(db_path), done=False)
+        tasks = TaskRepository(str(db_path)).list_tasks(done=False)
         assert len(tasks) > 0, "Task should have been created in database"
         assert any("milk" in (t.title or "").lower() for t in tasks), (
             "Created task should contain 'milk'"

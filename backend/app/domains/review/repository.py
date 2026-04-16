@@ -8,7 +8,7 @@ import json
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
-from app.core.database import get_db, tx
+from app.core.base_repository import BaseRepository
 from app.core.id_gen import review_card_id
 from app.domains.review.schemas import (
     DeckCreate,
@@ -54,17 +54,17 @@ def _row_to_card(row: object) -> ReviewCardRead:
     )
 
 
-class ReviewRepository:
+class ReviewRepository(BaseRepository):
     """Read and write decks, cards, and session logs via SQLite."""
 
     def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
+        super().__init__(db_path)
         self._ensure_default_deck()
 
     def _ensure_default_deck(self) -> None:
         """Create the default deck if it does not exist."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT OR IGNORE INTO review_decks (id, name)
@@ -78,7 +78,7 @@ class ReviewRepository:
     def list_cards(self) -> list[ReviewCardRead]:
         """Return all cards due today or new, ordered by next_review_at."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT *
@@ -95,7 +95,7 @@ class ReviewRepository:
     ) -> list[ReviewCardRead]:
         """Return cards due today or earlier for a specific deck."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT *
@@ -114,7 +114,7 @@ class ReviewRepository:
     def get_card(self, card_id: str) -> ReviewCardRead:
         """Fetch a single card by ID."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT * FROM review_cards WHERE id = ?", (card_id,)
             ).fetchone()
@@ -125,7 +125,7 @@ class ReviewRepository:
     def update_card(self, card_id: str, front: str, back: str) -> ReviewCardRead:
         """Update the front and back text of an existing card."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             result = conn.execute(
                 "UPDATE review_cards SET front = ?, back = ? WHERE id = ?",
                 (front.strip(), back.strip(), card_id),
@@ -137,7 +137,7 @@ class ReviewRepository:
     def card_exists_by_front(self, deck_id: str, front: str) -> bool:
         """Return True if a card with this front text already exists in the deck."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT id FROM review_cards WHERE deck_id = ? AND lower(front) = lower(?) LIMIT 1",
                 (deck_id, front.strip()),
@@ -148,7 +148,7 @@ class ReviewRepository:
         """Insert a new review card and return it."""
 
         card_id = review_card_id()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT INTO review_cards (id, deck_id, front, back)
@@ -156,7 +156,7 @@ class ReviewRepository:
                 """,
                 (card_id, payload.deck_id, payload.front, payload.back),
             )
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT * FROM review_cards WHERE id = ?", (card_id,)
             ).fetchone()
@@ -174,7 +174,7 @@ class ReviewRepository:
 
         card_id = review_card_id()
         tags_json = json.dumps(tags)
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT INTO review_cards (id, deck_id, front, back, tags_json)
@@ -182,7 +182,7 @@ class ReviewRepository:
                 """,
                 (card_id, deck_id, front, back, tags_json),
             )
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT * FROM review_cards WHERE id = ?", (card_id,)
             ).fetchone()
@@ -201,7 +201,7 @@ class ReviewRepository:
     ) -> ReviewCardRead:
         """Persist SM-2 results back to the card row."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 UPDATE review_cards
@@ -235,7 +235,7 @@ class ReviewRepository:
     def reset_card(self, card_id: str) -> ReviewCardRead:
         """Reset SM-2 state for a card back to new."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 UPDATE review_cards
@@ -255,7 +255,7 @@ class ReviewRepository:
     def suspend_card(self, card_id: str) -> None:
         """Suspend a card so it does not appear in the review queue."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE review_cards SET state = 'suspended' WHERE id = ?", (card_id,)
             )
@@ -263,7 +263,7 @@ class ReviewRepository:
     def unsuspend_card(self, card_id: str) -> None:
         """Restore a suspended card to the queue."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 UPDATE review_cards
@@ -277,7 +277,7 @@ class ReviewRepository:
         """Hide a card until tomorrow by moving its next review date."""
 
         buried_until = (date.today() + timedelta(days=1)).isoformat()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE review_cards SET next_review_at = ? WHERE id = ?",
                 (buried_until, card_id),
@@ -303,7 +303,7 @@ class ReviewRepository:
             params.append(state)
         parts.append("ORDER BY created_at DESC, id DESC LIMIT ?")
         params.append(max(1, min(limit, 50)))
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(" ".join(parts), tuple(params)).fetchall()
         return [
             ReviewSearchCard(
@@ -322,7 +322,7 @@ class ReviewRepository:
         if not ids:
             return 0
         placeholders = ",".join("?" * len(ids))
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             if action == "suspend":
                 cur = conn.execute(
                     f"UPDATE review_cards SET state = 'suspended' WHERE deck_id = ? AND id IN ({placeholders})",
@@ -368,7 +368,7 @@ class ReviewRepository:
     def list_decks(self) -> list[ReviewDeckBasic]:
         """Return all review decks with a lightweight card count."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT d.id, d.name, COUNT(c.id) AS card_count
@@ -392,7 +392,7 @@ class ReviewRepository:
         """Create a review deck and return its record."""
 
         deck_id = f"deck_{payload.name.lower().replace(' ', '_')}"
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO review_decks (id, name) VALUES (?, ?)",
                 (deck_id, payload.name),
@@ -409,7 +409,7 @@ class ReviewRepository:
     def get_deck(self, deck_id: str) -> DeckRead | None:
         """Fetch a single deck by ID."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT id, name, description, created_at FROM review_decks WHERE id = ?",
                 (deck_id,),
@@ -426,14 +426,14 @@ class ReviewRepository:
         )
 
     def rename_deck(self, deck_id: str, name: str) -> DeckRead | None:
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE review_decks SET name = ? WHERE id = ?", (name, deck_id)
             )
         return self.get_deck(deck_id)
 
     def delete_deck(self, deck_id: str) -> bool:
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute("DELETE FROM review_cards WHERE deck_id = ?", (deck_id,))
             result = conn.execute("DELETE FROM review_decks WHERE id = ?", (deck_id,))
         return result.rowcount > 0
@@ -441,7 +441,7 @@ class ReviewRepository:
     def get_deck_stats(self, deck_id: str) -> ReviewDeckStats:
         """Return aggregate stats for a review deck."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 """
                 SELECT
@@ -480,7 +480,7 @@ class ReviewRepository:
     def get_next_due(self, deck_id: str) -> str | None:
         """Return the ISO timestamp of the next due card in the deck."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 """
                 SELECT next_review_at
@@ -498,7 +498,7 @@ class ReviewRepository:
     def get_all_cards_for_export(self, deck_id: str) -> list[ReviewExportCard]:
         """Fetch all cards for deck export."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT id, deck_id, front, back, last_interval_days, ease_factor, lapse_count, reviews_done, next_review_at, tags_json
@@ -529,7 +529,7 @@ class ReviewRepository:
     ) -> ReviewExportPreviewResponse:
         """Return a preview of cards for export inspection."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT id, front, back, state, next_review_at, tags_json
@@ -620,7 +620,7 @@ class ReviewRepository:
 
         session_id = str(uuid.uuid4())
         now = _now_iso()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE review_session_log SET status = 'closed', ended_at = COALESCE(ended_at, ?) WHERE deck_id = ? AND status = 'active'",
                 (now, deck_id),
@@ -634,7 +634,7 @@ class ReviewRepository:
     def get_active_session(self, deck_id: str) -> ReviewActiveSession | None:
         """Return the active session row for a deck, if any."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT id, cards_seen FROM review_session_log WHERE deck_id = ? AND status = 'active' ORDER BY started_at DESC LIMIT 1",
                 (deck_id,),
@@ -667,7 +667,7 @@ class ReviewRepository:
         }
         if field not in VALID_CARD_RATING_FIELDS:
             raise ValueError(f"Invalid rating field: {field}")
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 f"UPDATE review_session_log SET cards_seen = cards_seen + 1, {field} = {field} + 1 WHERE id = ?",
                 (active.id,),
@@ -679,7 +679,7 @@ class ReviewRepository:
         active = self.get_active_session(deck_id)
         if not active:
             return None
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE review_session_log SET ended_at = ?, status = 'closed' WHERE id = ?",
                 (_now_iso(), active.id),
@@ -691,7 +691,7 @@ class ReviewRepository:
     ) -> ReviewSessionLog:
         """Persist a lightweight review session log summary (legacy)."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT INTO review_session_log (id, deck_id, card_id, rating, reviewed_at)
@@ -709,7 +709,7 @@ class ReviewRepository:
     def get_history(self, limit: int = 20) -> list[ReviewHistoryItem]:
         """Return closed review session summaries joined with deck names."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT rsl.id AS session_id, d.name AS deck_name, rsl.started_at, rsl.ended_at,

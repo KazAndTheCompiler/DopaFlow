@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.core.database import get_db, tx
+from app.core.base_repository import BaseRepository
 from app.core.id_gen import alarm_id
 from app.domains.alarms.schemas import AlarmCreate, AlarmRead, AlarmSchedulerStatus
 
@@ -23,23 +23,20 @@ def _row_to_alarm(row: object) -> AlarmRead:
     )
 
 
-class AlarmsRepository:
+class AlarmsRepository(BaseRepository):
     """Read and write scheduled alarms and trigger queue items."""
-
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
 
     def list_alarms(self) -> list[AlarmRead]:
         """Return all non-deleted alarms ordered by scheduled time."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute("SELECT * FROM alarms ORDER BY at ASC").fetchall()
             return [_row_to_alarm(row) for row in rows]
 
     def list_upcoming(self) -> list[AlarmRead]:
         """Return upcoming unmuted alarms ordered by scheduled time."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute(
                 """
                 SELECT *
@@ -54,7 +51,7 @@ class AlarmsRepository:
     def get_alarm(self, identifier: str) -> AlarmRead | None:
         """Fetch a single alarm by ID."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT * FROM alarms WHERE id = ?", (identifier,)
             ).fetchone()
@@ -64,7 +61,7 @@ class AlarmsRepository:
         """Insert a new alarm record."""
 
         new_id = alarm_id()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 INSERT INTO alarms (id, at, title, kind, tts_text, youtube_link, muted)
@@ -90,7 +87,7 @@ class AlarmsRepository:
             return None
         merged = alarm.model_dump()
         merged.update({k: v for k, v in patch.items() if v is not None})
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 UPDATE alarms
@@ -112,7 +109,7 @@ class AlarmsRepository:
     def delete_alarm(self, identifier: str) -> bool:
         """Delete an alarm record."""
 
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             result = conn.execute("DELETE FROM alarms WHERE id = ?", (identifier,))
             return result.rowcount > 0
 
@@ -120,7 +117,7 @@ class AlarmsRepository:
         """Record a fire timestamp."""
 
         now = datetime.now(timezone.utc).isoformat()
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE alarms SET last_fired_at = ? WHERE id = ?",
                 (now, identifier),
@@ -129,7 +126,7 @@ class AlarmsRepository:
     def scheduler_status(self) -> AlarmSchedulerStatus:
         """Return next pending alarm for scheduler health display."""
 
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 """
                 SELECT id, at FROM alarms
@@ -144,3 +141,11 @@ class AlarmsRepository:
                     next_alarm_at=str(row["at"]),
                 )
             return AlarmSchedulerStatus(running=False)
+
+    def get_alarm_row(self, alarm_id: str) -> dict | None:
+        """Return a raw alarm row as a dict for audio handling."""
+        with self.get_db_readonly() as conn:
+            row = conn.execute(
+                "SELECT * FROM alarms WHERE id = ?", (alarm_id,)
+            ).fetchone()
+            return dict(row) if row else None

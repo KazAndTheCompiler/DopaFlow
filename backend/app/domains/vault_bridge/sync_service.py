@@ -60,10 +60,10 @@ class VaultSyncService:
         self.journal_repo = JournalRepository(Settings(db_path=db_path))
 
     # lazy imports to avoid circular deps at module load time
-    def _tasks_repo(self):  # type: ignore[return]
-        from app.domains.tasks import repository as tasks_repo
+    def _tasks_repo(self):
+        from app.domains.tasks.repository import TaskRepository
 
-        return tasks_repo
+        return TaskRepository(self.db_path)
 
     def _projects_repo(self):  # type: ignore[return]
         from app.domains.projects import repository as proj_repo
@@ -353,7 +353,7 @@ class VaultSyncService:
         tasks_repo = self._tasks_repo()
         projects_repo = self._projects_repo()
 
-        all_tasks = tasks_repo.list_tasks(self.db_path)
+        all_tasks = tasks_repo.list_tasks()
         projects = {p["id"]: p for p in projects_repo.list_projects(self.db_path)}
 
         # Group tasks: inbox (no project) + one group per project
@@ -474,14 +474,13 @@ class VaultSyncService:
             if not candidate.dopaflow_id:
                 continue
             try:
-                task = tasks_repo.get_task(self.db_path, candidate.dopaflow_id)
+                task = tasks_repo.get_task(candidate.dopaflow_id)
                 if not task:
                     continue
 
                 # Sync completion status back
                 if bool(task.done) != candidate.done:
                     tasks_repo.update_task(
-                        self.db_path,
                         candidate.dopaflow_id,
                         {
                             "done": candidate.done,
@@ -528,7 +527,7 @@ class VaultSyncService:
                 pushed=0, skipped=0, conflicts=0, errors=[f"invalid date: {date}"]
             )
 
-        all_tasks = tasks_repo.list_tasks(self.db_path, done=False)
+        all_tasks = tasks_repo.list_tasks(done=False)
         due_tasks = [t for t in all_tasks if t.due_at and t.due_at[:10] <= date]
 
         tasks_section_body = "## Today's Tasks\n\n" + render_tasks_section(due_tasks)
@@ -613,7 +612,7 @@ class VaultSyncService:
             )
 
             if c.dopaflow_id:
-                task = tasks_repo.get_task(self.db_path, c.dopaflow_id)
+                task = tasks_repo.get_task(c.dopaflow_id)
                 if task:
                     candidate.status = "known"
                     candidate.known_task_id = c.dopaflow_id
@@ -650,7 +649,7 @@ class VaultSyncService:
             try:
                 source_external_id = f"{c.file_path}:{c.line_number or c.line_text}"
                 existing_task = tasks_repo.get_task_by_source_id(
-                    self.db_path, source_external_id
+                    source_external_id
                 )
                 if existing_task is not None:
                     continue
@@ -670,7 +669,7 @@ class VaultSyncService:
                 if c.project_id:
                     payload["project_id"] = c.project_id
 
-                new_task = tasks_repo.create_task(self.db_path, payload)
+                new_task = tasks_repo.create_task(payload)
                 new_id = new_task.id
                 imported += 1
 

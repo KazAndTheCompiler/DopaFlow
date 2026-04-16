@@ -361,6 +361,32 @@ async def test_request_log_preserves_incoming_request_id(tmp_path: Path) -> None
 
 
 @pytest.mark.anyio
+async def test_oidc_login_path_is_exempt_from_auth(tmp_path: Path) -> None:
+    app = build_app(str(tmp_path / "rate-limit.db"))
+
+    @app.get("/api/v2/auth/oidc/login/{provider_name}")
+    async def oidc_login(provider_name: str) -> dict[str, str]:
+        return {"status": "ok"}
+
+    response = await request(app, "GET", "/api/v2/auth/oidc/login/keycloak")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_oidc_callback_path_is_exempt_from_auth(tmp_path: Path) -> None:
+    app = build_app(str(tmp_path / "rate-limit.db"))
+
+    @app.get("/api/v2/auth/oidc/callback/{provider_name}")
+    async def oidc_callback(provider_name: str) -> dict[str, str]:
+        return {"status": "ok"}
+
+    response = await request(app, "GET", "/api/v2/auth/oidc/callback/keycloak")
+
+    assert response.status_code == 200
+
+
+@pytest.mark.anyio
 async def test_request_log_logs_exception_context(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:

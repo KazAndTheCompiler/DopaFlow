@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.domains.tasks import repository as tasks_repo
+from app.domains.tasks.repository import TaskRepository
 from app.domains.tasks.schemas import Task
 from app.domains.vault_bridge.schemas import (
     TaskImportCandidate,
@@ -443,7 +443,7 @@ class TestImportService:
 
         assert first.imported == 1
         assert second.imported == 0
-        tasks = tasks_repo.list_tasks(str(db_path))
+        tasks = TaskRepository(str(db_path)).list_tasks()
         assert len(tasks) == 1
 
     def test_confirm_import_reports_write_back_failure(self, db_path, tmp_path):

@@ -120,25 +120,11 @@ def test_trigger_backup_skips_when_integrity_check_fails(
 
     create_entry(client)
 
-    class FakeConnection:
-        def execute(self, sql: str):
-            assert sql == "PRAGMA integrity_check"
-            return self
-
-        def fetchone(self):
-            return ("corrupt",)
-
-        def close(self) -> None:
-            return None
-
-    class FakeContext:
-        def __enter__(self):
-            return FakeConnection()
-
-        def __exit__(self, exc_type, exc, tb):
-            return False
-
-    monkeypatch.setattr(journal_service, "get_db", lambda _db_path: FakeContext())
+    # Monkeypatch the repository's check_integrity to return False
+    # (simulating a corrupt database)
+    monkeypatch.setattr(
+        journal_service.JournalService, "_database_integrity_ok", lambda self: False
+    )
     caplog.set_level(logging.WARNING, logger="app.domains.journal.service")
 
     response = client.post(

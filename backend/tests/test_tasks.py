@@ -346,6 +346,9 @@ def test_materialize_recurring_caps_instances_per_rule_per_run(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     from app.domains.tasks import repository as tasks_repository
+    from app.domains.tasks.repository import TaskRepository
+
+    repo = TaskRepository(str(db_path))
 
     class FrozenDateTime(datetime):
         @classmethod
@@ -358,8 +361,7 @@ def test_materialize_recurring_caps_instances_per_rule_per_run(
 
     base_due = datetime(2026, 1, 1, 0, 0, tzinfo=timezone.utc)
     for offset in range(501):
-        tasks_repository.create_task(
-            str(db_path),
+        repo.create_task(
             {
                 "title": f"Hourly {offset}",
                 "done": True,
@@ -369,11 +371,11 @@ def test_materialize_recurring_caps_instances_per_rule_per_run(
             },
         )
 
-    result = tasks_repository.materialize_recurring(str(db_path), window_hours=24 * 365)
+    result = repo.materialize_recurring(window_hours=24 * 365)
 
     assert result.created == 500
 
-    tasks = tasks_repository.list_tasks(str(db_path))
+    tasks = repo.list_tasks()
     children = [task for task in tasks if task.recurrence_parent_id is not None]
     assert len(children) == 500
     assert any(
@@ -388,6 +390,9 @@ def test_materialize_recurring_daily_advances_25_hours_no_duplicates(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from app.domains.tasks import repository as tasks_repository
+    from app.domains.tasks.repository import TaskRepository
+
+    repo = TaskRepository(str(db_path))
 
     base_time = datetime(2026, 1, 1, 9, 0, tzinfo=timezone.utc)
 
@@ -399,8 +404,7 @@ def test_materialize_recurring_daily_advances_25_hours_no_duplicates(
 
     monkeypatch.setattr(tasks_repository, "datetime", FrozenDateTime)
 
-    tasks_repository.create_task(
-        str(db_path),
+    repo.create_task(
         {
             "title": "Daily recurring",
             "done": True,
@@ -410,18 +414,18 @@ def test_materialize_recurring_daily_advances_25_hours_no_duplicates(
         },
     )
 
-    result = tasks_repository.materialize_recurring(str(db_path), window_hours=36)
+    result = repo.materialize_recurring(window_hours=36)
     assert result.created == 1
 
-    tasks = tasks_repository.list_tasks(str(db_path))
+    tasks = repo.list_tasks()
     children = [task for task in tasks if task.recurrence_parent_id is not None]
     assert len(children) == 1
     assert children[0].due_at == (base_time + timedelta(days=1)).isoformat()
 
-    result2 = tasks_repository.materialize_recurring(str(db_path), window_hours=36)
+    result2 = repo.materialize_recurring(window_hours=36)
     assert result2.created == 0
 
-    tasks = tasks_repository.list_tasks(str(db_path))
+    tasks = repo.list_tasks()
     children = [task for task in tasks if task.recurrence_parent_id is not None]
     assert len(children) == 1
 

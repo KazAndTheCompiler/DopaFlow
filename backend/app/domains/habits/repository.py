@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from app.core.database import get_db, tx
+from app.core.base_repository import BaseRepository
 from app.core.id_gen import habit_id
 
 
@@ -72,154 +72,192 @@ def _habit_with_stats(conn, row) -> dict[str, Any]:
     }
 
 
-def list_habits(db_path: str) -> list[dict[str, Any]]:
-    """List active habits with computed streak metrics."""
+class HabitRepository(BaseRepository):
+    """Repository for habit CRUD and check-in operations."""
 
-    with get_db(db_path) as conn:
-        rows = conn.execute(
-            "SELECT * FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC"
-        ).fetchall()
-        return [_habit_with_stats(conn, row) for row in rows]
+    def list_habits(self) -> list[dict[str, Any]]:
+        """List active habits with computed streak metrics."""
+
+        with self.get_db_readonly() as conn:
+            rows = conn.execute(
+                "SELECT * FROM habits WHERE deleted_at IS NULL ORDER BY created_at ASC"
+            ).fetchall()
+            return [_habit_with_stats(conn, row) for row in rows]
+
+    def get_habit(self, habit_identifier: str) -> dict[str, Any] | None:
+        """Return one habit by ID."""
+
+        with self.get_db_readonly() as conn:
+            row = conn.execute(
+                "SELECT * FROM habits WHERE id = ? AND deleted_at IS NULL",
+                (habit_identifier,),
+            ).fetchone()
+            return _habit_with_stats(conn, row) if row else None
+
+    def add_habit(
+        self, name: str, target_freq: int, target_period: str, color: str
+    ) -> dict[str, Any]:
+        """Create a habit row."""
+
+        identifier = habit_id()
+        with self.tx() as conn:
+            conn.execute(
+                "INSERT INTO habits (id, name, target_freq, target_period, color) VALUES (?, ?, ?, ?, ?)",
+                (identifier, name, target_freq, target_period, color),
+            )
+        created = self.get_habit(identifier)
+        if created is None:
+            raise RuntimeError("Habit creation failed")
+        return created
+
+    def update_habit(
+        self, habit_identifier: str, payload: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Patch mutable habit fields."""
+
+        current = self.get_habit(habit_identifier)
+        if current is None:
+            return None
+        merged = {**current, **payload}
+        with self.tx() as conn:
+            conn.execute(
+                """
+                UPDATE habits
+                SET name = ?, target_freq = ?, target_period = ?, description = ?, color = ?, freeze_until = ?
+                WHERE id = ?
+                """,
+                (
+                    merged["name"],
+                    merged["target_freq"],
+                    merged["target_period"],
+                    merged.get("description"),
+                    merged.get("color"),
+                    merged.get("freeze_until"),
+                    habit_identifier,
+                ),
+            )
+        return self.get_habit(habit_identifier)
+
+    def delete_habit(self, habit_identifier: str) -> bool:
+        """Soft-delete a habit."""
+
+        with self.tx() as conn:
+            result = conn.execute(
+                "UPDATE habits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
+                (habit_identifier,),
+            )
+            return result.rowcount > 0
+
+    def log_checkin(
+        self, habit_identifier: str, checkin_date: str | None = None
+    ) -> dict[str, Any]:
+        """Insert a check-in event."""
+
+        target_date = checkin_date or datetime.now(UTC).isoformat()
+        checkin_identifier = habit_id()
+        with self.tx() as conn:
+            conn.execute(
+                """
+                INSERT INTO habit_checkins (id, habit_id, checkin_date)
+                VALUES (?, ?, ?)
+                """,
+                (checkin_identifier, habit_identifier, target_date),
+            )
+        habit = self.get_habit(habit_identifier)
+        if habit is None:
+            raise RuntimeError("Habit check-in failed")
+        return habit
+
+    def delete_checkin(self, habit_identifier: str, checkin_date: str) -> bool:
+        """Delete one habit check-in."""
+
+        with self.tx() as conn:
+            result = conn.execute(
+                "DELETE FROM habit_checkins WHERE habit_id = ? AND substr(checkin_date, 1, 10) = ?",
+                (habit_identifier, checkin_date[:10]),
+            )
+            return result.rowcount > 0
+
+    def get_logs(self, limit: int = 2000) -> list[dict[str, Any]]:
+        """Return recent habit logs."""
+
+        with self.get_db_readonly() as conn:
+            rows = conn.execute(
+                """
+                SELECT hc.*, h.name
+                FROM habit_checkins hc
+                JOIN habits h ON h.id = hc.habit_id
+                ORDER BY checkin_date DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_logs_for_habit(self, habit_identifier: str) -> list[dict[str, Any]]:
+        """Return all check-ins for one habit."""
+
+        with self.get_db_readonly() as conn:
+            rows = conn.execute(
+                "SELECT * FROM habit_checkins WHERE habit_id = ? ORDER BY checkin_date DESC",
+                (habit_identifier,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def goals_summary(self) -> list[dict[str, Any]]:
+        """Return goal progress rows."""
+
+        with self.get_db_readonly() as conn:
+            rows = conn.execute(
+                """
+                SELECT hg.*, h.name
+                FROM habit_goals hg
+                JOIN habits h ON h.id = hg.habit_id
+                ORDER BY hg.period_start DESC
+                """
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+
+# ---------------------------------------------------------------------------
+# Module-level wrappers for backward compatibility with external callers.
+# ---------------------------------------------------------------------------
+
+def list_habits(db_path: str) -> list[dict[str, Any]]:
+    return HabitRepository(db_path).list_habits()
 
 
 def get_habit(db_path: str, habit_identifier: str) -> dict[str, Any] | None:
-    """Return one habit by ID."""
-
-    with get_db(db_path) as conn:
-        row = conn.execute(
-            "SELECT * FROM habits WHERE id = ? AND deleted_at IS NULL",
-            (habit_identifier,),
-        ).fetchone()
-        return _habit_with_stats(conn, row) if row else None
+    return HabitRepository(db_path).get_habit(habit_identifier)
 
 
-def add_habit(
-    db_path: str, name: str, target_freq: int, target_period: str, color: str
-) -> dict[str, Any]:
-    """Create a habit row."""
-
-    identifier = habit_id()
-    with tx(db_path) as conn:
-        conn.execute(
-            "INSERT INTO habits (id, name, target_freq, target_period, color) VALUES (?, ?, ?, ?, ?)",
-            (identifier, name, target_freq, target_period, color),
-        )
-    created = get_habit(db_path, identifier)
-    if created is None:
-        raise RuntimeError("Habit creation failed")
-    return created
+def add_habit(db_path: str, name: str, target_freq: int, target_period: str, color: str) -> dict[str, Any]:
+    return HabitRepository(db_path).add_habit(name, target_freq, target_period, color)
 
 
-def update_habit(
-    db_path: str, habit_identifier: str, payload: dict[str, Any]
-) -> dict[str, Any] | None:
-    """Patch mutable habit fields."""
-
-    current = get_habit(db_path, habit_identifier)
-    if current is None:
-        return None
-    merged = {**current, **payload}
-    with tx(db_path) as conn:
-        conn.execute(
-            """
-            UPDATE habits
-            SET name = ?, target_freq = ?, target_period = ?, description = ?, color = ?, freeze_until = ?
-            WHERE id = ?
-            """,
-            (
-                merged["name"],
-                merged["target_freq"],
-                merged["target_period"],
-                merged.get("description"),
-                merged.get("color"),
-                merged.get("freeze_until"),
-                habit_identifier,
-            ),
-        )
-    return get_habit(db_path, habit_identifier)
+def update_habit(db_path: str, habit_identifier: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+    return HabitRepository(db_path).update_habit(habit_identifier, payload)
 
 
 def delete_habit(db_path: str, habit_identifier: str) -> bool:
-    """Soft-delete a habit."""
-
-    with tx(db_path) as conn:
-        result = conn.execute(
-            "UPDATE habits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
-            (habit_identifier,),
-        )
-        return result.rowcount > 0
+    return HabitRepository(db_path).delete_habit(habit_identifier)
 
 
-def log_checkin(
-    db_path: str, habit_identifier: str, checkin_date: str | None = None
-) -> dict[str, Any]:
-    """Insert a check-in event."""
-
-    target_date = checkin_date or datetime.now(UTC).isoformat()
-    checkin_identifier = habit_id()
-    with tx(db_path) as conn:
-        conn.execute(
-            """
-            INSERT INTO habit_checkins (id, habit_id, checkin_date)
-            VALUES (?, ?, ?)
-            """,
-            (checkin_identifier, habit_identifier, target_date),
-        )
-    habit = get_habit(db_path, habit_identifier)
-    if habit is None:
-        raise RuntimeError("Habit check-in failed")
-    return habit
+def log_checkin(db_path: str, habit_identifier: str, checkin_date: str | None = None) -> dict[str, Any]:
+    return HabitRepository(db_path).log_checkin(habit_identifier, checkin_date)
 
 
 def delete_checkin(db_path: str, habit_identifier: str, checkin_date: str) -> bool:
-    """Delete one habit check-in."""
-
-    with tx(db_path) as conn:
-        result = conn.execute(
-            "DELETE FROM habit_checkins WHERE habit_id = ? AND substr(checkin_date, 1, 10) = ?",
-            (habit_identifier, checkin_date[:10]),
-        )
-        return result.rowcount > 0
+    return HabitRepository(db_path).delete_checkin(habit_identifier, checkin_date)
 
 
 def get_logs(db_path: str, limit: int = 2000) -> list[dict[str, Any]]:
-    """Return recent habit logs."""
-
-    with get_db(db_path) as conn:
-        rows = conn.execute(
-            """
-            SELECT hc.*, h.name
-            FROM habit_checkins hc
-            JOIN habits h ON h.id = hc.habit_id
-            ORDER BY checkin_date DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
-        return [dict(row) for row in rows]
+    return HabitRepository(db_path).get_logs(limit=limit)
 
 
 def get_logs_for_habit(db_path: str, habit_identifier: str) -> list[dict[str, Any]]:
-    """Return all check-ins for one habit."""
-
-    with get_db(db_path) as conn:
-        rows = conn.execute(
-            "SELECT * FROM habit_checkins WHERE habit_id = ? ORDER BY checkin_date DESC",
-            (habit_identifier,),
-        ).fetchall()
-        return [dict(row) for row in rows]
+    return HabitRepository(db_path).get_logs_for_habit(habit_identifier)
 
 
 def goals_summary(db_path: str) -> list[dict[str, Any]]:
-    """Return goal progress rows."""
-
-    with get_db(db_path) as conn:
-        rows = conn.execute(
-            """
-            SELECT hg.*, h.name
-            FROM habit_goals hg
-            JOIN habits h ON h.id = hg.habit_id
-            ORDER BY hg.period_start DESC
-            """
-        ).fetchall()
-        return [dict(row) for row in rows]
+    return HabitRepository(db_path).goals_summary()

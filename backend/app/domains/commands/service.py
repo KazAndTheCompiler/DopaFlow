@@ -253,10 +253,11 @@ def parse_intent(text: str) -> dict[str, object]:
 def _preview_task_complete(
     text: str, parsed: dict[str, object], db_path: str
 ) -> dict[str, object]:
-    from app.domains.tasks import repository as task_repo
+    from app.domains.tasks.repository import TaskRepository
 
+    repo = TaskRepository(db_path)
     query = str((parsed.get("extracted") or {}).get("query") or "").strip().lower()
-    open_tasks = task_repo.list_tasks(db_path, done=False)
+    open_tasks = repo.list_tasks(done=False)
     open_tasks_dicts = [t.model_dump() for t in open_tasks]
     exact_matches = [
         task for task in open_tasks if query and query in (task.title or "").lower()
@@ -299,13 +300,14 @@ def _preview_task_complete(
 def _preview_habit_checkin(
     text: str, parsed: dict[str, object], db_path: str
 ) -> dict[str, object]:
-    from app.domains.habits import repository as habit_repo
+    from app.domains.habits.repository import HabitRepository
 
     del text
     habit_name = (
         str((parsed.get("extracted") or {}).get("habit_name") or "").strip().lower()
     )
-    habits = habit_repo.list_habits(db_path)
+    repo = HabitRepository(db_path)
+    habits = repo.list_habits()
     matched = [
         habit for habit in habits if habit_name in (habit.get("name") or "").lower()
     ]
@@ -344,7 +346,7 @@ def _preview_habit_checkin(
 
 def _preview_undo(db_path: str) -> dict[str, object]:
     supported = {"task.create", "task.complete", "calendar.create"}
-    history = CommandRepository.history(db_path, limit=10)
+    history = CommandRepository(db_path).history(limit=10)
 
     for entry in history:
         if (
@@ -400,19 +402,19 @@ class CommandService:
             "follow_ups": parsed.get("follow_ups", []),
             "tts_response": parsed.get("tts_response", ""),
         }
-        # Only check for compound commands when NLP returned unknown.
-        # If NLP already resolved an intent (e.g. task.create), trust it —
-        # "add task buy milk and bread" is one task, not a compound command.
-        if intent == "unknown":
-            compound_parts = detect_actionable_chain(text, parser=parse_intent)
-            if compound_parts is not None:
-                preview["would_execute"] = False
-                preview["status"] = "unsupported"
-                preview["message"] = (
-                    "Multiple actions in one command are disabled for now. Say one concrete action at a time."
-                )
-                preview["parts"] = compound_parts
-                return preview
+        # Always check for compound commands — "add task X and set alarm Y"
+        # contains two actionable intents even when NLP classifies the whole
+        # string as task.create.  "add task buy milk and bread" won't match
+        # because "bread" isn't an actionable intent.
+        compound_parts = detect_actionable_chain(text, parser=parse_intent)
+        if compound_parts is not None:
+            preview["would_execute"] = False
+            preview["status"] = "unsupported"
+            preview["message"] = (
+                "Multiple actions in one command are disabled for now. Say one concrete action at a time."
+            )
+            preview["parts"] = compound_parts
+            return preview
         if intent == "unknown":
             preview["message"] = (
                 "I didn't catch that. Try something like 'add task buy milk' or 'start focus'."

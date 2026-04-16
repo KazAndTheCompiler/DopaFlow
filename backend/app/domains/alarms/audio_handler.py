@@ -2,17 +2,10 @@
 
 from __future__ import annotations
 
-from app.core.db_utils import get_conn
+from app.core.config import Settings
+from app.domains.alarms.repository import AlarmsRepository
 from app.services import tts as tts_service
 from app.services.player import resolve_stream_url
-
-
-def _fetch_alarm_row(db_path: str, alarm_id: str) -> dict | None:
-    """Read one alarm row directly - avoids depending on service layer."""
-    conn = get_conn(db_path)
-    row = conn.execute("SELECT * FROM alarms WHERE id = ?", (alarm_id,)).fetchone()
-    conn.close()
-    return dict(row) if row else None
 
 
 def handle_alarm_audio(db_path: str, alarm_id: str) -> dict:
@@ -21,7 +14,8 @@ def handle_alarm_audio(db_path: str, alarm_id: str) -> dict:
     Returns {"stream_url": str | None, "spoke": str}.
     Never raises - failures are returned as {"error": str}.
     """
-    row = _fetch_alarm_row(db_path, alarm_id)
+    repo = AlarmsRepository(db_path)
+    row = repo.get_alarm_row(alarm_id)
     if not row:
         return {"stream_url": None, "spoke": None, "error": "alarm_not_found"}
 

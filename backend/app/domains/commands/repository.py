@@ -7,10 +7,10 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-from app.core.database import get_db, tx
+from app.core.base_repository import BaseRepository
 
 
-class CommandRepository:
+class CommandRepository(BaseRepository):
     @staticmethod
     def _ensure_table(conn: sqlite3.Connection) -> None:
         conn.execute(
@@ -40,9 +40,8 @@ class CommandRepository:
         if "undone_at" not in columns:
             conn.execute("ALTER TABLE command_logs ADD COLUMN undone_at TEXT")
 
-    @staticmethod
     def add_log(
-        db_path: str,
+        self,
         text: str,
         intent: str,
         status: str,
@@ -58,7 +57,7 @@ class CommandRepository:
         """
         cmd_id = str(uuid.uuid4())
         result_serialised = json.dumps(result) if result is not None else None
-        with tx(db_path) as conn:
+        with self.tx() as conn:
             CommandRepository._ensure_table(conn)
             conn.execute(
                 "INSERT INTO command_logs(id, text, intent, status, source, error_json, result_json, executed_at) VALUES(?,?,?,?,?,?,?,?)",
@@ -81,10 +80,9 @@ class CommandRepository:
             "source": source,
         }
 
-    @staticmethod
-    def history(db_path: str, limit: int = 100) -> list[dict[str, object]]:
+    def history(self, limit: int = 100) -> list[dict[str, object]]:
         """Fetch recent command logs."""
-        with get_db(db_path) as conn:
+        with self.get_db_readonly() as conn:
             CommandRepository._ensure_table(conn)
             rows = conn.execute(
                 "SELECT id, text, intent, status, source, error_json, result_json, executed_at, undone_at FROM command_logs ORDER BY executed_at DESC LIMIT ?",
@@ -102,18 +100,16 @@ class CommandRepository:
             result.append(entry)
         return result
 
-    @staticmethod
-    def mark_undone(db_path: str, command_id: str) -> None:
-        with tx(db_path) as conn:
+    def mark_undone(self, command_id: str) -> None:
+        with self.tx() as conn:
             CommandRepository._ensure_table(conn)
             conn.execute(
                 "UPDATE command_logs SET undone_at = ? WHERE id = ?",
                 (datetime.now(timezone.utc).isoformat(), command_id),
             )
 
-    @staticmethod
-    def clear_history(db_path: str) -> dict[str, object]:
+    def clear_history(self) -> dict[str, object]:
         """Delete all command logs."""
-        with tx(db_path) as conn:
+        with self.tx() as conn:
             conn.execute("DELETE FROM command_logs")
         return {"cleared": True}

@@ -49,6 +49,14 @@ class Settings(BaseSettings):
     google_redirect_uri: str = "http://localhost:8000/api/v2/calendar/auth/callback"
     enable_oauth: bool = False
 
+    # External OIDC provider (optional — SSO via Keycloak, Zitadel, etc.)
+    oidc_provider_name: str | None = None
+    oidc_issuer_url: str | None = None
+    oidc_client_id: str | None = None
+    oidc_client_secret: str | None = None
+    oidc_scopes: str = "openid profile email"
+    oidc_default_role: str = "viewer"
+
     disable_local_audio: bool = False
     disable_background_jobs: bool = False
     packaged: bool = False

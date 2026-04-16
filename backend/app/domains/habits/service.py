@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 
 from app.core.gamification_helpers import award as award_gamification
-from app.domains.habits import repository
+from app.domains.habits.repository import HabitRepository
 from app.domains.habits.schemas import (
     HabitCorrelation,
     HabitTodaySummary,
@@ -20,10 +20,14 @@ from app.domains.habits.schemas import (
 logger = logging.getLogger(__name__)
 
 
-def checkin(db_path: str, habit_id: str, target_date: str | None = None) -> dict:
+def checkin(
+    repo: HabitRepository | str, habit_id: str, target_date: str | None = None
+) -> dict:
     """Record a habit check-in and award XP."""
 
-    habit = repository.log_checkin(db_path, habit_id, target_date)
+    if isinstance(repo, str):
+        repo = HabitRepository(repo)
+    habit = repo.log_checkin(habit_id, target_date)
     checkin_source_id = (
         f"{habit_id}:{habit.get('last_checkin_date') or target_date or 'unknown'}"
     )
@@ -106,10 +110,12 @@ def pearson_correlation(
     return results
 
 
-def today_summary(db_path: str) -> HabitTodaySummary:
+def today_summary(repo: HabitRepository | str) -> HabitTodaySummary:
     """Return today's habit completion summary."""
 
-    habits = repository.list_habits(db_path)
+    if isinstance(repo, str):
+        repo = HabitRepository(repo)
+    habits = repo.list_habits()
     today = date.today().isoformat()
     done = sum(1 for habit in habits if habit.get("last_checkin_date") == today)
     missed = max(len(habits) - done, 0)

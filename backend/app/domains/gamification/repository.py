@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from datetime import UTC, date, datetime, timedelta
 
-from app.core.database import get_db, tx
+from app.core.base_repository import BaseRepository
 from app.domains.gamification.schemas import BadgeRead, PlayerLevelRead
 from app.domains.gamification.xp_engine import (
     level_for,
@@ -52,15 +52,13 @@ def _best_habit_streak(rows: list[object]) -> int:
     return best
 
 
-class GamificationRepository:
-    def __init__(self, db_path: str) -> None:
-        self.db_path = db_path
+class GamificationRepository(BaseRepository):
 
     def has_award_event_today(self, source: str, source_id: str | None) -> bool:
         if source_id is None:
             return False
         start_of_day = datetime.now(UTC).date().isoformat()
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 """
                 SELECT 1
@@ -76,7 +74,7 @@ class GamificationRepository:
 
     def award_xp(self, source: str, source_id: str | None, xp: int) -> int:
         _stats_cache.pop(self.db_path, None)
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "INSERT INTO xp_ledger (source, source_id, xp) VALUES (?, ?, ?)",
                 (source, source_id, xp),
@@ -97,14 +95,14 @@ class GamificationRepository:
         return int(row["total_xp"]) if row else 0
 
     def set_level(self, level: int) -> None:
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 "UPDATE player_level SET level = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1",
                 (level,),
             )
 
     def get_level(self) -> PlayerLevelRead:
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             row = conn.execute(
                 "SELECT total_xp, updated_at FROM player_level WHERE id = 1"
             ).fetchone()
@@ -118,14 +116,14 @@ class GamificationRepository:
         )
 
     def get_badges(self) -> list[BadgeRead]:
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             rows = conn.execute("SELECT * FROM badges ORDER BY id ASC").fetchall()
         return [BadgeRead(**dict(row)) for row in rows]
 
     def update_badge_progress(
         self, badge_id: str, progress: float, earned: bool
     ) -> None:
-        with tx(self.db_path) as conn:
+        with self.tx() as conn:
             conn.execute(
                 """
                 UPDATE badges
@@ -142,7 +140,7 @@ class GamificationRepository:
             expiry, stats = cached
             if now < expiry:
                 return stats
-        with get_db(self.db_path) as conn:
+        with self.get_db_readonly() as conn:
             tasks_done = int(
                 conn.execute(
                     "SELECT COUNT(*) FROM tasks WHERE deleted_at IS NULL AND (done = 1 OR status = 'done')"

@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, timedelta
 
 from app.core.config import Settings
-from app.core.database import get_db
 from app.domains.digest.repository import DigestRepository
 from app.domains.digest.schemas import (
     DailyDigestResponse,
@@ -69,11 +68,7 @@ def _compute_correlations(
     focus_minutes = [float(focus_daily.get(day, {}).get("minutes", 0)) for day in days]
 
     try:
-        with get_db(repo.settings) as conn:
-            habits = conn.execute(
-                "SELECT name FROM habits WHERE deleted_at IS NULL"
-            ).fetchall()
-            habit_names = [h["name"] for h in habits]
+        habit_names = repo.get_habit_names()
     except Exception:
         habit_names = []
 

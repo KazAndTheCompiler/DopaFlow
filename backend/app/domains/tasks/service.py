@@ -11,16 +11,18 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.gamification_helpers import award as award_gamification
-from app.domains.tasks import repository
+from app.domains.tasks.repository import TaskRepository
 from app.domains.tasks.schemas import Task
 
 logger = logging.getLogger(__name__)
 
 
-def complete_task(db_path: str, task_id: str) -> Task | None:
+def complete_task(repo: TaskRepository | str, task_id: str) -> Task | None:
     """Mark a task complete and award XP."""
 
-    task = repository.complete_task(db_path, task_id)
+    if isinstance(repo, str):
+        repo = TaskRepository(repo)
+    task = repo.complete_task(task_id)
     if task is not None:
         award_gamification("task_complete", task_id, logger=logger)
     return task
