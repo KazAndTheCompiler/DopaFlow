@@ -109,6 +109,7 @@ def test_tasks_quick_add():
         "POST",
         {
             "text": "Review quarterly report by Friday",
+            "commit": True,
         },
     )
     assert status == 200, f"quick-add failed: {body}"
@@ -190,7 +191,7 @@ def test_focus_session():
 
 def test_journal_create():
     status, body = rp(
-        "/api/v2/journal/",
+        "/api/v2/journal/entries",
         "POST",
         {
             "date": "2099-01-01",
@@ -199,7 +200,7 @@ def test_journal_create():
             "tags": ["smoke-test"],
         },
     )
-    assert status == 200, f"journal create failed: {body}"
+    assert status == 201, f"journal create failed: {body}"
     return body["id"]
 
 
@@ -275,9 +276,14 @@ def main():
     else:
         failed += 1
 
-    if run("Habit create", test_habit_create):
+    try:
+        habit_id = test_habit_create()
+        print("  ✓ Habit create")
         passed += 1
-    else:
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"  FAIL Habit create: {e}")
         failed += 1
 
     if run("Habit checkin", test_habit_checkin, habit_id):
