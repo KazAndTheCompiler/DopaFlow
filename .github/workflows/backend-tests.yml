@@ -48,7 +48,7 @@ jobs:
         run: |
           pip install pip-audit
           cd backend
-          pip-audit --desc --fail -r requirements.txt || true
+          pip-audit --desc -r requirements.txt || true
 
       - name: Validate OpenAPI schema
         run: |
