@@ -787,7 +787,9 @@ export function VoiceCommandModal({
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button
             onClick={toggleListening}
-            disabled={(!sttSupported && !fallbackMode) || phase === 'processing' || phase === 'executing'}
+            disabled={
+              (!sttSupported && !fallbackMode) || phase === 'processing' || phase === 'executing'
+            }
             variant={listening || isMicRecording ? 'primary' : 'secondary'}
           >
             {listening || isMicRecording ? (
@@ -831,9 +833,10 @@ export function VoiceCommandModal({
               padding: '0.75rem 1rem',
               borderRadius: '10px',
               background: 'var(--surface-2)',
-              border: (listening || isMicRecording)
-                ? '1px solid var(--state-overdue)'
-                : '1px solid var(--border-subtle)',
+              border:
+                listening || isMicRecording
+                  ? '1px solid var(--state-overdue)'
+                  : '1px solid var(--border-subtle)',
               minHeight: '2.5rem',
               transition: 'border-color 200ms',
             }}
