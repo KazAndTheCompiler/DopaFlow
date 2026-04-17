@@ -378,10 +378,16 @@ def execute_single(
                     text,
                     re.IGNORECASE,
                 )
-                name = name_match.group(1).strip() if name_match else re.sub(
-                    r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)?\s*",
-                    "", text, flags=re.IGNORECASE,
-                ).strip()
+                name = (
+                    name_match.group(1).strip()
+                    if name_match
+                    else re.sub(
+                        r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)?\s*",
+                        "",
+                        text,
+                        flags=re.IGNORECASE,
+                    ).strip()
+                )
 
             if not name:
                 return {
@@ -402,7 +408,9 @@ def execute_single(
                     "reply": f'A habit called "{name}" already exists.',
                 }
 
-            result = habit_repo.add_habit(db_path, name=name, target_freq=1, target_period="day", color="#49615c")
+            result = habit_repo.add_habit(
+                db_path, name=name, target_freq=1, target_period="day", color="#49615c"
+            )
             CommandRepository.add_log(db_path, text, intent, "executed", source=source)
             return _response(
                 text,

@@ -683,16 +683,22 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
     elif best_intent == "habit.create":
         name_match = re.search(
             r"(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)\s+(\w+(?:\s+\w+)?)",
-            text, re.I,
+            text,
+            re.I,
         )
         if name_match:
             habit_name = name_match.group(1).strip()
         else:
             # Strip command prefix to get the habit name (e.g. "add habit exercise" -> "exercise")
-            habit_name = re.sub(
-                r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+",
-                "", text, flags=re.I,
-            ).strip() or (body or text).strip()
+            habit_name = (
+                re.sub(
+                    r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+",
+                    "",
+                    text,
+                    flags=re.I,
+                ).strip()
+                or (body or text).strip()
+            )
         entities = {"name": habit_name, "target_freq": 1, "target_period": "day"}
         follow_ups = ["Check in on this habit?", "Set a reminder?"]
         tts_response = f'Habit "{habit_name}" created.'

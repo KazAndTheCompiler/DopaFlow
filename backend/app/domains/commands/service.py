@@ -355,10 +355,16 @@ def _preview_habit_create(
             text,
             re.IGNORECASE,
         )
-        name = name_match.group(1).strip() if name_match else re.sub(
-            r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)?\s*",
-            "", text, flags=re.IGNORECASE,
-        ).strip()
+        name = (
+            name_match.group(1).strip()
+            if name_match
+            else re.sub(
+                r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)?\s*",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            ).strip()
+        )
 
     if not name:
         return {
