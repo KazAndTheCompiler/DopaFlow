@@ -35,7 +35,7 @@ jobs:
       - name: Install backend deps
         run: |
           cd backend
-          pip install --no-cache-dir -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Run ruff lint
         run: |
@@ -95,7 +95,7 @@ jobs:
       - name: Install backend deps
         run: |
           cd backend
-          pip install --no-cache-dir -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Run backend tests with coverage
         run: |
@@ -118,7 +118,7 @@ jobs:
       - name: Install backend deps
         run: |
           cd backend
-          pip install --no-cache-dir -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Start backend and verify health
         run: |
@@ -164,8 +164,8 @@ jobs:
       - name: Install backend + load test deps
         run: |
           cd backend
-          pip install --no-cache-dir -r requirements.txt
-          pip install --no-cache-dir httpx
+          pip install -r requirements.txt
+          pip install httpx
 
       - name: Run load test
         run: |
@@ -201,7 +201,7 @@ jobs:
       - name: Install backend deps
         run: |
           cd backend
-          pip install --no-cache-dir -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Run recovery tests
         run: |
