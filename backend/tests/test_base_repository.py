@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.base_repository import BaseRepository
 from app.core.config import Settings
 from app.core.database import run_migrations
-from app.core.base_repository import BaseRepository
 from app.core.unit_of_work import UnitOfWork
 
 

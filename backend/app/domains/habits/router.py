@@ -26,8 +26,8 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app.core.config import Settings, get_settings_dependency
-from app.domains.habits.repository import HabitRepository
 from app.domains.habits import service
+from app.domains.habits.repository import HabitRepository
 from app.domains.habits.schemas import (
     DeleteResponse,
     HabitCheckIn,

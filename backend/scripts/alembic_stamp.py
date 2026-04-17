@@ -54,6 +54,7 @@ def main() -> None:
     os.environ.setdefault("DOPAFLOW_DB_PATH", db_path)
 
     from alembic.config import Config as AlembicConfig
+
     from alembic import command
 
     alembic_cfg = AlembicConfig("alembic.ini")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from app.core.base_repository import BaseRepository
-from app.core.config import Settings
 
 
 class AuthRepository(BaseRepository):

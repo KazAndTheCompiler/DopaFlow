@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
@@ -20,8 +19,8 @@ from app.domains.auth.service import AuthService, get_auth_service
 
 
 def _generate_rsa_key():
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public_key = private_key.public_key()
@@ -207,7 +206,7 @@ class TestOidcCallback:
         assert login_resp.status_code == 302
         location = login_resp.headers["location"]
         # Extract state from the redirect URL
-        from urllib.parse import urlparse, parse_qs
+        from urllib.parse import parse_qs, urlparse
         parsed = urlparse(location)
         external_state = parse_qs(parsed.query)["state"][0]
 
@@ -239,7 +238,7 @@ class TestOidcCallback:
             mock_jwks.return_value = jwks
 
             callback_resp = await client.get(
-                f"/api/v2/auth/oidc/callback/keycloak",
+                "/api/v2/auth/oidc/callback/keycloak",
                 params={"code": "auth-code-from-idp", "state": external_state},
                 follow_redirects=False,
             )
@@ -287,7 +286,7 @@ class TestOidcCallback:
                 },
                 follow_redirects=False,
             )
-        from urllib.parse import urlparse, parse_qs
+        from urllib.parse import parse_qs, urlparse
         external_state = parse_qs(urlparse(login_resp.headers["location"]).query)["state"][0]
 
         now = int(time.time())

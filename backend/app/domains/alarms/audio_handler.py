@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from app.core.config import Settings
 from app.domains.alarms.repository import AlarmsRepository
 from app.services import tts as tts_service
 from app.services.player import resolve_stream_url

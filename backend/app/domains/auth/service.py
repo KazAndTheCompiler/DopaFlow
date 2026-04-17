@@ -12,11 +12,11 @@ import bcrypt
 from fastapi import HTTPException
 
 from app.core.config import Settings
-from app.domains.auth.repository import AuthRepository
 from app.domains.auth.oidc import (
     at_hash_from_access_token,
     build_id_token,
 )
+from app.domains.auth.repository import AuthRepository
 from app.middleware.auth_scopes import create_scope_token, verify_scope_token
 
 ACCESS_TOKEN_TTL = 900
