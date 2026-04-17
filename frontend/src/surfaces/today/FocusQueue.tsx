@@ -33,19 +33,31 @@ function scoreTask(task: Task): number {
   const now = Date.now();
   if (!task.done && task.due_at) {
     const due = new Date(task.due_at).getTime();
-    if (due < now) return 1;
-    if (due - now < 24 * 60 * 60 * 1000) return 1;
-    if (due - now < 7 * 24 * 60 * 60 * 1000) return 2;
+    if (due < now) {
+      return 1;
+    }
+    if (due - now < 24 * 60 * 60 * 1000) {
+      return 1;
+    }
+    if (due - now < 7 * 24 * 60 * 60 * 1000) {
+      return 2;
+    }
   }
-  if (!task.done) return 3;
+  if (!task.done) {
+    return 3;
+  }
   return 4;
 }
 
 function scoreHabit(habit: Habit): number {
   const count = habit.today_count ?? 0;
   const target = habit.target_freq;
-  if (count >= target) return 4;
-  if (target > 0 && count < target * 0.5) return 2;
+  if (count >= target) {
+    return 4;
+  }
+  if (target > 0 && count < target * 0.5) {
+    return 2;
+  }
   return 3;
 }
 
@@ -53,29 +65,31 @@ function scoreEvent(event: CalendarEvent): number {
   const now = Date.now();
   const start = new Date(event.start_at).getTime();
   const diff = start - now;
-  if (diff < TWO_HOURS_MS && diff > -60 * 60 * 1000) return 1;
+  if (diff < TWO_HOURS_MS && diff > -60 * 60 * 1000) {
+    return 1;
+  }
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  if (start >= todayStart.getTime() && start < todayStart.getTime() + 24 * 60 * 60 * 1000)
+  if (start >= todayStart.getTime() && start < todayStart.getTime() + 24 * 60 * 60 * 1000) {
     return 2;
+  }
   return 3;
 }
 
-function buildUnifiedQueue(
-  tasks: Task[],
-  habits: Habit[],
-  events: CalendarEvent[],
-): QueueItem[] {
+function buildUnifiedQueue(tasks: Task[], habits: Habit[], events: CalendarEvent[]): QueueItem[] {
   const items: QueueItem[] = [];
   for (const task of tasks) {
-    if (!task.done) items.push({ kind: 'task', data: task, priority: scoreTask(task) });
+    if (!task.done) {
+      items.push({ kind: 'task', data: task, priority: scoreTask(task) });
+    }
   }
   for (const habit of habits) {
     items.push({ kind: 'habit', data: habit, priority: scoreHabit(habit) });
   }
   for (const event of events) {
-    if (!event.all_day)
+    if (!event.all_day) {
       items.push({ kind: 'event', data: event, priority: scoreEvent(event) });
+    }
   }
   return items.sort((a, b) => a.priority - b.priority);
 }
