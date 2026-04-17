@@ -61,7 +61,9 @@ class AuthRepository(BaseRepository):
             ).fetchall()
         return [dict(r) for r in rows]
 
-    def create_user(self, user_id: str, email: str, hashed_password: bytes, role: str, now: str) -> None:
+    def create_user(
+        self, user_id: str, email: str, hashed_password: bytes, role: str, now: str
+    ) -> None:
         with self.tx() as conn:
             conn.execute(
                 """
@@ -72,8 +74,14 @@ class AuthRepository(BaseRepository):
             )
 
     def create_user_with_oidc(
-        self, user_id: str, email: str, hashed_password: bytes, role: str,
-        issuer: str, subject: str, now: str,
+        self,
+        user_id: str,
+        email: str,
+        hashed_password: bytes,
+        role: str,
+        issuer: str,
+        subject: str,
+        now: str,
     ) -> None:
         with self.tx() as conn:
             conn.execute(
@@ -92,7 +100,9 @@ class AuthRepository(BaseRepository):
                 (email, now, user_id),
             )
 
-    def link_oidc_identity(self, user_id: str, issuer: str, subject: str, now: str) -> None:
+    def link_oidc_identity(
+        self, user_id: str, issuer: str, subject: str, now: str
+    ) -> None:
         with self.tx() as conn:
             conn.execute(
                 "UPDATE auth_users SET oidc_issuer = ?, oidc_subject = ?, updated_at = ? WHERE id = ?",
@@ -117,8 +127,15 @@ class AuthRepository(BaseRepository):
         return [dict(r) for r in rows]
 
     def create_client(
-        self, id: str, client_id: str, client_secret_hash: str, client_name: str,
-        redirect_uri: str, scope: str, pkce_required: bool, now: str,
+        self,
+        id: str,
+        client_id: str,
+        client_secret_hash: str,
+        client_name: str,
+        redirect_uri: str,
+        scope: str,
+        pkce_required: bool,
+        now: str,
     ) -> None:
         with self.tx() as conn:
             conn.execute(
@@ -142,8 +159,16 @@ class AuthRepository(BaseRepository):
     # ── auth_oidc_codes ──────────────────────────────────────────
 
     def insert_code(
-        self, code_hash: str, verifier_hash: str, client_id: str, redirect_uri: str,
-        scope: str, user_id: str, email: str, expires_at: str, state: str,
+        self,
+        code_hash: str,
+        verifier_hash: str,
+        client_id: str,
+        redirect_uri: str,
+        scope: str,
+        user_id: str,
+        email: str,
+        expires_at: str,
+        state: str,
     ) -> None:
         with self.tx() as conn:
             conn.execute(
@@ -152,7 +177,17 @@ class AuthRepository(BaseRepository):
                     (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, used_at, state)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
                 """,
-                (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, state),
+                (
+                    code_hash,
+                    verifier_hash,
+                    client_id,
+                    redirect_uri,
+                    scope,
+                    user_id,
+                    email,
+                    expires_at,
+                    state,
+                ),
             )
 
     def get_unused_code(self, code_hash: str) -> dict | None:
@@ -189,8 +224,13 @@ class AuthRepository(BaseRepository):
     # ── auth_refresh_tokens ──────────────────────────────────────
 
     def insert_token(
-        self, token_hash: str, user_id: str, email: str, scope: str,
-        expires_at: str, now: str,
+        self,
+        token_hash: str,
+        user_id: str,
+        email: str,
+        scope: str,
+        expires_at: str,
+        now: str,
     ) -> None:
         with self.tx() as conn:
             conn.execute(
@@ -211,7 +251,9 @@ class AuthRepository(BaseRepository):
             ).fetchone()
         return dict(row) if row else None
 
-    def consume_refresh_token(self, token_hash: str, now: str, replacement_hash: str) -> dict | None:
+    def consume_refresh_token(
+        self, token_hash: str, now: str, replacement_hash: str
+    ) -> dict | None:
         """Atomically look up an active refresh token, revoke it, and set replacement hash.
 
         Returns the token row or None if not found / already revoked.
@@ -229,7 +271,9 @@ class AuthRepository(BaseRepository):
             )
         return dict(row)
 
-    def revoke_and_rotate(self, token_hash: str, now: str, replacement_hash: str) -> None:
+    def revoke_and_rotate(
+        self, token_hash: str, now: str, replacement_hash: str
+    ) -> None:
         with self.tx() as conn:
             conn.execute(
                 "UPDATE auth_refresh_tokens SET revoked_at = ?, replaced_by_hash = ? WHERE token_hash = ?",
@@ -278,8 +322,15 @@ class AuthRepository(BaseRepository):
         return row["id"] if row else None
 
     def upsert_provider(
-        self, id: str, name: str, issuer_url: str, client_id: str,
-        client_secret: str, scopes: str, default_role: str, now: str,
+        self,
+        id: str,
+        name: str,
+        issuer_url: str,
+        client_id: str,
+        client_secret: str,
+        scopes: str,
+        default_role: str,
+        now: str,
     ) -> None:
         with self.tx() as conn:
             existing = conn.execute(
@@ -323,9 +374,17 @@ class AuthRepository(BaseRepository):
     # ── auth_oidc_states ─────────────────────────────────────────
 
     def insert_state(
-        self, state_hash: str, provider_name: str, code_verifier: str,
-        redirect_uri: str, scope: str, client_id: str, original_state: str,
-        code_challenge: str, now: str, expires_at: str,
+        self,
+        state_hash: str,
+        provider_name: str,
+        code_verifier: str,
+        redirect_uri: str,
+        scope: str,
+        client_id: str,
+        original_state: str,
+        code_challenge: str,
+        now: str,
+        expires_at: str,
     ) -> None:
         with self.tx() as conn:
             conn.execute(

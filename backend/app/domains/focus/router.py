@@ -182,5 +182,7 @@ async def focus_stats(repo: FocusRepository = Depends(_repo)) -> FocusStats:
     response_model=FocusRecommendation,
     dependencies=[Depends(require_scope("read:focus"))],
 )
-async def focus_recommendation(repo: FocusRepository = Depends(_repo)) -> FocusRecommendation:
+async def focus_recommendation(
+    repo: FocusRepository = Depends(_repo),
+) -> FocusRecommendation:
     return repo.session_recommendation()

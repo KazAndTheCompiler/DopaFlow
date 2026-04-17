@@ -53,7 +53,6 @@ def _best_habit_streak(rows: list[object]) -> int:
 
 
 class GamificationRepository(BaseRepository):
-
     def has_award_event_today(self, source: str, source_id: str | None) -> bool:
         if source_id is None:
             return False

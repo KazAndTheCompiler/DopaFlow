@@ -165,8 +165,15 @@ class AuthService:
             time.time() + AUTH_CODE_TTL, tz=UTC
         ).isoformat()
         self.repo.insert_code(
-            code_hash, verifier_hash, client_id, redirect_uri, scope,
-            user_id, email, expires_at, state,
+            code_hash,
+            verifier_hash,
+            client_id,
+            redirect_uri,
+            scope,
+            user_id,
+            email,
+            expires_at,
+            state,
         )
         return code
 
@@ -350,7 +357,9 @@ class AuthService:
         user_id = f"usr_{uuid4().hex[:16]}"
         now = _now_utc().isoformat()
         try:
-            self.repo.create_user(user_id, email.lower().strip(), hashed_password, role, now)
+            self.repo.create_user(
+                user_id, email.lower().strip(), hashed_password, role, now
+            )
         except Exception as exc:
             raise HTTPException(
                 status_code=409, detail="User with this email already exists"
@@ -371,8 +380,14 @@ class AuthService:
         now = _now_utc().isoformat()
         try:
             self.repo.create_client(
-                client_db_id, client_id, client_secret_hash, client_name,
-                redirect_uri, scope, pkce_required, now,
+                client_db_id,
+                client_id,
+                client_secret_hash,
+                client_name,
+                redirect_uri,
+                scope,
+                pkce_required,
+                now,
             )
         except Exception as exc:
             raise HTTPException(
@@ -450,7 +465,9 @@ class AuthService:
         # 2. Match by email — link existing user
         row = self.repo.get_by_email(email)
         if row:
-            self.repo.link_oidc_identity(row["id"], issuer, subject, _now_utc().isoformat())
+            self.repo.link_oidc_identity(
+                row["id"], issuer, subject, _now_utc().isoformat()
+            )
             return {"id": row["id"], "email": row["email"], "role": row["role"]}
 
         # 3. Auto-provision — random untypeable password
@@ -462,7 +479,13 @@ class AuthService:
         now = _now_utc().isoformat()
         try:
             self.repo.create_user_with_oidc(
-                user_id, email, hashed_password, default_role, issuer, subject, now,
+                user_id,
+                email,
+                hashed_password,
+                default_role,
+                issuer,
+                subject,
+                now,
             )
         except Exception:
             # Race condition: another request created the user first
@@ -489,7 +512,10 @@ class AuthService:
         # Merge env-var-configured provider if present
         if self.settings.oidc_issuer_url:
             env_name = self.settings.oidc_provider_name or "sso"
-            if not any(p["issuer_url"].rstrip("/") == self.settings.oidc_issuer_url.rstrip("/") for p in providers):
+            if not any(
+                p["issuer_url"].rstrip("/") == self.settings.oidc_issuer_url.rstrip("/")
+                for p in providers
+            ):
                 providers.append(
                     {
                         "name": env_name,
@@ -522,7 +548,10 @@ class AuthService:
             )
         except Exception as exc:
             import logging
-            logging.getLogger(__name__).warning("Failed to register env OIDC provider: %s", exc)
+
+            logging.getLogger(__name__).warning(
+                "Failed to register env OIDC provider: %s", exc
+            )
 
     def get_provider(self, name: str) -> dict[str, Any] | None:
         """Look up a specific OIDC provider by name (DB + env vars)."""

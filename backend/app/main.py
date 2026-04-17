@@ -100,6 +100,7 @@ def _stamp_alembic_if_needed(settings) -> None:
         )
         # Read the latest revision from alembic/versions/
         from pathlib import Path
+
         versions_dir = Path(__file__).resolve().parent.parent / "alembic" / "versions"
         latest_rev = None
         if versions_dir.exists():
@@ -121,6 +122,7 @@ def _stamp_alembic_if_needed(settings) -> None:
         conn.close()
     except Exception:
         logger.warning("Alembic stamp skipped (non-critical)", exc_info=True)
+
 
 _DOMAIN_ROUTERS = [
     (tasks_router, "/tasks"),

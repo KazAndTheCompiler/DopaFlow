@@ -127,7 +127,9 @@ class IntegrationsRepository(BaseRepository):
                 """,
                 (limit,),
             ).fetchall()
-            webhooks = conn.execute("SELECT * FROM webhooks WHERE enabled = 1").fetchall()
+            webhooks = conn.execute(
+                "SELECT * FROM webhooks WHERE enabled = 1"
+            ).fetchall()
         return [dict(e) for e in events], [dict(w) for w in webhooks]
 
     def mark_event_sent(self, event_id: str, attempts: int) -> None:

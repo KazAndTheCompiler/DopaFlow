@@ -105,7 +105,10 @@ class HealthService:
 
         readiness = repo.get_readiness()
         if readiness.get("error") is not None:
-            return {"status": "not_ready", "reason": f"database unavailable: {readiness['error']}"}
+            return {
+                "status": "not_ready",
+                "reason": f"database unavailable: {readiness['error']}",
+            }
 
         status = readiness.get("status", "not_ready")
 
@@ -148,4 +151,7 @@ class HealthService:
 
             return {"status": "ready", "reason": None}
 
-        return {"status": "not_ready", "reason": readiness.get("error", "unknown state")}
+        return {
+            "status": "not_ready",
+            "reason": readiness.get("error", "unknown state"),
+        }

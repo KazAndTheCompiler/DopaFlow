@@ -17,11 +17,14 @@ import sys
 
 
 def main() -> None:
-    db_path = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
-        "DOPAFLOW_DB_PATH", ""
+    db_path = (
+        sys.argv[1] if len(sys.argv) > 1 else os.environ.get("DOPAFLOW_DB_PATH", "")
     )
     if not db_path:
-        print("Error: provide db_path as argument or set DOPAFLOW_DB_PATH", file=sys.stderr)
+        print(
+            "Error: provide db_path as argument or set DOPAFLOW_DB_PATH",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # Verify _migrations table exists and has entries
@@ -44,7 +47,10 @@ def main() -> None:
     print(f"Found {count} applied migrations in _migrations table.")
 
     if count == 0:
-        print("Error: no migrations applied yet. Run run_migrations() first.", file=sys.stderr)
+        print(
+            "Error: no migrations applied yet. Run run_migrations() first.",
+            file=sys.stderr,
+        )
         conn.close()
         sys.exit(1)
 

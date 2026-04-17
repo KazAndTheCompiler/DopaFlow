@@ -148,7 +148,6 @@ def _row_to_food(row: object) -> FoodItemRead:
 
 
 class NutritionRepository(BaseRepository):
-
     def _ensure_presets(self) -> None:
         with self.tx() as conn:
             for preset in _PRESET_FOODS:

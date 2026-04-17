@@ -169,21 +169,26 @@ class OpsService:
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as arc:
             arc.writestr(
-                "tasks.json", json.dumps(data["tasks"], indent=2, sort_keys=True, default=str)
+                "tasks.json",
+                json.dumps(data["tasks"], indent=2, sort_keys=True, default=str),
             )
             arc.writestr(
-                "habits.json", json.dumps(data["habits"], indent=2, sort_keys=True, default=str)
+                "habits.json",
+                json.dumps(data["habits"], indent=2, sort_keys=True, default=str),
             )
             arc.writestr(
                 "journal.json",
                 json.dumps(data["journal"], indent=2, sort_keys=True, default=str),
             )
             arc.writestr(
-                "alarms.json", json.dumps(data["alarms"], indent=2, sort_keys=True, default=str)
+                "alarms.json",
+                json.dumps(data["alarms"], indent=2, sort_keys=True, default=str),
             )
             arc.writestr(
                 "nutrition.json",
-                json.dumps(data["nutrition_log"], indent=2, sort_keys=True, default=str),
+                json.dumps(
+                    data["nutrition_log"], indent=2, sort_keys=True, default=str
+                ),
             )
             arc.writestr("export_date.txt", datetime.now(UTC).isoformat())
         return buffer.getvalue()

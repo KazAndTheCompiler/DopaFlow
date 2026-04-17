@@ -33,6 +33,7 @@ def _generate_rsa_key():
 
 def _get_rsa_n(private_key):
     import base64
+
     numbers = private_key.private_numbers().public_numbers
     n_bytes = numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, byteorder="big")
     return base64.urlsafe_b64encode(n_bytes).rstrip(b"=").decode("ascii")
@@ -40,6 +41,7 @@ def _get_rsa_n(private_key):
 
 def _get_rsa_e(private_key):
     import base64
+
     numbers = private_key.private_numbers().public_numbers
     e_bytes = numbers.e.to_bytes((numbers.e.bit_length() + 7) // 8, byteorder="big")
     return base64.urlsafe_b64encode(e_bytes).rstrip(b"=").decode("ascii")
@@ -68,15 +70,32 @@ def _seed_provider(settings):
             """INSERT INTO auth_oidc_providers
                (id, name, issuer_url, client_id, client_secret, scopes, enabled, default_role, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)""",
-            ("op_e2e", "keycloak", "https://kc.example.com/realms/test",
-             "dopaflow-test", "secret123", "openid profile email", "viewer", now, now),
+            (
+                "op_e2e",
+                "keycloak",
+                "https://kc.example.com/realms/test",
+                "dopaflow-test",
+                "secret123",
+                "openid profile email",
+                "viewer",
+                now,
+                now,
+            ),
         )
         # Register a client for auth code exchange
         conn.execute(
             """INSERT INTO auth_clients
                (id, client_id, client_name, redirect_uri, scope, pkce_required, active, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, 1, 1, ?, ?)""",
-            ("cl_dopaflow", "dopaflow", "DopaFlow Test Client", "http://localhost:3000/callback", "openid profile email", now, now),
+            (
+                "cl_dopaflow",
+                "dopaflow",
+                "DopaFlow Test Client",
+                "http://localhost:3000/callback",
+                "openid profile email",
+                now,
+                now,
+            ),
         )
 
 
@@ -124,7 +143,9 @@ class TestListProviders:
 class TestOidcLogin:
     @pytest.mark.asyncio
     async def test_login_redirects_to_idp(self, client):
-        with patch("app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock) as mock_disc:
+        with patch(
+            "app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock
+        ) as mock_disc:
             mock_disc.return_value = DISCOVERY_DOC
             resp = await client.get(
                 "/api/v2/auth/oidc/login/keycloak",
@@ -178,18 +199,22 @@ class TestOidcCallback:
         """Full E2E: login creates state → callback consumes it, exchanges code, issues auth code."""
         private_key, _ = _generate_rsa_key()
         jwks = {
-            "keys": [{
-                "kty": "RSA",
-                "kid": "test-key-1",
-                "n": _get_rsa_n(private_key),
-                "e": _get_rsa_e(private_key),
-                "alg": "RS256",
-                "use": "sig",
-            }]
+            "keys": [
+                {
+                    "kty": "RSA",
+                    "kid": "test-key-1",
+                    "n": _get_rsa_n(private_key),
+                    "e": _get_rsa_e(private_key),
+                    "alg": "RS256",
+                    "use": "sig",
+                }
+            ]
         }
 
         # Step 1: Initiate login to get the state stored
-        with patch("app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock) as mock_disc:
+        with patch(
+            "app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock
+        ) as mock_disc:
             mock_disc.return_value = DISCOVERY_DOC
             login_resp = await client.get(
                 "/api/v2/auth/oidc/login/keycloak",
@@ -207,6 +232,7 @@ class TestOidcCallback:
         location = login_resp.headers["location"]
         # Extract state from the redirect URL
         from urllib.parse import parse_qs, urlparse
+
         parsed = urlparse(location)
         external_state = parse_qs(parsed.query)["state"][0]
 
@@ -220,20 +246,36 @@ class TestOidcCallback:
             "exp": now + 300,
             "iat": now,
         }
-        id_token = pyjwt.encode(payload, private_key, algorithm="RS256", headers={"kid": "test-key-1"})
+        id_token = pyjwt.encode(
+            payload, private_key, algorithm="RS256", headers={"kid": "test-key-1"}
+        )
 
         # Step 3: Mock the token exchange and JWKS fetch
-        mock_token_resp = type("Resp", (), {
-            "status_code": 200,
-            "json": lambda self: {"access_token": "at", "id_token": id_token, "token_type": "Bearer"},
-        })()
+        mock_token_resp = type(
+            "Resp",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {
+                    "access_token": "at",
+                    "id_token": id_token,
+                    "token_type": "Bearer",
+                },
+            },
+        )()
 
         async def mock_post(self, url, **kwargs):
             return mock_token_resp
 
-        with patch("app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock) as mock_disc, \
-             patch("app.domains.auth.oidc_router.fetch_jwks", new_callable=AsyncMock) as mock_jwks, \
-             patch("httpx.AsyncClient.post", mock_post):
+        with (
+            patch(
+                "app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock
+            ) as mock_disc,
+            patch(
+                "app.domains.auth.oidc_router.fetch_jwks", new_callable=AsyncMock
+            ) as mock_jwks,
+            patch("httpx.AsyncClient.post", mock_post),
+        ):
             mock_disc.return_value = DISCOVERY_DOC
             mock_jwks.return_value = jwks
 
@@ -261,18 +303,22 @@ class TestOidcCallback:
         """State is one-time-use: second callback with same state should fail."""
         private_key, _ = _generate_rsa_key()
         jwks = {
-            "keys": [{
-                "kty": "RSA",
-                "kid": "test-key-1",
-                "n": _get_rsa_n(private_key),
-                "e": _get_rsa_e(private_key),
-                "alg": "RS256",
-                "use": "sig",
-            }]
+            "keys": [
+                {
+                    "kty": "RSA",
+                    "kid": "test-key-1",
+                    "n": _get_rsa_n(private_key),
+                    "e": _get_rsa_e(private_key),
+                    "alg": "RS256",
+                    "use": "sig",
+                }
+            ]
         }
 
         # Initiate login
-        with patch("app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock) as mock_disc:
+        with patch(
+            "app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock
+        ) as mock_disc:
             mock_disc.return_value = DISCOVERY_DOC
             login_resp = await client.get(
                 "/api/v2/auth/oidc/login/keycloak",
@@ -287,7 +333,10 @@ class TestOidcCallback:
                 follow_redirects=False,
             )
         from urllib.parse import parse_qs, urlparse
-        external_state = parse_qs(urlparse(login_resp.headers["location"]).query)["state"][0]
+
+        external_state = parse_qs(urlparse(login_resp.headers["location"]).query)[
+            "state"
+        ][0]
 
         now = int(time.time())
         payload = {
@@ -298,20 +347,36 @@ class TestOidcCallback:
             "exp": now + 300,
             "iat": now,
         }
-        id_token = pyjwt.encode(payload, private_key, algorithm="RS256", headers={"kid": "test-key-1"})
+        id_token = pyjwt.encode(
+            payload, private_key, algorithm="RS256", headers={"kid": "test-key-1"}
+        )
 
-        mock_token_resp = type("Resp", (), {
-            "status_code": 200,
-            "json": lambda self: {"access_token": "at", "id_token": id_token, "token_type": "Bearer"},
-        })()
+        mock_token_resp = type(
+            "Resp",
+            (),
+            {
+                "status_code": 200,
+                "json": lambda self: {
+                    "access_token": "at",
+                    "id_token": id_token,
+                    "token_type": "Bearer",
+                },
+            },
+        )()
 
         async def mock_post(self, url, **kwargs):
             return mock_token_resp
 
         # First callback succeeds
-        with patch("app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock) as mock_disc, \
-             patch("app.domains.auth.oidc_router.fetch_jwks", new_callable=AsyncMock) as mock_jwks, \
-             patch("httpx.AsyncClient.post", mock_post):
+        with (
+            patch(
+                "app.domains.auth.oidc_router.fetch_discovery", new_callable=AsyncMock
+            ) as mock_disc,
+            patch(
+                "app.domains.auth.oidc_router.fetch_jwks", new_callable=AsyncMock
+            ) as mock_jwks,
+            patch("httpx.AsyncClient.post", mock_post),
+        ):
             mock_disc.return_value = DISCOVERY_DOC
             mock_jwks.return_value = jwks
             resp1 = await client.get(

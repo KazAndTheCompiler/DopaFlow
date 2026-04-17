@@ -87,7 +87,9 @@ def test_drift_blocks_startup(tmp_path: Path) -> bool:
     """Drift detection should raise and block startup."""
     db_path = tmp_path / "drift.db"
     db_path_str = str(db_path)
-    migration_file = Path(__file__).resolve().parent.parent / "migrations" / "001_init.sql"
+    migration_file = (
+        Path(__file__).resolve().parent.parent / "migrations" / "001_init.sql"
+    )
 
     if not migration_file.exists():
         print("  Drift test: no migration file found, skipping")

@@ -60,7 +60,9 @@ class GoalRepository(BaseRepository):
         goal_id = str(uuid4())
         now = _now()
         milestone_labels = [
-            label.strip() for label in payload.get("milestone_labels", []) if label.strip()
+            label.strip()
+            for label in payload.get("milestone_labels", [])
+            if label.strip()
         ]
         with self.tx() as conn:
             conn.execute(
@@ -114,7 +116,13 @@ class GoalRepository(BaseRepository):
                 INSERT INTO goal_milestones(id, goal_id, label, done, position, created_at)
                 VALUES (?, ?, ?, 0, ?, ?)
                 """,
-                (str(uuid4()), goal_id, label.strip(), position_row["next_position"], now),
+                (
+                    str(uuid4()),
+                    goal_id,
+                    label.strip(),
+                    position_row["next_position"],
+                    now,
+                ),
             )
             conn.execute(
                 "UPDATE goals SET done = 0, updated_at = ? WHERE id = ?", (now, goal_id)

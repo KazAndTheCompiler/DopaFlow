@@ -648,9 +648,7 @@ class VaultSyncService:
         for c in request.candidates:
             try:
                 source_external_id = f"{c.file_path}:{c.line_number or c.line_text}"
-                existing_task = tasks_repo.get_task_by_source_id(
-                    source_external_id
-                )
+                existing_task = tasks_repo.get_task_by_source_id(source_external_id)
                 if existing_task is not None:
                     continue
 

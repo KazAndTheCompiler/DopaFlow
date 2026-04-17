@@ -305,7 +305,9 @@ class TaskRepository(BaseRepository):
         if due_today:
             sql += " AND DATE(due_at) = DATE('now')"
         if search:
-            sql += " AND (LOWER(title) LIKE ? OR LOWER(COALESCE(description, '')) LIKE ?)"
+            sql += (
+                " AND (LOWER(title) LIKE ? OR LOWER(COALESCE(description, '')) LIKE ?)"
+            )
             needle = f"%{search.lower()}%"
             params.extend([needle, needle])
         if project_id is not None:
@@ -344,9 +346,7 @@ class TaskRepository(BaseRepository):
                 tasks.append(task)
             return tasks
 
-    def update_task(
-        self, task_identifier: str, payload: dict[str, Any]
-    ) -> Task | None:
+    def update_task(self, task_identifier: str, payload: dict[str, Any]) -> Task | None:
         """Patch task columns using the keys provided."""
 
         current = self.get_task(task_identifier)
@@ -633,7 +633,9 @@ class TaskRepository(BaseRepository):
         """Return task templates."""
 
         with self.get_db_readonly() as conn:
-            rows = conn.execute("SELECT * FROM task_templates ORDER BY name ASC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM task_templates ORDER BY name ASC"
+            ).fetchall()
             return [
                 TaskTemplate(
                     id=row["id"],
@@ -681,7 +683,9 @@ class TaskRepository(BaseRepository):
         """Delete a task template."""
 
         with self.tx() as conn:
-            result = conn.execute("DELETE FROM task_templates WHERE id = ?", (template_id,))
+            result = conn.execute(
+                "DELETE FROM task_templates WHERE id = ?", (template_id,)
+            )
             return result.rowcount > 0
 
     def create_from_template(self, template_id: str) -> Task | None:

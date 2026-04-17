@@ -37,14 +37,24 @@ def _seed_provider(svc, settings):
     from datetime import UTC, datetime
 
     from app.core.database import tx
+
     now = datetime.now(UTC).isoformat()
     with tx(settings) as conn:
         conn.execute(
             """INSERT INTO auth_oidc_providers
                (id, name, issuer_url, client_id, client_secret, scopes, enabled, default_role, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)""",
-            ("op_test1", "keycloak", "https://kc.example.com/realms/test",
-             "dopaflow-test", "secret123", "openid profile email", "editor", now, now),
+            (
+                "op_test1",
+                "keycloak",
+                "https://kc.example.com/realms/test",
+                "dopaflow-test",
+                "secret123",
+                "openid profile email",
+                "editor",
+                now,
+                now,
+            ),
         )
 
 
@@ -151,14 +161,24 @@ class TestGetEnabledProviders:
         from datetime import UTC, datetime
 
         from app.core.database import tx
+
         now = datetime.now(UTC).isoformat()
         with tx(settings) as conn:
             conn.execute(
                 """INSERT INTO auth_oidc_providers
                    (id, name, issuer_url, client_id, client_secret, scopes, enabled, default_role, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)""",
-                ("op_disabled", "disabled-idp", "https://disabled.example.com",
-                 "client", "secret", "openid", "viewer", now, now),
+                (
+                    "op_disabled",
+                    "disabled-idp",
+                    "https://disabled.example.com",
+                    "client",
+                    "secret",
+                    "openid",
+                    "viewer",
+                    now,
+                    now,
+                ),
             )
         providers = svc.get_enabled_providers()
         assert not any(p["name"] == "disabled-idp" for p in providers)

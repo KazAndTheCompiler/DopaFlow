@@ -27,7 +27,9 @@ from app.middleware.auth_scopes import require_scope
 router = APIRouter(tags=["notifications"])
 
 
-def _repo(settings: Settings = Depends(get_settings_dependency)) -> NotificationRepository:
+def _repo(
+    settings: Settings = Depends(get_settings_dependency),
+) -> NotificationRepository:
     return NotificationRepository(settings)
 
 

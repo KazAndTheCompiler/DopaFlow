@@ -32,7 +32,8 @@ class NotificationRepository(BaseRepository):
 
         with self.tx() as conn:
             result = conn.execute(
-                "UPDATE notifications SET read = 1 WHERE id = ?", (notification_identifier,)
+                "UPDATE notifications SET read = 1 WHERE id = ?",
+                (notification_identifier,),
             )
             return result.rowcount > 0
 
