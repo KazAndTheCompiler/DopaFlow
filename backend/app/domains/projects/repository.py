@@ -111,6 +111,7 @@ class ProjectRepository(BaseRepository):
 # Module-level wrappers for backward compatibility with external callers.
 # ---------------------------------------------------------------------------
 
+
 def list_projects(db_path: str, include_archived: bool = False) -> list[dict[str, Any]]:
     return ProjectRepository(db_path).list_projects(include_archived=include_archived)
 
@@ -119,7 +120,9 @@ def create_project(db_path: str, payload: dict[str, Any]) -> dict[str, Any]:
     return ProjectRepository(db_path).create_project(payload)
 
 
-def update_project(db_path: str, project_identifier: str, patch: dict[str, Any]) -> dict[str, Any] | None:
+def update_project(
+    db_path: str, project_identifier: str, patch: dict[str, Any]
+) -> dict[str, Any] | None:
     return ProjectRepository(db_path).update_project(project_identifier, patch)
 
 

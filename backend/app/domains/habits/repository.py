@@ -223,6 +223,7 @@ class HabitRepository(BaseRepository):
 # Module-level wrappers for backward compatibility with external callers.
 # ---------------------------------------------------------------------------
 
+
 def list_habits(db_path: str) -> list[dict[str, Any]]:
     return HabitRepository(db_path).list_habits()
 
@@ -231,11 +232,15 @@ def get_habit(db_path: str, habit_identifier: str) -> dict[str, Any] | None:
     return HabitRepository(db_path).get_habit(habit_identifier)
 
 
-def add_habit(db_path: str, name: str, target_freq: int, target_period: str, color: str) -> dict[str, Any]:
+def add_habit(
+    db_path: str, name: str, target_freq: int, target_period: str, color: str
+) -> dict[str, Any]:
     return HabitRepository(db_path).add_habit(name, target_freq, target_period, color)
 
 
-def update_habit(db_path: str, habit_identifier: str, payload: dict[str, Any]) -> dict[str, Any] | None:
+def update_habit(
+    db_path: str, habit_identifier: str, payload: dict[str, Any]
+) -> dict[str, Any] | None:
     return HabitRepository(db_path).update_habit(habit_identifier, payload)
 
 
@@ -243,7 +248,9 @@ def delete_habit(db_path: str, habit_identifier: str) -> bool:
     return HabitRepository(db_path).delete_habit(habit_identifier)
 
 
-def log_checkin(db_path: str, habit_identifier: str, checkin_date: str | None = None) -> dict[str, Any]:
+def log_checkin(
+    db_path: str, habit_identifier: str, checkin_date: str | None = None
+) -> dict[str, Any]:
     return HabitRepository(db_path).log_checkin(habit_identifier, checkin_date)
 
 

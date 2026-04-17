@@ -104,7 +104,9 @@ async def add_habit(
     response_model=HabitTodaySummary,
     dependencies=[Depends(require_scope("read:habits"))],
 )
-async def get_today_summary(repo: HabitRepository = Depends(_repo)) -> HabitTodaySummary:
+async def get_today_summary(
+    repo: HabitRepository = Depends(_repo),
+) -> HabitTodaySummary:
     return service.today_summary(repo)
 
 
@@ -132,9 +134,7 @@ async def habit_insights(repo: HabitRepository = Depends(_repo)) -> HabitInsight
     for days in (7, 14, 30):
         cutoff = (date.today() - timedelta(days=days - 1)).isoformat()
         logs = [
-            log
-            for log in repo.get_logs(limit=5000)
-            if log["checkin_date"] >= cutoff
+            log for log in repo.get_logs(limit=5000) if log["checkin_date"] >= cutoff
         ]
         windows[f"{days}d"] = len(logs)
     return HabitInsights(windows=windows, habit_count=len(habits))
@@ -145,7 +145,9 @@ async def habit_insights(repo: HabitRepository = Depends(_repo)) -> HabitInsight
     response_model=list[HabitGoalSummary],
     dependencies=[Depends(require_scope("read:habits"))],
 )
-async def goals_summary(repo: HabitRepository = Depends(_repo)) -> list[HabitGoalSummary]:
+async def goals_summary(
+    repo: HabitRepository = Depends(_repo),
+) -> list[HabitGoalSummary]:
     return [HabitGoalSummary(**goal) for goal in repo.goals_summary()]
 
 
@@ -175,9 +177,7 @@ async def checkin(
 async def delete_checkin(
     identifier: str, checkin_date: str, repo: HabitRepository = Depends(_repo)
 ) -> DeleteResponse:
-    result = DeleteResponse(
-        deleted=repo.delete_checkin(identifier, checkin_date)
-    )
+    result = DeleteResponse(deleted=repo.delete_checkin(identifier, checkin_date))
     if result.deleted:
         await publish_invalidation("habits")
     return result
@@ -191,16 +191,15 @@ async def delete_checkin(
 async def habit_logs(
     identifier: str, repo: HabitRepository = Depends(_repo)
 ) -> list[HabitCheckinLog]:
-    return [
-        HabitCheckinLog(**log)
-        for log in repo.get_logs_for_habit(identifier)
-    ]
+    return [HabitCheckinLog(**log) for log in repo.get_logs_for_habit(identifier)]
 
 
 @router.get(
     "/{identifier}/export/csv", dependencies=[Depends(require_scope("read:habits"))]
 )
-async def export_csv(identifier: str, repo: HabitRepository = Depends(_repo)) -> Response:
+async def export_csv(
+    identifier: str, repo: HabitRepository = Depends(_repo)
+) -> Response:
     logs = repo.get_logs_for_habit(identifier)
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=["habit_id", "checkin_date"])
@@ -220,9 +219,7 @@ async def export_csv(identifier: str, repo: HabitRepository = Depends(_repo)) ->
 async def update_habit(
     identifier: str, payload: HabitPatch, repo: HabitRepository = Depends(_repo)
 ) -> HabitRead:
-    habit = repo.update_habit(
-        identifier, payload.model_dump(exclude_unset=True)
-    )
+    habit = repo.update_habit(identifier, payload.model_dump(exclude_unset=True))
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
     await publish_invalidation("habits")
@@ -252,9 +249,7 @@ async def delete_habit(
 async def freeze(
     identifier: str, payload: HabitPatch, repo: HabitRepository = Depends(_repo)
 ) -> HabitRead:
-    habit = repo.update_habit(
-        identifier, {"freeze_until": payload.freeze_until}
-    )
+    habit = repo.update_habit(identifier, {"freeze_until": payload.freeze_until})
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
     await publish_invalidation("habits")
@@ -266,7 +261,9 @@ async def freeze(
     response_model=HabitRead,
     dependencies=[Depends(require_scope("write:habits"))],
 )
-async def unfreeze(identifier: str, repo: HabitRepository = Depends(_repo)) -> HabitRead:
+async def unfreeze(
+    identifier: str, repo: HabitRepository = Depends(_repo)
+) -> HabitRead:
     habit = repo.update_habit(identifier, {"freeze_until": None})
     if habit is None:
         raise HTTPException(status_code=404, detail="Habit not found")
@@ -279,7 +276,9 @@ async def unfreeze(identifier: str, repo: HabitRepository = Depends(_repo)) -> H
     response_model=list[HabitCorrelation],
     dependencies=[Depends(require_scope("read:habits"))],
 )
-async def correlations(repo: HabitRepository = Depends(_repo)) -> list[HabitCorrelation]:
+async def correlations(
+    repo: HabitRepository = Depends(_repo),
+) -> list[HabitCorrelation]:
     habits = repo.list_habits()
     logs = repo.get_logs(limit=500)
     names = {habit["id"]: habit["name"] for habit in habits}

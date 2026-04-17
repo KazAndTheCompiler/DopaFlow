@@ -93,6 +93,7 @@ class TestConsumeOidcState:
         # Expire the state by mocking time
         with patch("app.domains.auth.oidc_external.datetime") as mock_dt:
             from datetime import UTC, datetime
+
             future = datetime.fromtimestamp(time.time() + OIDC_STATE_TTL + 100, tz=UTC)
             # Make the consume check think we're far in the future
             mock_dt.now.return_value = future

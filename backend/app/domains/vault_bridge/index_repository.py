@@ -7,7 +7,6 @@ from app.domains.vault_bridge.schemas import VaultConfig, VaultFileRecord
 
 
 class VaultIndexRepository(BaseRepository):
-
     # ── config ────────────────────────────────────────────────────────────────
 
     def get_config(self) -> VaultConfig:

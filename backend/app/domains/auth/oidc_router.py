@@ -58,11 +58,15 @@ async def oidc_login(
 ):
     """Initiate an external OIDC login flow."""
     if code_challenge_method != "S256":
-        raise HTTPException(status_code=400, detail="code_challenge_method must be S256")
+        raise HTTPException(
+            status_code=400, detail="code_challenge_method must be S256"
+        )
 
     provider = svc.get_provider(provider_name)
     if not provider:
-        raise HTTPException(status_code=404, detail=f"OIDC provider '{provider_name}' not found")
+        raise HTTPException(
+            status_code=404, detail=f"OIDC provider '{provider_name}' not found"
+        )
 
     # Fetch discovery from the external IdP
     try:
@@ -76,10 +80,14 @@ async def oidc_login(
 
     auth_endpoint = discovery.get("authorization_endpoint")
     if not auth_endpoint:
-        raise HTTPException(status_code=502, detail="Provider discovery missing authorization_endpoint")
+        raise HTTPException(
+            status_code=502, detail="Provider discovery missing authorization_endpoint"
+        )
 
     # Build our callback URL
-    callback_url = f"{settings.base_url.rstrip('/')}/api/v2/auth/oidc/callback/{provider_name}"
+    callback_url = (
+        f"{settings.base_url.rstrip('/')}/api/v2/auth/oidc/callback/{provider_name}"
+    )
 
     # Create state and PKCE for the external IdP exchange
     external_state, external_code_verifier = create_oidc_state(
@@ -121,26 +129,36 @@ async def oidc_callback(
     # 1. Consume the state (one-time use)
     stored = consume_oidc_state(state, settings.db_path)
     if not stored:
-        raise HTTPException(status_code=400, detail="Invalid or expired state parameter")
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired state parameter"
+        )
 
     provider = svc.get_provider(provider_name)
     if not provider:
-        raise HTTPException(status_code=404, detail=f"OIDC provider '{provider_name}' not found")
+        raise HTTPException(
+            status_code=404, detail=f"OIDC provider '{provider_name}' not found"
+        )
 
     # 2. Fetch discovery and JWKS
     try:
         discovery = await fetch_discovery(provider["issuer_url"])
     except Exception as exc:
         logger.error("Failed to fetch OIDC discovery in callback: %s", exc)
-        raise HTTPException(status_code=502, detail="Could not reach OIDC provider") from exc
+        raise HTTPException(
+            status_code=502, detail="Could not reach OIDC provider"
+        ) from exc
 
     jwks_uri = discovery.get("jwks_uri")
     token_endpoint = discovery.get("token_endpoint")
     if not token_endpoint:
-        raise HTTPException(status_code=502, detail="Provider discovery missing token_endpoint")
+        raise HTTPException(
+            status_code=502, detail="Provider discovery missing token_endpoint"
+        )
 
     # 3. Exchange code with external IdP
-    callback_url = f"{settings.base_url.rstrip('/')}/api/v2/auth/oidc/callback/{provider_name}"
+    callback_url = (
+        f"{settings.base_url.rstrip('/')}/api/v2/auth/oidc/callback/{provider_name}"
+    )
     async with httpx.AsyncClient(timeout=10.0) as client:
         token_resp = await client.post(
             token_endpoint,
@@ -155,8 +173,14 @@ async def oidc_callback(
             headers={"Accept": "application/json"},
         )
     if token_resp.status_code != 200:
-        logger.error("Token exchange failed: %s %s", token_resp.status_code, token_resp.text[:200])
-        raise HTTPException(status_code=502, detail="Token exchange with OIDC provider failed")
+        logger.error(
+            "Token exchange failed: %s %s",
+            token_resp.status_code,
+            token_resp.text[:200],
+        )
+        raise HTTPException(
+            status_code=502, detail="Token exchange with OIDC provider failed"
+        )
 
     tokens = token_resp.json()
     id_token_str = tokens.get("id_token")

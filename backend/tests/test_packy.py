@@ -405,4 +405,7 @@ class TestPackyVoiceCommandMode:
         # Should indicate error state
         assert res.status == "error"
         assert res.mode == "clarification"
-        assert "database" in res.reply_text.lower() or "something went wrong" in res.reply_text.lower()
+        assert (
+            "database" in res.reply_text.lower()
+            or "something went wrong" in res.reply_text.lower()
+        )

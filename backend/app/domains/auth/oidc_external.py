@@ -42,8 +42,16 @@ def create_oidc_state(
     ).isoformat()
     repo = AuthRepository(settings)
     repo.insert_state(
-        state_hash, provider_name, code_verifier, redirect_uri,
-        scope, client_id, original_state, code_challenge, now, expires_at,
+        state_hash,
+        provider_name,
+        code_verifier,
+        redirect_uri,
+        scope,
+        client_id,
+        original_state,
+        code_challenge,
+        now,
+        expires_at,
     )
     return state, code_verifier
 

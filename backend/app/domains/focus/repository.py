@@ -46,7 +46,9 @@ class FocusRepository(BaseRepository):
         """Read the active session singleton."""
 
         with self.get_db_readonly() as conn:
-            row = conn.execute("SELECT * FROM focus_active_session WHERE id = 1").fetchone()
+            row = conn.execute(
+                "SELECT * FROM focus_active_session WHERE id = 1"
+            ).fetchone()
             return dict(row) if row else None
 
     def write_active_session(self, **kwargs) -> None:
@@ -92,7 +94,8 @@ class FocusRepository(BaseRepository):
 
         with self.tx() as conn:
             conn.execute(
-                "UPDATE focus_sessions SET status = ? WHERE id = ?", (status, session_id)
+                "UPDATE focus_sessions SET status = ? WHERE id = ?",
+                (status, session_id),
             )
 
     def add_pause_duration(self, session_id: str, pause_ms: int) -> None:
@@ -161,9 +164,12 @@ class FocusRepository(BaseRepository):
 
         sessions = self.list_sessions(limit=100)
         if not sessions:
-            return FocusRecommendation(peak_window="09:00-11:00", recommended_duration=25)
+            return FocusRecommendation(
+                peak_window="09:00-11:00", recommended_duration=25
+            )
         avg_minutes = round(
-            sum(int(session.duration_minutes or 25) for session in sessions) / len(sessions)
+            sum(int(session.duration_minutes or 25) for session in sessions)
+            / len(sessions)
         )
         return FocusRecommendation(
             peak_window="10:00-12:00", recommended_duration=avg_minutes
