@@ -106,7 +106,7 @@ export const alarmRecordsSchema = alarmRecordSchema.array();
 export const focusSessionSchema = z.object({
   id: z.string(),
   task_id: z.string().nullable().optional(),
-  started_at: z.string(),
+  started_at: z.string().nullable().optional(),
   ended_at: z.string().nullable().optional(),
   duration_minutes: z.number(),
   status: z.string(),

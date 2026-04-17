@@ -9,7 +9,7 @@ class FocusSessionCreate(BaseModel):
     """Payload for starting a Pomodoro or deep-focus session."""
 
     task_id: str | None = None
-    started_at: str
+    started_at: str | None = None
     duration_minutes: int = 25
 
 

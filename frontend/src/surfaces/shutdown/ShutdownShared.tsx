@@ -24,8 +24,8 @@ export const secondaryBtn: CSSProperties = {
   fontWeight: 600,
 };
 
-export const STEP_TITLES = ['Wins', 'Defer', 'Tomorrow'];
-export const TOTAL_STEPS = 3;
+export const STEP_TITLES = ['Wins', 'Habits', 'Defer', 'Tomorrow'];
+export const TOTAL_STEPS = 4;
 
 export const EMOJI_CHOICES = [
   { emoji: '😤', label: 'Rough' },

@@ -55,6 +55,7 @@ export default function CalendarEventModal({
   const [recurrence, setRecurrence] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(null);
 
   useEffect(() => {
     if (!event) {
@@ -70,6 +71,7 @@ export default function CalendarEventModal({
     setRecurrence(event.recurrence ?? '');
     setConfirmDelete(false);
     setSaving(false);
+    setReminderMinutes(event.reminder_minutes ?? null);
   }, [event]);
 
   if (!event) {
@@ -94,6 +96,7 @@ export default function CalendarEventModal({
         all_day: allDay,
         start_at: start.toISOString(),
         end_at: end.toISOString(),
+        reminder_minutes: reminderMinutes,
       });
       onClose();
     } finally {
@@ -379,6 +382,72 @@ export default function CalendarEventModal({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.65rem',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            <label
+              style={{
+                display: 'flex',
+                gap: '0.4rem',
+                alignItems: 'center',
+                cursor: readOnly ? 'default' : 'pointer',
+                fontSize: 'var(--text-sm)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={reminderMinutes !== null}
+                onChange={(e) =>
+                  setReminderMinutes(e.target.checked ? 15 : null)
+                }
+                disabled={readOnly}
+                style={{ accentColor: 'var(--accent)', cursor: readOnly ? 'default' : 'pointer' }}
+              />
+              TTS reminder
+            </label>
+            {reminderMinutes !== null && (
+              <select
+                value={reminderMinutes}
+                onChange={(e) => setReminderMinutes(Number(e.target.value))}
+                style={{
+                  padding: '0.3rem 0.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--surface-2, var(--surface))',
+                  color: 'var(--text)',
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: 'inherit',
+                }}
+                disabled={readOnly}
+              >
+                <option value={5}>5 min before</option>
+                <option value={15}>15 min before</option>
+                <option value={30}>30 min before</option>
+                <option value={60}>1 hour before</option>
+              </select>
+            )}
+            {event.alarm_id && (
+              <span
+                style={{
+                  padding: '0.18rem 0.5rem',
+                  borderRadius: '999px',
+                  background: 'color-mix(in srgb, var(--accent) 12%, transparent)',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--accent)',
+                  fontWeight: 600,
+                }}
+              >
+                Alarm linked
+              </span>
+            )}
           </div>
         </div>
 

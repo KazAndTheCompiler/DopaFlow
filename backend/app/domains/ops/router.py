@@ -54,6 +54,8 @@ async def require_ops_secret(
     settings: Settings = Depends(get_settings_dependency),
     x_ops_secret: str | None = Header(default=None),
 ) -> None:
+    if settings.dev_auth:
+        return
     if not settings.ops_secret:
         raise HTTPException(status_code=503, detail="Ops secret is not configured")
     if not x_ops_secret or not compare_digest(x_ops_secret, settings.ops_secret):

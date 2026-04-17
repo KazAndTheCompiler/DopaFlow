@@ -285,6 +285,7 @@ def execute_single(
             from app.domains.focus import service as focus_svc
 
             result = focus_svc.start(
+                db_path,
                 int(extracted.get("duration_minutes") or 25),
                 str(extracted.get("task_id")) if extracted.get("task_id") else None,
             )

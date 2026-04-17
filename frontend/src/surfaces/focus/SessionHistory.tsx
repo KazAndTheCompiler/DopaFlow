@@ -27,7 +27,7 @@ function isToday(isoString: string): boolean {
 }
 
 export function SessionHistory({ sessions }: { sessions: FocusSession[] }): JSX.Element {
-  const todayCompleted = sessions.filter((s) => s.status === 'completed' && isToday(s.started_at));
+  const todayCompleted = sessions.filter((s) => s.status === 'completed' && s.started_at && isToday(s.started_at));
   const totalMinutesToday = todayCompleted.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   // Show up to 20 recent sessions, excluding the actively running one from history
@@ -116,8 +116,8 @@ export function SessionHistory({ sessions }: { sessions: FocusSession[] }): JSX.
       ) : (
         <div style={{ display: 'grid', gap: '0.4rem' }}>
           {recent.map((session) => {
-            const startDate = new Date(session.started_at);
-            const sameDay = isToday(session.started_at);
+            const startDate = new Date(session.started_at ?? '');
+            const sameDay = session.started_at ? isToday(session.started_at) : false;
             const dateLabel = sameDay
               ? startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               : `${startDate.toLocaleDateString([], {

@@ -36,20 +36,14 @@ def breaking_changes(baseline: dict, current: dict) -> list[str]:
                 if method.lower() not in curr_routes[path]:
                     changes.append(f"REMOVED method: {method.upper()} {path}")
 
-    new_endpoints: list[str] = []
     for path, methods in curr_routes.items():
         if path not in base_routes:
-            new_endpoints.append(f"ADDED endpoint: {path}")
+            changes.append(f"ADDED endpoint: {path}")
             continue
         for method in methods:
             if method.lower() in {"get", "post", "put", "patch", "delete"}:
                 if method.lower() not in base_routes.get(path, {}):
-                    new_endpoints.append(f"ADDED method: {method.upper()} {path}")
-
-    if new_endpoints:
-        print("New endpoints (non-breaking):")
-        for e in new_endpoints:
-            print(f"  + {e}")
+                    changes.append(f"ADDED method: {method.upper()} {path}")
 
     return changes
 

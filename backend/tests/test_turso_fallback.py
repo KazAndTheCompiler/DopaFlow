@@ -177,8 +177,8 @@ def test_run_migrations_rejects_modified_applied_migration(tmp_path: Path) -> No
             "CREATE TABLE sample (id INTEGER PRIMARY KEY, label TEXT);\n",
             encoding="utf-8",
         )
-        run_migrations(str(db_path))
-        # Should not raise — checksum mismatch is a warning, not a blocker
+        with pytest.raises(RuntimeError, match="Migration drift detected"):
+            run_migrations(str(db_path))
     finally:
         database_module._migrations_dir = original
 

@@ -43,7 +43,7 @@ export function Sidebar({
         width: collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-expanded-width)',
         transition: 'width 180ms ease',
         borderRight: '1px solid var(--border)',
-        background: 'var(--sidebar-gradient, var(--surface))',
+        background: 'var(--nav-rail-fill, var(--sidebar-gradient, var(--surface)))',
         backdropFilter: 'var(--nav-rail-glass-blur)',
         padding: '1rem 0.5rem',
         overflow: 'hidden',

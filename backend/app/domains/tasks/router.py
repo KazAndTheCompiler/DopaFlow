@@ -50,7 +50,7 @@ from fastapi import (
 
 from app.core.config import Settings, get_settings_dependency
 from app.domains.integrations.service import emit_event
-from app.domains.tasks.repository import TaskRepository
+from app.domains.tasks import repository
 from app.domains.tasks.schemas import (
     CreatedCountResponse,
     DeleteResponse,
@@ -75,8 +75,10 @@ from app.services.upload_security import validate_upload
 router = APIRouter(tags=["tasks"])
 
 
-def _repo(settings: Settings = Depends(get_settings_dependency)) -> TaskRepository:
-    return TaskRepository(settings)
+async def _db_path(settings: Settings = Depends(get_settings_dependency)) -> str:
+    """Resolve the configured database path."""
+
+    return settings.db_path
 
 
 async def _settings(settings: Settings = Depends(get_settings_dependency)) -> Settings:
@@ -96,10 +98,10 @@ def _emit(settings: Settings, event_type: str, payload: dict[str, Any]) -> None:
 )
 async def create_task(
     payload: TaskCreate,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> Task:
-    task = repo.create_task(payload.model_dump(mode="json"))
+    task = repository.create_task(db_path, payload.model_dump(mode="json"))
     _emit(settings, "task.created", {"id": task.id})
     await publish_invalidation("tasks")
     return task
@@ -121,9 +123,10 @@ async def list_tasks(
     sort_by: str = Query(
         default="default", pattern="^(default|due|priority|created|updated|title)$"
     ),
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> list[Task]:
-    tasks = repo.list_tasks(
+    tasks = repository.list_tasks(
+        db_path,
         done=done,
         status=status,
         no_date=no_date,
@@ -154,9 +157,9 @@ async def search_tasks(
     priority: int | None = Query(default=None),
     done: bool | None = Query(default=None),
     due_before: str | None = Query(default=None),
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> list[Task]:
-    tasks = repo.list_tasks(done=done, search=q)
+    tasks = repository.list_tasks(db_path, done=done, search=q)
     if tag:
         tasks = [task for task in tasks if tag in task.tags]
     if priority is not None:
@@ -171,9 +174,9 @@ async def search_tasks(
     response_model=list[Task],
     dependencies=[Depends(require_scope("read:tasks"))],
 )
-async def tomorrow_tasks(repo: TaskRepository = Depends(_repo)) -> list[Task]:
+async def tomorrow_tasks(db_path: str = Depends(_db_path)) -> list[Task]:
     tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).date()
-    tasks = repo.list_tasks()
+    tasks = repository.list_tasks(db_path)
     return [
         task
         for task in tasks
@@ -190,8 +193,8 @@ async def tomorrow_tasks(repo: TaskRepository = Depends(_repo)) -> list[Task]:
     response_model=list[TaskTemplate],
     dependencies=[Depends(require_scope("read:tasks"))],
 )
-async def list_templates(repo: TaskRepository = Depends(_repo)) -> list[TaskTemplate]:
-    return repo.list_templates()
+async def list_templates(db_path: str = Depends(_db_path)) -> list[TaskTemplate]:
+    return repository.list_templates(db_path)
 
 
 @router.post(
@@ -200,9 +203,9 @@ async def list_templates(repo: TaskRepository = Depends(_repo)) -> list[TaskTemp
     dependencies=[Depends(require_scope("write:tasks"))],
 )
 async def create_template(
-    payload: TaskTemplateCreate, repo: TaskRepository = Depends(_repo)
+    payload: TaskTemplateCreate, db_path: str = Depends(_db_path)
 ) -> TaskTemplate:
-    return repo.create_template(payload.model_dump(mode="json"))
+    return repository.create_template(db_path, payload.model_dump(mode="json"))
 
 
 @router.delete(
@@ -211,9 +214,9 @@ async def create_template(
     dependencies=[Depends(require_scope("write:tasks"))],
 )
 async def delete_template(
-    identifier: str, repo: TaskRepository = Depends(_repo)
+    identifier: str, db_path: str = Depends(_db_path)
 ) -> dict[str, bool]:
-    return {"deleted": repo.delete_template(identifier)}
+    return {"deleted": repository.delete_template(db_path, identifier)}
 
 
 @router.post(
@@ -223,10 +226,10 @@ async def delete_template(
 )
 async def create_from_template(
     identifier: str,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> Task | None:
-    task = repo.create_from_template(identifier)
+    task = repository.create_from_template(db_path, identifier)
     if task is None:
         raise HTTPException(status_code=404, detail="Template not found")
     _emit(
@@ -245,7 +248,7 @@ async def create_from_template(
 )
 async def quick_add(
     request: Request,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> dict[str, Any]:
     commit = False
@@ -266,7 +269,7 @@ async def quick_add(
     if "rrule" in parsed and "recurrence_rule" not in parsed:
         parsed["recurrence_rule"] = parsed.pop("rrule")
     if commit:
-        task = repo.create_task(parsed)
+        task = repository.create_task(db_path, parsed)
         _emit(settings, "task.created", {"id": task.id})
         await publish_invalidation("tasks")
         return task
@@ -281,7 +284,7 @@ async def quick_add(
 async def materialize_recurring(
     request: Request,
     window_hours: int = Query(default=36),
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> CreatedCountResponse:
     content_type = request.headers.get("content-type", "")
@@ -301,7 +304,7 @@ async def materialize_recurring(
                 raise HTTPException(
                     status_code=422, detail="window_hours must be an integer"
                 ) from exc
-    result = repo.materialize_recurring(window_hours=window_hours)
+    result = repository.materialize_recurring(db_path, window_hours=window_hours)
     if result.created:
         _emit(settings, "task.recurring_materialized", {"count": result.created})
         await publish_invalidation("tasks")
@@ -315,10 +318,10 @@ async def materialize_recurring(
 )
 async def bulk_complete(
     payload: dict[str, list[str]],
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> dict[str, int]:
-    count = repo.bulk_complete(payload.get("ids", []))
+    count = repository.bulk_complete(db_path, payload.get("ids", []))
     _emit(settings, "task.bulk_completed", {"count": count})
     if count:
         await publish_invalidation("tasks")
@@ -332,10 +335,10 @@ async def bulk_complete(
 )
 async def bulk_delete(
     payload: dict[str, list[str]],
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> dict[str, int]:
-    count = repo.bulk_delete(payload.get("ids", []))
+    count = repository.bulk_delete(db_path, payload.get("ids", []))
     _emit(settings, "task.bulk_deleted", {"count": count})
     if count:
         await publish_invalidation("tasks")
@@ -343,8 +346,8 @@ async def bulk_delete(
 
 
 @router.get("/export/csv", dependencies=[Depends(require_scope("read:tasks"))])
-async def export_csv(repo: TaskRepository = Depends(_repo)) -> Response:
-    tasks = repo.list_tasks()
+async def export_csv(db_path: str = Depends(_db_path)) -> Response:
+    tasks = repository.list_tasks(db_path)
     output = csv.StringIO()
     fields = [
         "id",
@@ -381,7 +384,7 @@ async def export_csv(repo: TaskRepository = Depends(_repo)) -> Response:
 )
 async def import_csv(
     file: UploadFile = File(...),
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> dict[str, int]:
     data, _ = validate_upload(
@@ -403,7 +406,7 @@ async def import_csv(
         ) from exc
     created = 0
     for payload in import_tasks_csv(content):
-        repo.create_task(payload)
+        repository.create_task(db_path, payload)
         created += 1
     _emit(settings, "task.csv_imported", {"count": created})
     if created:
@@ -416,8 +419,8 @@ async def import_csv(
     response_model=Task,
     dependencies=[Depends(require_scope("read:tasks"))],
 )
-async def get_task(identifier: str, repo: TaskRepository = Depends(_repo)) -> Task:
-    task = repo.get_task(identifier)
+async def get_task(identifier: str, db_path: str = Depends(_db_path)) -> Task:
+    task = repository.get_task(db_path, identifier)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
@@ -431,14 +434,14 @@ async def get_task(identifier: str, repo: TaskRepository = Depends(_repo)) -> Ta
 async def update_task(
     identifier: str,
     payload: TaskUpdate,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> Task:
-    previous = repo.get_task(identifier)
+    previous = repository.get_task(db_path, identifier)
     if previous is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    task = repo.update_task(
-        identifier, payload.model_dump(mode="json", exclude_unset=True)
+    task = repository.update_task(
+        db_path, identifier, payload.model_dump(mode="json", exclude_unset=True)
     )
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -458,10 +461,10 @@ async def update_task(
 )
 async def delete_task(
     identifier: str,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> dict[str, bool]:
-    deleted = repo.delete_task(identifier)
+    deleted = repository.delete_task(db_path, identifier)
     if not deleted:
         raise HTTPException(status_code=404, detail="Task not found")
     _emit(settings, "task.deleted", {"id": identifier})
@@ -476,10 +479,10 @@ async def delete_task(
 )
 async def complete_task(
     identifier: str,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
     settings: Settings = Depends(_settings),
 ) -> Task:
-    task = complete_task_service(repo, identifier)
+    task = complete_task_service(db_path, identifier)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     _emit(settings, "task.completed", {"id": identifier})
@@ -493,9 +496,9 @@ async def complete_task(
     dependencies=[Depends(require_scope("read:tasks"))],
 )
 async def get_task_context(
-    identifier: str, repo: TaskRepository = Depends(_repo)
+    identifier: str, db_path: str = Depends(_db_path)
 ) -> TaskContext:
-    return repo.get_task_context(identifier)
+    return repository.get_task_context(db_path, identifier)
 
 
 @router.post(
@@ -506,9 +509,9 @@ async def get_task_context(
 async def add_dependency(
     identifier: str,
     dep_id: str,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> dict[str, Any]:
-    ok, detail = repo.add_dependency(identifier, dep_id)
+    ok, detail = repository.add_dependency(db_path, identifier, dep_id)
     if not ok:
         raise HTTPException(status_code=400, detail=detail)
     await publish_invalidation("tasks")
@@ -523,9 +526,9 @@ async def add_dependency(
 async def remove_dependency(
     identifier: str,
     dep_id: str,
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> dict[str, bool]:
-    repo.remove_dependency(identifier, dep_id)
+    repository.remove_dependency(db_path, identifier, dep_id)
     await publish_invalidation("tasks")
     return {"ok": True}
 
@@ -536,9 +539,9 @@ async def remove_dependency(
     dependencies=[Depends(require_scope("write:tasks"))],
 )
 async def add_subtask(
-    identifier: str, payload: dict[str, str], repo: TaskRepository = Depends(_repo)
+    identifier: str, payload: dict[str, str], db_path: str = Depends(_db_path)
 ) -> Task:
-    task = repo.add_subtask(identifier, payload["title"])
+    task = repository.add_subtask(db_path, identifier, payload["title"])
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     await publish_invalidation("tasks")
@@ -554,9 +557,11 @@ async def patch_subtask(
     identifier: str,
     sub_id: str,
     payload: dict[str, bool],
-    repo: TaskRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> Task:
-    task = repo.patch_subtask(identifier, sub_id, payload.get("done", False))
+    task = repository.patch_subtask(
+        db_path, identifier, sub_id, payload.get("done", False)
+    )
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     await publish_invalidation("tasks")
@@ -569,9 +574,9 @@ async def patch_subtask(
     dependencies=[Depends(require_scope("write:tasks"))],
 )
 async def delete_subtask(
-    identifier: str, sub_id: str, repo: TaskRepository = Depends(_repo)
+    identifier: str, sub_id: str, db_path: str = Depends(_db_path)
 ) -> Task:
-    task = repo.delete_subtask(identifier, sub_id)
+    task = repository.delete_subtask(db_path, identifier, sub_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     await publish_invalidation("tasks")
@@ -583,10 +588,8 @@ async def delete_subtask(
     response_model=TaskTimeLog,
     dependencies=[Depends(require_scope("write:tasks"))],
 )
-async def start_time(
-    identifier: str, repo: TaskRepository = Depends(_repo)
-) -> TaskTimeLog:
-    log = repo.start_time_log(identifier)
+async def start_time(identifier: str, db_path: str = Depends(_db_path)) -> TaskTimeLog:
+    log = repository.start_time_log(db_path, identifier)
     await publish_invalidation("tasks")
     return log
 
@@ -596,10 +599,8 @@ async def start_time(
     response_model=TaskTimeLog,
     dependencies=[Depends(require_scope("write:tasks"))],
 )
-async def stop_time(
-    identifier: str, repo: TaskRepository = Depends(_repo)
-) -> TaskTimeLog:
-    log = repo.stop_time_log(identifier)
+async def stop_time(identifier: str, db_path: str = Depends(_db_path)) -> TaskTimeLog:
+    log = repository.stop_time_log(db_path, identifier)
     if log is None:
         raise HTTPException(status_code=404, detail="No active time log")
     await publish_invalidation("tasks")
@@ -612,6 +613,6 @@ async def stop_time(
     dependencies=[Depends(require_scope("read:tasks"))],
 )
 async def get_time_logs(
-    identifier: str, repo: TaskRepository = Depends(_repo)
+    identifier: str, db_path: str = Depends(_db_path)
 ) -> list[TaskTimeLog]:
-    return repo.list_time_logs(identifier)
+    return repository.list_time_logs(db_path, identifier)

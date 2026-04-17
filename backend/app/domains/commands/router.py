@@ -111,7 +111,7 @@ async def command_history(
     """Fetch recent command logs."""
     return [
         CommandHistoryItem(**entry)
-        for entry in CommandRepository(settings.db_path).history(limit)
+        for entry in CommandRepository.history(settings.db_path, limit)
     ]
 
 
@@ -125,7 +125,7 @@ async def clear_history(
 ) -> CommandClearHistoryResponse:
     """Clear all command history logs."""
     return CommandClearHistoryResponse(
-        **CommandRepository(settings.db_path).clear_history()
+        **CommandRepository.clear_history(settings.db_path)
     )
 
 

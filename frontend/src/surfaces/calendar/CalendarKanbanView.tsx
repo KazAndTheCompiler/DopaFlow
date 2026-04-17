@@ -35,6 +35,53 @@ function formatEventDate(event: CalendarEvent): string {
   });
 }
 
+const URGENT_HOURS = 48;
+const IMPORTANT_CATEGORIES = new Set(['work', 'focus']);
+
+function eventPriority(event: CalendarEvent): number {
+  const hoursUntil = (new Date(event.start_at).getTime() - Date.now()) / (1000 * 60 * 60);
+  const urgent = hoursUntil <= URGENT_HOURS;
+  const important = IMPORTANT_CATEGORIES.has(event.category?.toLowerCase() ?? '');
+  if (urgent && important) return 1;
+  if (!urgent && important) return 2;
+  if (urgent && !important) return 3;
+  return 4;
+}
+
+function priorityBadge(priority: number): JSX.Element {
+  const color =
+    priority === 1
+      ? 'var(--state-overdue)'
+      : priority === 2
+        ? 'var(--state-warn)'
+        : priority === 3
+          ? 'var(--accent)'
+          : 'var(--text-muted)';
+  const bg =
+    priority === 1
+      ? 'color-mix(in srgb, var(--state-overdue) 14%, transparent)'
+      : priority === 2
+        ? 'color-mix(in srgb, var(--state-warn) 14%, transparent)'
+        : priority === 3
+          ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+          : 'var(--surface-2)';
+  return (
+    <span
+      style={{
+        padding: '0.1rem 0.4rem',
+        borderRadius: '4px',
+        background: bg,
+        color,
+        fontSize: '0.65rem',
+        fontWeight: 800,
+        flexShrink: 0,
+      }}
+    >
+      P{priority}
+    </span>
+  );
+}
+
 interface CalendarKanbanViewProps {
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
@@ -133,7 +180,7 @@ export default function CalendarKanbanView({
                   onClick={() => onEventClick(event)}
                   style={{
                     display: 'grid',
-                    gap: '0.2rem',
+                    gap: '0.15rem',
                     padding: '0.6rem 0.75rem',
                     borderRadius: '12px',
                     border: '1px solid var(--border-subtle)',
@@ -151,7 +198,9 @@ export default function CalendarKanbanView({
                     (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-2)';
                   }}
                 >
-                  <span
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    {priorityBadge(eventPriority(event))}
+                    <span
                     style={{
                       fontSize: 'var(--text-sm)',
                       fontWeight: 600,
@@ -162,6 +211,7 @@ export default function CalendarKanbanView({
                   >
                     {event.title}
                   </span>
+                  </div>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                     {formatEventDate(event)}
                   </span>

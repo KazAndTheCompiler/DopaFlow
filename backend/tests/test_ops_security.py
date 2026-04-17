@@ -33,9 +33,11 @@ def test_ops_import_input_enforces_payload_limit() -> None:
         OpsImportIn(package="x" * (MAX_OPS_IMPORT_BYTES + 1), checksum="a" * 64)
 
 
-def _create_remote_app(db_path: Path, *, ops_secret: str = "test-ops-secret"):
+def _create_remote_app(
+    db_path: Path, *, ops_secret: str = "test-ops-secret", dev_auth: bool = True
+):
     os.environ["DOPAFLOW_DB_PATH"] = str(db_path)
-    os.environ["DOPAFLOW_DEV_AUTH"] = "true"
+    os.environ["DOPAFLOW_DEV_AUTH"] = str(dev_auth).lower()
     os.environ["DOPAFLOW_AUTH_TOKEN_SECRET"] = "test-scope-secret"
     os.environ["DOPAFLOW_OPS_SECRET"] = ops_secret
     os.environ["DOPAFLOW_DISABLE_LOCAL_AUDIO"] = "1"
@@ -61,7 +63,7 @@ async def _request(
 async def test_missing_ops_secret_returns_403(tmp_path: Path) -> None:
     db_path = tmp_path / "ops-security.sqlite"
     run_migrations(str(db_path))
-    app = _create_remote_app(db_path)
+    app = _create_remote_app(db_path, dev_auth=False)
 
     response = await _request(app, "GET", "/api/v2/ops/stats")
 
@@ -75,7 +77,7 @@ async def test_missing_ops_secret_returns_403(tmp_path: Path) -> None:
 async def test_wrong_ops_secret_returns_403(tmp_path: Path) -> None:
     db_path = tmp_path / "ops-security.sqlite"
     run_migrations(str(db_path))
-    app = _create_remote_app(db_path)
+    app = _create_remote_app(db_path, dev_auth=False)
 
     response = await _request(
         app, "GET", "/api/v2/ops/stats", headers={"X-Ops-Secret": "wrong-secret"}
@@ -93,7 +95,7 @@ async def test_ops_routes_return_403_not_401(tmp_path: Path) -> None:
     """Ensure all ops routes return 403 (not 401) with correct JSON body."""
     db_path = tmp_path / "ops-security.sqlite"
     run_migrations(str(db_path))
-    app = _create_remote_app(db_path)
+    app = _create_remote_app(db_path, dev_auth=False)
 
     for path in ("/api/v2/ops/stats", "/api/v2/ops/config", "/api/v2/ops/sync-status"):
         missing = await _request(app, "GET", path)

@@ -72,12 +72,12 @@ def test_materialize_recurring_tasks_logs_and_swallows_failures(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    from app.domains.tasks.repository import TaskRepository
+    from app.domains.tasks import repository as tasks_repo
 
     def explode(*_args, **_kwargs):
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(TaskRepository, "materialize_recurring", explode)
+    monkeypatch.setattr(tasks_repo, "materialize_recurring", explode)
     caplog.set_level(logging.ERROR, logger="app.core.scheduler")
 
     scheduler._materialize_recurring_tasks()

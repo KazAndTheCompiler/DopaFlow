@@ -26,7 +26,7 @@ function buildBlocks(sessions: FocusSession[], events: CalendarEvent[]): BlockIt
   const items: Array<BlockItem & { startMinutes: number; endMinutes: number }> = [];
 
   sessions.forEach((session) => {
-    const start = new Date(session.started_at);
+    const start = new Date(session.started_at ?? '');
     const startMinutes = start.getHours() * 60 + start.getMinutes() - START_HOUR * 60;
     if (startMinutes < 0 || startMinutes > TOTAL_MINUTES) {
       return;

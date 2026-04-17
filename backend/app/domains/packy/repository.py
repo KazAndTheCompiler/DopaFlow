@@ -7,7 +7,7 @@ import json
 import logging
 from uuid import uuid4
 
-from app.core.base_repository import BaseRepository
+from app.core.database import get_db, tx
 from app.domains.packy.schemas import (
     MomentumScore,
     PackyAnswer,
@@ -20,8 +20,11 @@ from app.domains.packy.schemas import (
 logger = logging.getLogger(__name__)
 
 
-class PackyRepository(BaseRepository):
+class PackyRepository:
     """Read and write lightweight Packy context and computed momentum values."""
+
+    def __init__(self, db_path: str) -> None:
+        self.db_path = db_path
 
     def _ensure_lorebook_tables(self, conn) -> None:
         conn.execute(
@@ -58,7 +61,7 @@ class PackyRepository(BaseRepository):
         """Return a neutral ADHD-aware assistant response."""
 
         achievement = ""
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT recent_mood FROM packy_lorebook ORDER BY updated_at DESC LIMIT 1"
             ).fetchone()
@@ -86,7 +89,7 @@ class PackyRepository(BaseRepository):
         afternoon = 12 <= hour < 17
         evening = 17 <= hour < 21
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM packy_lorebook ORDER BY updated_at DESC LIMIT 1"
             ).fetchone()
@@ -203,7 +206,7 @@ class PackyRepository(BaseRepository):
         """Upsert lorebook context for a session."""
 
         session_id = payload.session_id or "default"
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             self._ensure_lorebook_tables(conn)
             conn.execute(
                 """
@@ -256,7 +259,7 @@ class PackyRepository(BaseRepository):
         nutrition_today = 0
 
         try:
-            with self.get_db_readonly() as conn:
+            with get_db(self.db_path) as conn:
                 focus_velocity = int(
                     conn.execute(
                         """
@@ -304,7 +307,7 @@ class PackyRepository(BaseRepository):
             pass
 
         try:
-            with self.get_db_readonly() as conn:
+            with get_db(self.db_path) as conn:
                 try:
                     journal_today = int(
                         conn.execute(
@@ -345,7 +348,7 @@ class PackyRepository(BaseRepository):
         # Delta vs yesterday
         delta_vs_yesterday = 0
         try:
-            with self.tx() as conn:
+            with tx(self.db_path) as conn:
                 conn.execute(
                     """
                     CREATE TABLE IF NOT EXISTS packy_momentum_log (

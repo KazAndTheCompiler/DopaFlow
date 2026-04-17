@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { useAppAlarms, useAppCalendar, useAppTasks } from '../../app/AppContexts';
+import { useAppCalendar, useAppTasks } from '../../app/AppContexts';
 import { showToast } from '@ds/primitives/Toast';
 import { CalendarDaySidebar } from './CalendarDaySidebar';
 import { CalendarHeaderPanel } from './CalendarHeaderPanel';
@@ -21,7 +21,6 @@ import WeekView from './WeekView';
 export default function CalendarView(): JSX.Element {
   const calendar = useAppCalendar();
   const tasks = useAppTasks();
-  const alarms = useAppAlarms();
   const [tab, setTab] = useState<CalendarTab>('week');
   const [weekOffset, setWeekOffset] = useState<number>(0);
   const [dayOffset, setDayOffset] = useState<number>(0);
@@ -162,16 +161,8 @@ export default function CalendarView(): JSX.Element {
         start_at: start.toISOString(),
         end_at: end.toISOString(),
         all_day: false,
+        reminder_minutes: blockReminder ? blockReminderOffset : null,
       });
-      if (blockReminder) {
-        const fireAt = new Date(start.getTime() - blockReminderOffset * 60_000);
-        await alarms.create({
-          title: prefillTitle.trim(),
-          at: fireAt.toISOString(),
-          kind: 'tts',
-          tts_text: `Starting soon: ${prefillTitle.trim()}`,
-        });
-      }
       clearBlockDraft();
       showToast('Calendar block added.', 'success');
     } catch {

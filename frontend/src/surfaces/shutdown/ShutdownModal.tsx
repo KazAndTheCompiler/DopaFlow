@@ -1,10 +1,10 @@
 import { useState } from 'react';
 
-import type { Task } from '@shared/types';
+import type { Habit, Task } from '@shared/types';
 
 import { ShutdownDeferStep } from './ShutdownDeferStep';
 import { ShutdownJournalPrompt } from './ShutdownJournalPrompt';
-import { STEP_TITLES, TOTAL_STEPS, primaryBtn } from './ShutdownShared';
+import { STEP_TITLES, TOTAL_STEPS, primaryBtn, secondaryBtn } from './ShutdownShared';
 import { ShutdownStepDots } from './ShutdownStepDots';
 import { ShutdownWinStrip } from './ShutdownWinStrip';
 
@@ -12,6 +12,8 @@ interface ShutdownModalProps {
   completedToday: Task[];
   incompleteToday: Task[];
   tomorrowTasks: Task[];
+  habits: Habit[];
+  onHabitCheckIn: (id: string) => void;
   onDefer: (taskId: string, when: 'tomorrow' | 'this_week' | 'drop') => Promise<void> | void;
   onJournalNote: (emoji: string, note: string) => Promise<void> | void;
   onClose: () => void;
@@ -49,6 +51,8 @@ export default function ShutdownModal({
   completedToday,
   incompleteToday,
   tomorrowTasks,
+  habits,
+  onHabitCheckIn,
   onDefer,
   onJournalNote,
   onClose,
@@ -84,8 +88,10 @@ export default function ShutdownModal({
       }
     }
     setDecisions(next);
-    setStep(2);
+    setStep(3);
   };
+
+  const completedHabits = habits.filter((h) => (h.today_count ?? 0) >= h.target_freq);
 
   const handleJournalSubmit = async (emoji: string, note: string): Promise<void> => {
     setSaving(true);
@@ -313,11 +319,11 @@ export default function ShutdownModal({
                   fontWeight: 700,
                 }}
               >
-                Planned
+                Habits
               </span>
-              <strong style={{ fontSize: '1.2rem' }}>{tomorrowTasks.length}</strong>
+              <strong style={{ fontSize: '1.2rem' }}>{completedHabits.length}/{habits.length}</strong>
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                tasks already lined up
+                habits hit today
               </span>
             </div>
           </div>
@@ -408,15 +414,96 @@ export default function ShutdownModal({
               />
             )}
             {step === 1 && (
+              <div style={{ display: 'grid', gap: '0.65rem' }}>
+                {habits.length === 0 ? (
+                  <div style={{ padding: '1rem', borderRadius: '14px', background: 'var(--surface-2)', border: '1px dashed var(--border-subtle)', textAlign: 'center' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No habits to track</span>
+                  </div>
+                ) : (
+                  habits.map((habit) => {
+                    const count = habit.today_count ?? 0;
+                    const target = habit.target_freq;
+                    const done = count >= target;
+                    return (
+                      <div
+                        key={habit.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.6rem',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '10px',
+                          background: done
+                            ? 'color-mix(in srgb, var(--state-completed) 6%, transparent)'
+                            : 'var(--surface-2)',
+                          border: done
+                            ? '1px solid color-mix(in srgb, var(--state-completed) 20%, transparent)'
+                            : '1px solid transparent',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '999px',
+                            border: `2px solid ${done ? 'var(--state-completed)' : 'var(--accent)'}`,
+                            background: done ? 'var(--state-completed)' : 'transparent',
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {done && <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 800 }}>&#10003;</span>}
+                        </span>
+                        <span style={{ flex: 1, fontSize: 'var(--text-sm)', opacity: done ? 0.65 : 1 }}>
+                          {habit.name}
+                          {target > 1 && (
+                            <span style={{ marginLeft: '0.35rem', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                              {count}/{target}
+                            </span>
+                          )}
+                        </span>
+                        {!done && (
+                          <button
+                            onClick={() => onHabitCheckIn(habit.id)}
+                            style={{
+                              padding: '0.25rem 0.65rem',
+                              borderRadius: '8px',
+                              border: '1px solid var(--accent)',
+                              background: 'transparent',
+                              color: 'var(--accent)',
+                              fontSize: 'var(--text-xs)',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            +1
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setStep(0)} style={{ ...secondaryBtn }}>
+                    Back
+                  </button>
+                  <button onClick={() => setStep(2)} style={{ ...primaryBtn }}>
+                    Continue
+                  </button>
+                </div>
+              </div>
+            )}
+            {step === 2 && (
               <ShutdownDeferStep
                 incompleteToday={incompleteToday}
                 decisions={decisions}
                 onDecide={handleDecide}
                 onNext={handleAdvanceFromDefer}
-                onBack={() => setStep(0)}
+                onBack={() => setStep(1)}
               />
             )}
-            {step === 2 && (
+            {step === 3 && (
               <ShutdownJournalPrompt
                 tomorrowTasks={projectedTomorrowTasks}
                 saving={saving}
@@ -424,7 +511,7 @@ export default function ShutdownModal({
                 onJournalNote={handleJournalSubmit}
                 onBack={() => {
                   setSaveError(null);
-                  setStep(1);
+                  setStep(2);
                 }}
                 onFinish={handleFinish}
               />

@@ -10,8 +10,8 @@ from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
-from app.core.base_repository import BaseRepository
 from app.core.config import Settings, default_backup_dir
+from app.core.database import get_db, tx
 from app.core.id_gen import journal_id
 from app.domains.journal.schemas import (
     JournalBackupStatus,
@@ -87,8 +87,7 @@ def _row_to_entry(row: object) -> JournalEntryRead:
         auto_tags = json.loads(row["auto_tags_json"] or "[]")  # type: ignore[index]
     except Exception:
         logger.exception(
-            "Failed to parse auto_tags_json: %s",
-            row["auto_tags_json"] if "auto_tags_json" in row else "N/A",  # noqa: SIM401
+            "Failed to parse auto_tags_json: %s", row.get("auto_tags_json")
         )
     return JournalEntryRead(
         id=row["id"],  # type: ignore[index]
@@ -113,24 +112,18 @@ def _row_to_template(row: object) -> JournalTemplate:
     )
 
 
-class JournalRepository(BaseRepository):
+class JournalRepository:
     """Read and write journal entries, backlinks, backup metadata, versions, and templates."""
 
     def __init__(self, settings: Settings) -> None:
-        super().__init__(settings)
-
-    def check_integrity(self) -> bool:
-        """Return True if the database passes integrity_check."""
-        with self.get_db_readonly() as conn:
-            row = conn.execute("PRAGMA integrity_check").fetchone()
-        return bool(row) and row[0] == "ok"
+        self.settings = settings
 
     # ── entries ───────────────────────────────────────────────────────────────
 
     def list_entries(
         self, tag: str | None = None, search: str | None = None
     ) -> list[JournalEntryRead]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             query = "SELECT * FROM journal_entries WHERE deleted_at IS NULL"
             params: list[object] = []
             if tag:
@@ -144,7 +137,7 @@ class JournalRepository(BaseRepository):
             return [_row_to_entry(row) for row in rows]
 
     def get_entry(self, identifier: str) -> JournalEntryRead | None:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             row = conn.execute(
                 "SELECT * FROM journal_entries WHERE (id = ? OR entry_date = ?) AND deleted_at IS NULL",
                 (identifier, identifier),
@@ -154,7 +147,7 @@ class JournalRepository(BaseRepository):
     def save_entry(self, payload: JournalEntryCreate) -> JournalEntryRead:
         tags_json = json.dumps(payload.tags)
         auto_tags_json = json.dumps(_auto_tags_for_body(payload.markdown_body))
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             new_id = journal_id()
             conn.execute(
                 """
@@ -197,7 +190,7 @@ class JournalRepository(BaseRepository):
         tags = patch.get("tags", existing.tags)
         tags_json = json.dumps(tags)
         auto_tags_json = json.dumps(_auto_tags_for_body(body))
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 """
                 UPDATE journal_entries
@@ -218,7 +211,7 @@ class JournalRepository(BaseRepository):
         return self.get_entry(entry_id)
 
     def set_locked(self, entry_id: str, locked: bool) -> JournalEntryRead | None:
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "UPDATE journal_entries SET locked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND deleted_at IS NULL",
                 (1 if locked else 0, entry_id),
@@ -226,7 +219,7 @@ class JournalRepository(BaseRepository):
         return self.get_entry(entry_id)
 
     def delete_entry(self, identifier: str) -> bool:
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             result = conn.execute(
                 "UPDATE journal_entries SET deleted_at = CURRENT_TIMESTAMP WHERE (id = ? OR entry_date = ?) AND deleted_at IS NULL",
                 (identifier, identifier),
@@ -237,7 +230,7 @@ class JournalRepository(BaseRepository):
 
     def _save_version(self, entry_date: str, body: str) -> None:
         try:
-            with self.tx() as conn:
+            with tx(self.settings) as conn:
                 row = conn.execute(
                     "SELECT COALESCE(MAX(version_number), 0) AS v FROM journal_versions WHERE entry_date = ?",
                     (entry_date,),
@@ -263,7 +256,7 @@ class JournalRepository(BaseRepository):
 
     def list_versions(self, entry_date: str) -> list[JournalVersionSummary]:
         try:
-            with self.get_db_readonly() as conn:
+            with get_db(self.settings) as conn:
                 rows = conn.execute(
                     "SELECT version_number, word_count, saved_at FROM journal_versions WHERE entry_date = ? ORDER BY version_number DESC",
                     (entry_date,),
@@ -283,7 +276,7 @@ class JournalRepository(BaseRepository):
         self, entry_date: str, version_number: int
     ) -> JournalVersionDetail | None:
         try:
-            with self.get_db_readonly() as conn:
+            with get_db(self.settings) as conn:
                 row = conn.execute(
                     "SELECT body, saved_at FROM journal_versions WHERE entry_date = ? AND version_number = ?",
                     (entry_date, version_number),
@@ -299,7 +292,7 @@ class JournalRepository(BaseRepository):
     # ── wikilinks ─────────────────────────────────────────────────────────────
 
     def persist_links(self, entry_id: str, target_slugs: list[str]) -> None:
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             for slug in target_slugs:
                 conn.execute(
                     "INSERT INTO journal_links (id, source_entry_id, target_slug) VALUES (?, ?, ?) ON CONFLICT(source_entry_id, target_slug) DO NOTHING",
@@ -307,7 +300,7 @@ class JournalRepository(BaseRepository):
                 )
 
     def get_backlinks(self, identifier: str) -> list[str]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT source_entry_id FROM journal_links WHERE target_slug = ? ORDER BY source_entry_id ASC",
                 (identifier,),
@@ -315,7 +308,7 @@ class JournalRepository(BaseRepository):
             return [str(row["source_entry_id"]) for row in rows]
 
     def get_graph_data(self) -> dict[str, list[dict[str, object]]]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             node_rows = conn.execute(
                 "SELECT target_slug, COUNT(*) AS entry_count FROM journal_links GROUP BY target_slug ORDER BY target_slug ASC"
             ).fetchall()
@@ -341,7 +334,7 @@ class JournalRepository(BaseRepository):
 
     def get_analytics_summary(self, days: int = 90) -> dict[str, object]:
         cutoff = (datetime.now(UTC).date() - timedelta(days=days - 1)).isoformat()
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT entry_date, markdown_body, emoji, tags_json, auto_tags_json FROM journal_entries WHERE deleted_at IS NULL AND entry_date >= ? ORDER BY entry_date ASC",
                 (cutoff,),
@@ -407,7 +400,7 @@ class JournalRepository(BaseRepository):
         }
 
     def get_heatmap(self, year: int) -> dict[str, int]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT entry_date FROM journal_entries WHERE deleted_at IS NULL AND entry_date LIKE ?",
                 (f"{year:04d}-%",),
@@ -415,7 +408,7 @@ class JournalRepository(BaseRepository):
         return {str(row["entry_date"]): 1 for row in rows}
 
     def get_auto_tag_stats(self) -> dict[str, int]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT auto_tags_json FROM journal_entries WHERE deleted_at IS NULL"
             ).fetchall()
@@ -428,7 +421,7 @@ class JournalRepository(BaseRepository):
     def search_rich(
         self, q: str = "", mood: str | None = None, limit: int = 50
     ) -> list[JournalSearchResult]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT id, entry_date, markdown_body, emoji FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date DESC"
             ).fetchall()
@@ -456,14 +449,14 @@ class JournalRepository(BaseRepository):
     # ── templates ─────────────────────────────────────────────────────────────
 
     def list_templates(self) -> list[JournalTemplate]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             rows = conn.execute(
                 "SELECT * FROM journal_templates ORDER BY name ASC"
             ).fetchall()
             return [_row_to_template(row) for row in rows]
 
     def get_template(self, template_id: str) -> JournalTemplate | None:
-        with self.get_db_readonly() as conn:
+        with get_db(self.settings) as conn:
             row = conn.execute(
                 "SELECT * FROM journal_templates WHERE id = ?", (template_id,)
             ).fetchone()
@@ -471,7 +464,7 @@ class JournalRepository(BaseRepository):
 
     def create_template(self, name: str, body: str, tags: list[str]) -> JournalTemplate:
         tpl_id = f"tpl_{uuid.uuid4().hex[:8]}"
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "INSERT INTO journal_templates (id, name, body, tags) VALUES (?, ?, ?, ?)",
                 (tpl_id, name, body, json.dumps(tags)),
@@ -488,7 +481,7 @@ class JournalRepository(BaseRepository):
         name = patch.get("name", existing.name)
         body = patch.get("body", existing.body)
         tags = patch.get("tags", existing.tags)
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "UPDATE journal_templates SET name = ?, body = ?, tags = ? WHERE id = ?",
                 (name, body, json.dumps(tags), template_id),
@@ -496,7 +489,7 @@ class JournalRepository(BaseRepository):
         return self.get_template(template_id)
 
     def delete_template(self, template_id: str) -> bool:
-        with self.tx() as conn:
+        with tx(self.settings) as conn:
             result = conn.execute(
                 "DELETE FROM journal_templates WHERE id = ?", (template_id,)
             )

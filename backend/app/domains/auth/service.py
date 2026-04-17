@@ -12,11 +12,11 @@ import bcrypt
 from fastapi import HTTPException
 
 from app.core.config import Settings
+from app.core.database import get_db, tx
 from app.domains.auth.oidc import (
     at_hash_from_access_token,
     build_id_token,
 )
-from app.domains.auth.repository import AuthRepository
 from app.middleware.auth_scopes import create_scope_token, verify_scope_token
 
 ACCESS_TOKEN_TTL = 900
@@ -119,12 +119,18 @@ ROLE_SCOPES: dict[str, list[str]] = {
 
 
 class AuthService:
-    def __init__(self, repo: AuthRepository, settings: Settings) -> None:
-        self.repo = repo
+    def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
     def get_client(self, client_id: str) -> dict[str, Any] | None:
-        return self.repo.get_by_client_id(client_id)
+        with get_db(self.settings) as conn:
+            row = conn.execute(
+                "SELECT * FROM auth_clients WHERE client_id = ? AND active = 1",
+                (client_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return dict(row)
 
     def validate_client_redirect(
         self, client_id: str, redirect_uri: str
@@ -137,7 +143,11 @@ class AuthService:
         return client
 
     def authenticate_user(self, email: str, password: str) -> dict[str, Any]:
-        row = self.repo.get_credentials_by_email(email)
+        with tx(self.settings) as conn:
+            row = conn.execute(
+                "SELECT id, email, hashed_password, role FROM auth_users WHERE email = ? AND active = 1",
+                (email,),
+            ).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         try:
@@ -164,17 +174,25 @@ class AuthService:
         expires_at = datetime.fromtimestamp(
             time.time() + AUTH_CODE_TTL, tz=UTC
         ).isoformat()
-        self.repo.insert_code(
-            code_hash,
-            verifier_hash,
-            client_id,
-            redirect_uri,
-            scope,
-            user_id,
-            email,
-            expires_at,
-            state,
-        )
+        with tx(self.settings) as conn:
+            conn.execute(
+                """
+                INSERT INTO auth_oidc_codes
+                    (code_hash, verifier_hash, client_id, redirect_uri, scope, user_id, email, expires_at, used_at, state)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+                """,
+                (
+                    code_hash,
+                    verifier_hash,
+                    client_id,
+                    redirect_uri,
+                    scope,
+                    user_id,
+                    email,
+                    expires_at,
+                    state,
+                ),
+            )
         return code
 
     def exchange_code(
@@ -188,25 +206,36 @@ class AuthService:
         code_hash = _token_hash(code)
         verifier_hash = _token_hash(code_verifier)
         now = _now_utc().isoformat()
-        row = self.repo.consume_code(code_hash, now)
-        if not row:
-            raise HTTPException(status_code=400, detail="invalid_grant")
-        if row["verifier_hash"] != verifier_hash:
-            raise HTTPException(status_code=400, detail="invalid_grant")
-        if row["client_id"] != client_id:
-            raise HTTPException(status_code=400, detail="invalid_grant")
-        if row["redirect_uri"] != redirect_uri:
-            raise HTTPException(status_code=400, detail="invalid_grant")
-        if row["expires_at"] < now:
-            raise HTTPException(status_code=400, detail="invalid_grant")
-        stored_state = row["state"]
-        if stored_state is not None and state is not None and stored_state != state:
-            raise HTTPException(status_code=400, detail="invalid_grant")
-        user_id = row["user_id"]
-        email = row["email"]
-        scope = row["scope"]
-        user_row = self.repo.get_email_and_role_by_id(user_id)
-        role = user_row["role"] if user_row else None
+        with tx(self.settings) as conn:
+            row = conn.execute(
+                "SELECT * FROM auth_oidc_codes WHERE code_hash = ? AND used_at IS NULL",
+                (code_hash,),
+            ).fetchone()
+            if not row:
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            if row["verifier_hash"] != verifier_hash:
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            if row["client_id"] != client_id:
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            if row["redirect_uri"] != redirect_uri:
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            if row["expires_at"] < now:
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            stored_state = row["state"]
+            if stored_state is not None and state is not None and stored_state != state:
+                raise HTTPException(status_code=400, detail="invalid_grant")
+            conn.execute(
+                "UPDATE auth_oidc_codes SET used_at = ? WHERE code_hash = ?",
+                (now, code_hash),
+            )
+            user_id = row["user_id"]
+            email = row["email"]
+            scope = row["scope"]
+            user_row = conn.execute(
+                "SELECT role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
+            role = user_row["role"] if user_row else None
         access_token = create_scope_token(
             scopes=scope.split(),
             subject=user_id,
@@ -239,22 +268,41 @@ class AuthService:
             time.time() + REFRESH_TOKEN_TTL, tz=UTC
         ).isoformat()
         now = _now_utc().isoformat()
-        self.repo.insert_token(token_hash, user_id, email, scope, expires_at, now)
+        with tx(self.settings) as conn:
+            conn.execute(
+                """
+                INSERT INTO auth_refresh_tokens
+                    (token_hash, user_id, email, scope, expires_at, created_at, revoked_at, replaced_by_hash)
+                VALUES (?, ?, ?, ?, ?, ?, NULL, NULL)
+                """,
+                (token_hash, user_id, email, scope, expires_at, now),
+            )
         return token
 
     def refresh_access_token(self, refresh_token: str) -> dict[str, Any]:
         token_hash = _token_hash(refresh_token)
         now = _now_utc().isoformat()
-        row = self.repo.consume_refresh_token(token_hash, now, "rotated")
-        if not row:
-            raise HTTPException(status_code=401, detail="invalid_grant")
-        if row["expires_at"] < now:
-            raise HTTPException(status_code=401, detail="invalid_grant")
-        user_id = row["user_id"]
-        email = row["email"]
-        scope = row["scope"]
-        user_row = self.repo.get_email_and_role_by_id(user_id)
-        role = user_row["role"] if user_row else None
+        with tx(self.settings) as conn:
+            row = conn.execute(
+                "SELECT * FROM auth_refresh_tokens WHERE token_hash = ? AND revoked_at IS NULL",
+                (token_hash,),
+            ).fetchone()
+            if not row:
+                raise HTTPException(status_code=401, detail="invalid_grant")
+            if row["expires_at"] < now:
+                raise HTTPException(status_code=401, detail="invalid_grant")
+            user_id = row["user_id"]
+            email = row["email"]
+            scope = row["scope"]
+            conn.execute(
+                "UPDATE auth_refresh_tokens SET revoked_at = ?, replaced_by_hash = ? WHERE token_hash = ?",
+                (now, "rotated", token_hash),
+            )
+            user_row = conn.execute(
+                "SELECT role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
+            role = user_row["role"] if user_row else None
         new_access_token = create_scope_token(
             scopes=scope.split(),
             subject=user_id,
@@ -291,7 +339,11 @@ class AuthService:
             return {"active": False}
         user_id = payload["sub"]
         scopes = payload.get("scopes", [])
-        user_row = self.repo.get_email_and_role_by_id(user_id)
+        with get_db(self.settings) as conn:
+            user_row = conn.execute(
+                "SELECT email, role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
         if not user_row:
             return {"active": False}
         return {
@@ -309,26 +361,36 @@ class AuthService:
     def revoke_token(self, token: str, token_hint: str | None = None) -> bool:
         token_hash = _token_hash(token)
         now = _now_utc().isoformat()
-        if token_hint == "refresh_token" or token_hint is None:
-            self.repo.revoke_by_hash(token_hash, now)
-            # If hint was refresh_token, we're done
-            if token_hint == "refresh_token":
-                return True
-        if token_hint == "access_token" or token_hint is None:
-            try:
-                payload = verify_scope_token(token, settings=self.settings)
-                token_id = payload.get("jti")
-                if token_id:
-                    self.repo.revoke_scope_token(token_id, now)
+        with tx(self.settings) as conn:
+            if token_hint == "refresh_token" or token_hint is None:
+                result = conn.execute(
+                    "UPDATE auth_refresh_tokens SET revoked_at = ? WHERE token_hash = ? AND revoked_at IS NULL",
+                    (now, token_hash),
+                )
+                if result.rowcount > 0:
                     return True
-            except Exception:
-                pass
+            if token_hint == "access_token" or token_hint is None:
+                try:
+                    payload = verify_scope_token(token, settings=self.settings)
+                    token_id = payload.get("jti")
+                    if token_id:
+                        conn.execute(
+                            "UPDATE auth_scope_tokens SET revoked_at = ? WHERE id = ?",
+                            (now, token_id),
+                        )
+                        return True
+                except Exception:
+                    pass
         return True
 
     def get_userinfo(self, access_token: str) -> dict[str, Any]:
         payload = verify_scope_token(access_token, settings=self.settings)
         user_id = payload["sub"]
-        row = self.repo.get_by_id(user_id)
+        with get_db(self.settings) as conn:
+            row = conn.execute(
+                "SELECT id, email, role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
         if not row:
             raise HTTPException(status_code=401, detail="invalid_token")
         return {
@@ -357,9 +419,14 @@ class AuthService:
         user_id = f"usr_{uuid4().hex[:16]}"
         now = _now_utc().isoformat()
         try:
-            self.repo.create_user(
-                user_id, email.lower().strip(), hashed_password, role, now
-            )
+            with tx(self.settings) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO auth_users (id, email, hashed_password, role, active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, 1, ?, ?)
+                    """,
+                    (user_id, email.lower().strip(), hashed_password, role, now, now),
+                )
         except Exception as exc:
             raise HTTPException(
                 status_code=409, detail="User with this email already exists"
@@ -379,16 +446,24 @@ class AuthService:
         client_db_id = f"ocl_{uuid4().hex[:16]}"
         now = _now_utc().isoformat()
         try:
-            self.repo.create_client(
-                client_db_id,
-                client_id,
-                client_secret_hash,
-                client_name,
-                redirect_uri,
-                scope,
-                pkce_required,
-                now,
-            )
+            with tx(self.settings) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO auth_clients (id, client_id, client_secret_hash, client_name, redirect_uri, scope, pkce_required, active, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                    """,
+                    (
+                        client_db_id,
+                        client_id,
+                        client_secret_hash,
+                        client_name,
+                        redirect_uri,
+                        scope,
+                        1 if pkce_required else 0,
+                        now,
+                        now,
+                    ),
+                )
         except Exception as exc:
             raise HTTPException(
                 status_code=409, detail="Client ID already registered"
@@ -403,7 +478,10 @@ class AuthService:
         }
 
     def list_clients(self) -> list[dict[str, Any]]:
-        rows = self.repo.list_all_clients()
+        with get_db(self.settings) as conn:
+            rows = conn.execute(
+                "SELECT id, client_id, client_name, redirect_uri, scope, pkce_required, active, created_at FROM auth_clients ORDER BY created_at DESC"
+            ).fetchall()
         return [
             {
                 "id": row["id"],
@@ -419,13 +497,20 @@ class AuthService:
         ]
 
     def get_user_by_id(self, user_id: str) -> dict[str, Any] | None:
-        row = self.repo.get_by_id(user_id)
+        with get_db(self.settings) as conn:
+            row = conn.execute(
+                "SELECT id, email, role FROM auth_users WHERE id = ? AND active = 1",
+                (user_id,),
+            ).fetchone()
         if not row:
             return None
         return {"id": row["id"], "email": row["email"], "role": row["role"]}
 
     def list_users(self) -> list[dict[str, Any]]:
-        rows = self.repo.list_active()
+        with get_db(self.settings) as conn:
+            rows = conn.execute(
+                "SELECT id, email, role, created_at FROM auth_users WHERE active = 1 ORDER BY created_at DESC"
+            ).fetchall()
         return [
             {
                 "id": row["id"],
@@ -436,143 +521,6 @@ class AuthService:
             for row in rows
         ]
 
-    def get_or_create_user_by_oidc(
-        self,
-        issuer: str,
-        subject: str,
-        email: str,
-        default_role: str = "viewer",
-    ) -> dict[str, Any]:
-        """Look up or create a local user from an external OIDC identity.
-
-        1. Match by (oidc_issuer, oidc_subject) — return if found
-        2. Match by email — link the OIDC identity to the existing user
-        3. Auto-provision a new user with a random password
-        """
-        if default_role not in ROLE_SCOPES:
-            default_role = "viewer"
-        issuer = issuer.rstrip("/")
-        email = email.lower().strip()
-
-        # 1. Match by OIDC identity
-        row = self.repo.get_by_oidc_identity(issuer, subject)
-        if row:
-            # Update email if changed in the external IdP
-            if row["email"] != email:
-                self.repo.update_email(row["id"], email, _now_utc().isoformat())
-            return {"id": row["id"], "email": email, "role": row["role"]}
-
-        # 2. Match by email — link existing user
-        row = self.repo.get_by_email(email)
-        if row:
-            self.repo.link_oidc_identity(
-                row["id"], issuer, subject, _now_utc().isoformat()
-            )
-            return {"id": row["id"], "email": row["email"], "role": row["role"]}
-
-        # 3. Auto-provision — random untypeable password
-        import secrets as _secrets
-
-        random_password = _secrets.token_urlsafe(48)
-        hashed_password = _hash_password(random_password)
-        user_id = f"usr_{uuid4().hex[:16]}"
-        now = _now_utc().isoformat()
-        try:
-            self.repo.create_user_with_oidc(
-                user_id,
-                email,
-                hashed_password,
-                default_role,
-                issuer,
-                subject,
-                now,
-            )
-        except Exception:
-            # Race condition: another request created the user first
-            row = self.repo.get_by_oidc_identity(issuer, subject)
-            if row:
-                return {"id": row["id"], "email": row["email"], "role": row["role"]}
-            raise
-        return {"id": user_id, "email": email, "role": default_role}
-
-    def get_enabled_providers(self) -> list[dict[str, Any]]:
-        """Return all enabled OIDC providers (from DB + env vars)."""
-        providers: list[dict[str, Any]] = []
-        rows = self.repo.list_enabled_providers()
-        for row in rows:
-            providers.append(
-                {
-                    "name": row["name"],
-                    "issuer_url": row["issuer_url"],
-                    "scopes": row["scopes"],
-                    "default_role": row["default_role"],
-                }
-            )
-
-        # Merge env-var-configured provider if present
-        if self.settings.oidc_issuer_url:
-            env_name = self.settings.oidc_provider_name or "sso"
-            if not any(
-                p["issuer_url"].rstrip("/") == self.settings.oidc_issuer_url.rstrip("/")
-                for p in providers
-            ):
-                providers.append(
-                    {
-                        "name": env_name,
-                        "issuer_url": self.settings.oidc_issuer_url,
-                        "scopes": self.settings.oidc_scopes,
-                        "default_role": self.settings.oidc_default_role,
-                    }
-                )
-        return providers
-
-    def register_env_provider(self) -> None:
-        """Ensure the env-var-configured provider exists in auth_oidc_providers."""
-        if not self.settings.oidc_issuer_url:
-            return
-        if not self.settings.oidc_client_id or not self.settings.oidc_client_secret:
-            return
-        issuer = self.settings.oidc_issuer_url.rstrip("/")
-        name = self.settings.oidc_provider_name or "sso"
-        now = _now_utc().isoformat()
-        try:
-            self.repo.upsert_provider(
-                f"op_{uuid4().hex[:16]}",
-                name,
-                issuer,
-                self.settings.oidc_client_id,
-                self.settings.oidc_client_secret,
-                self.settings.oidc_scopes,
-                self.settings.oidc_default_role,
-                now,
-            )
-        except Exception as exc:
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "Failed to register env OIDC provider: %s", exc
-            )
-
-    def get_provider(self, name: str) -> dict[str, Any] | None:
-        """Look up a specific OIDC provider by name (DB + env vars)."""
-        row = self.repo.get_enabled_by_name(name)
-        if row:
-            return row
-
-        # Check env-var provider
-        env_name = self.settings.oidc_provider_name or "sso"
-        if name == env_name and self.settings.oidc_issuer_url:
-            return {
-                "name": env_name,
-                "issuer_url": self.settings.oidc_issuer_url,
-                "client_id": self.settings.oidc_client_id,
-                "client_secret": self.settings.oidc_client_secret,
-                "scopes": self.settings.oidc_scopes,
-                "default_role": self.settings.oidc_default_role,
-            }
-        return None
-
 
 def get_auth_service(settings: Settings) -> AuthService:
-    repo = AuthRepository(settings)
-    return AuthService(repo, settings)
+    return AuthService(settings)

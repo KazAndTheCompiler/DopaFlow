@@ -35,19 +35,46 @@ class CalendarService:
 
         return self.repository.get_event(identifier)
 
-    def create_event(self, payload: CalendarEventCreate) -> CalendarEvent:
-        """Create a calendar event."""
+    def create_event(
+        self, payload: CalendarEventCreate, db_path: str = ""
+    ) -> CalendarEvent:
+        """Create a calendar event. If reminder_minutes is set, auto-create a linked alarm."""
 
-        return self.repository.create_event(payload)
+        event = self.repository.create_event(payload)
+        if payload.reminder_minutes and db_path:
+            from datetime import timedelta
+
+            from app.domains.alarms.repository import AlarmsRepository
+            from app.domains.alarms.schemas import AlarmCreate
+
+            alarm_at = (
+                event.start_at - timedelta(minutes=payload.reminder_minutes)
+            ).isoformat()
+            alarm_repo = AlarmsRepository(db_path)
+            alarm = alarm_repo.create_alarm(
+                AlarmCreate(
+                    at=alarm_at,
+                    title=event.title,
+                    kind="tts",
+                    tts_text=f"Reminder: {event.title} in {payload.reminder_minutes} minutes",
+                    event_id=event.id,
+                )
+            )
+            event.alarm_id = alarm.id
+        return event
 
     def update_event(self, identifier: str, patch: dict) -> CalendarEvent | None:
         """Update a calendar event."""
 
         return self.repository.update_event(identifier, patch)
 
-    def delete_event(self, identifier: str) -> bool:
-        """Delete a calendar event."""
+    def delete_event(self, identifier: str, db_path: str = "") -> bool:
+        """Delete a calendar event. Cascade-delete any linked alarms."""
 
+        if db_path:
+            from app.domains.alarms.repository import AlarmsRepository
+
+            AlarmsRepository(db_path).delete_by_event(identifier)
         return self.repository.delete_event(identifier)
 
     def move_event(

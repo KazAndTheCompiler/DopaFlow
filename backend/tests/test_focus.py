@@ -53,7 +53,7 @@ def test_control_completed_ends_active_session(client) -> None:
     history = client.get("/api/v2/focus/history")
 
     assert response.status_code == 200
-    assert response.json()["status"] == "idle"
+    assert response.json()["status"] == "completed"
     assert history.json()[0]["status"] == "completed"
 
 
@@ -79,7 +79,7 @@ def test_complete_focus_logs_gamification_failure_without_failing_session(
     )
 
     assert response.status_code == 200
-    assert response.json()["status"] == "idle"
+    assert response.json()["status"] == "completed"
     assert any(
         "Failed to award gamification for source=focus_session" in record.message
         for record in caplog.records

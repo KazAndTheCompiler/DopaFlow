@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.domains.tasks.repository import TaskRepository
+from app.domains.tasks import repository as tasks_repo
 from app.domains.vault_bridge.schemas import TaskImportConfirmRequest
 from app.domains.vault_bridge.sync_service import VaultSyncService
 
@@ -24,8 +24,8 @@ def test_push_tasks_includes_completed_items(db_path: Path, tmp_path: Path) -> N
     service = VaultSyncService(str(db_path))
     _configure_vault(service, tmp_path)
 
-    repo = TaskRepository(str(db_path))
-    repo.create_task(
+    tasks_repo.create_task(
+        str(db_path),
         {
             "title": "Open loop",
             "status": "todo",
@@ -34,7 +34,8 @@ def test_push_tasks_includes_completed_items(db_path: Path, tmp_path: Path) -> N
             "tags": ["work"],
         },
     )
-    repo.create_task(
+    tasks_repo.create_task(
+        str(db_path),
         {
             "title": "Finished loop",
             "status": "done",
@@ -60,8 +61,8 @@ def test_push_tasks_marks_conflict_when_vault_and_app_both_drift(
     service = VaultSyncService(str(db_path))
     _configure_vault(service, tmp_path)
 
-    repo = TaskRepository(str(db_path))
-    created = repo.create_task(
+    created = tasks_repo.create_task(
+        str(db_path),
         {
             "title": "Original title",
             "status": "todo",
@@ -81,7 +82,7 @@ def test_push_tasks_marks_conflict_when_vault_and_app_both_drift(
         ),
         encoding="utf-8",
     )
-    repo.update_task(created.id, {"title": "App-edited title"})
+    tasks_repo.update_task(str(db_path), created.id, {"title": "App-edited title"})
 
     second_push = service.push_tasks()
 
@@ -100,8 +101,8 @@ def test_conflict_preview_returns_snapshot_and_current_file(
     service = VaultSyncService(str(db_path))
     _configure_vault(service, tmp_path)
 
-    repo = TaskRepository(str(db_path))
-    created = repo.create_task(
+    created = tasks_repo.create_task(
+        str(db_path),
         {
             "title": "Preview me",
             "status": "todo",
@@ -117,7 +118,7 @@ def test_conflict_preview_returns_snapshot_and_current_file(
     inbox_file.write_text(
         original.replace("Preview me", "Vault changed"), encoding="utf-8"
     )
-    repo.update_task(created.id, {"title": "App changed"})
+    tasks_repo.update_task(str(db_path), created.id, {"title": "App changed"})
 
     second_push = service.push_tasks()
     assert second_push.conflicts == 1
@@ -215,7 +216,7 @@ def test_confirm_task_import_is_idempotent_by_source_locator(
 
     assert first.imported == 1
     assert second.imported == 0
-    tasks = TaskRepository(str(db_path)).list_tasks()
+    tasks = tasks_repo.list_tasks(str(db_path))
     assert len(tasks) == 1
     assert "df:" in source.read_text(encoding="utf-8")
 
@@ -226,7 +227,8 @@ def test_push_daily_tasks_section_preserves_existing_note_content(
     service = VaultSyncService(str(db_path))
     _configure_vault(service, tmp_path)
 
-    TaskRepository(str(db_path)).create_task(
+    tasks_repo.create_task(
+        str(db_path),
         {
             "title": "Daily note task",
             "due_at": "2026-04-05T17:00:00+00:00",

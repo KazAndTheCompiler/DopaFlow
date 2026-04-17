@@ -74,7 +74,7 @@ export function Modal({
             overflowY: 'auto',
             padding: '1.5rem',
             borderRadius: 'var(--radius-lg)',
-            background: 'color-mix(in srgb, var(--surface) 90%, transparent)',
+            background: 'var(--modal-fill, color-mix(in srgb, var(--surface) 90%, transparent))',
             backdropFilter: 'var(--modal-glass-blur, blur(20px))',
             border: '1px solid var(--modal-edge, var(--border))',
             boxShadow: 'var(--shadow-floating)',
@@ -101,7 +101,7 @@ export function Modal({
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'var(--surface-inner-light)',
+              background: 'var(--modal-inner-light, var(--surface-inner-light))',
               pointerEvents: 'none',
               borderRadius: 'inherit',
             }}

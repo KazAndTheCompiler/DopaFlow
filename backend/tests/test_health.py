@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import logging
 import sqlite3
 from pathlib import Path
 
 from app.core.config import Settings, get_settings
+from app.domains.health import service as health_service_module
 from app.domains.health.service import HealthService
 from app.domains.ops.service import OpsService
 
@@ -86,8 +88,8 @@ def test_health_payload_prefers_dopaflow_env_flags_over_legacy(monkeypatch) -> N
     assert payload["features"]["local_webhooks"] is True
 
 
-def test_health_memory_depth_gracefully_handles_missing_table(
-    monkeypatch, tmp_path: Path
+def test_health_logs_missing_journal_table_for_memory_depth(
+    monkeypatch, tmp_path: Path, caplog
 ) -> None:
     from app.core.config import get_settings
 
@@ -101,11 +103,15 @@ def test_health_memory_depth_gracefully_handles_missing_table(
 
     monkeypatch.setenv("DOPAFLOW_DB_PATH", str(db_path))
     get_settings.cache_clear()
+    caplog.set_level(logging.WARNING, logger="app.domains.health.service")
 
     payload = HealthService.get_status(str(db_path))
 
     assert payload["db"] == "ok"
     assert payload["memory_depth_days"] == 0
+    assert any(
+        "Health memory depth unavailable" in record.message for record in caplog.records
+    )
 
 
 def test_health_ready_returns_ready(client) -> None:
@@ -115,42 +121,31 @@ def test_health_ready_returns_ready(client) -> None:
     assert response.json() == {"status": "ready", "reason": None}
 
 
-def test_health_ready_returns_503_when_no_alembic_version(
+def test_health_ready_returns_503_when_migration_is_pending(
     monkeypatch, tmp_path: Path
 ) -> None:
-    """A database with only a _migrations table but no alembic_version should
-    return not_ready because the Alembic stamp hasn't been applied yet, and
-    pending SQL migrations are detected via the legacy fallback."""
-
-    import app.core.database as db_mod
-
     db_path = tmp_path / "health-pending.sqlite"
     conn = sqlite3.connect(db_path)
     try:
         conn.execute(
-            "CREATE TABLE _migrations (filename TEXT PRIMARY KEY, "
-            "checksum TEXT NOT NULL DEFAULT '')"
+            "CREATE TABLE _migrations (filename TEXT PRIMARY KEY, checksum TEXT NOT NULL DEFAULT '')"
         )
         conn.commit()
     finally:
         conn.close()
 
-    # Create a temporary migration directory with one unapplied migration
     migrations_dir = tmp_path / "migrations"
     migrations_dir.mkdir()
     migration = migrations_dir / "001_pending.sql"
     migration.write_text(
         "CREATE TABLE sample (id INTEGER PRIMARY KEY);\n", encoding="utf-8"
     )
-
-    # Monkeypatch the database module's _migrations_dir to use our temp dir
-    # (the service lazy-imports from app.core.database)
-    original_dir = db_mod._migrations_dir
-    db_mod._migrations_dir = lambda: migrations_dir
+    original = health_service_module._migrations_dir
+    health_service_module._migrations_dir = lambda: migrations_dir
     try:
         payload = HealthService.get_ready(str(db_path))
     finally:
-        db_mod._migrations_dir = original_dir
+        health_service_module._migrations_dir = original
 
     assert payload["status"] == "not_ready"
     assert payload["reason"] == f"pending migration: {migration.name}"
