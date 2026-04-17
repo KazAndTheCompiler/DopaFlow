@@ -95,7 +95,9 @@ export function HabitsToday({ habits, onCheckIn }: HabitsTodayProps): JSX.Elemen
               fontSize: 'var(--text-xs)',
               fontWeight: 700,
               color:
-                totalCompleted === habits.length ? 'var(--state-completed)' : 'var(--text-secondary)',
+                totalCompleted === habits.length
+                  ? 'var(--state-completed)'
+                  : 'var(--text-secondary)',
             }}
           >
             {totalCompleted}/{habits.length}

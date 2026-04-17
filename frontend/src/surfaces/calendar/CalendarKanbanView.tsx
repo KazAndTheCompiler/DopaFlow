@@ -42,9 +42,15 @@ function eventPriority(event: CalendarEvent): number {
   const hoursUntil = (new Date(event.start_at).getTime() - Date.now()) / (1000 * 60 * 60);
   const urgent = hoursUntil <= URGENT_HOURS;
   const important = IMPORTANT_CATEGORIES.has(event.category?.toLowerCase() ?? '');
-  if (urgent && important) return 1;
-  if (!urgent && important) return 2;
-  if (urgent && !important) return 3;
+  if (urgent && important) {
+    return 1;
+  }
+  if (!urgent && important) {
+    return 2;
+  }
+  if (urgent && !important) {
+    return 3;
+  }
   return 4;
 }
 
@@ -201,16 +207,16 @@ export default function CalendarKanbanView({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     {priorityBadge(eventPriority(event))}
                     <span
-                    style={{
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: 600,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {event.title}
-                  </span>
+                      style={{
+                        fontSize: 'var(--text-sm)',
+                        fontWeight: 600,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {event.title}
+                    </span>
                   </div>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                     {formatEventDate(event)}

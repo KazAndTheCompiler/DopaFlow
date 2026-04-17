@@ -321,7 +321,9 @@ export default function ShutdownModal({
               >
                 Habits
               </span>
-              <strong style={{ fontSize: '1.2rem' }}>{completedHabits.length}/{habits.length}</strong>
+              <strong style={{ fontSize: '1.2rem' }}>
+                {completedHabits.length}/{habits.length}
+              </strong>
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                 habits hit today
               </span>
@@ -416,8 +418,18 @@ export default function ShutdownModal({
             {step === 1 && (
               <div style={{ display: 'grid', gap: '0.65rem' }}>
                 {habits.length === 0 ? (
-                  <div style={{ padding: '1rem', borderRadius: '14px', background: 'var(--surface-2)', border: '1px dashed var(--border-subtle)', textAlign: 'center' }}>
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No habits to track</span>
+                  <div
+                    style={{
+                      padding: '1rem',
+                      borderRadius: '14px',
+                      background: 'var(--surface-2)',
+                      border: '1px dashed var(--border-subtle)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                      No habits to track
+                    </span>
                   </div>
                 ) : (
                   habits.map((habit) => {
@@ -453,12 +465,25 @@ export default function ShutdownModal({
                             flexShrink: 0,
                           }}
                         >
-                          {done && <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 800 }}>&#10003;</span>}
+                          {done && (
+                            <span style={{ fontSize: '0.55rem', color: 'white', fontWeight: 800 }}>
+                              &#10003;
+                            </span>
+                          )}
                         </span>
-                        <span style={{ flex: 1, fontSize: 'var(--text-sm)', opacity: done ? 0.65 : 1 }}>
+                        <span
+                          style={{ flex: 1, fontSize: 'var(--text-sm)', opacity: done ? 0.65 : 1 }}
+                        >
                           {habit.name}
                           {target > 1 && (
-                            <span style={{ marginLeft: '0.35rem', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            <span
+                              style={{
+                                marginLeft: '0.35rem',
+                                fontSize: 'var(--text-xs)',
+                                color: 'var(--text-muted)',
+                                fontWeight: 600,
+                              }}
+                            >
                               {count}/{target}
                             </span>
                           )}

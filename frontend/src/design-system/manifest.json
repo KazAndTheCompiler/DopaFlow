@@ -1,25 +1,122 @@
 {
   "version": "2.0.11",
   "skins": [
-    { "id": "ink-and-stone", "name": "Ink & Stone", "category": "light", "default": true, "preview": { "bg": "#f4efe4", "accent": "#49615c", "surface": "#fbf8f0" } },
-    { "id": "warm-analog", "name": "Warm Analog", "category": "light", "preview": { "bg": "#f7f0e5", "accent": "#bc6c25", "surface": "#fff8ef" } },
-    { "id": "paper-minimal", "name": "Paper Minimal", "category": "light", "preview": { "bg": "#faf7f1", "accent": "#215c4d", "surface": "#fffdf9" } },
-    { "id": "aurora", "name": "Aurora", "category": "light", "preview": { "bg": "#eef6f5", "accent": "#157a6e", "surface": "#ffffff" } },
-    { "id": "soft-pastel", "name": "Soft Pastel", "category": "light", "preview": { "bg": "#f8f3fa", "accent": "#d66c8d", "surface": "#fffafe" } },
-    { "id": "cotton-candy", "name": "Cotton Candy", "category": "light", "preview": { "bg": "#fef6ff", "accent": "#e879f9", "surface": "#ffffff" } },
-    { "id": "high-contrast", "name": "High Contrast", "category": "light", "accessibility": "high-contrast", "preview": { "bg": "#ffffff", "accent": "#0047ff", "surface": "#ffffff" } },
-    { "id": "midnight-neon", "name": "Midnight Neon", "category": "dark", "preview": { "bg": "#091017", "accent": "#31f0c8", "surface": "#101c29" } },
-    { "id": "amber-terminal", "name": "Amber Terminal", "category": "dark", "preview": { "bg": "#1b140c", "accent": "#ffb000", "surface": "#251c11" } },
-    { "id": "glassy-modern", "name": "Glassy Modern", "category": "dark", "preview": { "bg": "#0f1b20", "accent": "#50bfd3", "surface": "#182c34" } },
-    { "id": "lush-forest", "name": "Lush Forest", "category": "dark", "preview": { "bg": "#0d1512", "accent": "#7ce3a0", "surface": "#141f1a" } },
-    { "id": "vampire-romance", "name": "Vampire Romance", "category": "dark", "preview": { "bg": "#1a0a0f", "accent": "#ff708d", "surface": "#251419" } },
-    { "id": "deep-ocean", "name": "Deep Ocean", "category": "dark", "preview": { "bg": "#030810", "accent": "#00e5ff", "surface": "#081420" } },
-    { "id": "sunset-blues", "name": "Sunset Blues", "category": "dark", "preview": { "bg": "#1a1520", "accent": "#c084fc", "surface": "#251e2d" } },
-    { "id": "classic-noir", "name": "Classic Noir", "category": "dark", "preview": { "bg": "#0a0a0a", "accent": "#d4af37", "surface": "#141414" } },
-    { "id": "neon-punk", "name": "Neon Punk", "category": "dark", "preview": { "bg": "#0a0612", "accent": "#bf00ff", "surface": "#120c1e" } },
-    { "id": "forest-gradient", "name": "Forest Gradient", "category": "dark", "preview": { "bg": "#111e14", "accent": "#6abf70", "surface": "#1e3024" } },
-    { "id": "ocean-gradient", "name": "Ocean Gradient", "category": "dark", "preview": { "bg": "#0a1628", "accent": "#3db8d8", "surface": "#0f1e32" } },
-    { "id": "amber-night", "name": "Amber Night", "category": "dark", "preview": { "bg": "#1a1005", "accent": "#d4901a", "surface": "#241808" } }
+    {
+      "id": "ink-and-stone",
+      "name": "Ink & Stone",
+      "category": "light",
+      "default": true,
+      "preview": { "bg": "#f4efe4", "accent": "#49615c", "surface": "#fbf8f0" }
+    },
+    {
+      "id": "warm-analog",
+      "name": "Warm Analog",
+      "category": "light",
+      "preview": { "bg": "#f7f0e5", "accent": "#bc6c25", "surface": "#fff8ef" }
+    },
+    {
+      "id": "paper-minimal",
+      "name": "Paper Minimal",
+      "category": "light",
+      "preview": { "bg": "#faf7f1", "accent": "#215c4d", "surface": "#fffdf9" }
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora",
+      "category": "light",
+      "preview": { "bg": "#eef6f5", "accent": "#157a6e", "surface": "#ffffff" }
+    },
+    {
+      "id": "soft-pastel",
+      "name": "Soft Pastel",
+      "category": "light",
+      "preview": { "bg": "#f8f3fa", "accent": "#d66c8d", "surface": "#fffafe" }
+    },
+    {
+      "id": "cotton-candy",
+      "name": "Cotton Candy",
+      "category": "light",
+      "preview": { "bg": "#fef6ff", "accent": "#e879f9", "surface": "#ffffff" }
+    },
+    {
+      "id": "high-contrast",
+      "name": "High Contrast",
+      "category": "light",
+      "accessibility": "high-contrast",
+      "preview": { "bg": "#ffffff", "accent": "#0047ff", "surface": "#ffffff" }
+    },
+    {
+      "id": "midnight-neon",
+      "name": "Midnight Neon",
+      "category": "dark",
+      "preview": { "bg": "#091017", "accent": "#31f0c8", "surface": "#101c29" }
+    },
+    {
+      "id": "amber-terminal",
+      "name": "Amber Terminal",
+      "category": "dark",
+      "preview": { "bg": "#1b140c", "accent": "#ffb000", "surface": "#251c11" }
+    },
+    {
+      "id": "glassy-modern",
+      "name": "Glassy Modern",
+      "category": "dark",
+      "preview": { "bg": "#0f1b20", "accent": "#50bfd3", "surface": "#182c34" }
+    },
+    {
+      "id": "lush-forest",
+      "name": "Lush Forest",
+      "category": "dark",
+      "preview": { "bg": "#0d1512", "accent": "#7ce3a0", "surface": "#141f1a" }
+    },
+    {
+      "id": "vampire-romance",
+      "name": "Vampire Romance",
+      "category": "dark",
+      "preview": { "bg": "#1a0a0f", "accent": "#ff708d", "surface": "#251419" }
+    },
+    {
+      "id": "deep-ocean",
+      "name": "Deep Ocean",
+      "category": "dark",
+      "preview": { "bg": "#030810", "accent": "#00e5ff", "surface": "#081420" }
+    },
+    {
+      "id": "sunset-blues",
+      "name": "Sunset Blues",
+      "category": "dark",
+      "preview": { "bg": "#1a1520", "accent": "#c084fc", "surface": "#251e2d" }
+    },
+    {
+      "id": "classic-noir",
+      "name": "Classic Noir",
+      "category": "dark",
+      "preview": { "bg": "#0a0a0a", "accent": "#d4af37", "surface": "#141414" }
+    },
+    {
+      "id": "neon-punk",
+      "name": "Neon Punk",
+      "category": "dark",
+      "preview": { "bg": "#0a0612", "accent": "#bf00ff", "surface": "#120c1e" }
+    },
+    {
+      "id": "forest-gradient",
+      "name": "Forest Gradient",
+      "category": "dark",
+      "preview": { "bg": "#111e14", "accent": "#6abf70", "surface": "#1e3024" }
+    },
+    {
+      "id": "ocean-gradient",
+      "name": "Ocean Gradient",
+      "category": "dark",
+      "preview": { "bg": "#0a1628", "accent": "#3db8d8", "surface": "#0f1e32" }
+    },
+    {
+      "id": "amber-night",
+      "name": "Amber Night",
+      "category": "dark",
+      "preview": { "bg": "#1a1005", "accent": "#d4901a", "surface": "#241808" }
+    }
   ],
   "tokenContract": "2.0.0",
   "customSkinSupport": true

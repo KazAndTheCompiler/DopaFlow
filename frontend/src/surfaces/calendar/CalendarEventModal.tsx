@@ -405,9 +405,7 @@ export default function CalendarEventModal({
               <input
                 type="checkbox"
                 checked={reminderMinutes !== null}
-                onChange={(e) =>
-                  setReminderMinutes(e.target.checked ? 15 : null)
-                }
+                onChange={(e) => setReminderMinutes(e.target.checked ? 15 : null)}
                 disabled={readOnly}
                 style={{ accentColor: 'var(--accent)', cursor: readOnly ? 'default' : 'pointer' }}
               />

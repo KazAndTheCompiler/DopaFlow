@@ -27,7 +27,9 @@ function isToday(isoString: string): boolean {
 }
 
 export function SessionHistory({ sessions }: { sessions: FocusSession[] }): JSX.Element {
-  const todayCompleted = sessions.filter((s) => s.status === 'completed' && s.started_at && isToday(s.started_at));
+  const todayCompleted = sessions.filter(
+    (s) => s.status === 'completed' && s.started_at && isToday(s.started_at),
+  );
   const totalMinutesToday = todayCompleted.reduce((sum, s) => sum + s.duration_minutes, 0);
 
   // Show up to 20 recent sessions, excluding the actively running one from history

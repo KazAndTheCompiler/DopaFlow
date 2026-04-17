@@ -30,7 +30,9 @@ export function NavButton({
         gap: '0.75rem',
         width: '100%',
         border: 0,
-        borderLeft: isActive ? `3px solid var(--nav-item-active-edge, var(--accent))` : '3px solid transparent',
+        borderLeft: isActive
+          ? `3px solid var(--nav-item-active-edge, var(--accent))`
+          : '3px solid transparent',
         background: isActive
           ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--surface)), color-mix(in srgb, var(--surface) 84%, white 16%))'
           : isHovered
@@ -41,7 +43,9 @@ export function NavButton({
         cursor: 'pointer',
         boxShadow: isActive
           ? '0 0 12px var(--nav-item-active-glow, transparent)'
-          : isHovered ? 'var(--shadow-soft)' : 'none',
+          : isHovered
+            ? 'var(--shadow-soft)'
+            : 'none',
         transform: isHovered && !isActive ? 'translateX(2px)' : 'none',
         transition:
           'box-shadow 180ms ease, transform 180ms ease, background 180ms ease, border-color 180ms ease',
