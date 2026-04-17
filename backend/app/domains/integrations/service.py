@@ -12,7 +12,6 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
-from app.core.id_gen import notification_id
 from app.domains.integrations.repository import IntegrationsRepository
 
 logger = logging.getLogger("dopaflow.outbox")

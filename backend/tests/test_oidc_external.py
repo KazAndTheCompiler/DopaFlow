@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import time
+from unittest.mock import patch
+
+import pytest
+
 from app.core.config import Settings
 from app.core.database import run_migrations
 from app.domains.auth.oidc_external import (
@@ -9,9 +14,6 @@ from app.domains.auth.oidc_external import (
     consume_oidc_state,
     create_oidc_state,
 )
-from unittest.mock import patch
-import time
-import pytest
 
 
 @pytest.fixture

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import time
 from unittest.mock import patch
 
@@ -10,18 +9,16 @@ import jwt as pyjwt
 import pytest
 
 from app.services.oidc_provider import (
-    CACHE_TTL,
     clear_cache,
     fetch_discovery,
-    fetch_jwks,
     validate_id_token,
 )
 
 
 def _generate_rsa_key():
     """Generate an RSA key pair for testing."""
-    from cryptography.hazmat.primitives.asymmetric import rsa
     from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
 
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     public_key = private_key.public_key()
@@ -181,7 +178,6 @@ class TestCaching:
 
 def _get_rsa_n(private_key):
     """Extract base64url-encoded RSA modulus."""
-    from cryptography.hazmat.primitives.asymmetric import rsa as rsa_mod
     numbers = private_key.private_numbers().public_numbers
     import base64
     n_bytes = numbers.n.to_bytes((numbers.n.bit_length() + 7) // 8, byteorder="big")
@@ -190,7 +186,6 @@ def _get_rsa_n(private_key):
 
 def _get_rsa_e(private_key):
     """Extract base64url-encoded RSA exponent."""
-    from cryptography.hazmat.primitives.asymmetric import rsa as rsa_mod
     numbers = private_key.private_numbers().public_numbers
     import base64
     e_bytes = numbers.e.to_bytes((numbers.e.bit_length() + 7) // 8, byteorder="big")
