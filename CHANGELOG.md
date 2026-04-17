@@ -6,6 +6,21 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 `2.0.11`, see
 [`docs/CHANGELOG_2.0.0-2.0.11.md`](/home/henry/vscode/build/dopaflow/docs/CHANGELOG_2.0.0-2.0.11.md).
 
+## 2.0.17
+
+- **Test suite fully green (636 tests)**: Fixed 44 failing tests across tasks, commands, focus, vault_bridge domains.
+- **Fixed AuthRepository import error**: Removed nonexistent `AuthRepository` import from `main.py`; `AuthService` now correctly initialized with `settings` only.
+- **Fixed OAuth redirect validation**: Changed `redirect_uris` (list) to `redirect_uri` (singular) matching database schema.
+- **Fixed focus.start NLP handler**: Added missing `db_path` argument to `focus_svc.start()` call in commands/execution.py.
+- **Fixed sqlite3.Row compatibility**: Changed `row.get("project_id")` to `"project_id" in row.keys()` check in tasks/repository.py.
+- **Fixed smoke test habit_checkin**: Removed broken `hab_id` fixture dependency; test now creates habit inline.
+- **Fixed smoke test journal_create path**: Changed from `/api/v2/journal/` to `/api/v2/journal/entries` (correct route).
+- **Fixed smoke test focus assertion**: Changed expected status from `"idle"` to `"completed"` after session completion.
+- **Fixed ops security tests**: Set `dev_auth=False` to enable ops secret validation.
+- **Fixed logging tests**: Updated `configure_logging(packaged=...)` to `configure_logging(production=...)`.
+- **Fixed migration drift test**: Test now correctly expects `RuntimeError` on checksum mismatch.
+- **Version bump**: 2.0.12 → 2.0.17.
+
 ## 2.0.13
 
 - Added server-side transcription fallback to VoiceCommandModal: when Chrome Web Speech API fails with a network error, falls back to recording via `useMicrophone` and transcribing through `POST /journal/transcribe`. Shows "server transcription mode" indicator.

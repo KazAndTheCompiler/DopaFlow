@@ -113,13 +113,7 @@ class PackyService:
         # 5. Execute if requested and the preview says it's actionable
         if payload.auto_execute and preview.get("would_execute"):
             db_path = payload.db_path or ""
-            if not db_path:
-                # No database path configured — return error response
-                response.status = "error"
-                response.reply_text = "Internal error: database not configured."
-                response.tts_text = "Something went wrong. Try again."
-                response.mode = "clarification"
-            else:
+            if db_path:
                 result = CommandService.execute(
                     db_path, text, confirm=True, source="voice"
                 )

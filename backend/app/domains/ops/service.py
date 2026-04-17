@@ -14,9 +14,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from app.core.config import Settings
+from app.core.database import get_db, tx
 from app.core.id_gen import habit_id, task_id
 from app.core.version import APP_VERSION, SCHEMA_VERSION
-from app.domains.ops.repository import OpsRepository
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,6 @@ class OpsService:
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.repository = OpsRepository(settings)
 
     def _inspect_backup(self, content: bytes) -> dict[str, object]:
         if content[:16] != b"SQLite format 3\x00":
@@ -101,10 +100,38 @@ class OpsService:
     # ── metadata helpers ──────────────────────────────────────────────────────
 
     def _set_metadata(self, key: str, value: str) -> None:
-        self.repository.set_metadata(key, value)
+        with tx(self.settings) as conn:
+            conn.execute(
+                """
+                INSERT INTO ops_metadata(key, value, updated_at)
+                VALUES(?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP
+                """,
+                (key, value),
+            )
 
     def _get_metadata(self, key: str) -> str | None:
-        return self.repository.get_metadata(key)
+        try:
+            with get_db(self.settings) as conn:
+                row = conn.execute(
+                    "SELECT value FROM ops_metadata WHERE key=?", (key,)
+                ).fetchone()
+            return row["value"] if row else None
+        except Exception:
+            return None
+
+    def _optional_rows(
+        self, conn: sqlite3.Connection, sql: str, *, table_name: str
+    ) -> list[dict[str, object]]:
+        try:
+            return [dict(row) for row in conn.execute(sql).fetchall()]
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc).lower():
+                raise
+            logger.warning(
+                "Optional ops export table %s is unavailable: %s", table_name, exc
+            )
+            return []
 
     @staticmethod
     def _env_flag(name: str, legacy_name: str, default: str = "0") -> bool:
@@ -116,7 +143,13 @@ class OpsService:
     # ── diagnostics ───────────────────────────────────────────────────────────
 
     def get_stats(self) -> dict[str, int]:
-        return self.repository.get_counts()
+        with get_db(self.settings) as conn:
+            tasks = int(conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0])
+            habits = int(conn.execute("SELECT COUNT(*) FROM habits").fetchone()[0])
+            journal_entries = int(
+                conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0]
+            )
+        return {"tasks": tasks, "habits": habits, "journal_entries": journal_entries}
 
     def get_sync_status(self) -> dict[str, object]:
         db_file = Path(self.settings.db_path)
@@ -124,7 +157,16 @@ class OpsService:
             db_size = db_file.stat().st_size
         except FileNotFoundError:
             db_size = 0
-        entry_count = self.repository.count_journal_entries()
+        entry_count = 0
+        try:
+            with get_db(self.settings) as conn:
+                entry_count = int(
+                    conn.execute("SELECT COUNT(*) FROM journal_entries").fetchone()[0]
+                )
+        except sqlite3.OperationalError as exc:
+            if "no such table" not in str(exc).lower():
+                raise
+            logger.warning("Ops sync status could not count journal entries: %s", exc)
         return {
             "db_path": str(db_file),
             "db_size_bytes": db_size,
@@ -152,43 +194,107 @@ class OpsService:
     # ── export ────────────────────────────────────────────────────────────────
 
     def export_payload(self) -> dict[str, object]:
-        data = self.repository.export_payload()
+        with get_db(self.settings) as conn:
+            tasks = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM tasks ORDER BY created_at"
+                ).fetchall()
+            ]
+            habits = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM habit_checkins ORDER BY checkin_date"
+                ).fetchall()
+            ]
+            journal = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date"
+                ).fetchall()
+            ]
+            decks = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM review_decks ORDER BY created_at"
+                ).fetchall()
+            ]
+            cards = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM review_cards ORDER BY created_at"
+                ).fetchall()
+            ]
+            nutrition = self._optional_rows(
+                conn,
+                "SELECT * FROM nutrition_log ORDER BY date",
+                table_name="nutrition_log",
+            )
+            cmd_logs = self._optional_rows(
+                conn,
+                "SELECT * FROM command_logs ORDER BY executed_at DESC LIMIT 500",
+                table_name="command_logs",
+            )
         return {
             "manifest": {"schema_version": SCHEMA_VERSION, "app_version": APP_VERSION},
-            "tasks": data["tasks"],
-            "commands": data["commands"],
-            "habits": data["habits"],
-            "journal": data["journal"],
-            "decks": data["decks"],
-            "cards": data["cards"],
-            "nutrition_log": data["nutrition_log"],
+            "tasks": tasks,
+            "commands": cmd_logs,
+            "habits": habits,
+            "journal": journal,
+            "decks": decks,
+            "cards": cards,
+            "nutrition_log": nutrition,
         }
 
     def export_all_zip(self) -> bytes:
-        data = self.repository.export_zip_data()
+        with get_db(self.settings) as conn:
+            tasks = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM tasks ORDER BY created_at"
+                ).fetchall()
+            ]
+            habits = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM habit_checkins ORDER BY checkin_date"
+                ).fetchall()
+            ]
+            journal = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM journal_entries WHERE deleted_at IS NULL ORDER BY entry_date"
+                ).fetchall()
+            ]
+            alarms = [
+                dict(r)
+                for r in conn.execute(
+                    "SELECT * FROM alarms ORDER BY created_at"
+                ).fetchall()
+            ]
+            nutrition = self._optional_rows(
+                conn,
+                "SELECT * FROM nutrition_log ORDER BY date",
+                table_name="nutrition_log",
+            )
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as arc:
             arc.writestr(
-                "tasks.json",
-                json.dumps(data["tasks"], indent=2, sort_keys=True, default=str),
+                "tasks.json", json.dumps(tasks, indent=2, sort_keys=True, default=str)
             )
             arc.writestr(
-                "habits.json",
-                json.dumps(data["habits"], indent=2, sort_keys=True, default=str),
+                "habits.json", json.dumps(habits, indent=2, sort_keys=True, default=str)
             )
             arc.writestr(
                 "journal.json",
-                json.dumps(data["journal"], indent=2, sort_keys=True, default=str),
+                json.dumps(journal, indent=2, sort_keys=True, default=str),
             )
             arc.writestr(
-                "alarms.json",
-                json.dumps(data["alarms"], indent=2, sort_keys=True, default=str),
+                "alarms.json", json.dumps(alarms, indent=2, sort_keys=True, default=str)
             )
             arc.writestr(
                 "nutrition.json",
-                json.dumps(
-                    data["nutrition_log"], indent=2, sort_keys=True, default=str
-                ),
+                json.dumps(nutrition, indent=2, sort_keys=True, default=str),
             )
             arc.writestr("export_date.txt", datetime.now(UTC).isoformat())
         return buffer.getvalue()
@@ -258,11 +364,13 @@ class OpsService:
     # ── seed ──────────────────────────────────────────────────────────────────
 
     def seed_first_run(self) -> dict[str, object]:
-        task_count, habit_count = self.repository.count_tasks_and_habits()
+        with get_db(self.settings) as conn:
+            task_count = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+            habit_count = conn.execute("SELECT COUNT(*) FROM habits").fetchone()[0]
         if task_count or habit_count:
             return {"seeded": False, "message": "Sample data only seeds on first run"}
         today = datetime.now(UTC).date().isoformat()
-        with self.repository.tx() as conn:
+        with tx(self.settings) as conn:
             conn.execute(
                 "INSERT INTO tasks(id, title, due_at, priority) VALUES(?,?,?,?)",
                 (task_id(), "Try the task list", f"{today}T12:00:00Z", 2),
@@ -297,7 +405,7 @@ class OpsService:
         if not dry_run:
             import uuid
 
-            with self.repository.tx() as conn:
+            with tx(self.settings) as conn:
                 for t in tasks:
                     title = (t.get("title") or "").strip()
                     if not title:

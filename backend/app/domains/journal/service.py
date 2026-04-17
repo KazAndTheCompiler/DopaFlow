@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.core.config import default_backup_dir
+from app.core.database import get_db
 from app.core.gamification_helpers import award as award_gamification
 from app.domains.journal.repository import JournalRepository
 from app.domains.journal.schemas import (
@@ -299,7 +300,9 @@ class JournalService:
         return self.repository.backup_status()
 
     def _database_integrity_ok(self) -> bool:
-        return self.repository.check_integrity()
+        with get_db(self.repository.settings) as conn:
+            row = conn.execute("PRAGMA integrity_check").fetchone()
+        return bool(row) and row[0] == "ok"
 
     def trigger_backup(self, date: str | None = None) -> JournalBackupTriggerResponse:
         target_date = date or datetime.now(UTC).date().isoformat()

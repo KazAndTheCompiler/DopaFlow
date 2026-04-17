@@ -98,11 +98,12 @@ async def list_events(
 )
 async def create_event(
     payload: CalendarEventCreate,
+    settings: Settings = Depends(get_settings_dependency),
     svc: CalendarService = Depends(_svc),
 ) -> CalendarEvent:
     """Create a new calendar event."""
 
-    event = svc.create_event(payload)
+    event = svc.create_event(payload, db_path=settings.db_path)
     await publish_invalidation("calendar")
     return event
 
@@ -150,11 +151,12 @@ async def update_event(
 )
 async def delete_event(
     identifier: str,
+    settings: Settings = Depends(get_settings_dependency),
     svc: CalendarService = Depends(_svc),
 ) -> CalendarDeleteResponse:
     """Delete a calendar event."""
 
-    if not svc.delete_event(identifier):
+    if not svc.delete_event(identifier, db_path=settings.db_path):
         raise HTTPException(status_code=404, detail="Event not found")
     await publish_invalidation("calendar")
     return CalendarDeleteResponse(deleted=True)

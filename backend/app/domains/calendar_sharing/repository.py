@@ -9,7 +9,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from app.core.base_repository import BaseRepository
+from app.core.database import get_db, tx
 from app.domains.calendar_sharing.schemas import (
     PeerFeed,
     PeerFeedCreate,
@@ -50,13 +50,16 @@ def _row_to_peer_feed(row: object) -> PeerFeed:
     )
 
 
-class CalendarSharingRepository(BaseRepository):
+class CalendarSharingRepository:
     """Manage calendar sharing tokens and peer feed subscriptions."""
+
+    def __init__(self, db_path: str) -> None:
+        self.db_path = db_path
 
     def list_tokens(self) -> list[ShareToken]:
         """Return non-revoked share tokens."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 """
                 SELECT *
@@ -83,7 +86,7 @@ class CalendarSharingRepository(BaseRepository):
                 datetime.now(timezone.utc) + timedelta(days=expires_in_days)
             ).isoformat()
 
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
                 INSERT INTO calendar_share_tokens (id, label, token_hash, scopes, allow_write, created_at, expires_at)
@@ -108,7 +111,7 @@ class CalendarSharingRepository(BaseRepository):
         """Revoke a share token."""
 
         now = datetime.now(timezone.utc).isoformat()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             result = conn.execute(
                 "UPDATE calendar_share_tokens SET revoked_at = ? WHERE id = ?",
                 (now, token_id),
@@ -121,7 +124,7 @@ class CalendarSharingRepository(BaseRepository):
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
         now = datetime.now(timezone.utc).isoformat()
 
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             row = conn.execute(
                 """
                 SELECT *
@@ -143,7 +146,7 @@ class CalendarSharingRepository(BaseRepository):
     def list_feeds(self) -> list[PeerFeed]:
         """Return all active peer feeds."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 "SELECT * FROM calendar_peer_feeds ORDER BY created_at DESC"
             ).fetchall()
@@ -152,7 +155,7 @@ class CalendarSharingRepository(BaseRepository):
     def get_feed_credentials(self, feed_id: str) -> tuple[PeerFeed, str] | None:
         """Return a peer feed plus its stored bearer token for sync work."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
             ).fetchone()
@@ -166,7 +169,7 @@ class CalendarSharingRepository(BaseRepository):
         feed_id = "pf_" + uuid4().hex[:16]
         now = datetime.now(timezone.utc).isoformat()
 
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
                 INSERT INTO calendar_peer_feeds (id, label, base_url, token, color, sync_status, created_at, updated_at)
@@ -198,7 +201,7 @@ class CalendarSharingRepository(BaseRepository):
     def update_feed(self, feed_id: str, patch: PeerFeedUpdate) -> PeerFeed | None:
         """Update mutable peer feed fields."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
             ).fetchone()
@@ -206,7 +209,7 @@ class CalendarSharingRepository(BaseRepository):
                 return None
 
         now = datetime.now(timezone.utc).isoformat()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             updates = []
             params = []
             if patch.label is not None:
@@ -224,7 +227,7 @@ class CalendarSharingRepository(BaseRepository):
                 )
                 conn.execute(query, params)
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM calendar_peer_feeds WHERE id = ?", (feed_id,)
             ).fetchone()
@@ -233,7 +236,7 @@ class CalendarSharingRepository(BaseRepository):
     def remove_feed(self, feed_id: str) -> bool:
         """Delete a peer feed subscription."""
 
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             source_type = f"peer:{feed_id}"
             conn.execute("DELETE FROM sync_conflicts WHERE owner = ?", (source_type,))
             conn.execute(
@@ -250,7 +253,7 @@ class CalendarSharingRepository(BaseRepository):
         """Update peer feed sync status and error message."""
 
         now = datetime.now(timezone.utc).isoformat()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             if status == "ok":
                 conn.execute(
                     """
@@ -287,7 +290,7 @@ class CalendarSharingRepository(BaseRepository):
         source_type = f"peer:{feed_id}"
         now = datetime.now(timezone.utc).isoformat()
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             existing = conn.execute(
                 "SELECT * FROM calendar_events WHERE source_external_id = ? AND source_type = ?",
                 (external_id, source_type),
@@ -300,7 +303,7 @@ class CalendarSharingRepository(BaseRepository):
 
             if existing_status != "local_only" and remote_updated > local_updated:
                 # Update from remote
-                with self.tx() as conn:
+                with tx(self.db_path) as conn:
                     conn.execute(
                         """
                         UPDATE calendar_events
@@ -322,7 +325,7 @@ class CalendarSharingRepository(BaseRepository):
                 return "updated"
             elif existing_status == "local_only":
                 # Conflict: local-only, incoming shared change
-                with self.tx() as conn:
+                with tx(self.db_path) as conn:
                     conn.execute(
                         """
                         INSERT INTO sync_conflicts
@@ -345,7 +348,7 @@ class CalendarSharingRepository(BaseRepository):
             from app.core.id_gen import event_id
 
             new_id = event_id()
-            with self.tx() as conn:
+            with tx(self.db_path) as conn:
                 conn.execute(
                     """
                     INSERT INTO calendar_events

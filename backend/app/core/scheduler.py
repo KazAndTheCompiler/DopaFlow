@@ -96,10 +96,10 @@ def _materialize_recurring_tasks() -> None:
     """Materialize recurring task instances for the next 36 hours."""
     try:
         from app.core.config import get_settings
-        from app.domains.tasks.repository import TaskRepository
+        from app.domains.tasks import repository as tasks_repo
 
         settings = get_settings()
-        TaskRepository(settings).materialize_recurring(window_hours=36)
+        tasks_repo.materialize_recurring(settings.db_path, window_hours=36)
     except Exception:
         logger.exception("Failed to materialize recurring tasks")
 

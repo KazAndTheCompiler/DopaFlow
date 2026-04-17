@@ -19,8 +19,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from app.core.config import Settings, get_settings_dependency
-from app.domains.focus import service
-from app.domains.focus.repository import FocusRepository
+from app.domains.focus import repository, service
 from app.domains.focus.schemas import (
     FocusControlRequest,
     FocusRecommendation,
@@ -34,8 +33,8 @@ from app.middleware.auth_scopes import require_scope
 router = APIRouter(tags=["focus"])
 
 
-def _repo(settings: Settings = Depends(get_settings_dependency)) -> FocusRepository:
-    return FocusRepository(settings)
+async def _db_path(settings: Settings = Depends(get_settings_dependency)) -> str:
+    return settings.db_path
 
 
 # ── REST surface (used by frontend hooks) ──────────────────────────────────
@@ -48,50 +47,62 @@ def _repo(settings: Settings = Depends(get_settings_dependency)) -> FocusReposit
 )
 async def list_sessions(
     limit: int = Query(default=30),
-    repo: FocusRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> list[FocusSessionRead]:
     """List recent focus sessions."""
 
-    return repo.list_sessions(limit=limit)
+    return repository.list_sessions(db_path, limit=limit)
 
 
 @router.post(
     "/sessions",
-    response_model=FocusStatus,
+    response_model=FocusSessionRead,
     dependencies=[Depends(require_scope("write:focus"))],
 )
 async def start_session(
     payload: FocusSessionCreate,
-    repo: FocusRepository = Depends(_repo),
-) -> FocusStatus:
+    db_path: str = Depends(_db_path),
+) -> FocusSessionRead:
     """Start a new Pomodoro or deep-focus session."""
 
-    return service.start(repo.db_path, payload.duration_minutes, payload.task_id)
+    status = service.start(db_path, payload.duration_minutes, payload.task_id)
+    session = repository.get_session(db_path, status.log_id)
+    if session is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=500, detail="Session created but not found")
+    return FocusSessionRead(**session)
 
 
 @router.post(
     "/sessions/control",
-    response_model=FocusStatus,
+    response_model=FocusSessionRead | FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
 async def control_session(
     payload: FocusControlRequest,
-    repo: FocusRepository = Depends(_repo),
-) -> FocusStatus:
+    db_path: str = Depends(_db_path),
+) -> FocusSessionRead | FocusStatus:
     """Pause, resume, or complete the active session."""
 
     action = payload.action
     if action == "paused":
-        return service.pause(repo.db_path)
-    if action == "running":
-        return service.resume(repo.db_path)
-    if action in {"completed", "stopped"}:
-        return (
-            service.complete(repo.db_path)
+        status = service.pause(db_path)
+    elif action == "running":
+        status = service.resume(db_path)
+    elif action in {"completed", "stopped"}:
+        status = (
+            service.complete(db_path)
             if action == "completed"
-            else service.stop(repo.db_path)
+            else service.stop(db_path)
         )
-    return service.get_status()
+    else:
+        return service.get_status()
+    if status.log_id:
+        session = repository.get_session(db_path, status.log_id)
+        if session:
+            return FocusSessionRead(**session)
+    return status
 
 
 # ── Convenience single-action verbs (keep for backward compatibility) ──────
@@ -103,11 +114,11 @@ async def control_session(
     dependencies=[Depends(require_scope("write:focus"))],
 )
 async def start_focus(
-    payload: dict | None = None, repo: FocusRepository = Depends(_repo)
+    payload: dict | None = None, db_path: str = Depends(_db_path)
 ) -> FocusStatus:
     payload = payload or {}
     return service.start(
-        repo.db_path, int(payload.get("duration_minutes", 25)), payload.get("task_id")
+        db_path, int(payload.get("duration_minutes", 25)), payload.get("task_id")
     )
 
 
@@ -116,8 +127,8 @@ async def start_focus(
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def pause_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
-    return service.pause(repo.db_path)
+async def pause_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.pause(db_path)
 
 
 @router.post(
@@ -125,8 +136,8 @@ async def pause_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def resume_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
-    return service.resume(repo.db_path)
+async def resume_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.resume(db_path)
 
 
 @router.post(
@@ -134,8 +145,8 @@ async def resume_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def stop_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
-    return service.stop(repo.db_path)
+async def stop_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.stop(db_path)
 
 
 @router.post(
@@ -143,8 +154,8 @@ async def stop_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
     response_model=FocusStatus,
     dependencies=[Depends(require_scope("write:focus"))],
 )
-async def complete_focus(repo: FocusRepository = Depends(_repo)) -> FocusStatus:
-    return service.complete(repo.db_path)
+async def complete_focus(db_path: str = Depends(_db_path)) -> FocusStatus:
+    return service.complete(db_path)
 
 
 @router.get(
@@ -163,9 +174,9 @@ async def focus_status() -> FocusStatus:
 )
 async def focus_history(
     limit: int = Query(default=30),
-    repo: FocusRepository = Depends(_repo),
+    db_path: str = Depends(_db_path),
 ) -> list[FocusSessionRead]:
-    return repo.list_sessions(limit=limit)
+    return repository.list_sessions(db_path, limit=limit)
 
 
 @router.get(
@@ -173,8 +184,8 @@ async def focus_history(
     response_model=FocusStats,
     dependencies=[Depends(require_scope("read:focus"))],
 )
-async def focus_stats(repo: FocusRepository = Depends(_repo)) -> FocusStats:
-    return repo.session_stats()
+async def focus_stats(db_path: str = Depends(_db_path)) -> FocusStats:
+    return repository.session_stats(db_path)
 
 
 @router.get(
@@ -182,7 +193,5 @@ async def focus_stats(repo: FocusRepository = Depends(_repo)) -> FocusStats:
     response_model=FocusRecommendation,
     dependencies=[Depends(require_scope("read:focus"))],
 )
-async def focus_recommendation(
-    repo: FocusRepository = Depends(_repo),
-) -> FocusRecommendation:
-    return repo.session_recommendation()
+async def focus_recommendation(db_path: str = Depends(_db_path)) -> FocusRecommendation:
+    return repository.session_recommendation(db_path)

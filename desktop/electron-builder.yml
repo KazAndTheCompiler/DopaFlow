@@ -1,0 +1,46 @@
+appId: com.kazandthecompiler.dopaflow
+productName: DopaFlow
+copyright: Copyright (C) 2026 KazAndTheCompiler
+publish:
+  - provider: github
+    owner: KazAndTheCompiler
+    repo: DopaFlow
+afterPack: afterPack.js
+directories:
+  output: dist
+files:
+  - main.js
+  - preload.js
+  - backend-runtime.js
+  - assets/**
+  - package.json
+  - node_modules
+asar: true
+
+extraResources:
+  - from: "../frontend/dist"
+    to: "frontend/dist"
+    filter: ["**/*"]
+  - from: "../release/dopaflow-backend-v2"
+    to: "dopaflow-backend"
+    filter: ["**/*"]
+
+linux:
+  target:
+    - AppImage
+  category: Utility
+
+mac:
+  target:
+    - dmg
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: true
+
+win:
+  target:
+    - nsis
+  publisherName: KazAndTheCompiler
+
+nsis:
+  verifyUpdateCodeSignature: true

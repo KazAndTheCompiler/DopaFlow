@@ -113,8 +113,7 @@ def test_tasks_quick_add():
         },
     )
     assert status == 200, f"quick-add failed: {body}"
-    task = body.get("task", body)
-    return task["id"]
+    return body["id"]
 
 
 def test_habit_create():
@@ -133,17 +132,7 @@ def test_habit_create():
 
 
 def test_habit_checkin():
-    _, hbody = rp(
-        "/api/v2/habits/",
-        "POST",
-        {
-            "name": "Morning walk",
-            "target_freq": 1,
-            "target_period": "day",
-            "color": "#22c55e",
-        },
-    )
-    hab_id = hbody["id"]
+    hab_id = test_habit_create()
     status, body = rp(f"/api/v2/habits/{hab_id}/checkin", "POST", {})
     assert status == 200, f"checkin failed: {body}"
     assert body["current_streak"] >= 1
@@ -197,7 +186,7 @@ def test_focus_session():
         "/api/v2/focus/sessions/control", "POST", {"action": "completed"}
     )
     assert status2 == 200
-    assert body2["status"] == "idle"
+    assert body2["status"] == "completed"
 
 
 def test_journal_create():

@@ -17,22 +17,22 @@ export function Button({
   const palette =
     variant === 'primary'
       ? {
-          background: 'var(--accent)',
-          color: 'var(--text-inverted)',
-          border: '1px solid transparent',
+          background: 'var(--button-primary-fill, var(--accent))',
+          color: 'var(--button-primary-text, var(--text-inverted))',
+          border: '1px solid var(--button-primary-edge, transparent)',
           boxShadow:
             'var(--button-primary-glow, 0 1px 3px color-mix(in srgb, var(--accent) 40%, transparent)), inset 0 1px 0 color-mix(in srgb, white 15%, transparent)',
         }
       : variant === 'secondary'
         ? {
-            background: 'var(--surface-2)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
+            background: 'var(--button-secondary-fill, var(--surface-2))',
+            color: 'var(--button-secondary-text, var(--text))',
+            border: '1px solid var(--button-secondary-edge, var(--border))',
             boxShadow: '0 1px 2px color-mix(in srgb, black 6%, transparent)',
           }
         : {
-            background: 'transparent',
-            color: 'var(--text)',
+            background: 'var(--button-quiet-fill, transparent)',
+            color: 'var(--button-quiet-text, var(--text))',
             border: '1px solid var(--border)',
             boxShadow: 'none',
           };

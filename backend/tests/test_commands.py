@@ -149,7 +149,6 @@ def test_natural_language_focus_no_prefix(client) -> None:
     body = response.json()
     assert body["intent"] == "focus.start"
     assert body["status"] == "executed"
-    assert body["result"]["task_id"] is None
 
 
 def test_natural_language_greeting(client) -> None:

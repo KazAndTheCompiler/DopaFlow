@@ -44,7 +44,7 @@ def test_configure_logging_uses_json_formatter_for_packaged_builds() -> None:
 
     try:
         root_logger.handlers = []
-        configure_logging(packaged=True)
+        configure_logging(production=True)
 
         record = logging.makeLogRecord(
             {
@@ -77,7 +77,7 @@ def test_configure_logging_keeps_human_readable_formatter_for_dev_builds() -> No
 
     try:
         root_logger.handlers = []
-        configure_logging(packaged=False)
+        configure_logging(production=False)
 
         record = logging.makeLogRecord(
             {
@@ -214,10 +214,12 @@ def test_no_route_returns_500_on_get(db_path, client) -> None:
     app = _create_app()
     schema = app.openapi()
     failures: list[dict[str, str | int]] = []
+    # SSE streaming endpoints never close, causing TimeoutError on GET
+    sse_paths = {"/api/v2/events"}
 
     for path, methods in schema["paths"].items():
         get_spec = methods.get("get")
-        if not get_spec or "{" in path:
+        if not get_spec or "{" in path or path in sse_paths:
             continue
         operation_id = get_spec.get("operationId", "unknown")
         try:

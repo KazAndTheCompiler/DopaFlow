@@ -78,6 +78,7 @@ class CalendarEvent(BaseModel):
     source_origin_app: str | None = "dopaflow"
     sync_status: SyncStatus = SyncStatus.local_only
     provider_readonly: bool = False
+    alarm_id: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -95,6 +96,7 @@ class CalendarEventCreate(BaseModel):
     source_type: str | None = None
     source_external_id: str | None = None
     source_instance_id: str | None = None
+    reminder_minutes: int | None = None
 
 
 class GoogleSyncRequest(BaseModel):

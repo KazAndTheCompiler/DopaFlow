@@ -14,13 +14,10 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   build-backend-linux:
     name: Backend (Linux)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
@@ -31,12 +28,6 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: backend/requirements.txt
-
-      - uses: actions/cache@v4
-        with:
-          path: backend/dist/
-          key: pyinstaller-linux-${{ hashFiles('backend/requirements.txt', 'backend/dopaflow-backend.spec') }}
-          restore-keys: pyinstaller-linux-
 
       - name: Install backend deps
         run: |
@@ -91,7 +82,7 @@ jobs:
   build-linux:
     name: AppImage (Linux x64)
     needs: build-backend-linux
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       actions: write
@@ -100,7 +91,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: 20
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -128,8 +119,6 @@ jobs:
           npm run build
 
       - name: Run frontend release E2E tests
-        env:
-          DOPAFLOW_PLAYWRIGHT_LD_LIBRARY_PATH: ""
         run: |
           cd frontend
           npm run test:e2e:release
@@ -155,14 +144,9 @@ jobs:
 
       - name: Install FUSE (required by appimagetool)
         run: |
-          sudo apt-get install -y libfuse2t64 || sudo apt-get install -y libfuse2
-          sudo modprobe fuse || true
+          sudo apt-get install -y libfuse2
 
       - name: Build AppImage
-        env:
-          DOPAFLOW_RELEASE_CHANNEL: stable
-          DOPAFLOW_GITHUB_OWNER: KazAndTheCompiler
-          DOPAFLOW_GITHUB_REPO: DopaFlow
         run: |
           cd desktop
           npm run dist:stable:linux -- --publish never
@@ -193,7 +177,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: 20
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -232,10 +216,6 @@ jobs:
           npm test
 
       - name: Build NSIS installer
-        env:
-          DOPAFLOW_RELEASE_CHANNEL: stable
-          DOPAFLOW_GITHUB_OWNER: KazAndTheCompiler
-          DOPAFLOW_GITHUB_REPO: DopaFlow
         run: |
           cd desktop
           npm run dist:stable:win -- --publish never
@@ -253,7 +233,7 @@ jobs:
   release:
     name: Publish Release
     needs: [build-linux, build-windows]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/download-artifact@v4

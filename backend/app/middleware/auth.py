@@ -41,14 +41,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if request.url.path in HEALTH_PATHS:
             return await call_next(request)
 
-        # OIDC login/callback must be accessible without API key so that
-        # external IdP redirects can reach the callback endpoint.
-        if any(
-            request.url.path.startswith(p)
-            for p in ("/api/v2/auth/oidc/login/", "/api/v2/auth/oidc/callback/")
-        ):
-            return await call_next(request)
-
         host = request.client.host if request.client else ""
 
         if self.settings.dev_auth and not self.settings.production:

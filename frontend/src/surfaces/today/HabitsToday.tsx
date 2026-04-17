@@ -5,21 +5,16 @@ export interface HabitsTodayProps {
   onCheckIn: (habitId: string) => Promise<void>;
 }
 
-function isCheckedInToday(habit: Habit): boolean {
-  if (!habit.last_checkin_date) {
-    return false;
-  }
-  const checkinDate = new Date(habit.last_checkin_date);
-  const today = new Date();
-  return (
-    checkinDate.getFullYear() === today.getFullYear() &&
-    checkinDate.getMonth() === today.getMonth() &&
-    checkinDate.getDate() === today.getDate()
-  );
+function getTodayCount(habit: Habit): number {
+  return habit.today_count ?? 0;
+}
+
+function isTargetMet(habit: Habit): boolean {
+  return getTodayCount(habit) >= habit.target_freq;
 }
 
 export function HabitsToday({ habits, onCheckIn }: HabitsTodayProps): JSX.Element {
-  const checkedIn = habits.filter(isCheckedInToday).length;
+  const totalCompleted = habits.filter(isTargetMet).length;
 
   return (
     <section
@@ -90,20 +85,20 @@ export function HabitsToday({ habits, onCheckIn }: HabitsTodayProps): JSX.Elemen
               padding: '0.15rem 0.55rem',
               borderRadius: '999px',
               background:
-                checkedIn === habits.length
+                totalCompleted === habits.length
                   ? 'color-mix(in srgb, var(--state-completed) 14%, transparent)'
                   : 'var(--surface-2)',
               border:
-                checkedIn === habits.length
+                totalCompleted === habits.length
                   ? '1px solid color-mix(in srgb, var(--state-completed) 30%, transparent)'
                   : '1px solid transparent',
               fontSize: 'var(--text-xs)',
               fontWeight: 700,
               color:
-                checkedIn === habits.length ? 'var(--state-completed)' : 'var(--text-secondary)',
+                totalCompleted === habits.length ? 'var(--state-completed)' : 'var(--text-secondary)',
             }}
           >
-            {checkedIn}/{habits.length}
+            {totalCompleted}/{habits.length}
           </span>
         )}
       </div>
@@ -127,66 +122,149 @@ export function HabitsToday({ habits, onCheckIn }: HabitsTodayProps): JSX.Elemen
         </div>
       ) : (
         habits.map((habit) => {
-          const doneToday = isCheckedInToday(habit);
+          const count = getTodayCount(habit);
+          const target = habit.target_freq;
+          const done = isTargetMet(habit);
+          const multiTarget = target > 1;
+          const pct = Math.min(count / target, 1);
+
           return (
-            <button
+            <div
               key={habit.id}
-              onClick={() => void onCheckIn(habit.id)}
-              aria-label={`${habit.name} — ${doneToday ? 'checked in today' : 'tap to check in'}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 padding: '0.55rem 0.75rem',
                 borderRadius: '12px',
-                border: doneToday
+                border: done
                   ? '1px solid color-mix(in srgb, var(--state-completed) 25%, transparent)'
                   : '1px solid transparent',
-                background: doneToday
+                background: done
                   ? 'color-mix(in srgb, var(--state-completed) 6%, transparent)'
                   : 'var(--surface-2)',
                 color: 'inherit',
-                cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'background 150ms ease, border-color 150ms ease',
               }}
             >
+              {/* Progress ring or check circle */}
               <span
                 style={{
-                  width: '20px',
-                  height: '20px',
+                  width: '22px',
+                  height: '22px',
                   borderRadius: '999px',
-                  border: `2px solid ${doneToday ? 'var(--state-completed)' : 'var(--accent)'}`,
-                  background: doneToday ? 'var(--state-completed)' : 'transparent',
+                  border: `2px solid ${done ? 'var(--state-completed)' : 'var(--accent)'}`,
+                  background: done ? 'var(--state-completed)' : 'transparent',
                   display: 'grid',
                   placeItems: 'center',
                   transition: 'background 150ms, border-color 150ms',
                   flexShrink: 0,
+                  position: 'relative',
                 }}
               >
-                {doneToday && (
+                {done ? (
                   <span
                     style={{ fontSize: '0.6rem', color: 'white', fontWeight: 800, lineHeight: 1 }}
                   >
                     ✓
                   </span>
+                ) : multiTarget ? (
+                  <span
+                    style={{
+                      fontSize: '0.55rem',
+                      color: 'var(--accent)',
+                      fontWeight: 700,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {count}
+                  </span>
+                ) : null}
+              </span>
+
+              <span style={{ flex: 1, fontSize: 'var(--text-sm)', opacity: done ? 0.65 : 1 }}>
+                {habit.name}
+                {multiTarget && (
+                  <span
+                    style={{
+                      marginLeft: '0.4rem',
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-muted)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {count}/{target}
+                  </span>
                 )}
               </span>
-              <span style={{ flex: 1, fontSize: 'var(--text-sm)', opacity: doneToday ? 0.65 : 1 }}>
-                {habit.name}
-              </span>
+
+              {/* Progress bar for multi-target */}
+              {multiTarget && !done && (
+                <span
+                  style={{
+                    width: '40px',
+                    height: '4px',
+                    borderRadius: '2px',
+                    background: 'var(--border-subtle)',
+                    overflow: 'hidden',
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'block',
+                      width: `${pct * 100}%`,
+                      height: '100%',
+                      borderRadius: '2px',
+                      background: 'var(--accent)',
+                      transition: 'width 200ms ease',
+                    }}
+                  />
+                </span>
+              )}
+
               {habit.current_streak > 0 && (
                 <span
                   style={{
                     fontSize: 'var(--text-xs)',
                     fontWeight: 700,
-                    color: doneToday ? 'var(--state-completed)' : 'var(--text-muted)',
+                    color: done ? 'var(--state-completed)' : 'var(--text-muted)',
                   }}
                 >
                   {habit.current_streak}d
                 </span>
               )}
-            </button>
+
+              {/* +1 checkin button */}
+              {!done && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onCheckIn(habit.id);
+                  }}
+                  aria-label={`Check in ${habit.name}`}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--accent)',
+                    background: 'transparent',
+                    color: 'var(--accent)',
+                    fontSize: 'var(--text-xs)',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: 0,
+                    flexShrink: 0,
+                    transition: 'background 100ms ease',
+                  }}
+                >
+                  +
+                </button>
+              )}
+            </div>
           );
         })
       )}

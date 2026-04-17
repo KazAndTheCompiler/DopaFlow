@@ -14,6 +14,7 @@ class AlarmCreate(BaseModel):
     tts_text: str | None = None
     youtube_link: str | None = None
     muted: bool = False
+    event_id: str | None = None
 
 
 class AlarmRead(AlarmCreate):

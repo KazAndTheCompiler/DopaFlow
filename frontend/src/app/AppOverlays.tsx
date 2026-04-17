@@ -80,21 +80,23 @@ export function AppOverlays({
             const tomorrowISO = localDateISO(1);
             return !task.done && task.due_at?.slice(0, 10) === tomorrowISO;
           })}
+          habits={habits.habits}
+          onHabitCheckIn={(id) => void habits.checkIn(id)}
           onDefer={async (taskId, when) => {
             if (when === 'drop') {
               await tasks.update(taskId, { status: 'cancelled' });
               return;
             }
-            if (when === 'tomorrow') {
-              await tasks.update(taskId, { due_at: localDateISO(1) });
-              return;
-            }
-            await tasks.update(taskId, { due_at: localDateISO(7) });
+            const targetDate = localDateISO(when === 'tomorrow' ? 1 : 7);
+            await tasks.update(taskId, { due_at: `${targetDate}T09:00:00Z` });
           }}
           onJournalNote={async (emoji, note) => {
+            const habitSummary = habits.habits.length > 0
+              ? `\n\n**Habits today**: ${habits.habits.filter((h) => (h.today_count ?? 0) >= h.target_freq).length}/${habits.habits.length} hit`
+              : '';
             await journal.save({
               date: localDateISO(),
-              markdown_body: note,
+              markdown_body: note + habitSummary,
               emoji,
               tags: ['shutdown'],
             });

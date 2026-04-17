@@ -14,6 +14,49 @@ function isImportant(event: CalendarEvent): boolean {
   return IMPORTANT_CATEGORIES.has(cat);
 }
 
+function eventPriority(event: CalendarEvent): number {
+  const urgent = isUrgent(event);
+  const important = isImportant(event);
+  if (urgent && important) return 1;
+  if (!urgent && important) return 2;
+  if (urgent && !important) return 3;
+  return 4;
+}
+
+function priorityBadge(priority: number): JSX.Element {
+  const color =
+    priority === 1
+      ? 'var(--state-overdue)'
+      : priority === 2
+        ? 'var(--state-warn)'
+        : priority === 3
+          ? 'var(--accent)'
+          : 'var(--text-muted)';
+  const bg =
+    priority === 1
+      ? 'color-mix(in srgb, var(--state-overdue) 14%, transparent)'
+      : priority === 2
+        ? 'color-mix(in srgb, var(--state-warn) 14%, transparent)'
+        : priority === 3
+          ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+          : 'var(--surface-2)';
+  return (
+    <span
+      style={{
+        padding: '0.1rem 0.4rem',
+        borderRadius: '4px',
+        background: bg,
+        color,
+        fontSize: '0.65rem',
+        fontWeight: 800,
+        flexShrink: 0,
+      }}
+    >
+      P{priority}
+    </span>
+  );
+}
+
 function formatEventTime(event: CalendarEvent): string {
   if (event.all_day) {
     return 'All day';
@@ -101,8 +144,9 @@ function QuadrantCard({
               key={event.id}
               onClick={() => onEventClick(event)}
               style={{
-                display: 'grid',
-                gap: '0.15rem',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '0.5rem',
                 padding: '0.55rem 0.7rem',
                 borderRadius: '10px',
                 border: '1px solid var(--border-subtle)',
@@ -112,6 +156,8 @@ function QuadrantCard({
                 textAlign: 'left',
               }}
             >
+              {priorityBadge(eventPriority(event))}
+              <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: '0.15rem' }}>
               <span
                 style={{
                   fontSize: 'var(--text-sm)',
@@ -137,6 +183,7 @@ function QuadrantCard({
                   {event.category}
                 </span>
               )}
+              </div>
             </button>
           ))
         )}

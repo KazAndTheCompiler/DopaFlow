@@ -197,10 +197,13 @@ export default function TodayView(): JSX.Element {
         <div onDragOver={(event) => event.preventDefault()} onDrop={onDropToQueue}>
           <FocusQueue
             tasks={focusQueue}
+            habits={habits.habits}
+            events={upcomingEvents}
             activeSession={focus.activeSession}
             onStartFocus={(taskId, mins) => void focus.start(taskId, mins ?? 25)}
             onComplete={(taskId) => void tasks.complete(taskId)}
             onEdit={(task) => setEditingTask(task)}
+            onHabitCheckIn={(id) => void habits.checkIn(id)}
           />
         </div>
 

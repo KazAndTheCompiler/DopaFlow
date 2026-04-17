@@ -107,9 +107,15 @@ export function useHabits(): UseHabitsResult {
         });
         await refresh();
         showToast('Habit checked in. ST updated.', 'success');
-      } catch {
-        await refresh(); // rollback via real data
-        showToast('Check-in failed.', 'error');
+      } catch (e) {
+        await refresh();
+        const msg = e instanceof Error ? e.message : '';
+        showToast(
+          msg.includes('500') || msg.includes('IntegrityError')
+            ? 'Habit not found — list refreshed.'
+            : 'Check-in failed.',
+          'error',
+        );
       }
     },
     update: async (habitId: string, patch: Partial<Habit>) => {

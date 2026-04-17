@@ -4,13 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.core.base_repository import BaseRepository
+from app.core.database import get_db, tx
 from app.core.id_gen import alarm_id
 from app.domains.alarms.schemas import AlarmCreate, AlarmRead, AlarmSchedulerStatus
 
 
 def _row_to_alarm(row: object) -> AlarmRead:
     """Convert a SQLite Row to AlarmRead."""
+    try:
+        _event_id = row["event_id"]  # type: ignore[index]
+    except (IndexError, KeyError):
+        _event_id = None
     return AlarmRead(
         id=row["id"],  # type: ignore[index]
         at=row["at"],  # type: ignore[index]
@@ -20,23 +24,27 @@ def _row_to_alarm(row: object) -> AlarmRead:
         youtube_link=row["youtube_link"],  # type: ignore[index]
         muted=bool(row["muted"]),  # type: ignore[index]
         last_fired_at=row["last_fired_at"],  # type: ignore[index]
+        event_id=_event_id,
     )
 
 
-class AlarmsRepository(BaseRepository):
+class AlarmsRepository:
     """Read and write scheduled alarms and trigger queue items."""
+
+    def __init__(self, db_path: str) -> None:
+        self.db_path = db_path
 
     def list_alarms(self) -> list[AlarmRead]:
         """Return all non-deleted alarms ordered by scheduled time."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute("SELECT * FROM alarms ORDER BY at ASC").fetchall()
             return [_row_to_alarm(row) for row in rows]
 
     def list_upcoming(self) -> list[AlarmRead]:
         """Return upcoming unmuted alarms ordered by scheduled time."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 """
                 SELECT *
@@ -51,7 +59,7 @@ class AlarmsRepository(BaseRepository):
     def get_alarm(self, identifier: str) -> AlarmRead | None:
         """Fetch a single alarm by ID."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM alarms WHERE id = ?", (identifier,)
             ).fetchone()
@@ -61,11 +69,11 @@ class AlarmsRepository(BaseRepository):
         """Insert a new alarm record."""
 
         new_id = alarm_id()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
-                INSERT INTO alarms (id, at, title, kind, tts_text, youtube_link, muted)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO alarms (id, at, title, kind, tts_text, youtube_link, muted, event_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     new_id,
@@ -75,6 +83,7 @@ class AlarmsRepository(BaseRepository):
                     payload.tts_text,
                     payload.youtube_link,
                     int(payload.muted),
+                    payload.event_id,
                 ),
             )
         return self.get_alarm(new_id)  # type: ignore[return-value]
@@ -87,7 +96,7 @@ class AlarmsRepository(BaseRepository):
             return None
         merged = alarm.model_dump()
         merged.update({k: v for k, v in patch.items() if v is not None})
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
                 UPDATE alarms
@@ -109,15 +118,32 @@ class AlarmsRepository(BaseRepository):
     def delete_alarm(self, identifier: str) -> bool:
         """Delete an alarm record."""
 
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             result = conn.execute("DELETE FROM alarms WHERE id = ?", (identifier,))
             return result.rowcount > 0
+
+    def list_by_event(self, event_id: str) -> list[AlarmRead]:
+        """Return all alarms linked to a calendar event."""
+
+        with get_db(self.db_path) as conn:
+            rows = conn.execute(
+                "SELECT * FROM alarms WHERE event_id = ? ORDER BY at ASC",
+                (event_id,),
+            ).fetchall()
+            return [_row_to_alarm(row) for row in rows]
+
+    def delete_by_event(self, event_id: str) -> int:
+        """Delete all alarms linked to a calendar event. Return count deleted."""
+
+        with tx(self.db_path) as conn:
+            result = conn.execute("DELETE FROM alarms WHERE event_id = ?", (event_id,))
+            return result.rowcount
 
     def touch_alarm(self, identifier: str) -> None:
         """Record a fire timestamp."""
 
         now = datetime.now(timezone.utc).isoformat()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 "UPDATE alarms SET last_fired_at = ? WHERE id = ?",
                 (now, identifier),
@@ -126,7 +152,7 @@ class AlarmsRepository(BaseRepository):
     def scheduler_status(self) -> AlarmSchedulerStatus:
         """Return next pending alarm for scheduler health display."""
 
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 """
                 SELECT id, at FROM alarms
@@ -141,11 +167,3 @@ class AlarmsRepository(BaseRepository):
                     next_alarm_at=str(row["at"]),
                 )
             return AlarmSchedulerStatus(running=False)
-
-    def get_alarm_row(self, alarm_id: str) -> dict | None:
-        """Return a raw alarm row as a dict for audio handling."""
-        with self.get_db_readonly() as conn:
-            row = conn.execute(
-                "SELECT * FROM alarms WHERE id = ?", (alarm_id,)
-            ).fetchone()
-            return dict(row) if row else None

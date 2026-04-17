@@ -9,7 +9,7 @@ from datetime import date as date_mod
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from app.core.base_repository import BaseRepository
+from app.core.database import get_db, tx
 from app.domains.nutrition.schemas import (
     DailyTotals,
     FoodItemCreate,
@@ -147,9 +147,12 @@ def _row_to_food(row: object) -> FoodItemRead:
     )
 
 
-class NutritionRepository(BaseRepository):
+class NutritionRepository:
+    def __init__(self, db_path: str) -> None:
+        self.db_path = db_path
+
     def _ensure_presets(self) -> None:
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             for preset in _PRESET_FOODS:
                 conn.execute(
                     """
@@ -184,7 +187,7 @@ class NutritionRepository(BaseRepository):
         """Log a food entry with inline macros."""
         identifier = f"nut_{uuid4().hex[:24]}"
         today = datetime.now(timezone.utc).date().isoformat()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
                 INSERT INTO nutrition_entries (
@@ -203,7 +206,7 @@ class NutritionRepository(BaseRepository):
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM nutrition_entries WHERE id = ?", (identifier,)
             ).fetchone()
@@ -217,7 +220,7 @@ class NutritionRepository(BaseRepository):
         identifier = f"nut_{uuid4().hex[:24]}"
         target_date = payload.date or datetime.now(timezone.utc).date().isoformat()
         qty = payload.qty
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
                 INSERT INTO nutrition_entries (
@@ -239,7 +242,7 @@ class NutritionRepository(BaseRepository):
                     datetime.now(timezone.utc).isoformat(),
                 ),
             )
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM nutrition_entries WHERE id = ?", (identifier,)
             ).fetchone()
@@ -248,7 +251,7 @@ class NutritionRepository(BaseRepository):
     def get_log(self, date: str | None = None) -> dict:
         """Return all log entries for a date grouped by meal."""
         target = date or datetime.now(timezone.utc).date().isoformat()
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 "SELECT * FROM nutrition_entries WHERE entry_date = ? ORDER BY created_at ASC",
                 (target,),
@@ -276,7 +279,7 @@ class NutritionRepository(BaseRepository):
         }
 
     def daily_totals(self, date: str) -> DailyTotals:
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 "SELECT * FROM nutrition_entries WHERE entry_date = ? ORDER BY created_at DESC",
                 (date,),
@@ -294,7 +297,7 @@ class NutritionRepository(BaseRepository):
     def get_monthly(self, month: str | None = None) -> dict:
         """Return daily kj totals for a month."""
         target = month or datetime.now(timezone.utc).strftime("%Y-%m")
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 """
                 SELECT entry_date, SUM(calories) AS total_kj
@@ -345,7 +348,7 @@ class NutritionRepository(BaseRepository):
         }
 
     def delete_log_entry(self, identifier: str) -> bool:
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             result = conn.execute(
                 "DELETE FROM nutrition_entries WHERE id = ?", (identifier,)
             )
@@ -355,7 +358,7 @@ class NutritionRepository(BaseRepository):
         return self.delete_log_entry(identifier)
 
     def list_recent(self, limit: int = 50) -> list[FoodItemRead]:
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 "SELECT * FROM nutrition_entries ORDER BY created_at DESC LIMIT ?",
                 (limit,),
@@ -366,7 +369,7 @@ class NutritionRepository(BaseRepository):
 
     def list_foods(self) -> list[FoodLibraryItem]:
         self._ensure_presets()
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute(
                 "SELECT * FROM nutrition_foods ORDER BY is_preset DESC, name ASC"
             ).fetchall()
@@ -387,7 +390,7 @@ class NutritionRepository(BaseRepository):
 
     def get_food(self, food_id: str) -> FoodLibraryItem | None:
         self._ensure_presets()
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT * FROM nutrition_foods WHERE id = ?", (food_id,)
             ).fetchone()
@@ -408,7 +411,7 @@ class NutritionRepository(BaseRepository):
 
     def create_food(self, payload: FoodItemCreate) -> FoodLibraryItem:
         food_id = f"food_{uuid4().hex[:20]}"
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute(
                 """
                 INSERT INTO nutrition_foods (id, name, kj, unit, protein_g, carbs_g, fat_g, meal_label)
@@ -429,7 +432,7 @@ class NutritionRepository(BaseRepository):
 
     def delete_food(self, food_id: str) -> bool | None:
         """Returns None if not found, False if preset (protected), True if deleted."""
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             row = conn.execute(
                 "SELECT is_preset FROM nutrition_foods WHERE id = ?", (food_id,)
             ).fetchone()
@@ -437,7 +440,7 @@ class NutritionRepository(BaseRepository):
             return None
         if row["is_preset"]:
             return False
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             conn.execute("DELETE FROM nutrition_foods WHERE id = ?", (food_id,))
         return True
 
@@ -445,7 +448,7 @@ class NutritionRepository(BaseRepository):
 
     def get_goals(self) -> dict:
         goals = dict(_GOAL_DEFAULTS)
-        with self.get_db_readonly() as conn:
+        with get_db(self.db_path) as conn:
             rows = conn.execute("SELECT key, value FROM nutrition_goals").fetchall()
         for row in rows:
             try:
@@ -460,7 +463,7 @@ class NutritionRepository(BaseRepository):
 
     def set_goals(self, payload: NutritionGoals) -> dict:
         data = payload.model_dump()
-        with self.tx() as conn:
+        with tx(self.db_path) as conn:
             for key, value in data.items():
                 conn.execute(
                     "INSERT INTO nutrition_goals(key, value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

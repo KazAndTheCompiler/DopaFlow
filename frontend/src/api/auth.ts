@@ -166,31 +166,6 @@ export async function loginWithRedirect(
   }
 }
 
-export async function loginWithProvider(
-  providerName: string,
-  clientId: string,
-  redirectUri: string,
-  scope = 'openid profile email',
-): Promise<void> {
-  const verifier = generateCodeVerifier();
-  const challenge = await generateCodeChallenge(verifier);
-  const state = generateState();
-  sessionStorage.setItem(STATE_KEY, state);
-  sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
-  sessionStorage.setItem('dopaflow_client_id', clientId);
-  sessionStorage.setItem('dopaflow_redirect_uri', redirectUri);
-  const baseUrl = API_BASE_URL.replace('/api/v2', '');
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    scope,
-    state,
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-  });
-  window.location.href = `${baseUrl}/api/v2/auth/oidc/login/${providerName}?${params}`;
-}
-
 export async function handleCallback(extraParams?: {
   code?: string;
   state?: string;
@@ -293,7 +268,6 @@ export function isAuthenticated(): boolean {
 
 export const authService = {
   loginWithRedirect,
-  loginWithProvider,
   handleCallback,
   getAccessToken,
   getUser,

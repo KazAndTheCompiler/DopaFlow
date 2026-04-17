@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Button from '@ds/primitives/Button';
 import { useMicrophone } from '@hooks/useMicrophone';
-import { API_BASE_URL } from '../api/client';
+import { apiClient } from '../api/client';
 
 interface VoiceDictationProps {
   onTranscript: (text: string) => void;
@@ -30,14 +30,10 @@ export function VoiceDictation({
         const form = new FormData();
         form.append('file', blob, `dictation${ext}`);
         const lang = navigator.language || 'en-US';
-        const response = await fetch(
-          `${API_BASE_URL}/journal/transcribe?lang=${encodeURIComponent(lang)}`,
+        const result = await apiClient<{ transcript?: string; error?: string }>(
+          `/journal/transcribe?lang=${encodeURIComponent(lang)}`,
           { method: 'POST', body: form },
         );
-        const result = (await response.json()) as { transcript?: string; error?: string };
-        if (!response.ok) {
-          throw new Error(result.error ?? 'transcription_failed');
-        }
         const text = result.transcript?.trim();
         if (!text) {
           setError('No speech detected — try speaking louder or closer to the mic.');

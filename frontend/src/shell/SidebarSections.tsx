@@ -30,16 +30,18 @@ export function NavButton({
         gap: '0.75rem',
         width: '100%',
         border: 0,
-        borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+        borderLeft: isActive ? `3px solid var(--nav-item-active-edge, var(--accent))` : '3px solid transparent',
         background: isActive
           ? 'linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, var(--surface)), color-mix(in srgb, var(--surface) 84%, white 16%))'
           : isHovered
-            ? 'color-mix(in srgb, var(--surface) 76%, white 24%)'
-            : 'transparent',
+            ? 'var(--nav-item-hover, color-mix(in srgb, var(--surface) 76%, white 24%))'
+            : 'var(--nav-item-fill, transparent)',
         padding: '0.8rem 0.85rem',
         borderRadius: '0 16px 16px 0',
         cursor: 'pointer',
-        boxShadow: isHovered || isActive ? 'var(--shadow-soft)' : 'none',
+        boxShadow: isActive
+          ? '0 0 12px var(--nav-item-active-glow, transparent)'
+          : isHovered ? 'var(--shadow-soft)' : 'none',
         transform: isHovered && !isActive ? 'translateX(2px)' : 'none',
         transition:
           'box-shadow 180ms ease, transform 180ms ease, background 180ms ease, border-color 180ms ease',
@@ -53,9 +55,12 @@ export function NavButton({
           display: 'grid',
           placeItems: 'center',
           background: isActive
-            ? 'color-mix(in srgb, var(--accent) 16%, var(--surface))'
-            : 'color-mix(in srgb, var(--surface) 74%, white 26%)',
-          color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+            ? 'var(--icon-tile-active, color-mix(in srgb, var(--accent) 16%, var(--surface)))'
+            : 'var(--icon-tile-fill, color-mix(in srgb, var(--surface) 74%, white 26%))',
+          boxShadow: isActive ? '0 0 8px var(--icon-tile-glow, transparent)' : 'none',
+          color: isActive
+            ? 'var(--icon-symbol-active, var(--text-inverted))'
+            : 'var(--icon-symbol, var(--text-secondary))',
           fontSize: '0.95rem',
           fontWeight: 700,
           flexShrink: 0,
@@ -69,7 +74,9 @@ export function NavButton({
           maxWidth: collapsed ? 0 : 160,
           overflow: 'hidden',
           whiteSpace: 'nowrap',
-          color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+          color: isActive
+            ? 'var(--nav-item-active-text, var(--text-primary))'
+            : 'var(--nav-item-text, var(--text-secondary))',
           fontWeight: isActive ? 700 : 600,
           transition: 'opacity 140ms ease, max-width 180ms ease',
         }}

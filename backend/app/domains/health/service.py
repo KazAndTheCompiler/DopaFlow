@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 import os
+import sqlite3
 import time
 from datetime import datetime, timezone
 
+from app.core.database import _migration_checksum, _migrations_dir, get_db
 from app.core.version import APP_VERSION
-from app.domains.health.repository import HealthRepository
 
 _START_TIME = time.time()
 logger = logging.getLogger(__name__)
@@ -55,13 +56,31 @@ class HealthService:
         now = time.time()
         uptime_seconds = now - _START_TIME
 
-        repo = HealthRepository(db_path)
-
         db_status = "error"
         memory_depth_days = 0
-        if repo.check_connectivity():
+        try:
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            conn.execute("SELECT 1")
             db_status = "ok"
-            memory_depth_days = repo.get_memory_depth_days()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT COUNT(DISTINCT date(entry_date)) AS depth
+                    FROM journal_entries
+                    WHERE COALESCE(TRIM(markdown_body), '') <> ''
+                      AND deleted_at IS NULL
+                    """
+                ).fetchone()
+                memory_depth_days = int((row["depth"] if row else 0) or 0)
+            except sqlite3.OperationalError as exc:
+                if "no such table" not in str(exc).lower():
+                    raise
+                logger.warning("Health memory depth unavailable: %s", exc)
+                memory_depth_days = 0
+            conn.close()
+        except sqlite3.Error:
+            db_status = "error"
 
         return {
             "status": "ok" if db_status == "ok" else "degraded",
@@ -101,57 +120,44 @@ class HealthService:
 
     @staticmethod
     def get_ready(db_path: str) -> dict[str, object]:
-        repo = HealthRepository(db_path)
+        try:
+            with get_db(db_path) as conn:
+                row = conn.execute("PRAGMA user_version").fetchone()
+                user_version = int((row[0] if row else 0) or 0)
+                applied = {
+                    row[0]: row[1]
+                    for row in conn.execute(
+                        "SELECT filename, checksum FROM _migrations"
+                    ).fetchall()
+                }
+        except sqlite3.Error as exc:
+            return {"status": "not_ready", "reason": f"database unavailable: {exc}"}
+        except RuntimeError as exc:
+            return {"status": "not_ready", "reason": str(exc)}
 
-        readiness = repo.get_readiness()
-        if readiness.get("error") is not None:
+        migration_files = sorted(_migrations_dir().glob("*.sql"))
+        latest_version = 0
+        if migration_files:
+            latest_version = int(migration_files[-1].name.split("_", 1)[0])
+
+        if user_version not in {0, latest_version}:
             return {
                 "status": "not_ready",
-                "reason": f"database unavailable: {readiness['error']}",
+                "reason": f"database user_version {user_version} does not match {latest_version}",
             }
 
-        status = readiness.get("status", "not_ready")
-
-        # Alembic-based check: database is stamped and current
-        if status == "ready" and readiness.get("alembic_version"):
-            return {"status": "ready", "reason": None}
-
-        # Legacy fallback: database still using _migrations table
-        if status == "migrating":
-            user_version = readiness.get("user_version", 0)
-            applied = readiness.get("applied", {})
-            from app.core.database import _migration_checksum, _migrations_dir
-
-            migration_files = sorted(_migrations_dir().glob("*.sql"))
-            latest_version = 0
-            if migration_files:
-                latest_version = int(migration_files[-1].name.split("_", 1)[0])
-
-            if user_version not in {0, latest_version}:
+        for migration_file in migration_files:
+            applied_checksum = applied.get(migration_file.name)
+            if applied_checksum is None:
                 return {
                     "status": "not_ready",
-                    "reason": f"database user_version {user_version} does not match {latest_version}",
+                    "reason": f"pending migration: {migration_file.name}",
+                }
+            checksum = _migration_checksum(migration_file.read_text(encoding="utf-8"))
+            if applied_checksum and applied_checksum != checksum:
+                return {
+                    "status": "not_ready",
+                    "reason": f"migration checksum mismatch: {migration_file.name}",
                 }
 
-            for migration_file in migration_files:
-                applied_checksum = applied.get(migration_file.name)
-                if applied_checksum is None:
-                    return {
-                        "status": "not_ready",
-                        "reason": f"pending migration: {migration_file.name}",
-                    }
-                checksum = _migration_checksum(
-                    migration_file.read_text(encoding="utf-8")
-                )
-                if applied_checksum and applied_checksum != checksum:
-                    return {
-                        "status": "not_ready",
-                        "reason": f"migration checksum mismatch: {migration_file.name}",
-                    }
-
-            return {"status": "ready", "reason": None}
-
-        return {
-            "status": "not_ready",
-            "reason": readiness.get("error", "unknown state"),
-        }
+        return {"status": "ready", "reason": None}

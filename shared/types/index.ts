@@ -126,7 +126,7 @@ export interface Habit {
 export interface FocusSession {
   id: FocusId;
   task_id?: TaskId | null;
-  started_at: string;
+  started_at?: string | null;
   ended_at?: string | null;
   duration_minutes: number;
   status: string;
@@ -191,6 +191,8 @@ export interface CalendarEvent {
   source_origin_app?: string | null;
   sync_status: "local_only" | "pending_sync" | "synced" | "conflict" | "error";
   provider_readonly: boolean;
+  alarm_id?: AlarmId | null;
+  reminder_minutes?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -204,6 +206,7 @@ export interface Alarm {
   youtube_link?: string | null;
   muted?: boolean;
   last_fired_at?: string | null;
+  event_id?: EventId | null;
 }
 
 export interface Notification {
