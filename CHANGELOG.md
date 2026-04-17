@@ -6,6 +6,19 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 `2.0.11`, see
 [`docs/CHANGELOG_2.0.0-2.0.11.md`](/home/henry/vscode/build/dopaflow/docs/CHANGELOG_2.0.0-2.0.11.md).
 
+## 2.0.13
+
+- Added server-side transcription fallback to VoiceCommandModal: when Chrome Web Speech API fails with a network error, falls back to recording via `useMicrophone` and transcribing through `POST /journal/transcribe`. Shows "server transcription mode" indicator.
+- Added `habit.create` NLP intent: voice commands like "add habit exercise" now correctly classify as `habit.create` instead of `unknown`. Full execution pipeline creates the habit in the database.
+- Added `habit.create` to VoiceCommandModal INTENT_META, ROUTE_SUGGESTIONS, backend vocabulary, command execution, and preview logic.
+- Fixed migration drift: updated stale checksum for `007_alarms.sql` in `_migrations` table.
+
+### Known Issues
+
+- **Voice commands still bugged**: Browser Web Speech API (Chrome) throws `network` error when Google speech servers are unreachable. Server-side fallback is now wired but requires ffmpeg on the host. If both paths fail, commands are unusable — type instead. Root cause is Chrome's dependency on Google's external speech service, not a DopaFlow API issue.
+
+- Added glass CSS tokens to 7 mid-tier dark skins that were marked `glass: true` but had zero glass properties: midnight-neon, amber-terminal, vampire-romance, deep-ocean, sunset-blues, classic-noir, neon-punk. Each now defines `--surface-glass-blur`, `--surface-edge-light`, `--surface-inner-light`, `--surface-inner-highlight`, `--surface-specular` with accent-matched values in both `skins.css` and their JSON manifests.
+
 ## 2.0.12
 
 - Fixed TypeScript errors in `domains.test.ts`: aligned `startFocusSession` payload to use `duration_minutes`, `createAlarm` to use `at`/`title` field names, corrected unsafe type casts to route through `unknown`, and fixed `updateVaultConfig` to use `vault_enabled`.

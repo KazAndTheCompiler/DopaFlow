@@ -45,6 +45,12 @@
     "--reminder-default": "#ff7d6b",
     "--busy-block-hint": "rgba(49,240,200,0.18)",
     "--free-slot-hint": "rgba(144,182,193,0.12)",
-    "--selected-range": "rgba(49,240,200,0.18)"
+    "--selected-range": "rgba(49,240,200,0.18)",
+    "--surface-glass-blur": "blur(14px)",
+    "--surface-inner-light": "linear-gradient(135deg, rgba(49,240,200,0.05) 0%, transparent 60%)",
+    "--surface-inner-highlight": "rgba(49,240,200,0.03)",
+    "--surface-specular": "radial-gradient(ellipse at 30% 20%, rgba(49,240,200,0.04) 0%, transparent 50%)",
+    "--surface-edge-light": "1px solid rgba(49,240,200,0.08)",
+    "--surface-3": "rgba(49,240,200,0.04)"
   }
 }
