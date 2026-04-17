@@ -18,6 +18,7 @@ from app.core.version import APP_VERSION
 from app.domains.alarms.audio_router import router as alarm_audio_router
 from app.domains.alarms.router import router as alarms_router
 from app.domains.auth.oidc import build_discovery
+from app.domains.auth.repository import AuthRepository
 from app.domains.auth.router import router as auth_router
 from app.domains.auth.service import AuthService
 from app.domains.boards.router import router as boards_router
@@ -265,7 +266,7 @@ button {{ padding: 10px 20px; background: #4f46e5; color: white; border: none; b
 </body>
 </html>"""
 
-    svc = AuthService(settings)
+    svc = AuthService(AuthRepository(settings), settings)
 
     def _validate_redirect_uri(client_id: str, redirect_uri: str) -> bool:
         """Check redirect_uri against registered client URIs."""
