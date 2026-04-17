@@ -253,11 +253,10 @@ def parse_intent(text: str) -> dict[str, object]:
 def _preview_task_complete(
     text: str, parsed: dict[str, object], db_path: str
 ) -> dict[str, object]:
-    from app.domains.tasks.repository import TaskRepository
+    from app.domains.tasks import repository as task_repo
 
-    repo = TaskRepository(db_path)
     query = str((parsed.get("extracted") or {}).get("query") or "").strip().lower()
-    open_tasks = repo.list_tasks(done=False)
+    open_tasks = task_repo.list_tasks(db_path, done=False)
     open_tasks_dicts = [t.model_dump() for t in open_tasks]
     exact_matches = [
         task for task in open_tasks if query and query in (task.title or "").lower()
@@ -300,14 +299,13 @@ def _preview_task_complete(
 def _preview_habit_checkin(
     text: str, parsed: dict[str, object], db_path: str
 ) -> dict[str, object]:
-    from app.domains.habits.repository import HabitRepository
+    from app.domains.habits import repository as habit_repo
 
     del text
     habit_name = (
         str((parsed.get("extracted") or {}).get("habit_name") or "").strip().lower()
     )
-    repo = HabitRepository(db_path)
-    habits = repo.list_habits()
+    habits = habit_repo.list_habits(db_path)
     matched = [
         habit for habit in habits if habit_name in (habit.get("name") or "").lower()
     ]
@@ -344,9 +342,50 @@ def _preview_habit_checkin(
     }
 
 
+def _preview_habit_create(
+    text: str, parsed: dict[str, object], db_path: str
+) -> dict[str, object]:
+    from app.domains.habits import repository as habit_repo
+
+    entities = dict(parsed.get("extracted") or {})
+    name = str(entities.get("name") or "").strip()
+    if not name:
+        name_match = re.search(
+            r"(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)\s+(\w+(?:\s+\w+)?)",
+            text,
+            re.IGNORECASE,
+        )
+        name = name_match.group(1).strip() if name_match else re.sub(
+            r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)?\s*",
+            "", text, flags=re.IGNORECASE,
+        ).strip()
+
+    if not name:
+        return {
+            "would_execute": False,
+            "status": "needs_name",
+            "message": "What should I call the new habit?",
+        }
+
+    habits = habit_repo.list_habits(db_path)
+    if any(h.get("name", "").lower() == name.lower() for h in habits):
+        return {
+            "would_execute": False,
+            "status": "duplicate",
+            "message": f'A habit called "{name}" already exists.',
+        }
+
+    return {
+        "would_execute": True,
+        "status": "ok",
+        "result": {"name": name, "target_freq": 1, "target_period": "day"},
+        "message": f'Will create habit: "{name}".',
+    }
+
+
 def _preview_undo(db_path: str) -> dict[str, object]:
     supported = {"task.create", "task.complete", "calendar.create"}
-    history = CommandRepository(db_path).history(limit=10)
+    history = CommandRepository.history(db_path, limit=10)
 
     for entry in history:
         if (
@@ -402,10 +441,6 @@ class CommandService:
             "follow_ups": parsed.get("follow_ups", []),
             "tts_response": parsed.get("tts_response", ""),
         }
-        # Always check for compound commands — "add task X and set alarm Y"
-        # contains two actionable intents even when NLP classifies the whole
-        # string as task.create.  "add task buy milk and bread" won't match
-        # because "bread" isn't an actionable intent.
         compound_parts = detect_actionable_chain(text, parser=parse_intent)
         if compound_parts is not None:
             preview["would_execute"] = False
@@ -437,6 +472,9 @@ class CommandService:
             return preview
         if db_path and intent == "habit.checkin":
             preview.update(_preview_habit_checkin(text, parsed, db_path))
+            return preview
+        if db_path and intent == "habit.create":
+            preview.update(_preview_habit_create(text, parsed, db_path))
             return preview
         if db_path and intent == "undo":
             preview.update(_preview_undo(db_path))

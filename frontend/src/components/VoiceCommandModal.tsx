@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { sendVoiceCommand, type PackyVoiceResponse } from '@api/index';
+import { apiClient } from '@api/client';
 import { showToast } from '@ds/primitives/Toast';
 import { Modal } from '@ds/primitives/Modal';
 import Button from '@ds/primitives/Button';
@@ -22,6 +23,7 @@ const INTENT_META: Record<string, { icon: string; label: string; color: string }
   'focus.start': { icon: '🎯', label: 'Focus', color: 'var(--state-warn)' },
   'alarm.create': { icon: '⏰', label: 'Alarm', color: 'var(--accent-primary)' },
   'habit.checkin': { icon: '🔥', label: 'Habit', color: 'var(--state-ok)' },
+  'habit.create': { icon: '➕', label: 'New Habit', color: 'var(--state-ok)' },
   'habit.list': { icon: '📊', label: 'Habits', color: 'var(--accent-primary)' },
   'review.start': { icon: '🃏', label: 'Review', color: 'var(--accent-secondary)' },
   search: { icon: '🔍', label: 'Search', color: 'var(--text-secondary)' },
@@ -46,6 +48,7 @@ const ROUTE_SUGGESTIONS: Record<string, Record<string, string[]>> = {
   },
   habits: {
     'habit.checkin': ['Start a focus block?', "Check tomorrow's habits?"],
+    'habit.create': ['Check in on it?', 'Set a reminder?'],
     'habit.list': ['Check in a habit?', "View today's tasks?"],
   },
   focus: {
@@ -158,6 +161,7 @@ export function VoiceCommandModal({
   const [error, setError] = useState<string | null>(null);
   const [continuousMode, setContinuousMode] = useState(false);
   const [commandHistory, setCommandHistory] = useState<PackyVoiceResponse[]>([]);
+  const [fallbackMode, setFallbackMode] = useState(false);
 
   const {
     supported: sttSupported,
@@ -169,7 +173,19 @@ export function VoiceCommandModal({
     stop,
     reset,
   } = useSpeechRecognition();
-  const { start: startMicrophone, stop: stopMicrophone, error: microphoneError } = useMicrophone();
+
+  const fallbackTranscribeRef = useRef<(blob: Blob, mimeType: string) => void>(() => {});
+
+  const {
+    start: startMicrophone,
+    stop: stopMicrophone,
+    error: microphoneError,
+    isRecording: isMicRecording,
+  } = useMicrophone({
+    onStop: async (blob, mimeType) => {
+      fallbackTranscribeRef.current(blob, mimeType);
+    },
+  });
   const { speak, speaking } = useTTS();
   const processingRef = useRef(false);
   const lastTranscriptRef = useRef('');
@@ -218,6 +234,36 @@ export function VoiceCommandModal({
     [speak, continuousMode, route],
   );
 
+  // Wire the fallback transcription handler (must be after processTranscript)
+  fallbackTranscribeRef.current = async (blob: Blob, mimeType: string): Promise<void> => {
+    if (blob.size < 100) {
+      setError('Recording too short — hold the button while speaking.');
+      setPhase('idle');
+      return;
+    }
+    setPhase('processing');
+    try {
+      const ext = mimeType.includes('mp4') ? '.mp4' : '.webm';
+      const form = new FormData();
+      form.append('file', blob, `command${ext}`);
+      const lang = navigator.language || 'en-US';
+      const result = await apiClient<{ transcript?: string; warning?: string; error?: string }>(
+        `/journal/transcribe?lang=${encodeURIComponent(lang)}`,
+        { method: 'POST', body: form },
+      );
+      const text = result.transcript?.trim();
+      if (!text) {
+        setError('No speech detected — try again.');
+        setPhase('idle');
+        return;
+      }
+      void processTranscript(text);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : 'Transcription failed');
+      setPhase('idle');
+    }
+  };
+
   // When speech recognition produces a final transcript, process it
   useEffect(() => {
     if (transcriptText && transcriptText !== lastTranscriptRef.current && !listening) {
@@ -230,9 +276,23 @@ export function VoiceCommandModal({
     if (!sttError) {
       return;
     }
+    if (/network/i.test(sttError)) {
+      setFallbackMode(true);
+      setError(null);
+      void (async () => {
+        const ready = await startMicrophone();
+        if (!ready) {
+          setError('Microphone unavailable — please type your command.');
+          setPhase('idle');
+          return;
+        }
+        setPhase('listening');
+      })();
+      return;
+    }
     setError(sttError);
     setPhase('idle');
-  }, [sttError]);
+  }, [sttError, startMicrophone]);
 
   useEffect(() => {
     if (!microphoneError) {
@@ -331,9 +391,20 @@ export function VoiceCommandModal({
   // -----------------------------------------------------------------------
 
   const toggleListening = (): void => {
-    if (listening) {
+    if (listening || isMicRecording) {
       stop();
       stopMicrophone();
+      return;
+    }
+    if (fallbackMode) {
+      void (async () => {
+        const ready = await startMicrophone();
+        if (!ready) {
+          setError('Microphone unavailable — please type your command.');
+          return;
+        }
+        setPhase('listening');
+      })();
       return;
     }
     void (async () => {
@@ -370,6 +441,7 @@ export function VoiceCommandModal({
     setContinuousMode(false);
     setCommandHistory([]);
     setOpen(false);
+    setFallbackMode(false);
     lastTranscriptRef.current = '';
   };
 
@@ -715,10 +787,10 @@ export function VoiceCommandModal({
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <Button
             onClick={toggleListening}
-            disabled={!sttSupported || phase === 'processing' || phase === 'executing'}
-            variant={listening ? 'primary' : 'secondary'}
+            disabled={(!sttSupported && !fallbackMode) || phase === 'processing' || phase === 'executing'}
+            variant={listening || isMicRecording ? 'primary' : 'secondary'}
           >
-            {listening ? (
+            {listening || isMicRecording ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span
                   style={{
@@ -730,7 +802,7 @@ export function VoiceCommandModal({
                     display: 'inline-block',
                   }}
                 />
-                Listening…
+                {fallbackMode ? 'Recording…' : 'Listening…'}
               </span>
             ) : phase === 'processing' ? (
               'Processing…'
@@ -740,21 +812,26 @@ export function VoiceCommandModal({
               'Start Listening'
             )}
           </Button>
-          {!sttSupported && (
+          {fallbackMode && (
+            <span style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)' }}>
+              server transcription mode
+            </span>
+          )}
+          {!sttSupported && !fallbackMode && (
             <span style={{ color: 'var(--state-warn)', fontSize: 'var(--text-sm)' }}>
               Speech recognition not supported in this browser.
             </span>
           )}
         </div>
 
-        {/* Live transcript */}
-        {(listening || Boolean(interimText)) && (
+        {/* Live transcript / recording indicator */}
+        {(listening || Boolean(interimText) || isMicRecording) && (
           <div
             style={{
               padding: '0.75rem 1rem',
               borderRadius: '10px',
               background: 'var(--surface-2)',
-              border: listening
+              border: (listening || isMicRecording)
                 ? '1px solid var(--state-overdue)'
                 : '1px solid var(--border-subtle)',
               minHeight: '2.5rem',
@@ -768,8 +845,10 @@ export function VoiceCommandModal({
                 {interimText}
               </span>
             )}
-            {!transcriptText && !interimText && listening && (
-              <span style={{ color: 'var(--text-tertiary)' }}>Say something…</span>
+            {!transcriptText && !interimText && (listening || isMicRecording) && (
+              <span style={{ color: 'var(--text-tertiary)' }}>
+                {fallbackMode ? 'Recording via server… tap to stop' : 'Say something…'}
+              </span>
             )}
           </div>
         )}

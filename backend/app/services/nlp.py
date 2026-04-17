@@ -175,6 +175,29 @@ _INTENT_PATTERNS: dict[str, list[tuple[re.Pattern[str], float]]] = {
             0.9,
         ),
     ],
+    "habit.create": [
+        (
+            re.compile(
+                r"\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\b",
+                re.I,
+            ),
+            1.0,
+        ),
+        (
+            re.compile(
+                r"\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)\s+\w+",
+                re.I,
+            ),
+            1.0,
+        ),
+        (
+            re.compile(
+                r"\b(?:i\s+want\s+to\s+)?(?:track|start)\s+(?:a\s+)?(?:new\s+)?(?:habit|streak|routine)\b",
+                re.I,
+            ),
+            0.9,
+        ),
+    ],
     "habit.list": [
         (re.compile(r"\b(?:show|list|view|display)\s+(?:my\s+)?habits?\b", re.I), 1.0),
         (
@@ -444,6 +467,9 @@ _STRIP_PREFIXES = (
     "check in habit",
     "log habit",
     "check in",
+    "add habit exercise",
+    "create habit reading",
+    "new habit meditation",
     "show habits",
     "list habits",
 )
@@ -653,6 +679,23 @@ def classify(text: str, *, context: dict[str, Any] | None = None) -> NLPResult:
         entities = {"habit_name": body or text}
         follow_ups = ["Check another habit?", "How's your streak?"]
         tts_response = "Habit checked in."
+
+    elif best_intent == "habit.create":
+        name_match = re.search(
+            r"(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+(?:for|called|named|:)\s+(\w+(?:\s+\w+)?)",
+            text, re.I,
+        )
+        if name_match:
+            habit_name = name_match.group(1).strip()
+        else:
+            # Strip command prefix to get the habit name (e.g. "add habit exercise" -> "exercise")
+            habit_name = re.sub(
+                r"^\b(?:add|create|new|start)\s+(?:a\s+)?(?:habit|streak|routine)\s+",
+                "", text, flags=re.I,
+            ).strip() or (body or text).strip()
+        entities = {"name": habit_name, "target_freq": 1, "target_period": "day"}
+        follow_ups = ["Check in on this habit?", "Set a reminder?"]
+        tts_response = f'Habit "{habit_name}" created.'
 
     elif best_intent == "habit.list":
         entities = {}
