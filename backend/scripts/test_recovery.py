@@ -27,7 +27,7 @@ app = create_app()
 print('App created successfully')
 """,
         ],
-        cwd="backend",
+        cwd=str(Path(__file__).resolve().parent.parent),
         env=env,
         capture_output=True,
         text=True,
@@ -60,7 +60,7 @@ except Exception as e:
     print(f'Expected error: {type(e).__name__}: {e}')
 """,
         ],
-        cwd="backend",
+        cwd=str(Path(__file__).resolve().parent.parent),
         env=env,
         capture_output=True,
         text=True,
@@ -109,7 +109,7 @@ run_migrations('"""
 print('Bootstrap OK')
 """,
         ],
-        cwd="backend",
+        cwd=str(Path(__file__).resolve().parent.parent),
         env=env,
         capture_output=True,
         text=True,
@@ -143,7 +143,7 @@ except Exception as e:
     print(f'OTHER_ERROR: {{type(e).__name__}}: {{e}}')
 """,
             ],
-            cwd="backend",
+            cwd=str(Path(__file__).resolve().parent.parent),
             env=env2,
             capture_output=True,
             text=True,
@@ -177,7 +177,7 @@ except Exception as e:
     print(f'Error: {type(e).__name__}: {e}')
 """,
         ],
-        cwd="backend",
+        cwd=str(Path(__file__).resolve().parent.parent),
         env=env,
         capture_output=True,
         text=True,

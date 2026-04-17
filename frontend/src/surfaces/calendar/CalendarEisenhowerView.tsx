@@ -17,9 +17,15 @@ function isImportant(event: CalendarEvent): boolean {
 function eventPriority(event: CalendarEvent): number {
   const urgent = isUrgent(event);
   const important = isImportant(event);
-  if (urgent && important) return 1;
-  if (!urgent && important) return 2;
-  if (urgent && !important) return 3;
+  if (urgent && important) {
+    return 1;
+  }
+  if (!urgent && important) {
+    return 2;
+  }
+  if (urgent && !important) {
+    return 3;
+  }
   return 4;
 }
 
@@ -158,31 +164,31 @@ function QuadrantCard({
             >
               {priorityBadge(eventPriority(event))}
               <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: '0.15rem' }}>
-              <span
-                style={{
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {event.title}
-              </span>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                {formatEventTime(event)}
-              </span>
-              {event.category && (
                 <span
                   style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--text-secondary)',
-                    textTransform: 'capitalize',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  {event.category}
+                  {event.title}
                 </span>
-              )}
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                  {formatEventTime(event)}
+                </span>
+                {event.category && (
+                  <span
+                    style={{
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--text-secondary)',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {event.category}
+                  </span>
+                )}
               </div>
             </button>
           ))

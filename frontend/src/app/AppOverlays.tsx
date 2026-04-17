@@ -91,9 +91,10 @@ export function AppOverlays({
             await tasks.update(taskId, { due_at: `${targetDate}T09:00:00Z` });
           }}
           onJournalNote={async (emoji, note) => {
-            const habitSummary = habits.habits.length > 0
-              ? `\n\n**Habits today**: ${habits.habits.filter((h) => (h.today_count ?? 0) >= h.target_freq).length}/${habits.habits.length} hit`
-              : '';
+            const habitSummary =
+              habits.habits.length > 0
+                ? `\n\n**Habits today**: ${habits.habits.filter((h) => (h.today_count ?? 0) >= h.target_freq).length}/${habits.habits.length} hit`
+                : '';
             await journal.save({
               date: localDateISO(),
               markdown_body: note + habitSummary,
