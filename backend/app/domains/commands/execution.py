@@ -319,9 +319,9 @@ def execute_single(
             }
 
         if intent == "habit.checkin":
-            from app.domains.habits import repository as habit_repo
+            from app.domains.habits import service as habit_svc
 
-            habits = habit_repo.list_habits(db_path)
+            habits = habit_svc.list_habits(db_path)
             habit_name = (extracted.get("habit_name") or "").strip().lower()
             matched = [
                 habit
@@ -329,7 +329,7 @@ def execute_single(
                 if habit_name in (habit.get("name") or "").lower()
             ]
             if len(matched) == 1:
-                result = habit_repo.checkin(db_path, matched[0]["id"])
+                result = habit_svc.checkin(db_path, matched[0]["id"])
                 CommandRepository.add_log(
                     db_path, text, intent, "executed", source=source
                 )
@@ -370,7 +370,7 @@ def execute_single(
             }
 
         if intent == "habit.create":
-            from app.domains.habits import repository as habit_repo
+            from app.domains.habits import service as habit_svc
 
             name = str(extracted.get("name") or "").strip()
             if not name:
@@ -399,7 +399,7 @@ def execute_single(
                     "reply": "What should I call the new habit?",
                 }
 
-            habits = habit_repo.list_habits(db_path)
+            habits = habit_svc.list_habits(db_path)
             if any(h.get("name", "").lower() == name.lower() for h in habits):
                 return {
                     "text": text,
@@ -409,7 +409,7 @@ def execute_single(
                     "reply": f'A habit called "{name}" already exists.',
                 }
 
-            result = habit_repo.add_habit(
+            result = habit_svc.add_habit(
                 db_path, name=name, target_freq=1, target_period="day", color="#49615c"
             )
             CommandRepository.add_log(db_path, text, intent, "executed", source=source)
@@ -422,9 +422,9 @@ def execute_single(
             )
 
         if intent == "habit.list":
-            from app.domains.habits import repository as habit_repo
+            from app.domains.habits import service as habit_svc
 
-            habits = habit_repo.list_habits(db_path)
+            habits = habit_svc.list_habits(db_path)
             CommandRepository.add_log(db_path, text, intent, "executed", source=source)
             return _response(text, intent, parsed, result={"habits": habits})
 

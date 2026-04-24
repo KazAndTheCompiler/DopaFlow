@@ -39,7 +39,9 @@ def _connect(
             )
         return libsql.connect(turso_url, auth_token=turso_token)
     pathlib.Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-    return sqlite3.connect(db_path)
+    # P1 FIX: Add connection timeout to prevent indefinite hangs
+    # 30 seconds is reasonable for most operations
+    return sqlite3.connect(db_path, timeout=30.0)
 
 
 def _resolve_db_config(
@@ -244,8 +246,9 @@ def tx(
         turso_token=turso_token,
     )
     conn = _connect(db_path, turso_url=turso_url, turso_token=turso_token)
-    _prepare_connection(conn)
+    # P1 FIX: Wrap _prepare_connection in try/finally to ensure cleanup
     try:
+        _prepare_connection(conn)
         yield conn
         conn.commit()
     except Exception as exc:
