@@ -321,7 +321,8 @@ def require_scope(scope: str):
         request: Request, authorization: str | None = Header(default=None)
     ) -> bool:
         settings = get_settings()
-        if env_flag("DEV_AUTH") and not settings.production:
+        # P1 FIX: Harden dev auth bypass - also check enforce_auth
+        if env_flag("DEV_AUTH") and not settings.production and not settings.enforce_auth:
             return True
         origin = request.headers.get("origin", "")
         client_host = request.client.host if request.client else ""

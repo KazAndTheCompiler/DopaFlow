@@ -6,6 +6,7 @@ import logging
 import math
 from collections import defaultdict
 from datetime import date, timedelta
+from typing import Any
 
 from app.core.gamification_helpers import award as award_gamification
 from app.domains.habits import repository
@@ -115,3 +116,16 @@ def today_summary(db_path: str) -> HabitTodaySummary:
     missed = max(len(habits) - done, 0)
     completion_pct = round((done / len(habits) * 100) if habits else 0.0, 2)
     return HabitTodaySummary(done=done, missed=missed, completion_pct=completion_pct)
+
+
+# Re-export repository functions for service layer consistency
+def list_habits(db_path: str) -> list[dict]:
+    """List all habits with stats."""
+    return repository.list_habits(db_path)
+
+
+def add_habit(
+    db_path: str, name: str, target_freq: int, target_period: str, color: str
+) -> dict[str, Any]:
+    """Create a new habit."""
+    return repository.add_habit(db_path, name, target_freq, target_period, color)

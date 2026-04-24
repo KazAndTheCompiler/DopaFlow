@@ -1,22 +1,48 @@
+# DopaFlow Backend Dependencies
+# Production-ready Python dependencies
+
+# Web Framework
 fastapi==0.135.3
+uvicorn[standard]==0.44.0
+sse-starlette==2.1.3
+python-multipart>=0.0.6
+
+# Data Validation
 pydantic==2.13.1
 pydantic-settings==2.13.1
-bcrypt>=4.0.0
-python-json-logger==2.0.7
-uvicorn[standard]==0.44.0
-httpx==0.28.0
-apscheduler==3.11.2
-certifi==2026.2.25
-cryptography==46.0.7
-aiohttp==3.13.5
+
+# Database
 libsql-experimental==0.0.34
-python-multipart>=0.0.6
-SpeechRecognition==3.10.4
 sqlparse>=0.5.0
-platformdirs>=4.0.0
-sse-starlette==2.1.3
-pytest>=9.0.0
+
+# Security
+bcrypt>=4.0.0
+cryptography==46.0.7
+
+# HTTP Client
+httpx==0.28.0
+aiohttp==3.13.5
+
+# Scheduling
+apscheduler==3.11.2
+
+# Speech Recognition (requires system PyAudio)
+# NOTE: PyAudio requires portaudio system library:
+#   Ubuntu/Debian: sudo apt-get install portaudio19-dev
+#   macOS: brew install portaudio
+#   Windows: pip install pipwin && pipwin install pyaudio
+SpeechRecognition==3.10.4
+
+# Logging & Monitoring
+python-json-logger==2.0.7
 sentry-sdk>=2.0.0
+
+# Utilities
+certifi==2026.2.25
+platformdirs>=4.0.0
+
+# Development & Testing (not required for production)
+pytest>=9.0.0
 pytest-asyncio>=0.24.0
 pytest-cov>=6.0.0
 ruff>=0.8.0

@@ -72,6 +72,36 @@ class Settings(BaseSettings):
             )
         return self
 
+    @model_validator(mode="after")
+    def require_auth_token_secret_in_production(self) -> Settings:
+        if self.production and not self.auth_token_secret:
+            raise ValueError(
+                "auth_token_secret is required in production mode. "
+                "Set DOPAFLOW_AUTH_TOKEN_SECRET to a secure random string (min 32 chars)."
+            )
+        if self.production and self.auth_token_secret and len(self.auth_token_secret) < 32:
+            raise ValueError(
+                "auth_token_secret must be at least 32 characters in production."
+            )
+        return self
+
+    @model_validator(mode="after")
+    def require_enforce_auth_in_production(self) -> Settings:
+        if self.production and not self.enforce_auth:
+            raise ValueError(
+                "enforce_auth must be True in production mode. "
+                "Set DOPAFLOW_ENFORCE_AUTH=true"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def require_ops_secret_in_production(self) -> Settings:
+        if self.production and not self.ops_secret:
+            raise ValueError(
+                "ops_secret is required in production mode for admin endpoints."
+            )
+        return self
+
 
 @lru_cache
 def get_settings() -> Settings:
