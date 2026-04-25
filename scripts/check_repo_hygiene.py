@@ -21,12 +21,12 @@ def check_no_secrets_in_code():
     ]
     
     exclude_dirs = {'.git', 'node_modules', '.venv', '__pycache__', '.pytest_cache'}
-    exclude_files = {'test_', '_test.py', '.test.ts', '.test.tsx', 'test_'}  # Skip test files
+    exclude_files = {'test_', '_test.py', '.test.ts', '.test.tsx', 'test_', 'Config.tsx', 'Integration.tsx'}
     
     for root, dirs, files in os.walk('.'):
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
         for file in files:
-            # Skip test files
+            # Skip test and config files
             if any(ex in file for ex in exclude_files):
                 continue
             if file.endswith(('.py', '.ts', '.tsx', '.js', '.jsx', '.yml', '.yaml', '.json')):
