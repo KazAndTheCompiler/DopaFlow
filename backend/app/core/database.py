@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import os
 import pathlib
+import re
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -13,7 +15,7 @@ from hashlib import sha256
 import sqlparse
 from fastapi import HTTPException
 
-from app.core.config import Settings
+from app.core.config import Settings, user_data_dir
 
 if importlib.util.find_spec("libsql_experimental") is not None:
     import libsql_experimental as libsql
@@ -21,6 +23,34 @@ else:
     libsql = None
 
 logger = logging.getLogger("dopaflow.db")
+
+
+def _validate_db_path(db_path: str) -> pathlib.Path:
+    """Validate and sanitize database path to prevent path traversal.
+    
+    Ensures the database path is within the allowed user data directory
+    or is an absolute path that doesn't traverse outside expected locations.
+    """
+    path = pathlib.Path(db_path).resolve()
+    
+    # Allow paths within user data directory
+    user_data = user_data_dir().resolve()
+    try:
+        path.relative_to(user_data)
+        return path
+    except ValueError:
+        pass
+    
+    # Allow absolute paths that don't contain traversal sequences
+    # and are not device files or special paths
+    if ".." in str(path):
+        raise ValueError(f"Database path contains traversal sequence: {db_path}")
+    
+    # Block device files and special paths
+    if path.is_fifo() or path.is_socket() or path.is_block_device() or path.is_char_device():
+        raise ValueError(f"Database path cannot be a device or special file: {db_path}")
+    
+    return path
 
 
 def _migrations_dir() -> pathlib.Path:
@@ -38,10 +68,14 @@ def _connect(
                 "Install libsql-experimental to use Turso: pip install libsql-experimental"
             )
         return libsql.connect(turso_url, auth_token=turso_token)
-    pathlib.Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    
+    # SECURITY FIX: Validate path to prevent directory traversal
+    validated_path = _validate_db_path(db_path)
+    validated_path.parent.mkdir(parents=True, exist_ok=True)
+    
     # P1 FIX: Add connection timeout to prevent indefinite hangs
     # 30 seconds is reasonable for most operations
-    return sqlite3.connect(db_path, timeout=30.0)
+    return sqlite3.connect(str(validated_path), timeout=30.0)
 
 
 def _resolve_db_config(
