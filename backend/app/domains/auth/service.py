@@ -331,7 +331,8 @@ class AuthService:
     def introspect_token(self, token: str) -> dict[str, Any]:
         try:
             payload = verify_scope_token(token, settings=self.settings)
-        except Exception:
+        except Exception as exc:
+            logger.debug("Token introspection failed: %s", exc)
             return {"active": False}
         now = int(time.time())
         exp = payload.get("exp", 0)
@@ -379,8 +380,8 @@ class AuthService:
                             (now, token_id),
                         )
                         return True
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Token revocation failed during verify: %s", exc)
         return True
 
     def get_userinfo(self, access_token: str) -> dict[str, Any]:

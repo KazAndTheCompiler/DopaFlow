@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime, timedelta
 
 from app.core.config import Settings
+
+logger = logging.getLogger(__name__)
 from app.core.database import get_db
 from app.domains.digest.repository import DigestRepository
 from app.domains.digest.schemas import (
@@ -75,6 +78,7 @@ def _compute_correlations(
             ).fetchall()
             habit_names = [h["name"] for h in habits]
     except Exception:
+        logger.exception("Failed to fetch habits for correlation analysis")
         habit_names = []
 
     for name in habit_names:
