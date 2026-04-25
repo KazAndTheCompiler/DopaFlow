@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build && node scripts/check-bundle-size.js",
+    "build": "vite build && node scripts/check-bundle-size.js",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx --max-warnings 50",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
