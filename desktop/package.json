@@ -1,0 +1,68 @@
+{
+  "name": "dopaflow-desktop",
+  "version": "2.0.17",
+  "description": "DopaFlow Desktop App",
+  "main": "build/main.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node scripts/test-runtime.js",
+    "dist:stable:linux": "electron-builder --linux",
+    "dist:stable:win": "electron-builder --win",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-log": "^5.0.0",
+    "electron-updater": "^6.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "typescript": "^5.3.0"
+  },
+  "build": {
+    "appId": "com.dopaflow.app",
+    "productName": "DopaFlow",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "build/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist/dopaflow-backend",
+        "to": "backend",
+        "filter": "**/*"
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "frontend",
+        "filter": "**/*"
+      }
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Productivity",
+      "maintainer": "KazAndTheCompiler"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
