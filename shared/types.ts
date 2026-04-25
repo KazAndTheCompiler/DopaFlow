@@ -158,6 +158,12 @@ export interface Alarm {
   enabled: boolean;
   repeat_days?: number[];
   sound?: string;
+  // Frontend-specific properties
+  kind?: 'standard' | 'tts' | 'youtube';
+  muted?: boolean;
+  tts_text?: string;
+  youtube_link?: string;
+  last_fired_at?: string;
 }
 
 // Notifications
@@ -167,6 +173,8 @@ export interface Notification {
   level?: 'info' | 'warning' | 'error';
   title: string;
   message: string;
+  body?: string;
+  action_url?: string;
   read: boolean;
   data?: unknown;
   created_at: string;
