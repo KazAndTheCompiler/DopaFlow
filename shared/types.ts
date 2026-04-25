@@ -45,10 +45,15 @@ export interface CalendarEvent {
   description?: string;
   start_time: string;
   end_time: string;
+  start_at?: string;  // Frontend alias
+  end_at?: string;    // Frontend alias
   all_day: boolean;
   recurrence?: string;
   tags: string[];
   color?: string;
+  category?: string;
+  reminder_minutes?: number;
+  provider_readonly?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +66,7 @@ export interface Habit {
   frequency: 'daily' | 'weekly' | 'custom';
   target_freq?: number;
   target_count: number;
+  target_period?: 'day' | 'week' | 'month';
   current_streak: number;
   longest_streak: number;
   today_count?: number;
@@ -77,6 +83,7 @@ export interface JournalEntry {
   content: string;
   markdown_body?: string;
   body?: string;
+  emoji?: string;
   tags: string[];
   mood?: number;
   word_count: number;
@@ -93,9 +100,10 @@ export interface FocusSession {
   started_at: string;
   ended_at?: string;
   duration_minutes: number;
+  paused_duration_ms?: number;
   interruptions: number;
   notes?: string;
-  status?: 'active' | 'completed' | 'cancelled';
+  status?: 'active' | 'completed' | 'cancelled' | 'running' | 'paused';
 }
 
 // Review Cards (Spaced Repetition)
@@ -187,6 +195,7 @@ export interface PlayerLevel {
   xp_to_next: number;
   total_xp: number;
   title: string;
+  progress?: number;
 }
 
 export interface Badge {
@@ -195,6 +204,8 @@ export interface Badge {
   description: string;
   icon: string;
   unlocked_at?: string;
+  earned_at?: string;
+  progress?: number;
 }
 
 export interface MomentumScore {
@@ -212,17 +223,19 @@ export interface MomentumScore {
 export interface PackyWhisper {
   id: string;
   message: string;
+  text?: string;
   type: 'suggestion' | 'reminder' | 'insight';
   dismissed: boolean;
   created_at: string;
 }
 
 export interface PackyVoiceResponse {
-  status: 'ok' | 'error' | 'needs_clarification' | 'pending';
+  status: 'ok' | 'error' | 'needs_clarification' | 'pending' | 'executed' | 'needs_datetime' | 'ambiguous' | 'not_found' | 'unsupported' | 'nothing_to_undo';
   intent: string;
   confidence: number;
   tts_text?: string;
   reply_text: string;
+  reply?: string;
   preview?: {
     title?: string;
     description?: string;
@@ -234,9 +247,11 @@ export interface PackyVoiceResponse {
     success: boolean;
     message?: string;
     data?: unknown;
+    reply?: string;
   };
   follow_ups?: string[];
   entities?: Record<string, unknown>;
+  results?: PackyVoiceResponse[];
 }
 
 // Vault (Obsidian Integration)
