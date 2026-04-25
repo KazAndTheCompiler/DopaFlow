@@ -8,7 +8,7 @@
     "test": "node scripts/test-runtime.js",
     "dist:stable:linux": "electron-builder --linux",
     "dist:stable:win": "electron-builder --win",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps 2>/dev/null || echo 'electron-builder not available (skip in dev)'"
   },
   "dependencies": {
     "electron-log": "^5.0.0",
