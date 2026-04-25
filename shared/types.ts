@@ -10,11 +10,12 @@ export interface Task {
   id: TaskId;
   title: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'done' | 'archived';
+  status: 'pending' | 'in_progress' | 'done' | 'archived' | 'cancelled' | 'todo';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   done?: boolean;
   due_date?: string;
   due_at?: string;
+  estimated_minutes?: number;
   tags: string[];
   project_id?: string;
   time_logs?: TaskTimeLog[];
@@ -54,6 +55,8 @@ export interface CalendarEvent {
   category?: string;
   reminder_minutes?: number;
   provider_readonly?: boolean;
+  alarm_id?: string;
+  source_type?: string;
   created_at: string;
   updated_at: string;
 }
@@ -66,11 +69,15 @@ export interface Habit {
   frequency: 'daily' | 'weekly' | 'custom';
   target_freq?: number;
   target_count: number;
-  target_period?: 'day' | 'week' | 'month';
+  target_period?: 'day' | 'week' | 'month' | string;
   current_streak: number;
   longest_streak: number;
   today_count?: number;
   completed_dates: string[];
+  freeze_until?: string;
+  completion_pct?: number;
+  completion_count?: number;
+  color?: string;
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -139,10 +146,13 @@ export interface Project {
 export interface PeerFeed {
   id: string;
   name: string;
+  label?: string;
   url: string;
   color: string;
   last_sync_at?: string;
-  sync_status: 'ok' | 'error' | 'pending';
+  last_synced_at?: string;
+  sync_status: 'ok' | 'error' | 'pending' | 'idle' | 'syncing';
+  last_error?: string;
   enabled: boolean;
 }
 
@@ -150,6 +160,11 @@ export interface PeerFeed {
 export interface SyncConflict {
   id: string;
   type: 'task' | 'event' | 'habit';
+  object_type?: string;
+  object_id?: string;
+  conflict_reason?: string;
+  repair_hint?: string;
+  detected_at?: string;
   local_data: unknown;
   remote_data: unknown;
   resolved_at?: string;
@@ -196,6 +211,7 @@ export interface PlayerLevel {
   total_xp: number;
   title: string;
   progress?: number;
+  updated_at?: string;
 }
 
 export interface Badge {
@@ -211,6 +227,9 @@ export interface Badge {
 export interface MomentumScore {
   date: string;
   score: number;
+  level?: number;
+  summary?: string;
+  delta_vs_yesterday?: number;
   factors: {
     tasks_completed: number;
     focus_minutes: number;
@@ -395,6 +414,7 @@ export interface VaultConfig {
 export interface VaultConfigUpdate {
   path?: string;
   auto_sync?: boolean;
+  vault_enabled?: boolean;
 }
 
 export interface VaultPushResult {
@@ -428,6 +448,7 @@ export interface ShareToken {
   id: string;
   token: string;
   name: string;
+  label?: string;
   expires_at?: string;
   created_at: string;
 }
