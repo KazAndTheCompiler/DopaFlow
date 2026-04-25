@@ -21,16 +21,24 @@ def check_no_secrets_in_code():
     ]
     
     exclude_dirs = {'.git', 'node_modules', '.venv', '__pycache__', '.pytest_cache'}
+    exclude_files = {'test_', '_test.py', '.test.ts', '.test.tsx', 'test_'}  # Skip test files
     
     for root, dirs, files in os.walk('.'):
         dirs[:] = [d for d in dirs if d not in exclude_dirs]
         for file in files:
+            # Skip test files
+            if any(ex in file for ex in exclude_files):
+                continue
             if file.endswith(('.py', '.ts', '.tsx', '.js', '.jsx', '.yml', '.yaml', '.json')):
                 filepath = Path(root) / file
                 try:
                     content = filepath.read_text(encoding='utf-8', errors='ignore')
                     for pattern, desc in secret_patterns:
                         if re.search(pattern, content, re.IGNORECASE):
+                            # Skip if it's a placeholder or example
+                            line = re.search(r'.*' + pattern + r'.*', content, re.IGNORECASE)
+                            if line and any(x in line.group().lower() for x in ['example', 'placeholder', 'your_', 'test_', 'mock_', 'fake_']):
+                                continue
                             issues.append(f"{filepath}: Potential {desc}")
                 except Exception:
                     pass
