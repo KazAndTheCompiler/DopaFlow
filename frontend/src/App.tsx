@@ -288,6 +288,7 @@ export default function App(): JSX.Element {
         },
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     focus.sessions,
     gamification.refresh,
@@ -311,7 +312,8 @@ export default function App(): JSX.Element {
         "dopaflow:gamification-refresh",
         refreshGamification as EventListener,
       );
-  }, [gamification.refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const level = gamification.level;

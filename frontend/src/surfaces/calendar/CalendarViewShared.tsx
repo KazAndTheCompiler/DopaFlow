@@ -1,7 +1,5 @@
 import type { JSX } from "react";
 
-import type { PeerFeed } from "../../../../shared/types";
-
 export type CalendarTab = "week" | "day" | "month" | "kanban" | "eisenhower";
 
 export function describeFeedRepair(raw: string | null): {

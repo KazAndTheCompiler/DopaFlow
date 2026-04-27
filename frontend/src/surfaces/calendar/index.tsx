@@ -41,13 +41,23 @@ export default function CalendarView(): JSX.Element {
         : false,
   );
 
-  const anchor = new Date();
-  anchor.setDate(anchor.getDate() + weekOffset * 7);
+  const anchor = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + weekOffset * 7);
+    return d;
+  }, [weekOffset]);
 
-  const dayAnchor = new Date();
-  dayAnchor.setDate(dayAnchor.getDate() + dayOffset);
-  const monthAnchor = new Date();
-  monthAnchor.setMonth(monthAnchor.getMonth() + weekOffset);
+  const dayAnchor = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    return d;
+  }, [dayOffset]);
+
+  const monthAnchor = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + weekOffset);
+    return d;
+  }, [weekOffset]);
 
   const {
     weekLabel,

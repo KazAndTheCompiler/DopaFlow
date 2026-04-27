@@ -290,7 +290,12 @@ export function VoiceCommandModal({
         processingRef.current = false;
       }
     },
-    [speak, continuousMode, route],
+    [
+      speak,
+      continuousMode,
+      route,
+      scheduleFollowUpRelisten,
+    ],
   );
 
   // Wire the fallback transcription handler (must be after processTranscript)
@@ -421,7 +426,7 @@ export function VoiceCommandModal({
   // Continuous conversation
   // -----------------------------------------------------------------------
 
-  const scheduleFollowUpRelisten = (res: PackyVoiceResponse): void => {
+  const scheduleFollowUpRelisten = useCallback((res: PackyVoiceResponse): void => {
     if (followUpTimeoutRef.current) {
       clearTimeout(followUpTimeoutRef.current);
     }
@@ -445,7 +450,7 @@ export function VoiceCommandModal({
         })();
       }
     }, delay);
-  };
+  }, [continuousMode, sttSupported, startMicrophone, stopMicrophone, reset, start]);
 
   // -----------------------------------------------------------------------
   // Follow-up relay

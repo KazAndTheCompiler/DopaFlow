@@ -13,22 +13,6 @@ import type { UseReviewResult } from "../hooks/useReview";
 import type { UsePackyResult } from "../hooks/usePacky";
 import type { AppRoute } from "../appRoutes";
 
-interface RefreshMap {
-  "task.create": () => Promise<void>;
-  "task.complete": () => Promise<void>;
-  "task.list": () => Promise<void>;
-  "journal.create": () => Promise<void>;
-  "calendar.create": () => Promise<void>;
-  "focus.start": () => Promise<void>;
-  "alarm.create": () => Promise<void>;
-  "habit.checkin": () => Promise<void>;
-  "habit.list": () => Promise<void>;
-  "review.start": () => Promise<void>;
-  search: () => Promise<void>;
-  "nutrition.log": () => Promise<void>;
-  undo: () => Promise<void>;
-}
-
 export interface CommandExecutorDeps {
   tasks: Pick<UseTasksResult, "refresh">;
   journal: Pick<UseJournalResult, "refresh">;
@@ -55,24 +39,6 @@ export function useCommandExecutor(
   const { tasks, journal, calendar, focus, alarms, habits, review, packy } =
     deps;
 
-  const refreshers: RefreshMap = {
-    "task.create": tasks.refresh,
-    "task.complete": tasks.refresh,
-    "task.list": tasks.refresh,
-    "journal.create": journal.refresh,
-    "calendar.create": calendar.refresh,
-    "focus.start": focus.refresh,
-    "alarm.create": alarms.refresh,
-    "habit.checkin": habits.refresh,
-    "habit.list": habits.refresh,
-    "review.start": review.refresh,
-    search: async () => {},
-    "nutrition.log": async () => {
-      window.dispatchEvent(new CustomEvent("dopaflow:nutrition-logged"));
-    },
-    undo: tasks.refresh,
-  };
-
   const execute = useCallback(
     async (
       text: string,
@@ -95,7 +61,21 @@ export function useCommandExecutor(
         const reply = getCommandReply(result);
 
         if (status === "executed") {
-          const refresher = refreshers[intent as keyof RefreshMap];
+          // Refresh based on intent
+          const refreshMap: Record<string, () => Promise<void>> = {
+            "task.create": tasks.refresh,
+            "task.complete": tasks.refresh,
+            "task.list": tasks.refresh,
+            "journal.create": journal.refresh,
+            "calendar.create": calendar.refresh,
+            "focus.start": focus.refresh,
+            "alarm.create": alarms.refresh,
+            "habit.checkin": habits.refresh,
+            "habit.list": habits.refresh,
+            "review.start": review.refresh,
+            undo: tasks.refresh,
+          };
+          const refresher = refreshMap[intent];
           if (refresher) {
             try {
               await refresher();
@@ -171,7 +151,7 @@ export function useCommandExecutor(
         return false;
       }
     },
-    [packy, refreshers],
+    [packy, tasks.refresh, journal.refresh, calendar.refresh, focus.refresh, alarms.refresh, habits.refresh, review.refresh],
   );
 
   return { execute };

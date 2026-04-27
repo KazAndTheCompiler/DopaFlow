@@ -57,6 +57,7 @@ export function useFocusTimerController(
     }
     const intervalId = window.setInterval(() => setFocusNow(Date.now()), 1000);
     return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSession?.id, activeSession?.status]);
 
   const startTimer = () => setFocusNow(Date.now());

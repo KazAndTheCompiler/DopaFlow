@@ -32,6 +32,7 @@ export function useFocus(): UseFocusResult {
 
   useEffect(() => {
     void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

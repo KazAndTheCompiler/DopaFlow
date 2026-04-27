@@ -416,9 +416,11 @@ export function DayView({
             const canResize = canInteract && !!onResizeEvent;
 
             const topRem = isDragging
-              ? dragVisual!.topRem
+              ? (dragVisual?.topRem ?? 0)
               : topOffsetRem(event);
-            const hRem = isDragging ? dragVisual!.heightRem : heightRem(event);
+            const hRem = isDragging
+              ? (dragVisual?.heightRem ?? 0)
+              : heightRem(event);
 
             return (
               <div

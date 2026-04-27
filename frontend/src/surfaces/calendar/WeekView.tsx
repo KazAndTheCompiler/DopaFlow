@@ -52,8 +52,10 @@ export function WeekView({
   sourceLabels = {},
   onEventClick,
 }: WeekViewProps): JSX.Element {
-  const anchor = anchorDate ?? new Date();
-  const days = useMemo(() => weekDates(anchor), [anchor]);
+  const days = useMemo(() => {
+    const anchor = anchorDate ?? new Date();
+    return weekDates(anchor);
+  }, [anchorDate]);
 
   const today = new Date();
   const weekHasEvents = days.some((day) =>
