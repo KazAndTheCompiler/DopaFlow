@@ -370,7 +370,7 @@ export function DeckList({ onSelectDeck }: DeckListProps): JSX.Element {
                 DUE {deckStats.due_cards} today
               </span>
             )}
-            {retention !== null && deckStats!.total_cards > 0 && (
+            {retention !== null && deckStats && deckStats.total_cards > 0 && (
               <span
                 style={{
                   color:

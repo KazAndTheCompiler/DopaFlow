@@ -82,6 +82,7 @@ export default function PlanMyDayModal({
         .slice(0, MAX_PICKS);
       setPicks(new Set(pre.map((t) => t.id)));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picks.size, step, tasks]);
 
   useEffect(() => {

@@ -69,7 +69,7 @@ export default function PlayerView(): JSX.Element {
     setNowPlaying({ ...item, stream_url: streamUrl });
     setTimeout(() => {
       if (audioRef.current) {
-        audioRef.current.src = streamUrl!;
+        audioRef.current.src = streamUrl ?? "";
         void audioRef.current.play().catch(() => {});
       }
     }, 50);

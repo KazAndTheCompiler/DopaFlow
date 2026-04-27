@@ -60,6 +60,7 @@ export function EditorView({
     setBody(entry?.markdown_body ?? "");
     setEmoji(entry?.emoji ?? "");
     setStatus("idle");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry?.id, selectedDate]);
 
   const scheduleAutosave = useCallback(

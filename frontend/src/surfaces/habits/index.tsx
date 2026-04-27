@@ -33,6 +33,7 @@ export default function HabitsView(): JSX.Element {
       }
       setCheckins(map);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habits.habits, habits.getLogs]);
 
   const totalHabits = habits.habits.length;

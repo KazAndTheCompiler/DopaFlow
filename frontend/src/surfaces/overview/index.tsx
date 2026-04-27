@@ -185,14 +185,14 @@ export default function OverviewView(): JSX.Element {
   );
 
   const weeklyDigest = app?.insights.weeklyDigest;
-  const priorityOrder: Record<Task["priority"], number> = {
-    urgent: 0,
-    high: 1,
-    medium: 2,
-    low: 3,
-  };
-  const nextFocusTask = useMemo(
-    () =>
+  const nextFocusTask = useMemo(() => {
+    const priorityOrder: Record<Task["priority"], number> = {
+      urgent: 0,
+      high: 1,
+      medium: 2,
+      low: 3,
+    };
+    return (
       (app?.tasks.tasks ?? [])
         .filter((task) => !task.done && task.due_at?.slice(0, 10) === todayIso)
         .sort((left, right) => {
@@ -200,9 +200,9 @@ export default function OverviewView(): JSX.Element {
             return priorityOrder[left.priority] - priorityOrder[right.priority];
           }
           return left.title.localeCompare(right.title);
-        })[0] ?? null,
-    [app?.tasks.tasks, todayIso],
-  );
+        })[0] ?? null
+    );
+  }, [app?.tasks.tasks, todayIso]);
   const nextCalendarBlock = useMemo(
     () =>
       (app?.calendar.events ?? [])

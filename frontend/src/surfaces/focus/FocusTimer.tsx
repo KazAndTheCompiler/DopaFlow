@@ -49,6 +49,7 @@ export function FocusTimer({
     } else {
       setElapsed(0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     session?.id,
     session?.status,
@@ -67,7 +68,7 @@ export function FocusTimer({
         const wallElapsed = Math.floor((Date.now() - startedAt) / 1000);
         const newElapsed = Math.max(0, wallElapsed - pausedSeconds);
         if (newElapsed >= totalSeconds) {
-          clearInterval(intervalRef.current!);
+          clearInterval(intervalRef.current ?? undefined);
           setElapsed(totalSeconds);
           onCompleteRef.current();
         } else {

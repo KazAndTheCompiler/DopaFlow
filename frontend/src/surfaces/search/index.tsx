@@ -67,18 +67,24 @@ export default function SearchView(): JSX.Element {
 
   const q = query.toLowerCase().trim();
 
-  const taskResults: Task[] = q
-    ? tasks.tasks.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.tags.some((tag) => tag.toLowerCase().includes(q)) ||
-          t.description?.toLowerCase().includes(q),
-      )
-    : [];
+  const taskResults = useMemo<Task[]>(
+    () =>
+      q
+        ? tasks.tasks.filter(
+            (t) =>
+              t.title.toLowerCase().includes(q) ||
+              t.tags.some((tag) => tag.toLowerCase().includes(q)) ||
+              t.description?.toLowerCase().includes(q),
+          )
+        : [],
+    [q, tasks.tasks],
+  );
 
-  const habitResults: Habit[] = q
-    ? habits.habits.filter((h) => h.name.toLowerCase().includes(q))
-    : [];
+  const habitResults = useMemo<Habit[]>(
+    () =>
+      q ? habits.habits.filter((h) => h.name.toLowerCase().includes(q)) : [],
+    [q, habits.habits],
+  );
 
   useEffect(() => {
     if (!q) {
