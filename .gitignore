@@ -45,6 +45,9 @@ release/
 desktop/dist/
 build/
 
+# --- Internal documentation (not for public repo) ---
+docs/internal/
+
 # --- Backend build output ---
 backend/build/
 backend/dist/

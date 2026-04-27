@@ -156,9 +156,17 @@ html.skin-midnight-neon {
   --shadow-elevated: 0 22px 58px rgba(0, 0, 0, 0.52);
   --shadow-floating: 0 28px 70px rgba(0, 0, 0, 0.6);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(49, 240, 200, 0.05) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(49, 240, 200, 0.05) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(49, 240, 200, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(49, 240, 200, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(49, 240, 200, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(49, 240, 200, 0.08);
   --surface-3: rgba(49, 240, 200, 0.04);
 }
@@ -318,9 +326,17 @@ html.skin-amber-terminal {
   --shadow-elevated: 0 20px 48px rgba(0, 0, 0, 0.44);
   --shadow-floating: 0 26px 62px rgba(0, 0, 0, 0.5);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(255, 176, 0, 0.06) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(255, 176, 0, 0.06) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(255, 176, 0, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(255, 176, 0, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(255, 176, 0, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(255, 176, 0, 0.1);
   --surface-3: rgba(255, 176, 0, 0.04);
 }
@@ -401,18 +417,38 @@ html.skin-glassy-modern {
   --focus-ring: rgba(80, 191, 211, 0.3);
   --shadow-elevated: 0 26px 56px rgba(0, 0, 0, 0.34);
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.42);
-  --bg-gradient: linear-gradient(160deg, rgba(30, 30, 40, 0.98) 0%, rgba(20, 20, 30, 0.95) 100%);
-  --bg-vignette: radial-gradient(ellipse at 50% 0%, rgba(120, 120, 160, 0.08) 0%, transparent 70%);
+  --bg-gradient: linear-gradient(
+    160deg,
+    rgba(30, 30, 40, 0.98) 0%,
+    rgba(20, 20, 30, 0.95) 100%
+  );
+  --bg-vignette: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(120, 120, 160, 0.08) 0%,
+    transparent 70%
+  );
   --surface-glass-blur: blur(16px);
-  --surface-inner-light: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(255, 255, 255, 0.04);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(255, 255, 255, 0.03) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(255, 255, 255, 0.06);
   --surface-3: rgba(255, 255, 255, 0.03);
   --modal-fill: rgba(25, 25, 35, 0.85);
   --modal-edge: 1px solid rgba(255, 255, 255, 0.08);
   --modal-glass-blur: blur(20px);
-  --modal-inner-light: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, transparent 50%);
+  --modal-inner-light: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 50%
+  );
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-blur: blur(8px);
   --nav-rail-fill: rgba(20, 20, 30, 0.8);
@@ -431,7 +467,8 @@ html.skin-glassy-modern {
   --button-primary-glow: 0 0 12px rgba(140, 140, 180, 0.15);
   --highlight-rim: 1px solid rgba(140, 140, 180, 0.25);
   --accent-glow: 0 0 16px rgba(140, 140, 180, 0.25);
-  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-inset:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 html.skin-ink-and-stone {
@@ -517,20 +554,48 @@ html.skin-lush-forest {
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.5);
 
   /* Gradient tokens */
-  --bg-gradient: linear-gradient(175deg, #0b1510 0%, #111e14 30%, #1a2e1e 60%, #243d28 100%);
-  --sidebar-gradient: linear-gradient(180deg, #090f0b 0%, #111e14 50%, #1a2610 100%);
-  --card-gradient: linear-gradient(155deg, #243d28 0%, #1e3024 60%, #182818 100%);
+  --bg-gradient: linear-gradient(
+    175deg,
+    #0b1510 0%,
+    #111e14 30%,
+    #1a2e1e 60%,
+    #243d28 100%
+  );
+  --sidebar-gradient: linear-gradient(
+    180deg,
+    #090f0b 0%,
+    #111e14 50%,
+    #1a2610 100%
+  );
+  --card-gradient: linear-gradient(
+    155deg,
+    #243d28 0%,
+    #1e3024 60%,
+    #182818 100%
+  );
   --surface-gradient: linear-gradient(145deg, #2a3d2e 0%, #1e3024 100%);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(180, 255, 180, 0.05) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(180, 255, 180, 0.05) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(180, 255, 180, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(180, 255, 180, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(180, 255, 180, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(180, 255, 180, 0.08);
   --surface-3: rgba(180, 255, 180, 0.03);
   --modal-fill: rgba(15, 25, 15, 0.85);
   --modal-edge: 1px solid rgba(180, 255, 180, 0.1);
   --modal-glass-blur: blur(18px);
-  --modal-inner-light: linear-gradient(135deg, rgba(180, 255, 180, 0.04) 0%, transparent 50%);
+  --modal-inner-light: linear-gradient(
+    135deg,
+    rgba(180, 255, 180, 0.04) 0%,
+    transparent 50%
+  );
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-blur: blur(8px);
   --nav-rail-fill: rgba(15, 25, 15, 0.75);
@@ -549,7 +614,8 @@ html.skin-lush-forest {
   --button-primary-glow: 0 0 12px rgba(80, 200, 80, 0.15);
   --highlight-rim: 1px solid rgba(80, 200, 80, 0.25);
   --accent-glow: 0 0 16px rgba(80, 200, 80, 0.25);
-  --shadow-inset: inset 0 1px 0 rgba(180, 255, 180, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-inset:
+    inset 0 1px 0 rgba(180, 255, 180, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* 🩸 VAMPIRE ROMANCE - Deep crimson with rose gold */
@@ -591,9 +657,17 @@ html.skin-vampire-romance {
   --shadow-elevated: 0 24px 56px rgba(0, 0, 0, 0.5);
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.55);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(255, 112, 141, 0.06) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(255, 112, 141, 0.06) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(255, 112, 141, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(255, 112, 141, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(255, 112, 141, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(255, 112, 141, 0.08);
   --surface-3: rgba(255, 112, 141, 0.04);
 }
@@ -637,9 +711,17 @@ html.skin-deep-ocean {
   --shadow-elevated: 0 24px 56px rgba(0, 0, 0, 0.55);
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.6);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(0, 229, 255, 0.05) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(0, 229, 255, 0.05) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(0, 229, 255, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(0, 229, 255, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(0, 229, 255, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(0, 229, 255, 0.08);
   --surface-3: rgba(0, 229, 255, 0.04);
 }
@@ -683,9 +765,17 @@ html.skin-sunset-blues {
   --shadow-elevated: 0 24px 56px rgba(0, 0, 0, 0.45);
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.5);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(192, 132, 252, 0.06) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(192, 132, 252, 0.06) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(192, 132, 252, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(192, 132, 252, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(192, 132, 252, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(192, 132, 252, 0.08);
   --surface-3: rgba(192, 132, 252, 0.04);
 }
@@ -729,9 +819,17 @@ html.skin-classic-noir {
   --shadow-elevated: 0 24px 56px rgba(0, 0, 0, 0.55);
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.6);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(212, 175, 55, 0.06) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.06) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(212, 175, 55, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(212, 175, 55, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(212, 175, 55, 0.1);
   --surface-3: rgba(212, 175, 55, 0.04);
 }
@@ -815,9 +913,17 @@ html.skin-neon-punk {
   --shadow-elevated: 0 24px 56px rgba(0, 0, 0, 0.55);
   --shadow-floating: 0 32px 72px rgba(0, 0, 0, 0.6);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(191, 0, 255, 0.06) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(191, 0, 255, 0.06) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(191, 0, 255, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(191, 0, 255, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(191, 0, 255, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(191, 0, 255, 0.08);
   --surface-3: rgba(191, 0, 255, 0.04);
 }
@@ -860,20 +966,48 @@ html.skin-forest-gradient {
   --selected-range: rgba(106, 191, 112, 0.2);
   --border-strong: #4d7a52;
   /* Gradient tokens */
-  --bg-gradient: linear-gradient(175deg, #0b1510 0%, #111e14 30%, #1a2e1e 60%, #243d28 100%);
-  --sidebar-gradient: linear-gradient(180deg, #090f0b 0%, #111e14 50%, #1a2610 100%);
-  --card-gradient: linear-gradient(155deg, #243d28 0%, #1e3024 60%, #182818 100%);
+  --bg-gradient: linear-gradient(
+    175deg,
+    #0b1510 0%,
+    #111e14 30%,
+    #1a2e1e 60%,
+    #243d28 100%
+  );
+  --sidebar-gradient: linear-gradient(
+    180deg,
+    #090f0b 0%,
+    #111e14 50%,
+    #1a2610 100%
+  );
+  --card-gradient: linear-gradient(
+    155deg,
+    #243d28 0%,
+    #1e3024 60%,
+    #182818 100%
+  );
   --surface-gradient: linear-gradient(145deg, #2a3d2e 0%, #1e3024 100%);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(120, 200, 120, 0.05) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(120, 200, 120, 0.05) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(120, 200, 120, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(120, 200, 120, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(120, 200, 120, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(120, 200, 120, 0.08);
   --surface-3: rgba(120, 200, 120, 0.03);
   --modal-fill: rgba(12, 22, 12, 0.85);
   --modal-edge: 1px solid rgba(120, 200, 120, 0.1);
   --modal-glass-blur: blur(18px);
-  --modal-inner-light: linear-gradient(135deg, rgba(120, 200, 120, 0.04) 0%, transparent 50%);
+  --modal-inner-light: linear-gradient(
+    135deg,
+    rgba(120, 200, 120, 0.04) 0%,
+    transparent 50%
+  );
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-blur: blur(8px);
   --nav-rail-fill: rgba(12, 22, 12, 0.75);
@@ -892,7 +1026,8 @@ html.skin-forest-gradient {
   --button-primary-glow: 0 0 12px rgba(80, 180, 80, 0.15);
   --highlight-rim: 1px solid rgba(80, 180, 80, 0.25);
   --accent-glow: 0 0 16px rgba(80, 180, 80, 0.25);
-  --shadow-inset: inset 0 1px 0 rgba(120, 200, 120, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-inset:
+    inset 0 1px 0 rgba(120, 200, 120, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* 🌊 OCEAN GRADIENT - Deep blue → teal */
@@ -933,20 +1068,48 @@ html.skin-ocean-gradient {
   --selected-range: rgba(61, 184, 216, 0.2);
   --border-strong: #2a4a60;
   /* Gradient tokens */
-  --bg-gradient: linear-gradient(170deg, #060d18 0%, #0a1628 35%, #122236 65%, #1a3550 100%);
-  --sidebar-gradient: linear-gradient(180deg, #040810 0%, #0a1628 50%, #0f2035 100%);
-  --card-gradient: linear-gradient(155deg, #1a3550 0%, #142840 60%, #0f2030 100%);
+  --bg-gradient: linear-gradient(
+    170deg,
+    #060d18 0%,
+    #0a1628 35%,
+    #122236 65%,
+    #1a3550 100%
+  );
+  --sidebar-gradient: linear-gradient(
+    180deg,
+    #040810 0%,
+    #0a1628 50%,
+    #0f2035 100%
+  );
+  --card-gradient: linear-gradient(
+    155deg,
+    #1a3550 0%,
+    #142840 60%,
+    #0f2030 100%
+  );
   --surface-gradient: linear-gradient(145deg, #1a3550 0%, #142840 100%);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(100, 180, 255, 0.05) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(100, 180, 255, 0.05) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(100, 180, 255, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(100, 180, 255, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(100, 180, 255, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(100, 180, 255, 0.08);
   --surface-3: rgba(100, 180, 255, 0.03);
   --modal-fill: rgba(10, 20, 35, 0.85);
   --modal-edge: 1px solid rgba(100, 180, 255, 0.1);
   --modal-glass-blur: blur(18px);
-  --modal-inner-light: linear-gradient(135deg, rgba(100, 180, 255, 0.04) 0%, transparent 50%);
+  --modal-inner-light: linear-gradient(
+    135deg,
+    rgba(100, 180, 255, 0.04) 0%,
+    transparent 50%
+  );
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-blur: blur(8px);
   --nav-rail-fill: rgba(10, 20, 35, 0.75);
@@ -965,7 +1128,8 @@ html.skin-ocean-gradient {
   --button-primary-glow: 0 0 12px rgba(60, 140, 220, 0.15);
   --highlight-rim: 1px solid rgba(60, 140, 220, 0.25);
   --accent-glow: 0 0 16px rgba(60, 140, 220, 0.25);
-  --shadow-inset: inset 0 1px 0 rgba(100, 180, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-inset:
+    inset 0 1px 0 rgba(100, 180, 255, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* 🌙 AMBER NIGHT - Dark amber/brown → warm gold */
@@ -1006,20 +1170,48 @@ html.skin-amber-night {
   --selected-range: rgba(212, 144, 26, 0.2);
   --border-strong: #4a3020;
   /* Gradient tokens */
-  --bg-gradient: linear-gradient(165deg, #120a00 0%, #1a1005 40%, #2a1a08 70%, #3a2510 100%);
-  --sidebar-gradient: linear-gradient(180deg, #0a0600 0%, #1a1005 50%, #201808 100%);
-  --card-gradient: linear-gradient(155deg, #3a2510 0%, #2e200a 60%, #241808 100%);
+  --bg-gradient: linear-gradient(
+    165deg,
+    #120a00 0%,
+    #1a1005 40%,
+    #2a1a08 70%,
+    #3a2510 100%
+  );
+  --sidebar-gradient: linear-gradient(
+    180deg,
+    #0a0600 0%,
+    #1a1005 50%,
+    #201808 100%
+  );
+  --card-gradient: linear-gradient(
+    155deg,
+    #3a2510 0%,
+    #2e200a 60%,
+    #241808 100%
+  );
   --surface-gradient: linear-gradient(145deg, #3a2510 0%, #2e200a 100%);
   --surface-glass-blur: blur(14px);
-  --surface-inner-light: linear-gradient(135deg, rgba(255, 180, 80, 0.05) 0%, transparent 60%);
+  --surface-inner-light: linear-gradient(
+    135deg,
+    rgba(255, 180, 80, 0.05) 0%,
+    transparent 60%
+  );
   --surface-inner-highlight: rgba(255, 180, 80, 0.03);
-  --surface-specular: radial-gradient(ellipse at 30% 20%, rgba(255, 180, 80, 0.04) 0%, transparent 50%);
+  --surface-specular: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(255, 180, 80, 0.04) 0%,
+    transparent 50%
+  );
   --surface-edge-light: 1px solid rgba(255, 180, 80, 0.08);
   --surface-3: rgba(255, 180, 80, 0.03);
   --modal-fill: rgba(25, 18, 10, 0.85);
   --modal-edge: 1px solid rgba(255, 180, 80, 0.1);
   --modal-glass-blur: blur(18px);
-  --modal-inner-light: linear-gradient(135deg, rgba(255, 180, 80, 0.04) 0%, transparent 50%);
+  --modal-inner-light: linear-gradient(
+    135deg,
+    rgba(255, 180, 80, 0.04) 0%,
+    transparent 50%
+  );
   --overlay-backdrop: rgba(0, 0, 0, 0.5);
   --overlay-blur: blur(8px);
   --nav-rail-fill: rgba(25, 18, 10, 0.75);
@@ -1038,7 +1230,8 @@ html.skin-amber-night {
   --button-primary-glow: 0 0 12px rgba(220, 140, 40, 0.15);
   --highlight-rim: 1px solid rgba(220, 140, 40, 0.25);
   --accent-glow: 0 0 16px rgba(220, 140, 40, 0.25);
-  --shadow-inset: inset 0 1px 0 rgba(255, 180, 80, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  --shadow-inset:
+    inset 0 1px 0 rgba(255, 180, 80, 0.04), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -1066,8 +1259,10 @@ html.skin-nordic-glass {
   --accent-glow: rgba(0, 212, 200, 0.2);
   --focus-ring: rgba(0, 212, 200, 0.28);
   --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-elevated: 0 6px 28px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-floating: 0 16px 56px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-elevated:
+    0 6px 28px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-floating:
+    0 16px 56px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.35);
   --state-ok: #3ecfa0;
   --state-completed: #3ecfa0;
   --state-warn: #e8a040;
@@ -1106,8 +1301,18 @@ html.skin-nordic-glass {
   --button-secondary-edge: rgba(60, 100, 130, 0.4);
   --button-quiet-fill: transparent;
   --button-pressed-fill: rgba(5, 10, 16, 0.9);
-  --bg-gradient: radial-gradient(ellipse at 18% 0%, #152030 0%, #0d1e2a 40%, #090e14 70%, #07090f 100%);
-  --bg-vignette: radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(5, 8, 12, 0.55) 100%);
+  --bg-gradient: radial-gradient(
+    ellipse at 18% 0%,
+    #152030 0%,
+    #0d1e2a 40%,
+    #090e14 70%,
+    #07090f 100%
+  );
+  --bg-vignette: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 0%,
+    rgba(5, 8, 12, 0.55) 100%
+  );
   --surface-glass-blur: blur(18px);
   --surface-inner-light: linear-gradient(
     128deg,
@@ -1115,17 +1320,33 @@ html.skin-nordic-glass {
     rgba(255, 255, 255, 0.02) 40%,
     transparent 60%
   );
-  --surface-inner-highlight: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, transparent 35%);
-  --surface-specular: linear-gradient(125deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+  --surface-inner-highlight: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 35%
+  );
+  --surface-specular: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 50%
+  );
   --surface-edge-light: rgba(160, 210, 230, 0.08);
-  --highlight-rim: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+  --highlight-rim: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 60%
+  );
   --nav-rail-glass-blur: blur(20px);
   --topbar-glass-blur: blur(14px);
   --nav-item-active-edge: rgba(0, 212, 200, 0.3);
   --icon-symbol: #6a94aa;
   --icon-symbol-active: #060a0e;
   --modal-glass-blur: blur(24px);
-  --modal-inner-light: linear-gradient(128deg, rgba(200, 235, 240, 0.06) 0%, transparent 45%);
+  --modal-inner-light: linear-gradient(
+    128deg,
+    rgba(200, 235, 240, 0.06) 0%,
+    transparent 45%
+  );
   --button-primary-glow: 0 0 20px rgba(0, 212, 200, 0.25);
   --button-secondary-text: #dceef4;
   --button-quiet-text: #6a94aa;
@@ -1152,8 +1373,10 @@ html.skin-graphite-hifi {
   --accent-glow: rgba(0, 229, 255, 0.18);
   --focus-ring: rgba(0, 229, 255, 0.26);
   --shadow-soft: 0 2px 10px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-elevated: 0 6px 28px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-floating: 0 16px 56px rgba(0, 0, 0, 0.7), 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-elevated:
+    0 6px 28px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-floating:
+    0 16px 56px rgba(0, 0, 0, 0.7), 0 4px 16px rgba(0, 0, 0, 0.4);
   --state-ok: #00c896;
   --state-completed: #00c896;
   --state-warn: #d4a030;
@@ -1192,8 +1415,18 @@ html.skin-graphite-hifi {
   --button-secondary-edge: rgba(0, 229, 255, 0.15);
   --button-quiet-fill: transparent;
   --button-pressed-fill: rgba(4, 6, 10, 0.92);
-  --bg-gradient: radial-gradient(ellipse at 82% 100%, #0c1c28 0%, #081220 40%, #060a0d 65%, #040608 100%);
-  --bg-vignette: radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(2, 4, 6, 0.7) 100%);
+  --bg-gradient: radial-gradient(
+    ellipse at 82% 100%,
+    #0c1c28 0%,
+    #081220 40%,
+    #060a0d 65%,
+    #040608 100%
+  );
+  --bg-vignette: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 0%,
+    rgba(2, 4, 6, 0.7) 100%
+  );
   --surface-glass-blur: blur(16px);
   --surface-inner-light: linear-gradient(
     130deg,
@@ -1201,17 +1434,33 @@ html.skin-graphite-hifi {
     rgba(255, 255, 255, 0.015) 35%,
     transparent 55%
   );
-  --surface-inner-highlight: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 30%);
-  --surface-specular: linear-gradient(120deg, rgba(0, 229, 255, 0.03) 0%, transparent 45%);
+  --surface-inner-highlight: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    transparent 30%
+  );
+  --surface-specular: linear-gradient(
+    120deg,
+    rgba(0, 229, 255, 0.03) 0%,
+    transparent 45%
+  );
   --surface-edge-light: rgba(0, 229, 255, 0.06);
-  --highlight-rim: linear-gradient(180deg, rgba(0, 229, 255, 0.08) 0%, transparent 50%);
+  --highlight-rim: linear-gradient(
+    180deg,
+    rgba(0, 229, 255, 0.08) 0%,
+    transparent 50%
+  );
   --nav-rail-glass-blur: blur(20px);
   --topbar-glass-blur: blur(14px);
   --nav-item-active-edge: rgba(0, 229, 255, 0.25);
   --icon-symbol: #5a8090;
   --icon-symbol-active: #030608;
   --modal-glass-blur: blur(24px);
-  --modal-inner-light: linear-gradient(130deg, rgba(0, 229, 255, 0.04) 0%, transparent 40%);
+  --modal-inner-light: linear-gradient(
+    130deg,
+    rgba(0, 229, 255, 0.04) 0%,
+    transparent 40%
+  );
   --button-primary-glow: 0 0 20px rgba(0, 229, 255, 0.3);
   --button-secondary-text: #cce4f0;
   --button-quiet-text: #5a8090;
@@ -1237,9 +1486,12 @@ html.skin-champagne-studio {
   --accent-soft: rgba(196, 128, 96, 0.12);
   --accent-glow: rgba(196, 128, 96, 0.18);
   --focus-ring: rgba(196, 128, 96, 0.22);
-  --shadow-soft: 0 2px 12px rgba(100, 75, 50, 0.1), 0 1px 3px rgba(100, 75, 50, 0.06);
-  --shadow-elevated: 0 6px 28px rgba(100, 75, 50, 0.12), 0 2px 8px rgba(100, 75, 50, 0.07);
-  --shadow-floating: 0 16px 56px rgba(100, 75, 50, 0.15), 0 4px 16px rgba(100, 75, 50, 0.08);
+  --shadow-soft:
+    0 2px 12px rgba(100, 75, 50, 0.1), 0 1px 3px rgba(100, 75, 50, 0.06);
+  --shadow-elevated:
+    0 6px 28px rgba(100, 75, 50, 0.12), 0 2px 8px rgba(100, 75, 50, 0.07);
+  --shadow-floating:
+    0 16px 56px rgba(100, 75, 50, 0.15), 0 4px 16px rgba(100, 75, 50, 0.08);
   --state-ok: #7a9860;
   --state-completed: #7a9860;
   --state-warn: #c07030;
@@ -1278,8 +1530,18 @@ html.skin-champagne-studio {
   --button-secondary-edge: rgba(200, 180, 155, 0.45);
   --button-quiet-fill: transparent;
   --button-pressed-fill: rgba(238, 230, 218, 0.92);
-  --bg-gradient: linear-gradient(155deg, #f8f3eb 0%, #ede3d8 35%, #f0e9e0 65%, #f2ede3 100%);
-  --bg-vignette: radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(180, 160, 140, 0.15) 100%);
+  --bg-gradient: linear-gradient(
+    155deg,
+    #f8f3eb 0%,
+    #ede3d8 35%,
+    #f0e9e0 65%,
+    #f2ede3 100%
+  );
+  --bg-vignette: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 0%,
+    rgba(180, 160, 140, 0.15) 100%
+  );
   --surface-glass-blur: blur(16px);
   --surface-inner-light: linear-gradient(
     125deg,
@@ -1293,16 +1555,28 @@ html.skin-champagne-studio {
     rgba(255, 255, 255, 0.1) 40%,
     transparent 70%
   );
-  --surface-specular: linear-gradient(120deg, rgba(255, 255, 255, 0.4) 0%, transparent 40%);
+  --surface-specular: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    transparent 40%
+  );
   --surface-edge-light: rgba(255, 250, 240, 0.6);
-  --highlight-rim: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, transparent 50%);
+  --highlight-rim: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7) 0%,
+    transparent 50%
+  );
   --nav-rail-glass-blur: blur(16px);
   --topbar-glass-blur: blur(12px);
   --nav-item-active-edge: rgba(196, 128, 96, 0.25);
   --icon-symbol: #7a6858;
   --icon-symbol-active: #fdfaf6;
   --modal-glass-blur: blur(20px);
-  --modal-inner-light: linear-gradient(125deg, rgba(255, 255, 255, 0.4) 0%, transparent 40%);
+  --modal-inner-light: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    transparent 40%
+  );
   --button-primary-glow: 0 0 16px rgba(196, 128, 96, 0.15);
   --button-secondary-text: #2c2420;
   --button-quiet-text: #7a6858;
@@ -1329,8 +1603,10 @@ html.skin-emerald-atelier {
   --accent-glow: rgba(138, 184, 120, 0.18);
   --focus-ring: rgba(138, 184, 120, 0.24);
   --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.28);
-  --shadow-elevated: 0 6px 28px rgba(0, 0, 0, 0.52), 0 2px 8px rgba(0, 0, 0, 0.32);
-  --shadow-floating: 0 16px 56px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.36);
+  --shadow-elevated:
+    0 6px 28px rgba(0, 0, 0, 0.52), 0 2px 8px rgba(0, 0, 0, 0.32);
+  --shadow-floating:
+    0 16px 56px rgba(0, 0, 0, 0.6), 0 4px 16px rgba(0, 0, 0, 0.36);
   --state-ok: #6abf70;
   --state-completed: #6abf70;
   --state-warn: #c8a040;
@@ -1369,8 +1645,18 @@ html.skin-emerald-atelier {
   --button-secondary-edge: rgba(138, 184, 120, 0.15);
   --button-quiet-fill: transparent;
   --button-pressed-fill: rgba(6, 10, 6, 0.92);
-  --bg-gradient: radial-gradient(ellipse at 28% 0%, #162018 0%, #0e180e 40%, #0a120a 70%, #060a06 100%);
-  --bg-vignette: radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(4, 8, 4, 0.6) 100%);
+  --bg-gradient: radial-gradient(
+    ellipse at 28% 0%,
+    #162018 0%,
+    #0e180e 40%,
+    #0a120a 70%,
+    #060a06 100%
+  );
+  --bg-vignette: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 0%,
+    rgba(4, 8, 4, 0.6) 100%
+  );
   --surface-glass-blur: blur(18px);
   --surface-inner-light: linear-gradient(
     128deg,
@@ -1378,17 +1664,33 @@ html.skin-emerald-atelier {
     rgba(255, 255, 255, 0.015) 40%,
     transparent 60%
   );
-  --surface-inner-highlight: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 35%);
-  --surface-specular: linear-gradient(125deg, rgba(138, 184, 120, 0.03) 0%, transparent 50%);
+  --surface-inner-highlight: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    transparent 35%
+  );
+  --surface-specular: linear-gradient(
+    125deg,
+    rgba(138, 184, 120, 0.03) 0%,
+    transparent 50%
+  );
   --surface-edge-light: rgba(138, 184, 120, 0.05);
-  --highlight-rim: linear-gradient(180deg, rgba(138, 184, 120, 0.08) 0%, transparent 50%);
+  --highlight-rim: linear-gradient(
+    180deg,
+    rgba(138, 184, 120, 0.08) 0%,
+    transparent 50%
+  );
   --nav-rail-glass-blur: blur(20px);
   --topbar-glass-blur: blur(14px);
   --nav-item-active-edge: rgba(138, 184, 120, 0.2);
   --icon-symbol: #6a8870;
   --icon-symbol-active: #080e08;
   --modal-glass-blur: blur(24px);
-  --modal-inner-light: linear-gradient(128deg, rgba(180, 220, 170, 0.04) 0%, transparent 40%);
+  --modal-inner-light: linear-gradient(
+    128deg,
+    rgba(180, 220, 170, 0.04) 0%,
+    transparent 40%
+  );
   --button-primary-glow: 0 0 18px rgba(138, 184, 120, 0.2);
   --button-secondary-text: #d0e4d0;
   --button-quiet-text: #6a8870;
@@ -1415,8 +1717,10 @@ html.skin-ember-night {
   --accent-glow: rgba(232, 120, 64, 0.2);
   --focus-ring: rgba(232, 120, 64, 0.26);
   --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-elevated: 0 6px 28px rgba(0, 0, 0, 0.62), 0 2px 8px rgba(0, 0, 0, 0.38);
-  --shadow-floating: 0 16px 56px rgba(0, 0, 0, 0.68), 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-elevated:
+    0 6px 28px rgba(0, 0, 0, 0.62), 0 2px 8px rgba(0, 0, 0, 0.38);
+  --shadow-floating:
+    0 16px 56px rgba(0, 0, 0, 0.68), 0 4px 16px rgba(0, 0, 0, 0.4);
   --state-ok: #c08060;
   --state-completed: #c08060;
   --state-warn: #e89040;
@@ -1455,8 +1759,18 @@ html.skin-ember-night {
   --button-secondary-edge: rgba(232, 120, 64, 0.15);
   --button-quiet-fill: transparent;
   --button-pressed-fill: rgba(6, 4, 4, 0.92);
-  --bg-gradient: radial-gradient(ellipse at 15% 85%, #1c1008 0%, #140c08 30%, #0a0606 60%, #060404 100%);
-  --bg-vignette: radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(4, 2, 2, 0.65) 100%);
+  --bg-gradient: radial-gradient(
+    ellipse at 15% 85%,
+    #1c1008 0%,
+    #140c08 30%,
+    #0a0606 60%,
+    #060404 100%
+  );
+  --bg-vignette: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 0%,
+    rgba(4, 2, 2, 0.65) 100%
+  );
   --surface-glass-blur: blur(18px);
   --surface-inner-light: linear-gradient(
     130deg,
@@ -1464,17 +1778,33 @@ html.skin-ember-night {
     rgba(255, 200, 150, 0.015) 35%,
     transparent 55%
   );
-  --surface-inner-highlight: linear-gradient(180deg, rgba(255, 200, 150, 0.04) 0%, transparent 30%);
-  --surface-specular: linear-gradient(125deg, rgba(232, 120, 64, 0.03) 0%, transparent 50%);
+  --surface-inner-highlight: linear-gradient(
+    180deg,
+    rgba(255, 200, 150, 0.04) 0%,
+    transparent 30%
+  );
+  --surface-specular: linear-gradient(
+    125deg,
+    rgba(232, 120, 64, 0.03) 0%,
+    transparent 50%
+  );
   --surface-edge-light: rgba(232, 120, 64, 0.06);
-  --highlight-rim: linear-gradient(180deg, rgba(232, 120, 64, 0.1) 0%, transparent 50%);
+  --highlight-rim: linear-gradient(
+    180deg,
+    rgba(232, 120, 64, 0.1) 0%,
+    transparent 50%
+  );
   --nav-rail-glass-blur: blur(20px);
   --topbar-glass-blur: blur(14px);
   --nav-item-active-edge: rgba(232, 120, 64, 0.25);
   --icon-symbol: #8a7868;
   --icon-symbol-active: #0a0606;
   --modal-glass-blur: blur(24px);
-  --modal-inner-light: linear-gradient(130deg, rgba(232, 120, 64, 0.04) 0%, transparent 40%);
+  --modal-inner-light: linear-gradient(
+    130deg,
+    rgba(232, 120, 64, 0.04) 0%,
+    transparent 40%
+  );
   --button-primary-glow: 0 0 20px rgba(232, 120, 64, 0.28);
   --button-secondary-text: #e8dcd0;
   --button-quiet-text: #8a7868;

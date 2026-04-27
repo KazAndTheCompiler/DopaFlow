@@ -1,4 +1,4 @@
-import type { LayoutMode } from '../../hooks/useLayout';
+import type { LayoutMode } from "../../hooks/useLayout";
 
 const OPTIONS: Array<{
   id: LayoutMode;
@@ -6,19 +6,19 @@ const OPTIONS: Array<{
   description: string;
 }> = [
   {
-    id: 'compact',
-    label: 'Compact',
-    description: 'Tighter spacing for dense task and review work.',
+    id: "compact",
+    label: "Compact",
+    description: "Tighter spacing for dense task and review work.",
   },
   {
-    id: 'comfortable',
-    label: 'Comfortable',
-    description: 'Balanced spacing for everyday use.',
+    id: "comfortable",
+    label: "Comfortable",
+    description: "Balanced spacing for everyday use.",
   },
   {
-    id: 'expanded',
-    label: 'Expanded',
-    description: 'More breathing room for calmer reading and planning.',
+    id: "expanded",
+    label: "Expanded",
+    description: "More breathing room for calmer reading and planning.",
   },
 ];
 
@@ -32,26 +32,29 @@ export function LayoutPicker({
   return (
     <section
       style={{
-        display: 'grid',
-        gap: '0.8rem',
-        padding: '1.1rem 1.25rem',
-        borderRadius: '20px',
-        background: 'var(--surface)',
-        border: '1px solid var(--border-subtle)',
-        boxShadow: 'var(--shadow-soft)',
+        display: "grid",
+        gap: "0.8rem",
+        padding: "1.1rem 1.25rem",
+        borderRadius: "20px",
+        background: "var(--surface)",
+        border: "1px solid var(--border-subtle)",
+        boxShadow: "var(--shadow-soft)",
       }}
     >
-      <div style={{ display: 'grid', gap: '0.25rem' }}>
-        <strong style={{ fontSize: 'var(--text-base)' }}>Layout density</strong>
-        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-          Themes change mood. Layout changes how tight or roomy the whole app feels.
+      <div style={{ display: "grid", gap: "0.25rem" }}>
+        <strong style={{ fontSize: "var(--text-base)" }}>Layout density</strong>
+        <span
+          style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}
+        >
+          Themes change mood. Layout changes how tight or roomy the whole app
+          feels.
         </span>
       </div>
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '0.6rem',
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gap: "0.6rem",
         }}
       >
         {OPTIONS.map((option) => {
@@ -61,27 +64,31 @@ export function LayoutPicker({
               key={option.id}
               onClick={() => onPick(option.id)}
               style={{
-                padding: '0.85rem 0.9rem',
-                borderRadius: '14px',
-                border: selected ? '2px solid var(--accent)' : '1px solid var(--border-subtle)',
+                padding: "0.85rem 0.9rem",
+                borderRadius: "14px",
+                border: selected
+                  ? "2px solid var(--accent)"
+                  : "1px solid var(--border-subtle)",
                 background: selected
-                  ? 'color-mix(in srgb, var(--accent) 10%, var(--surface))'
-                  : 'var(--surface-2)',
-                color: 'var(--text-primary)',
-                cursor: 'pointer',
-                display: 'grid',
-                gap: '0.25rem',
-                textAlign: 'left',
+                  ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
+                  : "var(--surface-2)",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                display: "grid",
+                gap: "0.25rem",
+                textAlign: "left",
                 boxShadow: selected
-                  ? '0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent)'
-                  : 'none',
+                  ? "0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent)"
+                  : "none",
               }}
             >
-              <strong style={{ fontSize: 'var(--text-sm)' }}>{option.label}</strong>
+              <strong style={{ fontSize: "var(--text-sm)" }}>
+                {option.label}
+              </strong>
               <span
                 style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-secondary)',
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-secondary)",
                   lineHeight: 1.4,
                 }}
               >

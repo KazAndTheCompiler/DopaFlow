@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import type { CalendarEvent, PeerFeed, SyncConflict } from '../../../shared/types';
-import { showToast } from '@ds/primitives/Toast';
+import type {
+  CalendarEvent,
+  PeerFeed,
+  SyncConflict,
+} from "../../../shared/types";
+import { showToast } from "@ds/primitives/Toast";
 import {
   createCalendarEvent,
   getGoogleCalendarOAuthUrl,
@@ -14,8 +18,8 @@ import {
   syncGoogleCalendar,
   syncPeerFeed,
   updateCalendarEvent,
-} from '@api/index';
-import { getInvalidationEventName } from './useSSE';
+} from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface UseCalendarResult {
   events: CalendarEvent[];
@@ -31,19 +35,24 @@ export interface UseCalendarResult {
   update: (id: string, patch: Partial<CalendarEvent>) => Promise<CalendarEvent>;
   remove: (id: string) => Promise<void>;
   syncGoogle: () => Promise<void>;
-  resolveConflict: (id: number, resolution: 'prefer_local' | 'prefer_incoming') => Promise<void>;
+  resolveConflict: (
+    id: string,
+    resolution: "prefer_local" | "prefer_incoming",
+  ) => Promise<void>;
 }
 
 export function useCalendar(): UseCalendarResult {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [syncStatus, setSyncStatus] = useState<string>('idle');
+  const [syncStatus, setSyncStatus] = useState<string>("idle");
   const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
   const [peerFeeds, setPeerFeeds] = useState<PeerFeed[]>([]);
 
   const sortEvents = useCallback(
     (items: CalendarEvent[]): CalendarEvent[] =>
       [...items].sort(
-        (left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime(),
+        (left, right) =>
+          new Date(left.start_at).getTime() -
+          new Date(right.start_at).getTime(),
       ),
     [],
   );
@@ -51,7 +60,10 @@ export function useCalendar(): UseCalendarResult {
   const mergeServerEvent = useCallback(
     (serverEvent: CalendarEvent): void => {
       setEvents((prev) =>
-        sortEvents([...prev.filter((item) => item.id !== serverEvent.id), serverEvent]),
+        sortEvents([
+          ...prev.filter((item) => item.id !== serverEvent.id),
+          serverEvent,
+        ]),
       );
     },
     [sortEvents],
@@ -62,7 +74,7 @@ export function useCalendar(): UseCalendarResult {
       const feeds = await listPeerFeeds();
       setPeerFeeds(feeds);
     } catch {
-      showToast('Could not refresh shared calendar feeds.', 'error');
+      showToast("Could not refresh shared calendar feeds.", "error");
     }
   }, []);
 
@@ -71,7 +83,7 @@ export function useCalendar(): UseCalendarResult {
       const next = await listSyncConflicts();
       setConflicts(next);
     } catch {
-      showToast('Could not refresh calendar conflicts.', 'error');
+      showToast("Could not refresh calendar conflicts.", "error");
     }
   }, []);
 
@@ -82,16 +94,16 @@ export function useCalendar(): UseCalendarResult {
         getCalendarSyncStatus(),
       ]);
 
-      if (nextEvents.status === 'fulfilled') {
+      if (nextEvents.status === "fulfilled") {
         setEvents(sortEvents(nextEvents.value));
       } else {
-        showToast('Could not refresh calendar events.', 'error');
+        showToast("Could not refresh calendar events.", "error");
       }
 
-      if (status.status === 'fulfilled') {
+      if (status.status === "fulfilled") {
         setSyncStatus(status.value.status);
       } else {
-        setSyncStatus('attention');
+        setSyncStatus("attention");
       }
     },
     [sortEvents],
@@ -115,8 +127,15 @@ export function useCalendar(): UseCalendarResult {
       void refreshConflicts();
       void refreshPeerFeeds();
     };
-    window.addEventListener(getInvalidationEventName('calendar'), handleInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName('calendar'), handleInvalidate);
+    window.addEventListener(
+      getInvalidationEventName("calendar"),
+      handleInvalidate,
+    );
+    return () =>
+      window.removeEventListener(
+        getInvalidationEventName("calendar"),
+        handleInvalidate,
+      );
   }, [refresh, refreshConflicts, refreshPeerFeeds]);
 
   return {
@@ -129,7 +148,9 @@ export function useCalendar(): UseCalendarResult {
     refreshConflicts,
     refreshPeerFeeds,
     syncAllPeers: async () => {
-      await Promise.all(peerFeeds.map((f) => syncPeerFeed(f.id).catch(() => undefined)));
+      await Promise.all(
+        peerFeeds.map((f) => syncPeerFeed(f.id).catch(() => undefined)),
+      );
       await Promise.all([refresh(), refreshPeerFeeds()]);
     },
     create: async (event: Partial<CalendarEvent>) => {
@@ -152,14 +173,17 @@ export function useCalendar(): UseCalendarResult {
     syncGoogle: async () => {
       const redirectUri = `${window.location.origin}/api/v2/calendar/oauth/callback`;
       const result = await getGoogleCalendarOAuthUrl(redirectUri);
-      if (result.status === 'redirect' && result.url) {
+      if (result.status === "redirect" && result.url) {
         window.location.href = result.url;
         return;
       }
       await syncGoogleCalendar({ fetch_from: new Date().toISOString() });
       await Promise.all([refresh(), refreshConflicts()]);
     },
-    resolveConflict: async (id: number, resolution: 'prefer_local' | 'prefer_incoming') => {
+    resolveConflict: async (
+      id: string,
+      resolution: "prefer_local" | "prefer_incoming",
+    ) => {
       await resolveSyncConflict(id, resolution);
       await refreshConflicts();
     },

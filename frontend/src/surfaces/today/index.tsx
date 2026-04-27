@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { DragEvent } from 'react';
+import { useEffect, useMemo, useState } from "react";
+import type { DragEvent } from "react";
 
-import type { Task } from '../../../../shared/types';
+import type { Task } from "../../../../shared/types";
 import {
   useAppCalendar,
   useAppFocus,
@@ -10,19 +10,24 @@ import {
   useAppPacky,
   useAppProjects,
   useAppTasks,
-} from '../../app/AppContexts';
-import BacklogColumn from './BacklogColumn';
-import ContextCard from './ContextCard';
-import DailyQuote from '../../components/DailyQuote';
-import FocusQueue from './FocusQueue';
-import HabitsToday from './HabitsToday';
-import MomentumCard from './MomentumCard';
-import TaskEditModal from '../tasks/TaskEditModal';
-import TimeBlocks from './TimeBlocks';
-import { TodayHeaderPanel } from './TodayHeaderPanel';
-import { TodaySurfaceSkeleton } from '@ds/primitives/Skeleton';
-import { apiClient } from '../../api/client';
-import { TODAY_KEY, getTodayDayState, getTodayNextAction, isSameDay } from './TodayShared';
+} from "../../app/AppContexts";
+import BacklogColumn from "./BacklogColumn";
+import ContextCard from "./ContextCard";
+import DailyQuote from "../../components/DailyQuote";
+import FocusQueue from "./FocusQueue";
+import HabitsToday from "./HabitsToday";
+import MomentumCard from "./MomentumCard";
+import TaskEditModal from "../tasks/TaskEditModal";
+import TimeBlocks from "./TimeBlocks";
+import { TodayHeaderPanel } from "./TodayHeaderPanel";
+import { TodaySurfaceSkeleton } from "@ds/primitives/Skeleton";
+import { apiClient } from "../../api/client";
+import {
+  TODAY_KEY,
+  getTodayDayState,
+  getTodayNextAction,
+  isSameDay,
+} from "./TodayShared";
 
 export default function TodayView(): JSX.Element {
   const tasks = useAppTasks();
@@ -35,10 +40,10 @@ export default function TodayView(): JSX.Element {
   const [dayOffset, setDayOffset] = useState<number>(0);
   const [focusQueueIds, setFocusQueueIds] = useState<string[]>([]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [quote, setQuote] = useState<string>('');
+  const [quote, setQuote] = useState<string>("");
   const [isCompactLayout, setIsCompactLayout] = useState<boolean>(() =>
-    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-      ? window.matchMedia('(max-width: 1180px)').matches
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 1180px)").matches
       : false,
   );
 
@@ -51,13 +56,15 @@ export default function TodayView(): JSX.Element {
 
   const activeProjectId = projects.activeProjectId ?? null;
   const selectedDateIso = selectedDate.toISOString().slice(0, 10);
-  const plannedToday = dayOffset === 0 && localStorage.getItem(TODAY_KEY) === selectedDateIso;
+  const plannedToday =
+    dayOffset === 0 && localStorage.getItem(TODAY_KEY) === selectedDateIso;
 
   const focusQueue = useMemo(
     () =>
       tasks.tasks.filter(
         (task) =>
-          (isSameDay(task.due_at, selectedDate) || focusQueueIds.includes(task.id)) &&
+          (isSameDay(task.due_at, selectedDate) ||
+            focusQueueIds.includes(task.id)) &&
           (!activeProjectId || task.project_id === activeProjectId),
       ),
     [tasks.tasks, focusQueueIds, selectedDate, activeProjectId],
@@ -102,7 +109,9 @@ export default function TodayView(): JSX.Element {
       calendar.events
         .filter((event) => isSameDay(event.start_at, selectedDate))
         .sort(
-          (left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime(),
+          (left, right) =>
+            new Date(left.start_at).getTime() -
+            new Date(right.start_at).getTime(),
         )
         .slice(0, 3),
     [calendar.events, selectedDate],
@@ -110,15 +119,15 @@ export default function TodayView(): JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    void apiClient<{ quote?: string }>('/motivation/quote')
+    void apiClient<{ quote?: string }>("/motivation/quote")
       .then((body) => {
         if (!cancelled) {
-          setQuote(body.quote ?? '');
+          setQuote(body.quote ?? "");
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setQuote('');
+          setQuote("");
         }
       });
     return () => {
@@ -127,13 +136,17 @@ export default function TodayView(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
       return undefined;
     }
-    const mq = window.matchMedia('(max-width: 1180px)');
-    const onChange = (event: MediaQueryListEvent): void => setIsCompactLayout(event.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
+    const mq = window.matchMedia("(max-width: 1180px)");
+    const onChange = (event: MediaQueryListEvent): void =>
+      setIsCompactLayout(event.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
   }, []);
 
   const isLoading = tasks.loading || habits.loading;
@@ -143,16 +156,18 @@ export default function TodayView(): JSX.Element {
   }
 
   const dateLabel = selectedDate.toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
+    weekday: "long",
+    month: "long",
+    day: "numeric",
   });
 
   const onDropToQueue = (event: DragEvent<HTMLDivElement>): void => {
     event.preventDefault();
-    const taskId = event.dataTransfer.getData('text/task-id');
+    const taskId = event.dataTransfer.getData("text/task-id");
     if (taskId) {
-      setFocusQueueIds((current) => (current.includes(taskId) ? current : [...current, taskId]));
+      setFocusQueueIds((current) =>
+        current.includes(taskId) ? current : [...current, taskId],
+      );
     }
   };
 
@@ -171,15 +186,15 @@ export default function TodayView(): JSX.Element {
   return (
     <div
       style={{
-        display: 'grid',
-        gap: '1rem',
+        display: "grid",
+        gap: "1rem",
         gridTemplateColumns: isCompactLayout
-          ? 'minmax(0, 1fr)'
-          : 'minmax(0, 1.9fr) minmax(300px, 0.95fr)',
-        alignItems: 'start',
+          ? "minmax(0, 1fr)"
+          : "minmax(0, 1.9fr) minmax(300px, 0.95fr)",
+        alignItems: "start",
       }}
     >
-      <section style={{ display: 'grid', gap: '1rem', minWidth: 0 }}>
+      <section style={{ display: "grid", gap: "1rem", minWidth: 0 }}>
         <TodayHeaderPanel
           dateLabel={dateLabel}
           dayState={dayState}
@@ -194,13 +209,18 @@ export default function TodayView(): JSX.Element {
           nextUpcomingEvent={nextUpcomingEvent}
         />
 
-        <div onDragOver={(event) => event.preventDefault()} onDrop={onDropToQueue}>
+        <div
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={onDropToQueue}
+        >
           <FocusQueue
             tasks={focusQueue}
             habits={habits.habits}
             events={upcomingEvents}
             activeSession={focus.activeSession}
-            onStartFocus={(taskId, mins) => void focus.start(taskId, mins ?? 25)}
+            onStartFocus={(taskId, mins) =>
+              void focus.start(taskId, mins ?? 25)
+            }
             onComplete={(taskId) => void tasks.complete(taskId)}
             onEdit={(task) => setEditingTask(task)}
             onHabitCheckIn={(id) => void habits.checkIn(id)}
@@ -218,12 +238,12 @@ export default function TodayView(): JSX.Element {
 
       <aside
         style={{
-          display: 'grid',
-          gap: '1rem',
-          alignContent: 'start',
+          display: "grid",
+          gap: "1rem",
+          alignContent: "start",
           gridTemplateColumns: isCompactLayout
-            ? 'repeat(auto-fit, minmax(260px, 1fr))'
-            : 'minmax(0, 1fr)',
+            ? "repeat(auto-fit, minmax(260px, 1fr))"
+            : "minmax(0, 1fr)",
           minWidth: 0,
         }}
       >
@@ -236,7 +256,10 @@ export default function TodayView(): JSX.Element {
 
         <HabitsToday habits={habits.habits} onCheckIn={habits.checkIn} />
 
-        <ContextCard weeklyDigest={insights.weeklyDigest} correlations={insights.correlations} />
+        <ContextCard
+          weeklyDigest={insights.weeklyDigest}
+          correlations={insights.correlations}
+        />
       </aside>
       <TaskEditModal
         task={editingTask}

@@ -21,8 +21,16 @@ body,
 
 body {
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-soft) 50%, transparent), transparent 35%),
-    linear-gradient(180deg, var(--bg-app), color-mix(in srgb, var(--bg-app) 85%, black));
+    radial-gradient(
+      circle at top left,
+      color-mix(in srgb, var(--accent-soft) 50%, transparent),
+      transparent 35%
+    ),
+    linear-gradient(
+      180deg,
+      var(--bg-app),
+      color-mix(in srgb, var(--bg-app) 85%, black)
+    );
 }
 
 button,

@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from "./client";
 
 export interface DigestTagCount {
   tag: string;
@@ -92,11 +92,13 @@ export interface WeeklyDigestReport {
 }
 
 export function getDailyDigest(date?: string): Promise<DailyDigest> {
-  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const query = date ? `?date=${encodeURIComponent(date)}` : "";
   return apiClient<DailyDigest>(`/digest/today${query}`);
 }
 
-export function getWeeklyDigestReport(weekStart?: string): Promise<WeeklyDigestReport> {
-  const query = weekStart ? `?week_start=${encodeURIComponent(weekStart)}` : '';
+export function getWeeklyDigestReport(
+  weekStart?: string,
+): Promise<WeeklyDigestReport> {
+  const query = weekStart ? `?week_start=${encodeURIComponent(weekStart)}` : "";
   return apiClient<WeeklyDigestReport>(`/digest/week${query}`);
 }

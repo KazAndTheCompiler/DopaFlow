@@ -8,16 +8,20 @@ interface WikiRendererProps {
   onWikiClick: (date: string) => void;
 }
 
-function renderLine(line: string, onWikiClick: (date: string) => void, key: number): JSX.Element {
+function renderLine(
+  line: string,
+  onWikiClick: (date: string) => void,
+  key: number,
+): JSX.Element {
   // Headings
   if (/^#{1,3} /.test(line)) {
     const level = line.match(/^#+/)?.[0].length ?? 1;
-    const text = line.replace(/^#+\s+/, '');
+    const text = line.replace(/^#+\s+/, "");
     const style: React.CSSProperties = {
       fontWeight: 700,
-      fontSize: level === 1 ? '1.2em' : level === 2 ? '1.05em' : '1em',
-      margin: '0.5rem 0 0.15rem',
-      color: 'var(--text)',
+      fontSize: level === 1 ? "1.2em" : level === 2 ? "1.05em" : "1em",
+      margin: "0.5rem 0 0.15rem",
+      color: "var(--text)",
     };
     return (
       <div key={key} style={style}>
@@ -31,7 +35,11 @@ function renderLine(line: string, onWikiClick: (date: string) => void, key: numb
     return (
       <hr
         key={key}
-        style={{ border: 'none', borderTop: '1px solid var(--border-subtle)', margin: '0.5rem 0' }}
+        style={{
+          border: "none",
+          borderTop: "1px solid var(--border-subtle)",
+          margin: "0.5rem 0",
+        }}
       />
     );
   }
@@ -51,16 +59,16 @@ function renderLine(line: string, onWikiClick: (date: string) => void, key: numb
           key={`w-${i++}`}
           onClick={() => onWikiClick(date)}
           style={{
-            background: 'none',
-            border: 'none',
-            padding: '0 2px',
-            color: 'var(--accent)',
-            cursor: 'pointer',
+            background: "none",
+            border: "none",
+            padding: "0 2px",
+            color: "var(--accent)",
+            cursor: "pointer",
             fontWeight: 600,
-            textDecoration: 'underline',
-            textUnderlineOffset: '2px',
-            fontFamily: 'inherit',
-            fontSize: 'inherit',
+            textDecoration: "underline",
+            textUnderlineOffset: "2px",
+            fontFamily: "inherit",
+            fontSize: "inherit",
           }}
         >
           {date}
@@ -93,10 +101,10 @@ function renderLine(line: string, onWikiClick: (date: string) => void, key: numb
         <code
           key={`c-${i++}`}
           style={{
-            background: 'var(--surface-2)',
-            padding: '0 4px',
-            borderRadius: '4px',
-            fontSize: '0.9em',
+            background: "var(--surface-2)",
+            padding: "0 4px",
+            borderRadius: "4px",
+            fontSize: "0.9em",
           }}
         >
           {codeMatch[1]}
@@ -110,7 +118,10 @@ function renderLine(line: string, onWikiClick: (date: string) => void, key: numb
     const tagMatch = remaining.match(/^(#\w+)/);
     if (tagMatch) {
       tokens.push(
-        <span key={`t-${i++}`} style={{ color: 'var(--accent)', fontWeight: 500 }}>
+        <span
+          key={`t-${i++}`}
+          style={{ color: "var(--accent)", fontWeight: 500 }}
+        >
           {tagMatch[1]}
         </span>,
       );
@@ -122,7 +133,7 @@ function renderLine(line: string, onWikiClick: (date: string) => void, key: numb
     const ch = remaining[0];
     if (
       tokens.length > 0 &&
-      typeof (tokens[tokens.length - 1] as JSX.Element).type === 'undefined'
+      typeof (tokens[tokens.length - 1] as JSX.Element).type === "undefined"
     ) {
       // merge string nodes — not possible, just push char as span
     }
@@ -131,25 +142,37 @@ function renderLine(line: string, onWikiClick: (date: string) => void, key: numb
   }
 
   return (
-    <div key={key} style={{ minHeight: '1.4em', lineHeight: 1.65, color: 'var(--text)' }}>
+    <div
+      key={key}
+      style={{ minHeight: "1.4em", lineHeight: 1.65, color: "var(--text)" }}
+    >
       {tokens}
     </div>
   );
 }
 
-export function WikiRenderer({ body, onWikiClick }: WikiRendererProps): JSX.Element {
+export function WikiRenderer({
+  body,
+  onWikiClick,
+}: WikiRendererProps): JSX.Element {
   if (!body.trim()) {
     return (
-      <div style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 'var(--text-sm)' }}>
+      <div
+        style={{
+          color: "var(--text-muted)",
+          fontStyle: "italic",
+          fontSize: "var(--text-sm)",
+        }}
+      >
         Nothing written yet.
       </div>
     );
   }
 
-  const lines = body.split('\n');
+  const lines = body.split("\n");
 
   return (
-    <div style={{ lineHeight: 1.65, fontSize: 'var(--text-base)' }}>
+    <div style={{ lineHeight: 1.65, fontSize: "var(--text-base)" }}>
       {lines.map((line, idx) => renderLine(line, onWikiClick, idx))}
     </div>
   );

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { API_BASE_URL } from '../api/client';
+import { useEffect, useRef, useState } from "react";
+import { API_BASE_URL } from "../api/client";
 
 interface SearchResult {
   id: string;
@@ -13,7 +13,7 @@ interface SearchBarProps {
 }
 
 export function SearchBar({ onResults }: SearchBarProps): JSX.Element {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [count, setCount] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -42,22 +42,22 @@ export function SearchBar({ onResults }: SearchBarProps): JSX.Element {
     };
   }, [onResults, query]);
   return (
-    <div style={{ display: 'grid', gap: '0.35rem' }}>
+    <div style={{ display: "grid", gap: "0.35rem" }}>
       <input
         value={query}
         onChange={(event) => setQuery(event.currentTarget.value)}
         placeholder="Search everything..."
         style={{
-          padding: '0.6rem 0.8rem',
+          padding: "0.6rem 0.8rem",
           borderRadius: 12,
-          border: '1px solid var(--border-subtle)',
-          background: 'var(--surface-2)',
-          color: 'var(--text-primary)',
+          border: "1px solid var(--border-subtle)",
+          background: "var(--surface-2)",
+          color: "var(--text-primary)",
         }}
       />
       {count !== null ? (
         <span
-          style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+          style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}
         >{`${count} results for '${query}'`}</span>
       ) : null}
     </div>

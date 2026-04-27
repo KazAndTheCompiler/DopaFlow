@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import type { CalendarEvent } from '../../../../shared/types';
-import EmptyState from '../../design-system/primitives/EmptyState';
+import type { CalendarEvent } from "../../../../shared/types";
+import EmptyState from "../../design-system/primitives/EmptyState";
 
 interface WeekViewProps {
   events: CalendarEvent[];
@@ -11,13 +11,13 @@ interface WeekViewProps {
   onEventClick?: (event: CalendarEvent) => void;
 }
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export const CATEGORY_COLORS: Record<string, string> = {
-  work: 'var(--accent)',
-  personal: 'var(--state-completed)',
-  health: 'var(--state-warn)',
-  focus: 'var(--accent)',
-  task: 'var(--accent-tertiary, #f59e0b)',
+  work: "var(--accent)",
+  personal: "var(--state-completed)",
+  health: "var(--state-warn)",
+  focus: "var(--accent)",
+  task: "var(--accent-tertiary, #f59e0b)",
 };
 
 function weekDates(anchor: Date): Date[] {
@@ -35,14 +35,14 @@ function sameDay(d1: Date, d2: Date): boolean {
 }
 
 function eventColor(event: CalendarEvent): string {
-  return CATEGORY_COLORS[event.category ?? ''] ?? 'var(--accent)';
+  return CATEGORY_COLORS[event.category ?? ""] ?? "var(--accent)";
 }
 
 function eventSourceKey(event: CalendarEvent): string {
-  if (event.source_type?.startsWith('peer:')) {
-    return event.source_type.slice('peer:'.length);
+  if (event.source_type?.startsWith("peer:")) {
+    return event.source_type.slice("peer:".length);
   }
-  return 'local';
+  return "local";
 }
 
 export function WeekView({
@@ -63,67 +63,67 @@ export function WeekView({
   return (
     <section
       style={{
-        background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
-        backdropFilter: 'var(--surface-glass-blur, blur(14px))',
-        borderRadius: '20px',
-        border: '1px solid var(--border-subtle)',
-        overflow: 'hidden',
-        position: 'relative',
+        background: "color-mix(in srgb, var(--surface) 92%, transparent)",
+        backdropFilter: "var(--surface-glass-blur, blur(14px))",
+        borderRadius: "20px",
+        border: "1px solid var(--border-subtle)",
+        overflow: "hidden",
+        position: "relative",
       }}
     >
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
-          left: '8%',
-          right: '8%',
-          height: '1px',
+          left: "8%",
+          right: "8%",
+          height: "1px",
           background:
-            'linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)',
-          pointerEvents: 'none',
-          borderRadius: '1px',
+            "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)",
+          pointerEvents: "none",
+          borderRadius: "1px",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          background: 'var(--surface-inner-light)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          background: "var(--surface-inner-light)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          height: '35%',
-          background: 'var(--surface-inner-highlight)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          height: "35%",
+          background: "var(--surface-inner-highlight)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          background: 'var(--surface-specular)',
-          pointerEvents: 'none',
-          borderRadius: '14px 14px 0 0',
+          background: "var(--surface-specular)",
+          pointerEvents: "none",
+          borderRadius: "14px 14px 0 0",
         }}
       />
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(7, 1fr)',
-          borderBottom: '1px solid var(--border-subtle)',
-          position: 'relative',
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          borderBottom: "1px solid var(--border-subtle)",
+          position: "relative",
         }}
       >
         {days.map((day, i) => {
@@ -132,34 +132,36 @@ export function WeekView({
             <div
               key={i}
               style={{
-                padding: '0.65rem 0.5rem',
-                textAlign: 'center',
-                background: isToday ? 'var(--surface-2)' : 'transparent',
-                borderRight: i < 6 ? '1px solid var(--border-subtle)' : 'none',
+                padding: "0.65rem 0.5rem",
+                textAlign: "center",
+                background: isToday ? "var(--surface-2)" : "transparent",
+                borderRight: i < 6 ? "1px solid var(--border-subtle)" : "none",
               }}
             >
               <span
                 style={{
-                  display: 'block',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-secondary)',
+                  display: "block",
+                  fontSize: "var(--text-sm)",
+                  color: "var(--text-secondary)",
                 }}
               >
                 {DAYS[day.getDay()]}
               </span>
               <span
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  background: isToday ? 'var(--accent)' : 'transparent',
-                  color: isToday ? 'var(--text-inverted)' : 'var(--text-primary)',
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  background: isToday ? "var(--accent)" : "transparent",
+                  color: isToday
+                    ? "var(--text-inverted)"
+                    : "var(--text-primary)",
                   fontWeight: isToday ? 700 : 400,
-                  fontSize: 'var(--text-sm)',
-                  marginTop: '0.15rem',
+                  fontSize: "var(--text-sm)",
+                  marginTop: "0.15rem",
                 }}
               >
                 {day.getDate()}
@@ -170,7 +172,7 @@ export function WeekView({
       </div>
 
       {!weekHasEvents ? (
-        <div style={{ padding: '1.5rem' }}>
+        <div style={{ padding: "1.5rem" }}>
           <EmptyState
             icon="□"
             title="Nothing scheduled this week"
@@ -180,9 +182,9 @@ export function WeekView({
       ) : (
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            minHeight: '140px',
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+            minHeight: "140px",
           }}
         >
           {days.map((day, i) => {
@@ -195,100 +197,110 @@ export function WeekView({
               <div
                 key={i}
                 style={{
-                  padding: '0.4rem 0.35rem',
-                  borderRight: i < 6 ? '1px solid var(--border-subtle)' : 'none',
-                  minHeight: '120px',
+                  padding: "0.4rem 0.35rem",
+                  borderRight:
+                    i < 6 ? "1px solid var(--border-subtle)" : "none",
+                  minHeight: "120px",
                   background: sameDay(day, today)
-                    ? 'color-mix(in srgb, var(--accent) 4%, transparent)'
-                    : 'transparent',
+                    ? "color-mix(in srgb, var(--accent) 4%, transparent)"
+                    : "transparent",
                 }}
               >
-                {dayEvents.length === 0 && <div style={{ height: '4px' }} />}
+                {dayEvents.length === 0 && <div style={{ height: "4px" }} />}
                 {dayEvents.slice(0, 4).map((event) => {
                   const sourceKey = eventSourceKey(event);
-                  const sourceColor = sourceColors[sourceKey] ?? eventColor(event);
-                  const sourceLabel = sourceLabels[sourceKey] ?? 'Local';
+                  const sourceColor =
+                    sourceColors[sourceKey] ?? eventColor(event);
+                  const sourceLabel = sourceLabels[sourceKey] ?? "Local";
 
                   return (
                     <button
                       key={event.id}
                       type="button"
                       onClick={() => onEventClick?.(event)}
-                      title={`${event.title} · ${sourceLabel} · ${new Date(event.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${event.provider_readonly ? ' · read-only' : ''}`}
+                      title={`${event.title} · ${sourceLabel} · ${new Date(event.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${event.provider_readonly ? " · read-only" : ""}`}
                       style={{
-                        marginBottom: '6px',
-                        padding: '0.38rem 0.42rem 0.4rem',
-                        borderRadius: '10px',
+                        marginBottom: "6px",
+                        padding: "0.38rem 0.42rem 0.4rem",
+                        borderRadius: "10px",
                         background: `linear-gradient(160deg, color-mix(in srgb, ${sourceColor} 18%, var(--surface)), color-mix(in srgb, ${sourceColor} 11%, var(--surface)))`,
                         border: `1px solid color-mix(in srgb, ${sourceColor} 34%, var(--border-subtle))`,
-                        color: 'var(--text-primary)',
-                        fontSize: '11px',
-                        overflow: 'hidden',
-                        cursor: 'pointer',
+                        color: "var(--text-primary)",
+                        fontSize: "11px",
+                        overflow: "hidden",
+                        cursor: "pointer",
                         opacity: event.provider_readonly ? 0.88 : 1,
-                        boxShadow: 'var(--shadow-soft)',
-                        display: 'grid',
-                        gap: '0.15rem',
-                        width: '100%',
-                        textAlign: 'left',
+                        boxShadow: "var(--shadow-soft)",
+                        display: "grid",
+                        gap: "0.15rem",
+                        width: "100%",
+                        textAlign: "left",
                       }}
                     >
                       <div
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.3rem',
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.3rem",
                           minWidth: 0,
                         }}
                       >
                         <span
                           style={{
-                            width: '7px',
-                            height: '7px',
-                            borderRadius: '999px',
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "999px",
                             background: sourceColor,
                             flexShrink: 0,
                           }}
                         />
                         <span
                           style={{
-                            fontSize: '10px',
-                            color: 'var(--text-secondary)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
+                            fontSize: "10px",
+                            color: "var(--text-secondary)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
                             flex: 1,
                           }}
                         >
                           {sourceLabel}
                         </span>
                         {event.provider_readonly && (
-                          <span style={{ fontSize: '9px', opacity: 0.6, flexShrink: 0 }}>🔒</span>
+                          <span
+                            style={{
+                              fontSize: "9px",
+                              opacity: 0.6,
+                              flexShrink: 0,
+                            }}
+                          >
+                            🔒
+                          </span>
                         )}
                       </div>
                       <span
                         style={{
                           fontWeight: 700,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {event.title}
                       </span>
                       <span
                         style={{
-                          color: 'var(--text-secondary)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          color: "var(--text-secondary)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {event.all_day
-                          ? 'All day'
-                          : `${new Date(event.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(event.end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                          ? "All day"
+                          : `${new Date(event.start_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${new Date(event.end_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
                       </span>
                     </button>
                   );
@@ -298,15 +310,15 @@ export function WeekView({
                     type="button"
                     onClick={() => onEventClick?.(dayEvents[4])}
                     style={{
-                      padding: '0.25rem 0.4rem',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-subtle)',
-                      background: 'var(--surface-2)',
-                      color: 'var(--text-secondary)',
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                      width: '100%',
-                      textAlign: 'left',
+                      padding: "0.25rem 0.4rem",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-subtle)",
+                      background: "var(--surface-2)",
+                      color: "var(--text-secondary)",
+                      fontSize: "10px",
+                      cursor: "pointer",
+                      width: "100%",
+                      textAlign: "left",
                       fontWeight: 600,
                     }}
                   >

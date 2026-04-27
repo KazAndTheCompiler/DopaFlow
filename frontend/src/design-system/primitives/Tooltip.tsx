@@ -1,12 +1,18 @@
-import type { PropsWithChildren } from 'react';
+import type { PropsWithChildren } from "react";
 
 export interface TooltipProps {
   text: string;
 }
 
-export function Tooltip({ children, text }: PropsWithChildren<TooltipProps>): JSX.Element {
+export function Tooltip({
+  children,
+  text,
+}: PropsWithChildren<TooltipProps>): JSX.Element {
   return (
-    <span title={text} style={{ borderBottom: '1px dotted var(--text-muted)', cursor: 'help' }}>
+    <span
+      title={text}
+      style={{ borderBottom: "1px dotted var(--text-muted)", cursor: "help" }}
+    >
       {children}
     </span>
   );

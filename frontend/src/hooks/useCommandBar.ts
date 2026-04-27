@@ -1,4 +1,4 @@
-import { useState, useTransition } from 'react';
+import { useState, useTransition } from "react";
 
 export interface UseCommandBarResult {
   input: string;
@@ -8,7 +8,7 @@ export interface UseCommandBarResult {
 }
 
 export function useCommandBar(): UseCommandBarResult {
-  const [input, setInput] = useState<string>('');
+  const [input, setInput] = useState<string>("");
   const [pending, startTransition] = useTransition();
 
   return {

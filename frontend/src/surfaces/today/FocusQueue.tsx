@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { DragEvent } from 'react';
+import { useEffect, useMemo, useState } from "react";
+import type { DragEvent } from "react";
 
-import type { CalendarEvent, FocusSession, Habit, Task } from '../../../../shared/types';
-import { localDateISO } from '../../app/AppShared';
+import type {
+  CalendarEvent,
+  FocusSession,
+  Habit,
+  Task,
+} from "../../../../shared/types";
+import { localDateISO } from "../../app/AppShared";
 
 export interface FocusQueueProps {
   tasks: Task[];
@@ -16,16 +21,16 @@ export interface FocusQueueProps {
 }
 
 type QueueItem =
-  | { kind: 'task'; data: Task; priority: number }
-  | { kind: 'habit'; data: Habit; priority: number }
-  | { kind: 'event'; data: CalendarEvent; priority: number };
+  | { kind: "task"; data: Task; priority: number }
+  | { kind: "habit"; data: Habit; priority: number }
+  | { kind: "event"; data: CalendarEvent; priority: number };
 
-type TaskId = Task['id'];
+type TaskId = Task["id"];
 
 const QUEUE_SOFT_LIMIT = 5;
 const QUEUE_WARN_AT = 6;
-const FOCUS_QUEUE_ORDER_PREFIX = 'dopaflow:focus_queue_order_';
-const FOCUS_QUEUE_REORDER_TYPE = 'application/x-dopaflow-focus-queue-id';
+const FOCUS_QUEUE_ORDER_PREFIX = "dopaflow:focus_queue_order_";
+const FOCUS_QUEUE_REORDER_TYPE = "application/x-dopaflow-focus-queue-id";
 const FOCUS_QUEUE_RETENTION_DAYS = 2;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
@@ -70,41 +75,62 @@ function scoreEvent(event: CalendarEvent): number {
   }
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  if (start >= todayStart.getTime() && start < todayStart.getTime() + 24 * 60 * 60 * 1000) {
+  if (
+    start >= todayStart.getTime() &&
+    start < todayStart.getTime() + 24 * 60 * 60 * 1000
+  ) {
     return 2;
   }
   return 3;
 }
 
-function buildUnifiedQueue(tasks: Task[], habits: Habit[], events: CalendarEvent[]): QueueItem[] {
+function buildUnifiedQueue(
+  tasks: Task[],
+  habits: Habit[],
+  events: CalendarEvent[],
+): QueueItem[] {
   const items: QueueItem[] = [];
   for (const task of tasks) {
     if (!task.done) {
-      items.push({ kind: 'task', data: task, priority: scoreTask(task) });
+      items.push({ kind: "task", data: task, priority: scoreTask(task) });
     }
   }
   for (const habit of habits) {
-    items.push({ kind: 'habit', data: habit, priority: scoreHabit(habit) });
+    items.push({ kind: "habit", data: habit, priority: scoreHabit(habit) });
   }
   for (const event of events) {
     if (!event.all_day) {
-      items.push({ kind: 'event', data: event, priority: scoreEvent(event) });
+      items.push({ kind: "event", data: event, priority: scoreEvent(event) });
     }
   }
   return items.sort((a, b) => a.priority - b.priority);
 }
 
+const priorityOrder: Record<Task["priority"], number> = {
+  urgent: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
 function defaultTaskSort(left: Task, right: Task): number {
   if (left.priority !== right.priority) {
-    return left.priority - right.priority;
+    return priorityOrder[left.priority] - priorityOrder[right.priority];
   }
-  const leftDue = left.due_at ? new Date(left.due_at).getTime() : Number.POSITIVE_INFINITY;
-  const rightDue = right.due_at ? new Date(right.due_at).getTime() : Number.POSITIVE_INFINITY;
+  const leftDue = left.due_at
+    ? new Date(left.due_at).getTime()
+    : Number.POSITIVE_INFINITY;
+  const rightDue = right.due_at
+    ? new Date(right.due_at).getTime()
+    : Number.POSITIVE_INFINITY;
   return leftDue - rightDue;
 }
 
 function arraysEqual(left: TaskId[], right: TaskId[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
+  return (
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
 }
 
 function moveItem(ids: TaskId[], sourceId: TaskId, targetId: TaskId): TaskId[] {
@@ -123,7 +149,7 @@ function moveItem(ids: TaskId[], sourceId: TaskId, targetId: TaskId): TaskId[] {
 }
 
 function pruneStoredQueueOrders(todayISO: string): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return;
   }
   const cutoff = localDateISO(-FOCUS_QUEUE_RETENTION_DAYS);
@@ -139,7 +165,7 @@ function pruneStoredQueueOrders(todayISO: string): void {
 }
 
 function readStoredQueueOrder(storageKey: string): TaskId[] {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return [];
   }
   const storedOrder = window.localStorage.getItem(storageKey);
@@ -148,7 +174,10 @@ function readStoredQueueOrder(storageKey: string): TaskId[] {
   }
   try {
     const parsed = JSON.parse(storedOrder) as unknown;
-    if (Array.isArray(parsed) && parsed.every((value) => typeof value === 'string')) {
+    if (
+      Array.isArray(parsed) &&
+      parsed.every((value) => typeof value === "string")
+    ) {
       return parsed as TaskId[];
     }
   } catch {
@@ -160,49 +189,49 @@ function readStoredQueueOrder(storageKey: string): TaskId[] {
 function priorityDot(priority: number): JSX.Element {
   const color =
     priority === 1
-      ? 'var(--state-overdue)'
+      ? "var(--state-overdue)"
       : priority === 2
-        ? 'var(--state-warn)'
+        ? "var(--state-warn)"
         : priority === 3
-          ? 'var(--state-completed)'
-          : 'var(--text-muted)';
+          ? "var(--state-completed)"
+          : "var(--text-muted)";
   return (
     <span
       aria-hidden="true"
       style={{
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
+        width: "8px",
+        height: "8px",
+        borderRadius: "50%",
         background: color,
         flexShrink: 0,
-        marginTop: '2px',
+        marginTop: "2px",
       }}
     />
   );
 }
 
-function typeBadge(kind: 'task' | 'habit' | 'event'): JSX.Element {
-  const label = kind === 'task' ? 'T' : kind === 'habit' ? 'H' : 'E';
+function typeBadge(kind: "task" | "habit" | "event"): JSX.Element {
+  const label = kind === "task" ? "T" : kind === "habit" ? "H" : "E";
   const bg =
-    kind === 'task'
-      ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
-      : kind === 'habit'
-        ? 'color-mix(in srgb, var(--state-completed) 12%, transparent)'
-        : 'color-mix(in srgb, var(--state-warn) 12%, transparent)';
+    kind === "task"
+      ? "color-mix(in srgb, var(--accent) 12%, transparent)"
+      : kind === "habit"
+        ? "color-mix(in srgb, var(--state-completed) 12%, transparent)"
+        : "color-mix(in srgb, var(--state-warn) 12%, transparent)";
   const color =
-    kind === 'task'
-      ? 'var(--accent)'
-      : kind === 'habit'
-        ? 'var(--state-completed)'
-        : 'var(--state-warn)';
+    kind === "task"
+      ? "var(--accent)"
+      : kind === "habit"
+        ? "var(--state-completed)"
+        : "var(--state-warn)";
   return (
     <span
       style={{
-        padding: '0.1rem 0.35rem',
-        borderRadius: '4px',
+        padding: "0.1rem 0.35rem",
+        borderRadius: "4px",
         background: bg,
         color,
-        fontSize: '0.6rem',
+        fontSize: "0.6rem",
         fontWeight: 800,
         flexShrink: 0,
         lineHeight: 1,
@@ -242,7 +271,7 @@ export function FocusQueue({
     const pendingIds = new Set(pending.map((task) => task.id));
     setOrderedTaskIds((current) => {
       const next = current.filter((id) => pendingIds.has(id));
-      if (typeof window !== 'undefined' && !arraysEqual(current, next)) {
+      if (typeof window !== "undefined" && !arraysEqual(current, next)) {
         window.localStorage.setItem(storageKey, JSON.stringify(next));
       }
       return arraysEqual(current, next) ? current : next;
@@ -279,13 +308,18 @@ export function FocusQueue({
 
   const saveOrder = (ids: TaskId[]): void => {
     setOrderedTaskIds(ids);
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       window.localStorage.setItem(storageKey, JSON.stringify(ids));
     }
   };
 
-  const onQueueDrop = (event: DragEvent<HTMLDivElement>, targetId: TaskId): void => {
-    const sourceId = event.dataTransfer.getData(FOCUS_QUEUE_REORDER_TYPE) as TaskId;
+  const onQueueDrop = (
+    event: DragEvent<HTMLDivElement>,
+    targetId: TaskId,
+  ): void => {
+    const sourceId = event.dataTransfer.getData(
+      FOCUS_QUEUE_REORDER_TYPE,
+    ) as TaskId;
     if (!sourceId) {
       return;
     }
@@ -301,83 +335,84 @@ export function FocusQueue({
   return (
     <section
       style={{
-        padding: '1.1rem 1.15rem',
-        borderRadius: '20px',
-        background: 'var(--card-gradient, color-mix(in srgb, var(--surface) 92%, transparent))',
-        backdropFilter: 'var(--surface-glass-blur, blur(14px))',
-        border: '1px solid var(--border-subtle)',
-        display: 'grid',
-        gap: '0.85rem',
-        position: 'relative',
+        padding: "1.1rem 1.15rem",
+        borderRadius: "20px",
+        background:
+          "var(--card-gradient, color-mix(in srgb, var(--surface) 92%, transparent))",
+        backdropFilter: "var(--surface-glass-blur, blur(14px))",
+        border: "1px solid var(--border-subtle)",
+        display: "grid",
+        gap: "0.85rem",
+        position: "relative",
       }}
     >
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
-          left: '8%',
-          right: '8%',
-          height: '1px',
+          left: "8%",
+          right: "8%",
+          height: "1px",
           background:
-            'linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)',
-          pointerEvents: 'none',
-          borderRadius: '1px',
+            "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)",
+          pointerEvents: "none",
+          borderRadius: "1px",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          background: 'var(--surface-inner-light)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          background: "var(--surface-inner-light)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          height: '35%',
-          background: 'var(--surface-inner-highlight)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          height: "35%",
+          background: "var(--surface-inner-highlight)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          background: 'var(--surface-specular)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          background: "var(--surface-specular)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-        <strong style={{ fontSize: 'var(--text-base)' }}>Focus Queue</strong>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+        <strong style={{ fontSize: "var(--text-base)" }}>Focus Queue</strong>
         <span
           style={{
-            padding: '0.15rem 0.55rem',
-            borderRadius: '999px',
+            padding: "0.15rem 0.55rem",
+            borderRadius: "999px",
             background: isOverfull
-              ? 'color-mix(in srgb, var(--state-warn) 15%, transparent)'
-              : 'var(--surface-2)',
+              ? "color-mix(in srgb, var(--state-warn) 15%, transparent)"
+              : "var(--surface-2)",
             border: isOverfull
-              ? '1px solid color-mix(in srgb, var(--state-warn) 35%, transparent)'
-              : '1px solid transparent',
-            fontSize: 'var(--text-xs)',
+              ? "1px solid color-mix(in srgb, var(--state-warn) 35%, transparent)"
+              : "1px solid transparent",
+            fontSize: "var(--text-xs)",
             fontWeight: 700,
-            color: isOverfull ? 'var(--state-warn)' : 'var(--text-secondary)',
+            color: isOverfull ? "var(--state-warn)" : "var(--text-secondary)",
           }}
         >
           {queue.length}
-          {hiddenCount > 0 ? ` of ${totalItems}` : ''}
+          {hiddenCount > 0 ? ` of ${totalItems}` : ""}
         </span>
       </div>
 
@@ -385,36 +420,52 @@ export function FocusQueue({
       {hasActiveSession && (
         <div
           style={{
-            padding: '0.75rem 0.9rem',
-            borderRadius: '14px',
-            background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--accent) 22%, transparent)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
+            padding: "0.75rem 0.9rem",
+            borderRadius: "14px",
+            background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+            border:
+              "1px solid color-mix(in srgb, var(--accent) 22%, transparent)",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
           }}
         >
-          <span style={{ fontSize: '1rem', color: 'var(--accent)', flexShrink: 0 }}>&#9654;</span>
+          <span
+            style={{ fontSize: "1rem", color: "var(--accent)", flexShrink: 0 }}
+          >
+            &#9654;
+          </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, display: 'block' }}>
+            <span
+              style={{
+                fontSize: "var(--text-sm)",
+                fontWeight: 600,
+                display: "block",
+              }}
+            >
               Session in progress
             </span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+            <span
+              style={{
+                fontSize: "var(--text-xs)",
+                color: "var(--text-secondary)",
+              }}
+            >
               Pick up where you left off — open Focus to resume or finish.
             </span>
           </div>
           <button
             onClick={() => {
-              window.location.hash = '#/focus';
+              window.location.hash = "#/focus";
             }}
             style={{
-              padding: '0.4rem 0.85rem',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'var(--accent)',
-              color: 'var(--text-inverted)',
-              cursor: 'pointer',
-              fontSize: 'var(--text-xs)',
+              padding: "0.4rem 0.85rem",
+              borderRadius: "8px",
+              border: "none",
+              background: "var(--accent)",
+              color: "var(--text-inverted)",
+              cursor: "pointer",
+              fontSize: "var(--text-xs)",
               fontWeight: 700,
               flexShrink: 0,
             }}
@@ -428,17 +479,18 @@ export function FocusQueue({
       {isOverfull && (
         <div
           style={{
-            padding: '0.6rem 0.85rem',
-            borderRadius: '12px',
-            background: 'color-mix(in srgb, var(--state-warn) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--state-warn) 22%, transparent)',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--state-warn)',
+            padding: "0.6rem 0.85rem",
+            borderRadius: "12px",
+            background: "color-mix(in srgb, var(--state-warn) 8%, transparent)",
+            border:
+              "1px solid color-mix(in srgb, var(--state-warn) 22%, transparent)",
+            fontSize: "var(--text-xs)",
+            color: "var(--state-warn)",
             fontWeight: 600,
           }}
         >
-          {totalItems} items queued — a shorter list keeps execution sharper. Consider trimming to
-          3–5.
+          {totalItems} items queued — a shorter list keeps execution sharper.
+          Consider trimming to 3–5.
         </div>
       )}
 
@@ -446,30 +498,38 @@ export function FocusQueue({
       {queue.length === 0 ? (
         <div
           style={{
-            padding: '1.5rem 1rem',
-            borderRadius: '16px',
-            background: 'var(--surface-2)',
-            border: '1px dashed var(--border-subtle)',
-            display: 'grid',
-            gap: '0.4rem',
-            textAlign: 'center',
+            padding: "1.5rem 1rem",
+            borderRadius: "16px",
+            background: "var(--surface-2)",
+            border: "1px dashed var(--border-subtle)",
+            display: "grid",
+            gap: "0.4rem",
+            textAlign: "center",
           }}
         >
-          <span style={{ fontSize: '1.4rem' }}>&mdash;</span>
-          <strong style={{ fontSize: 'var(--text-sm)' }}>Nothing queued yet</strong>
+          <span style={{ fontSize: "1.4rem" }}>&mdash;</span>
+          <strong style={{ fontSize: "var(--text-sm)" }}>
+            Nothing queued yet
+          </strong>
           <span
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.5 }}
+            style={{
+              fontSize: "var(--text-xs)",
+              color: "var(--text-secondary)",
+              lineHeight: 1.5,
+            }}
           >
-            Drag a task here from the backlog, or open Today to choose your first move.
+            Drag a task here from the backlog, or open Today to choose your
+            first move.
           </span>
         </div>
       ) : (
         <>
           {queue.map((item) => {
-            if (item.kind === 'task') {
+            if (item.kind === "task") {
               const task = item.data;
               const dueDate = task.due_at ? new Date(task.due_at) : null;
-              const overdue = dueDate !== null && dueDate.getTime() < Date.now();
+              const overdue =
+                dueDate !== null && dueDate.getTime() < Date.now();
               const isActive = activeSession?.task_id === task.id;
 
               return (
@@ -477,58 +537,77 @@ export function FocusQueue({
                   key={task.id}
                   draggable
                   onDragStart={(event) => {
-                    event.dataTransfer.effectAllowed = 'move';
-                    event.dataTransfer.setData(FOCUS_QUEUE_REORDER_TYPE, task.id);
+                    event.dataTransfer.effectAllowed = "move";
+                    event.dataTransfer.setData(
+                      FOCUS_QUEUE_REORDER_TYPE,
+                      task.id,
+                    );
                   }}
                   onDragOver={(event) => {
-                    if (event.dataTransfer.types.includes(FOCUS_QUEUE_REORDER_TYPE)) {
+                    if (
+                      event.dataTransfer.types.includes(
+                        FOCUS_QUEUE_REORDER_TYPE,
+                      )
+                    ) {
                       event.preventDefault();
-                      event.dataTransfer.dropEffect = 'move';
+                      event.dataTransfer.dropEffect = "move";
                     }
                   }}
                   onDrop={(event) => onQueueDrop(event, task.id)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.65rem',
-                    padding: '0.65rem 0.8rem',
-                    borderRadius: '14px',
-                    background: 'var(--surface-2)',
-                    border: '1px solid transparent',
-                    transition: 'background 150ms ease',
-                    cursor: 'grab',
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.65rem",
+                    padding: "0.65rem 0.8rem",
+                    borderRadius: "14px",
+                    background: "var(--surface-2)",
+                    border: "1px solid transparent",
+                    transition: "background 150ms ease",
+                    cursor: "grab",
                   }}
                 >
                   {priorityDot(item.priority)}
-                  {typeBadge('task')}
+                  {typeBadge("task")}
                   <div
                     style={{
                       flex: 1,
                       minWidth: 0,
-                      display: 'grid',
-                      gap: '0.1rem',
-                      cursor: onEdit ? 'pointer' : 'inherit',
+                      display: "grid",
+                      gap: "0.1rem",
+                      cursor: onEdit ? "pointer" : "inherit",
                     }}
                     onClick={() => onEdit?.(task)}
-                    role={onEdit ? 'button' : undefined}
+                    role={onEdit ? "button" : undefined}
                     tabIndex={onEdit ? 0 : undefined}
-                    onKeyDown={onEdit ? (e) => e.key === 'Enter' && onEdit(task) : undefined}
+                    onKeyDown={
+                      onEdit
+                        ? (e) => e.key === "Enter" && onEdit(task)
+                        : undefined
+                    }
                   >
                     <span
                       style={{
-                        fontSize: 'var(--text-sm)',
+                        fontSize: "var(--text-sm)",
                         fontWeight: item.priority <= 2 ? 600 : 400,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {task.title}
                     </span>
                     {overdue && dueDate && (
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--state-overdue)' }}>
-                        Overdue &middot;{' '}
-                        {dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      <span
+                        style={{
+                          fontSize: "var(--text-xs)",
+                          color: "var(--state-overdue)",
+                        }}
+                      >
+                        Overdue &middot;{" "}
+                        {dueDate.toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </span>
                     )}
                   </div>
@@ -541,43 +620,43 @@ export function FocusQueue({
                         : `Start focus session for ${task.title}`
                     }
                     style={{
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '8px',
-                      border: 'none',
+                      padding: "0.3rem 0.8rem",
+                      borderRadius: "8px",
+                      border: "none",
                       background: isActive
-                        ? 'var(--surface-2)'
+                        ? "var(--surface-2)"
                         : item.priority <= 1
-                          ? 'var(--accent)'
-                          : 'color-mix(in srgb, var(--accent) 15%, transparent)',
+                          ? "var(--accent)"
+                          : "color-mix(in srgb, var(--accent) 15%, transparent)",
                       color: isActive
-                        ? 'var(--text-secondary)'
+                        ? "var(--text-secondary)"
                         : item.priority <= 1
-                          ? 'var(--text-inverted)'
-                          : 'var(--accent)',
-                      fontSize: 'var(--text-xs)',
+                          ? "var(--text-inverted)"
+                          : "var(--accent)",
+                      fontSize: "var(--text-xs)",
                       fontWeight: 700,
-                      cursor: isActive ? 'default' : 'pointer',
-                      transition: 'background 150ms ease',
+                      cursor: isActive ? "default" : "pointer",
+                      transition: "background 150ms ease",
                       flexShrink: 0,
                     }}
                   >
-                    {isActive ? 'Active' : 'Focus'}
+                    {isActive ? "Active" : "Focus"}
                   </button>
                   <button
                     onClick={() => onComplete(task.id)}
                     aria-label={`Mark ${task.title} complete`}
                     style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-subtle)',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border-subtle)",
+                      background: "transparent",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
                       lineHeight: 1,
-                      color: 'var(--state-completed)',
-                      display: 'grid',
-                      placeItems: 'center',
+                      color: "var(--state-completed)",
+                      display: "grid",
+                      placeItems: "center",
                       flexShrink: 0,
                     }}
                   >
@@ -587,7 +666,7 @@ export function FocusQueue({
               );
             }
 
-            if (item.kind === 'habit') {
+            if (item.kind === "habit") {
               const habit = item.data;
               const count = habit.today_count ?? 0;
               const target = habit.target_freq;
@@ -597,30 +676,30 @@ export function FocusQueue({
                 <div
                   key={habit.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.65rem',
-                    padding: '0.65rem 0.8rem',
-                    borderRadius: '14px',
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.65rem",
+                    padding: "0.65rem 0.8rem",
+                    borderRadius: "14px",
                     background: done
-                      ? 'color-mix(in srgb, var(--state-completed) 6%, transparent)'
-                      : 'var(--surface-2)',
+                      ? "color-mix(in srgb, var(--state-completed) 6%, transparent)"
+                      : "var(--surface-2)",
                     border: done
-                      ? '1px solid color-mix(in srgb, var(--state-completed) 20%, transparent)'
-                      : '1px solid transparent',
-                    transition: 'background 150ms ease',
+                      ? "1px solid color-mix(in srgb, var(--state-completed) 20%, transparent)"
+                      : "1px solid transparent",
+                    transition: "background 150ms ease",
                   }}
                 >
                   {priorityDot(item.priority)}
-                  {typeBadge('habit')}
+                  {typeBadge("habit")}
                   <span
                     style={{
                       flex: 1,
-                      fontSize: 'var(--text-sm)',
+                      fontSize: "var(--text-sm)",
                       fontWeight: item.priority <= 2 ? 600 : 400,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                       opacity: done ? 0.65 : 1,
                     }}
                   >
@@ -628,9 +707,9 @@ export function FocusQueue({
                     {target > 1 && (
                       <span
                         style={{
-                          marginLeft: '0.35rem',
-                          fontSize: 'var(--text-xs)',
-                          color: 'var(--text-muted)',
+                          marginLeft: "0.35rem",
+                          fontSize: "var(--text-xs)",
+                          color: "var(--text-muted)",
                           fontWeight: 600,
                         }}
                       >
@@ -641,9 +720,11 @@ export function FocusQueue({
                   {habit.current_streak > 0 && (
                     <span
                       style={{
-                        fontSize: 'var(--text-xs)',
+                        fontSize: "var(--text-xs)",
                         fontWeight: 700,
-                        color: done ? 'var(--state-completed)' : 'var(--text-muted)',
+                        color: done
+                          ? "var(--state-completed)"
+                          : "var(--text-muted)",
                       }}
                     >
                       {habit.current_streak}d
@@ -654,14 +735,14 @@ export function FocusQueue({
                       onClick={() => onHabitCheckIn(habit.id)}
                       aria-label={`Check in ${habit.name}`}
                       style={{
-                        padding: '0.3rem 0.8rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--state-completed)',
-                        background: 'transparent',
-                        color: 'var(--state-completed)',
-                        fontSize: 'var(--text-xs)',
+                        padding: "0.3rem 0.8rem",
+                        borderRadius: "8px",
+                        border: "1px solid var(--state-completed)",
+                        background: "transparent",
+                        color: "var(--state-completed)",
+                        fontSize: "var(--text-xs)",
                         fontWeight: 700,
-                        cursor: 'pointer',
+                        cursor: "pointer",
                         flexShrink: 0,
                       }}
                     >
@@ -676,42 +757,42 @@ export function FocusQueue({
             const event = item.data;
             const start = new Date(event.start_at);
             const timeStr = start.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
+              hour: "2-digit",
+              minute: "2-digit",
             });
 
             return (
               <div
                 key={event.id}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: '0.65rem 0.8rem',
-                  borderRadius: '14px',
-                  background: 'var(--surface-2)',
-                  border: '1px solid transparent',
-                  transition: 'background 150ms ease',
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.65rem",
+                  padding: "0.65rem 0.8rem",
+                  borderRadius: "14px",
+                  background: "var(--surface-2)",
+                  border: "1px solid transparent",
+                  transition: "background 150ms ease",
                 }}
               >
                 {priorityDot(item.priority)}
-                {typeBadge('event')}
+                {typeBadge("event")}
                 <span
                   style={{
                     flex: 1,
-                    fontSize: 'var(--text-sm)',
+                    fontSize: "var(--text-sm)",
                     fontWeight: item.priority <= 2 ? 600 : 400,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {event.title}
                 </span>
                 <span
                   style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--text-secondary)',
+                    fontSize: "var(--text-xs)",
+                    color: "var(--text-secondary)",
                     fontWeight: 600,
                     flexShrink: 0,
                   }}
@@ -721,8 +802,8 @@ export function FocusQueue({
                 {event.alarm_id && (
                   <span
                     style={{
-                      fontSize: 'var(--text-xs)',
-                      color: 'var(--accent)',
+                      fontSize: "var(--text-xs)",
+                      color: "var(--accent)",
                       flexShrink: 0,
                     }}
                     title="TTS reminder set"
@@ -736,18 +817,18 @@ export function FocusQueue({
           {hiddenCount > 0 && (
             <button
               onClick={() => {
-                window.location.hash = '#/tasks';
+                window.location.hash = "#/tasks";
               }}
               style={{
-                padding: '0.45rem 0.8rem',
-                borderRadius: '10px',
-                border: '1px solid var(--border-subtle)',
-                background: 'transparent',
-                cursor: 'pointer',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-secondary)',
+                padding: "0.45rem 0.8rem",
+                borderRadius: "10px",
+                border: "1px solid var(--border-subtle)",
+                background: "transparent",
+                cursor: "pointer",
+                fontSize: "var(--text-xs)",
+                color: "var(--text-secondary)",
                 fontWeight: 600,
-                textAlign: 'left',
+                textAlign: "left",
               }}
             >
               +{hiddenCount} more in queue — open Tasks to view all

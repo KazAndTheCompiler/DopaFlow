@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 
-import type { PeerFeed, ShareToken, ShareTokenCreated } from '../../../../shared/types';
+import type {
+  PeerFeed,
+  ShareToken,
+  ShareTokenCreated,
+} from "../../../../shared/types";
 import {
   addPeerFeed,
   createShareToken,
@@ -10,13 +14,13 @@ import {
   revokeShareToken,
   syncPeerFeed,
   updatePeerFeed,
-} from '../../api/sharing';
-import { API_BASE_URL } from '../../api/client';
-import Button from '../../design-system/primitives/Button';
-import Modal from '../../design-system/primitives/Modal';
-import { showToast } from '../../design-system/primitives/Toast';
-import { CalendarPeerFeedsSection } from './CalendarPeerFeedsSection';
-import { CalendarShareTokensSection } from './CalendarShareTokensSection';
+} from "../../api/sharing";
+import { API_BASE_URL } from "../../api/client";
+import Button from "../../design-system/primitives/Button";
+import Modal from "../../design-system/primitives/Modal";
+import { showToast } from "../../design-system/primitives/Toast";
+import { CalendarPeerFeedsSection } from "./CalendarPeerFeedsSection";
+import { CalendarShareTokensSection } from "./CalendarShareTokensSection";
 import {
   describeConnectionError,
   InfoStat,
@@ -26,53 +30,60 @@ import {
   panelStyle,
   parseSetupCode,
   StepCard,
-} from './CalendarSharingShared';
+} from "./CalendarSharingShared";
 
 export default function CalendarSharingSettings(): JSX.Element {
   const [tokens, setTokens] = useState<ShareToken[]>([]);
   const [feeds, setFeeds] = useState<PeerFeed[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateToken, setShowCreateToken] = useState(false);
-  const [newTokenLabel, setNewTokenLabel] = useState('');
-  const [newTokenExpiryDays, setNewTokenExpiryDays] = useState<string>('30');
-  const [createdToken, setCreatedToken] = useState<ShareTokenCreated | null>(null);
+  const [newTokenLabel, setNewTokenLabel] = useState("");
+  const [newTokenExpiryDays, setNewTokenExpiryDays] = useState<string>("30");
+  const [createdToken, setCreatedToken] = useState<ShareTokenCreated | null>(
+    null,
+  );
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [editingFeedId, setEditingFeedId] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState('');
-  const [editingColor, setEditingColor] = useState('');
-  const [setupCode, setSetupCode] = useState('');
+  const [editingLabel, setEditingLabel] = useState("");
+  const [editingColor, setEditingColor] = useState("");
+  const [setupCode, setSetupCode] = useState("");
   const [newFeed, setNewFeed] = useState({
-    label: '',
-    base_url: 'https://partner.example.com/api/v2',
-    token: '',
-    color: '#5b8def',
+    label: "",
+    base_url: "https://partner.example.com/api/v2",
+    token: "",
+    color: "#5b8def",
   });
 
   const activeFeedCount = useMemo(
-    () => feeds.filter((feed) => feed.sync_status === 'ok').length,
+    () => feeds.filter((feed) => feed.sync_status === "ok").length,
     [feeds],
   );
   const erroredFeedCount = useMemo(
-    () => feeds.filter((feed) => feed.sync_status === 'error').length,
+    () => feeds.filter((feed) => feed.sync_status === "error").length,
     [feeds],
   );
   const staleFeedCount = useMemo(
     () =>
       feeds.filter((feed) => {
         if (!feed.last_synced_at) {
-          return feed.sync_status !== 'syncing';
+          return feed.sync_status !== "syncing";
         }
-        return Date.now() - new Date(feed.last_synced_at).getTime() > 36 * 60 * 60 * 1000;
+        return (
+          Date.now() - new Date(feed.last_synced_at).getTime() >
+          36 * 60 * 60 * 1000
+        );
       }).length,
     [feeds],
   );
-  const localApiBaseUrl = useMemo(() => API_BASE_URL.replace(/\/+$/, ''), []);
-  const createdSetupCode = createdToken ? `${localApiBaseUrl}|${createdToken.raw_token}` : '';
+  const localApiBaseUrl = useMemo(() => API_BASE_URL.replace(/\/+$/, ""), []);
+  const createdSetupCode = createdToken
+    ? `${localApiBaseUrl}|${createdToken.raw_token}`
+    : "";
   const parsedSetupCode = useMemo(() => parseSetupCode(setupCode), [setupCode]);
 
   const relativeSyncAge = (iso: string | null): string => {
     if (!iso) {
-      return 'Not synced yet';
+      return "Not synced yet";
     }
     const diffMs = Date.now() - new Date(iso).getTime();
     const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
@@ -88,11 +99,17 @@ export default function CalendarSharingSettings(): JSX.Element {
   const loadData = async (): Promise<void> => {
     setLoading(true);
     try {
-      const [tokensData, feedsData] = await Promise.all([listShareTokens(), listPeerFeeds()]);
+      const [tokensData, feedsData] = await Promise.all([
+        listShareTokens(),
+        listPeerFeeds(),
+      ]);
       setTokens(tokensData);
       setFeeds(feedsData);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to load sharing settings', 'error');
+      showToast(
+        err instanceof Error ? err.message : "Failed to load sharing settings",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -104,21 +121,25 @@ export default function CalendarSharingSettings(): JSX.Element {
 
   const handleCreateToken = async (): Promise<void> => {
     if (!newTokenLabel.trim()) {
-      showToast('Please enter a label.', 'warn');
+      showToast("Please enter a label.", "warn");
       return;
     }
     setLoading(true);
     try {
-      const expiry = newTokenExpiryDays === 'never' ? null : Number(newTokenExpiryDays);
+      const expiry =
+        newTokenExpiryDays === "never" ? null : Number(newTokenExpiryDays);
       const token = await createShareToken(newTokenLabel.trim(), expiry);
       setCreatedToken(token);
-      setNewTokenLabel('');
-      setNewTokenExpiryDays('30');
+      setNewTokenLabel("");
+      setNewTokenExpiryDays("30");
       setShowCreateToken(false);
       await loadData();
-      showToast('Share token created.', 'success');
+      showToast("Share token created.", "success");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to create share token', 'error');
+      showToast(
+        err instanceof Error ? err.message : "Failed to create share token",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -129,39 +150,49 @@ export default function CalendarSharingSettings(): JSX.Element {
     try {
       await revokeShareToken(id);
       await loadData();
-      showToast('Share token revoked.', 'success');
+      showToast("Share token revoked.", "success");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to revoke share token', 'error');
+      showToast(
+        err instanceof Error ? err.message : "Failed to revoke share token",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddFeed = async (): Promise<void> => {
-    if (!newFeed.label.trim() || !newFeed.base_url.trim() || !newFeed.token.trim()) {
-      showToast('Fill in label, base URL, and token.', 'warn');
+    if (
+      !newFeed.label.trim() ||
+      !newFeed.base_url.trim() ||
+      !newFeed.token.trim()
+    ) {
+      showToast("Fill in label, base URL, and token.", "warn");
       return;
     }
-    let normalizedBaseUrl = '';
+    let normalizedBaseUrl = "";
     try {
       normalizedBaseUrl = normalizeApiBaseUrl(newFeed.base_url);
       const parsed = new URL(normalizedBaseUrl);
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        showToast('Base URL must start with http:// or https://.', 'warn');
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        showToast("Base URL must start with http:// or https://.", "warn");
         return;
       }
       if (!isLikelyApiBaseUrl(normalizedBaseUrl)) {
-        showToast('Base URL should usually end in /api/v2 for a DopaFlow install.', 'warn');
+        showToast(
+          "Base URL should usually end in /api/v2 for a DopaFlow install.",
+          "warn",
+        );
         return;
       }
     } catch {
-      showToast('Enter a valid base URL before connecting.', 'warn');
+      showToast("Enter a valid base URL before connecting.", "warn");
       return;
     }
     if (newFeed.token.trim().length < 12) {
       showToast(
-        'Token looks incomplete. Paste the full one-time setup code or token again.',
-        'warn',
+        "Token looks incomplete. Paste the full one-time setup code or token again.",
+        "warn",
       );
       return;
     }
@@ -174,26 +205,27 @@ export default function CalendarSharingSettings(): JSX.Element {
         color: newFeed.color,
       });
       setNewFeed({
-        label: '',
-        base_url: 'https://partner.example.com/api/v2',
-        token: '',
-        color: '#5b8def',
+        label: "",
+        base_url: "https://partner.example.com/api/v2",
+        token: "",
+        color: "#5b8def",
       });
       setShowAddFeed(false);
       await loadData();
-      showToast('Shared calendar added.', 'success');
+      showToast("Shared calendar added.", "success");
     } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : 'Failed to add shared calendar';
+      const rawMessage =
+        err instanceof Error ? err.message : "Failed to add shared calendar";
       const guidance = describeConnectionError(rawMessage);
-      showToast(`${guidance.title}. ${guidance.detail}`, 'error');
+      showToast(`${guidance.title}. ${guidance.detail}`, "error");
     } finally {
       setLoading(false);
     }
   };
 
   const applySetupCode = (): void => {
-    if ('error' in parsedSetupCode) {
-      showToast(parsedSetupCode.error, 'warn');
+    if ("error" in parsedSetupCode) {
+      showToast(parsedSetupCode.error, "warn");
       return;
     }
     setNewFeed((current) => ({
@@ -201,7 +233,10 @@ export default function CalendarSharingSettings(): JSX.Element {
       base_url: parsedSetupCode.base_url,
       token: parsedSetupCode.token,
     }));
-    showToast('Setup code applied. Add a label, then connect the calendar.', 'success');
+    showToast(
+      "Setup code applied. Add a label, then connect the calendar.",
+      "success",
+    );
   };
 
   const handleSyncFeed = async (id: string): Promise<void> => {
@@ -209,16 +244,22 @@ export default function CalendarSharingSettings(): JSX.Element {
     try {
       const result = await syncPeerFeed(id);
       await loadData();
-      if (result.status === 'ok') {
-        showToast(`Sync complete: ${result.events_imported} events imported.`, 'success');
+      if (result.status === "ok") {
+        showToast(
+          `Sync complete: ${result.events_imported} events imported.`,
+          "success",
+        );
       } else {
-        const guidance = describeConnectionError(result.detail ?? 'Shared calendar sync failed');
-        showToast(`${guidance.title}. ${guidance.detail}`, 'error');
+        const guidance = describeConnectionError(
+          result.detail ?? "Shared calendar sync failed",
+        );
+        showToast(`${guidance.title}. ${guidance.detail}`, "error");
       }
     } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : 'Failed to sync shared calendar';
+      const rawMessage =
+        err instanceof Error ? err.message : "Failed to sync shared calendar";
       const guidance = describeConnectionError(rawMessage);
-      showToast(`${guidance.title}. ${guidance.detail}`, 'error');
+      showToast(`${guidance.title}. ${guidance.detail}`, "error");
     } finally {
       setLoading(false);
     }
@@ -229,9 +270,12 @@ export default function CalendarSharingSettings(): JSX.Element {
     try {
       await removePeerFeed(id);
       await loadData();
-      showToast('Shared calendar removed.', 'success');
+      showToast("Shared calendar removed.", "success");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to remove shared calendar', 'error');
+      showToast(
+        err instanceof Error ? err.message : "Failed to remove shared calendar",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -239,17 +283,23 @@ export default function CalendarSharingSettings(): JSX.Element {
 
   const handleEditFeed = async (id: string): Promise<void> => {
     if (!editingLabel.trim()) {
-      showToast('Label cannot be empty.', 'warn');
+      showToast("Label cannot be empty.", "warn");
       return;
     }
     setLoading(true);
     try {
-      await updatePeerFeed(id, { label: editingLabel.trim(), color: editingColor });
+      await updatePeerFeed(id, {
+        label: editingLabel.trim(),
+        color: editingColor,
+      });
       setEditingFeedId(null);
       await loadData();
-      showToast('Feed updated.', 'success');
+      showToast("Feed updated.", "success");
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to update feed', 'error');
+      showToast(
+        err instanceof Error ? err.message : "Failed to update feed",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -257,19 +307,25 @@ export default function CalendarSharingSettings(): JSX.Element {
 
   const copyToClipboard = async (text: string): Promise<void> => {
     await navigator.clipboard.writeText(text);
-    showToast('Copied to clipboard.', 'success');
+    showToast("Copied to clipboard.", "success");
   };
 
   return (
-    <div style={{ display: 'grid', gap: '1rem' }}>
-      <section style={{ ...panelStyle, gap: '1rem', padding: '1.2rem 1.35rem 1.35rem' }}>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
+    <div style={{ display: "grid", gap: "1rem" }}>
+      <section
+        style={{
+          ...panelStyle,
+          gap: "1rem",
+          padding: "1.2rem 1.35rem 1.35rem",
+        }}
+      >
+        <div style={{ display: "grid", gap: "0.5rem" }}>
           <span
             style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--accent)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
+              fontSize: "var(--text-xs)",
+              color: "var(--accent)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
               fontWeight: 800,
             }}
           >
@@ -277,9 +333,9 @@ export default function CalendarSharingSettings(): JSX.Element {
           </span>
           <strong
             style={{
-              fontSize: 'clamp(1.3rem, 2.2vw, 1.75rem)',
+              fontSize: "clamp(1.3rem, 2.2vw, 1.75rem)",
               lineHeight: 1.05,
-              letterSpacing: '-0.03em',
+              letterSpacing: "-0.03em",
             }}
           >
             Calendar Sharing
@@ -287,53 +343,59 @@ export default function CalendarSharingSettings(): JSX.Element {
           <p
             style={{
               margin: 0,
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-secondary)',
-              maxWidth: '68ch',
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+              maxWidth: "68ch",
               lineHeight: 1.6,
             }}
           >
-            Token-based sharing between trusted DopaFlow installs. Imported events are stored as
-            read-only copies in your local SQLite database (
+            Token-based sharing between trusted DopaFlow installs. Imported
+            events are stored as read-only copies in your local SQLite database
+            (
             <code
               style={{
-                background: 'var(--surface)',
-                padding: '0.1em 0.3em',
-                borderRadius: '4px',
-                fontSize: '0.9em',
+                background: "var(--surface)",
+                padding: "0.1em 0.3em",
+                borderRadius: "4px",
+                fontSize: "0.9em",
               }}
             >
               ~/.local/share/DopaFlow/db.sqlite
             </code>
-            ). No external servers are involved — all sync is direct between installs over HTTPS.
-            Removing a peer feed deletes the imported events from your database.
+            ). No external servers are involved — all sync is direct between
+            installs over HTTPS. Removing a peer feed deletes the imported
+            events from your database.
           </p>
         </div>
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-            gap: '0.75rem',
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gap: "0.75rem",
           }}
         >
-          <InfoStat label="Share Tokens" value={String(tokens.length)} tone="accent" />
+          <InfoStat
+            label="Share Tokens"
+            value={String(tokens.length)}
+            tone="accent"
+          />
           <InfoStat label="Connected Feeds" value={String(feeds.length)} />
           <InfoStat
             label="Healthy Feeds"
             value={String(activeFeedCount)}
-            tone={activeFeedCount > 0 ? 'accent' : 'warn'}
+            tone={activeFeedCount > 0 ? "accent" : "warn"}
           />
           <InfoStat
             label="Needs Attention"
             value={String(erroredFeedCount + staleFeedCount)}
-            tone={erroredFeedCount + staleFeedCount > 0 ? 'warn' : 'default'}
+            tone={erroredFeedCount + staleFeedCount > 0 ? "warn" : "default"}
           />
         </div>
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '0.75rem',
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "0.75rem",
           }}
         >
           <StepCard
@@ -362,7 +424,7 @@ export default function CalendarSharingSettings(): JSX.Element {
         newTokenExpiryDays={newTokenExpiryDays}
         onToggleCreate={() => {
           setShowCreateToken((value) => !value);
-          setNewTokenLabel('');
+          setNewTokenLabel("");
         }}
         onSetNewTokenLabel={setNewTokenLabel}
         onSetNewTokenExpiryDays={setNewTokenExpiryDays}
@@ -408,35 +470,37 @@ export default function CalendarSharingSettings(): JSX.Element {
         onClose={() => setCreatedToken(null)}
       >
         {createdToken ? (
-          <div style={{ display: 'grid', gap: '1rem' }}>
+          <div style={{ display: "grid", gap: "1rem" }}>
             <div
               style={{
-                padding: '0.85rem 0.95rem',
-                borderRadius: '14px',
-                background: 'color-mix(in srgb, var(--accent) 10%, var(--surface))',
-                border: '1px solid color-mix(in srgb, var(--accent) 24%, var(--border-subtle))',
+                padding: "0.85rem 0.95rem",
+                borderRadius: "14px",
+                background:
+                  "color-mix(in srgb, var(--accent) 10%, var(--surface))",
+                border:
+                  "1px solid color-mix(in srgb, var(--accent) 24%, var(--border-subtle))",
               }}
             >
               <p
                 style={{
                   margin: 0,
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-secondary)',
+                  fontSize: "var(--text-sm)",
+                  color: "var(--text-secondary)",
                   lineHeight: 1.6,
                 }}
               >
-                Copy this token now. It is only displayed once. For future user sharing, this keeps
-                the current flow explicit and revocable instead of silently exposing a reusable
-                link.
+                Copy this token now. It is only displayed once. For future user
+                sharing, this keeps the current flow explicit and revocable
+                instead of silently exposing a reusable link.
               </p>
             </div>
-            <label style={{ display: 'grid', gap: '0.4rem' }}>
+            <label style={{ display: "grid", gap: "0.4rem" }}>
               <span
                 style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-secondary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-secondary)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
                 }}
               >
                 Setup code
@@ -445,16 +509,20 @@ export default function CalendarSharingSettings(): JSX.Element {
                 type="text"
                 value={createdSetupCode}
                 readOnly
-                style={{ ...inputStyle, fontFamily: 'monospace', background: 'var(--surface-2)' }}
+                style={{
+                  ...inputStyle,
+                  fontFamily: "monospace",
+                  background: "var(--surface-2)",
+                }}
               />
             </label>
-            <label style={{ display: 'grid', gap: '0.4rem' }}>
+            <label style={{ display: "grid", gap: "0.4rem" }}>
               <span
                 style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-secondary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-secondary)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
                 }}
               >
                 Suggested base URL
@@ -463,16 +531,16 @@ export default function CalendarSharingSettings(): JSX.Element {
                 type="text"
                 value={localApiBaseUrl}
                 readOnly
-                style={{ ...inputStyle, background: 'var(--surface-2)' }}
+                style={{ ...inputStyle, background: "var(--surface-2)" }}
               />
             </label>
-            <label style={{ display: 'grid', gap: '0.4rem' }}>
+            <label style={{ display: "grid", gap: "0.4rem" }}>
               <span
                 style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--text-secondary)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
+                  fontSize: "var(--text-xs)",
+                  color: "var(--text-secondary)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
                 }}
               >
                 Bearer token
@@ -481,18 +549,30 @@ export default function CalendarSharingSettings(): JSX.Element {
                 type="text"
                 value={createdToken.raw_token}
                 readOnly
-                style={{ ...inputStyle, fontFamily: 'monospace', background: 'var(--surface-2)' }}
+                style={{
+                  ...inputStyle,
+                  fontFamily: "monospace",
+                  background: "var(--surface-2)",
+                }}
               />
             </label>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-              Expires{' '}
+            <div
+              style={{
+                fontSize: "var(--text-xs)",
+                color: "var(--text-secondary)",
+              }}
+            >
+              Expires{" "}
               {createdToken.expires_at
                 ? new Date(createdToken.expires_at).toLocaleString()
-                : 'never'}
+                : "never"}
               .
             </div>
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <Button onClick={() => void copyToClipboard(createdSetupCode)} variant="secondary">
+            <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+              <Button
+                onClick={() => void copyToClipboard(createdSetupCode)}
+                variant="secondary"
+              >
                 Copy Setup Code
               </Button>
               <Button
@@ -501,7 +581,10 @@ export default function CalendarSharingSettings(): JSX.Element {
               >
                 Copy Token
               </Button>
-              <Button onClick={() => void copyToClipboard(localApiBaseUrl)} variant="ghost">
+              <Button
+                onClick={() => void copyToClipboard(localApiBaseUrl)}
+                variant="ghost"
+              >
                 Copy Base URL
               </Button>
             </div>

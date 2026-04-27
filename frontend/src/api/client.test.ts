@@ -1,10 +1,10 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 const mockFetch = vi.fn();
 
-vi.stubGlobal('fetch', mockFetch);
+vi.stubGlobal("fetch", mockFetch);
 
-describe('apiClient', () => {
+describe("apiClient", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     vi.clearAllMocks();
@@ -15,139 +15,151 @@ describe('apiClient', () => {
   });
 
   async function apiClient(path: string, init?: RequestInit) {
-    const { apiClient: client } = await import('./client');
+    const { apiClient: client } = await import("./client");
     return client(path, init);
   }
 
-  describe('rate limiting', () => {
-    it('throws rate_limited error on 429 response', async () => {
+  describe("rate limiting", () => {
+    it("throws rate_limited error on 429 response", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response(null, { status: 429, statusText: 'Too Many Requests' }),
+        new Response(null, { status: 429, statusText: "Too Many Requests" }),
       );
 
-      await expect(apiClient('/test')).rejects.toThrow('rate_limited');
+      await expect(apiClient("/test")).rejects.toThrow("rate_limited");
     });
   });
 
-  describe('server errors', () => {
-    it('throws server_error on 500', async () => {
+  describe("server errors", () => {
+    it("throws server_error on 500", async () => {
       mockFetch.mockResolvedValueOnce(new Response(null, { status: 500 }));
 
-      await expect(apiClient('/test')).rejects.toThrow('server_error:500');
+      await expect(apiClient("/test")).rejects.toThrow("server_error:500");
     });
   });
 
-  describe('network errors', () => {
-    it('retries once on network failure then throws with network_error prefix', async () => {
+  describe("network errors", () => {
+    it("retries once on network failure then throws with network_error prefix", async () => {
       mockFetch
-        .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-        .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+        .mockRejectedValueOnce(new TypeError("Failed to fetch"));
 
-      await expect(apiClient('/test')).rejects.toThrow('network_error:');
+      await expect(apiClient("/test")).rejects.toThrow("network_error:");
     });
   });
 
-  describe('4xx errors', () => {
-    it('throws with parsed detail from JSON error body', async () => {
-      const errorBody = JSON.stringify({ detail: 'Habit not found' });
+  describe("4xx errors", () => {
+    it("throws with parsed detail from JSON error body", async () => {
+      const errorBody = JSON.stringify({ detail: "Habit not found" });
       mockFetch.mockResolvedValueOnce(
         new Response(errorBody, {
           status: 404,
-          headers: { 'content-type': 'application/json' },
+          headers: { "content-type": "application/json" },
         }),
       );
 
-      await expect(apiClient('/test')).rejects.toThrow('API request failed: 404 Habit not found');
+      await expect(apiClient("/test")).rejects.toThrow(
+        "API request failed: 404 Habit not found",
+      );
     });
 
-    it('throws with status text when detail parsing fails', async () => {
-      mockFetch.mockResolvedValueOnce(new Response(null, { status: 404, statusText: 'Not Found' }));
+    it("throws with status text when detail parsing fails", async () => {
+      mockFetch.mockResolvedValueOnce(
+        new Response(null, { status: 404, statusText: "Not Found" }),
+      );
 
-      await expect(apiClient('/test')).rejects.toThrow('API request failed: 404 Not Found');
+      await expect(apiClient("/test")).rejects.toThrow(
+        "API request failed: 404 Not Found",
+      );
     });
   });
 
-  describe('successful responses', () => {
-    it('returns parsed JSON on 200', async () => {
-      const data = { id: 'tsk_123', title: 'Test task' };
+  describe("successful responses", () => {
+    it("returns parsed JSON on 200", async () => {
+      const data = { id: "tsk_123", title: "Test task" };
       mockFetch.mockResolvedValueOnce(
         new Response(JSON.stringify(data), {
           status: 200,
-          headers: { 'content-type': 'application/json' },
+          headers: { "content-type": "application/json" },
         }),
       );
 
-      const result = await apiClient('/tasks/tsk_123');
+      const result = await apiClient("/tasks/tsk_123");
       expect(result).toEqual(data);
     });
 
-    it('returns undefined on 204', async () => {
+    it("returns undefined on 204", async () => {
       mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-      const result = await apiClient('/test');
+      const result = await apiClient("/test");
       expect(result).toBeUndefined();
     });
 
-    it('returns undefined on empty content-length', async () => {
+    it("returns undefined on empty content-length", async () => {
       mockFetch.mockResolvedValueOnce(
         new Response(null, {
           status: 200,
-          headers: { 'content-length': '0' },
+          headers: { "content-length": "0" },
         }),
       );
 
-      const result = await apiClient('/test');
+      const result = await apiClient("/test");
       expect(result).toBeUndefined();
     });
 
-    it('returns text on text/plain response', async () => {
+    it("returns text on text/plain response", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response('plain text response', {
+        new Response("plain text response", {
           status: 200,
-          headers: { 'content-type': 'text/plain' },
+          headers: { "content-type": "text/plain" },
         }),
       );
 
-      const result = await apiClient('/test');
-      expect(result).toBe('plain text response');
+      const result = await apiClient("/test");
+      expect(result).toBe("plain text response");
     });
 
-    it('retries on 503 then returns successful response', async () => {
+    it("retries on 503 then returns successful response", async () => {
       const data = { ok: true };
-      mockFetch.mockResolvedValueOnce(new Response(null, { status: 503 })).mockResolvedValueOnce(
-        new Response(JSON.stringify(data), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      );
+      mockFetch
+        .mockResolvedValueOnce(new Response(null, { status: 503 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(data), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+        );
 
-      const result = await apiClient('/test');
+      const result = await apiClient("/test");
       expect(result).toEqual(data);
       expect(mockFetch).toHaveBeenCalledTimes(2);
     });
   });
 
-  describe('4xx error detail parsing', () => {
-    it('uses parsed string body as error detail', async () => {
+  describe("4xx error detail parsing", () => {
+    it("uses parsed string body as error detail", async () => {
       mockFetch.mockResolvedValueOnce(
         new Response('"validation error"', {
           status: 400,
-          headers: { 'content-type': 'application/json' },
+          headers: { "content-type": "application/json" },
         }),
       );
 
-      await expect(apiClient('/test')).rejects.toThrow('API request failed: 400 validation error');
+      await expect(apiClient("/test")).rejects.toThrow(
+        "API request failed: 400 validation error",
+      );
     });
 
-    it('preserves statusText when parseApiResponse throws', async () => {
+    it("preserves statusText when parseApiResponse throws", async () => {
       mockFetch.mockResolvedValueOnce(
-        new Response('{invalid json}', {
+        new Response("{invalid json}", {
           status: 400,
-          headers: { 'content-type': 'application/json' },
+          headers: { "content-type": "application/json" },
         }),
       );
 
-      await expect(apiClient('/test')).rejects.toThrow('API request failed: 400 ');
+      await expect(apiClient("/test")).rejects.toThrow(
+        "API request failed: 400 ",
+      );
     });
   });
 });

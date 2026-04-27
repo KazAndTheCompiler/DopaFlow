@@ -30,13 +30,16 @@
 
   --skin-bg-noise: none;
   --skin-surface-glow: 0 14px 40px rgba(0, 0, 0, 0.08);
-  --skin-accent-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
+  --skin-accent-ring: 0 0 0 3px
+    color-mix(in srgb, var(--accent) 24%, transparent);
   --skin-backdrop: blur(14px);
 
   /* Fallback shadows (overridden per skin) */
   --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-floating: 0 16px 40px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-elevated:
+    0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-floating:
+    0 16px 40px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.08);
 
   /* Gradient fallbacks (overridden per skin) */
   --bg-gradient: var(--bg-app);

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import type { Task, TaskId } from '@shared/types';
+import { useEffect, useRef, useState } from "react";
+import type { Task, TaskId } from "@shared/types";
 
-import { APP_STORAGE_KEYS } from '../../app/appStorage';
+import { APP_STORAGE_KEYS } from "../../app/appStorage";
 
 const FOCUS_PREFILL_KEY = APP_STORAGE_KEYS.focusPrefill;
 
@@ -14,9 +14,9 @@ export interface FocusPanelProps {
 
 // Sorted by duration: short → medium → long
 const PRESETS = [
-  { label: '15m', minutes: 15 },
-  { label: '25m', minutes: 25 },
-  { label: '50m', minutes: 50 },
+  { label: "15m", minutes: 15 },
+  { label: "25m", minutes: 25 },
+  { label: "50m", minutes: 50 },
 ];
 
 export function FocusPanel({
@@ -26,7 +26,7 @@ export function FocusPanel({
   onTaskSelect,
 }: FocusPanelProps): JSX.Element {
   const [selected, setSelected] = useState<number>(25);
-  const [customMinutes, setCustomMinutes] = useState<string>('');
+  const [customMinutes, setCustomMinutes] = useState<string>("");
   const [selectedTaskId, setSelectedTaskId] = useState<TaskId | null>(null);
   const [prefill, setPrefill] = useState<string | null>(null);
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
@@ -41,7 +41,9 @@ export function FocusPanel({
       return;
     }
     const matchedTask = tasks.find(
-      (task) => !task.done && task.title.trim().toLowerCase() === prefill.trim().toLowerCase(),
+      (task) =>
+        !task.done &&
+        task.title.trim().toLowerCase() === prefill.trim().toLowerCase(),
     );
     if (!matchedTask) {
       return;
@@ -57,71 +59,93 @@ export function FocusPanel({
         setTaskPickerOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const selectedTask =
-    selectedTaskId === null ? null : (tasks.find((task) => task.id === selectedTaskId) ?? null);
+    selectedTaskId === null
+      ? null
+      : (tasks.find((task) => task.id === selectedTaskId) ?? null);
 
   const pendingTasks = tasks.filter((t) => !t.done);
 
   return (
     <section
       style={{
-        padding: '1.1rem 1.15rem',
+        padding: "1.1rem 1.15rem",
         background:
-          'linear-gradient(155deg, color-mix(in srgb, var(--surface) 88%, white 12%), var(--surface))',
-        borderRadius: '20px',
-        border: '1px solid var(--border-subtle)',
-        display: 'grid',
-        gap: '1rem',
-        boxShadow: 'var(--shadow-soft)',
+          "linear-gradient(155deg, color-mix(in srgb, var(--surface) 88%, white 12%), var(--surface))",
+        borderRadius: "20px",
+        border: "1px solid var(--border-subtle)",
+        display: "grid",
+        gap: "1rem",
+        boxShadow: "var(--shadow-soft)",
       }}
     >
-      <div style={{ display: 'grid', gap: '0.22rem' }}>
-        <strong style={{ fontSize: 'var(--text-base)' }}>Focus Block</strong>
+      <div style={{ display: "grid", gap: "0.22rem" }}>
+        <strong style={{ fontSize: "var(--text-base)" }}>Focus Block</strong>
         <span
-          style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}
+          style={{
+            fontSize: "var(--text-sm)",
+            color: "var(--text-secondary)",
+            lineHeight: 1.5,
+          }}
         >
-          Pick one target, choose a duration that matches your energy, and start without negotiating
-          with the list again.
+          Pick one target, choose a duration that matches your energy, and start
+          without negotiating with the list again.
         </span>
       </div>
       {/* Title + task link row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          flexWrap: "wrap",
+        }}
+      >
         {/* Task picker */}
         {pendingTasks.length > 0 && (
-          <div ref={pickerRef} style={{ position: 'relative', flex: 1, minWidth: '160px' }}>
+          <div
+            ref={pickerRef}
+            style={{ position: "relative", flex: 1, minWidth: "160px" }}
+          >
             <button
               onClick={() => !isActive && setTaskPickerOpen((v) => !v)}
               disabled={isActive}
               aria-label="Link session to a task"
               style={{
-                width: '100%',
-                padding: '0.4rem 0.75rem',
-                borderRadius: '10px',
-                border: '1px solid',
+                width: "100%",
+                padding: "0.4rem 0.75rem",
+                borderRadius: "10px",
+                border: "1px solid",
                 borderColor: selectedTask
-                  ? 'color-mix(in srgb, var(--accent) 35%, transparent)'
-                  : 'var(--border-subtle)',
+                  ? "color-mix(in srgb, var(--accent) 35%, transparent)"
+                  : "var(--border-subtle)",
                 background: selectedTask
-                  ? 'color-mix(in srgb, var(--accent) 8%, transparent)'
-                  : 'var(--surface-2)',
-                color: selectedTask ? 'var(--text)' : 'var(--text-secondary)',
-                cursor: isActive ? 'default' : 'pointer',
-                fontSize: 'var(--text-sm)',
+                  ? "color-mix(in srgb, var(--accent) 8%, transparent)"
+                  : "var(--surface-2)",
+                color: selectedTask ? "var(--text)" : "var(--text-secondary)",
+                cursor: isActive ? "default" : "pointer",
+                fontSize: "var(--text-sm)",
                 fontWeight: selectedTask ? 600 : 400,
-                textAlign: 'left',
+                textAlign: "left",
                 opacity: isActive ? 0.6 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '0.5rem',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "0.5rem",
               }}
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {selectedTask ? selectedTask.title : 'Choose a task…'}
+              <span
+                style={{
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {selectedTask ? selectedTask.title : "Choose a task…"}
               </span>
               {selectedTask ? (
                 <span
@@ -135,17 +159,21 @@ export function FocusPanel({
                     localStorage.removeItem(FOCUS_PREFILL_KEY);
                   }}
                   style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--text-secondary)',
+                    fontSize: "var(--text-xs)",
+                    color: "var(--text-secondary)",
                     flexShrink: 0,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                   }}
                 >
                   ×
                 </span>
               ) : (
                 <span
-                  style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', flexShrink: 0 }}
+                  style={{
+                    fontSize: "var(--text-xs)",
+                    color: "var(--text-muted)",
+                    flexShrink: 0,
+                  }}
                 >
                   ▾
                 </span>
@@ -155,20 +183,21 @@ export function FocusPanel({
             {taskPickerOpen && (
               <div
                 style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
+                  position: "absolute",
+                  top: "calc(100% + 6px)",
                   left: 0,
                   right: 0,
                   zIndex: 100,
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '14px',
-                  boxShadow: 'var(--shadow-floating, 0 8px 32px rgba(0,0,0,0.18))',
-                  padding: '0.4rem',
-                  maxHeight: '240px',
-                  overflowY: 'auto',
-                  display: 'grid',
-                  gap: '0.2rem',
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "14px",
+                  boxShadow:
+                    "var(--shadow-floating, 0 8px 32px rgba(0,0,0,0.18))",
+                  padding: "0.4rem",
+                  maxHeight: "240px",
+                  overflowY: "auto",
+                  display: "grid",
+                  gap: "0.2rem",
                 }}
               >
                 <button
@@ -178,14 +207,14 @@ export function FocusPanel({
                     setTaskPickerOpen(false);
                   }}
                   style={{
-                    padding: '0.45rem 0.65rem',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontSize: 'var(--text-sm)',
-                    color: 'var(--text-secondary)',
-                    textAlign: 'left',
+                    padding: "0.45rem 0.65rem",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    fontSize: "var(--text-sm)",
+                    color: "var(--text-secondary)",
+                    textAlign: "left",
                   }}
                 >
                   No task
@@ -199,23 +228,23 @@ export function FocusPanel({
                       setTaskPickerOpen(false);
                     }}
                     style={{
-                      padding: '0.5rem 0.65rem',
-                      borderRadius: '8px',
+                      padding: "0.5rem 0.65rem",
+                      borderRadius: "8px",
                       border:
                         selectedTaskId === task.id
-                          ? '1px solid color-mix(in srgb, var(--accent) 30%, transparent)'
-                          : '1px solid transparent',
+                          ? "1px solid color-mix(in srgb, var(--accent) 30%, transparent)"
+                          : "1px solid transparent",
                       background:
                         selectedTaskId === task.id
-                          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-                          : 'transparent',
-                      cursor: 'pointer',
-                      fontSize: 'var(--text-sm)',
+                          ? "color-mix(in srgb, var(--accent) 10%, transparent)"
+                          : "transparent",
+                      cursor: "pointer",
+                      fontSize: "var(--text-sm)",
                       fontWeight: selectedTaskId === task.id ? 600 : 400,
-                      textAlign: 'left',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      textAlign: "left",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {task.title}
@@ -234,14 +263,15 @@ export function FocusPanel({
             }}
             title="Clear suggested task"
             style={{
-              padding: '0.3rem 0.7rem',
-              borderRadius: '8px',
-              border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
-              background: 'color-mix(in srgb, var(--accent) 8%, transparent)',
-              color: 'var(--accent)',
-              fontSize: 'var(--text-xs)',
+              padding: "0.3rem 0.7rem",
+              borderRadius: "8px",
+              border:
+                "1px solid color-mix(in srgb, var(--accent) 30%, transparent)",
+              background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+              color: "var(--accent)",
+              fontSize: "var(--text-xs)",
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: "pointer",
             }}
           >
             {prefill} ×
@@ -250,32 +280,41 @@ export function FocusPanel({
       </div>
 
       {/* Duration presets + custom + start */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: '0.35rem' }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", gap: "0.35rem" }}>
           {PRESETS.map(({ label, minutes }) => (
             <button
               key={minutes}
               onClick={() => {
                 setSelected(minutes);
-                setCustomMinutes('');
+                setCustomMinutes("");
               }}
               disabled={isActive}
               style={{
-                padding: '0.4rem 0.85rem',
-                borderRadius: '8px',
-                border: '1px solid',
+                padding: "0.4rem 0.85rem",
+                borderRadius: "8px",
+                border: "1px solid",
                 borderColor:
-                  selected === minutes && customMinutes === ''
-                    ? 'var(--accent)'
-                    : 'var(--border-subtle)',
+                  selected === minutes && customMinutes === ""
+                    ? "var(--accent)"
+                    : "var(--border-subtle)",
                 background:
-                  selected === minutes && customMinutes === '' ? 'var(--accent)' : 'transparent',
+                  selected === minutes && customMinutes === ""
+                    ? "var(--accent)"
+                    : "transparent",
                 color:
-                  selected === minutes && customMinutes === ''
-                    ? 'var(--text-inverted)'
-                    : 'var(--text-secondary)',
-                cursor: isActive ? 'default' : 'pointer',
-                fontSize: 'var(--text-sm)',
+                  selected === minutes && customMinutes === ""
+                    ? "var(--text-inverted)"
+                    : "var(--text-secondary)",
+                cursor: isActive ? "default" : "pointer",
+                fontSize: "var(--text-sm)",
                 fontWeight: 600,
                 opacity: isActive ? 0.5 : 1,
               }}
@@ -298,20 +337,21 @@ export function FocusPanel({
             disabled={isActive}
             aria-label="Custom duration in minutes"
             style={{
-              padding: '0.4rem 0.6rem',
-              borderRadius: '8px',
-              border: '1px solid',
-              borderColor: customMinutes !== '' ? 'var(--accent)' : 'var(--border-subtle)',
+              padding: "0.4rem 0.6rem",
+              borderRadius: "8px",
+              border: "1px solid",
+              borderColor:
+                customMinutes !== "" ? "var(--accent)" : "var(--border-subtle)",
               background:
-                customMinutes !== ''
-                  ? 'color-mix(in srgb, var(--accent) 10%, var(--surface))'
-                  : 'transparent',
-              color: 'var(--text-primary)',
-              cursor: isActive ? 'default' : 'pointer',
-              fontSize: 'var(--text-sm)',
+                customMinutes !== ""
+                  ? "color-mix(in srgb, var(--accent) 10%, var(--surface))"
+                  : "transparent",
+              color: "var(--text-primary)",
+              cursor: isActive ? "default" : "pointer",
+              fontSize: "var(--text-sm)",
               opacity: isActive ? 0.5 : 1,
-              width: '76px',
-              textAlign: 'center',
+              width: "76px",
+              textAlign: "center",
             }}
           />
         </div>
@@ -324,33 +364,34 @@ export function FocusPanel({
           }}
           disabled={isActive}
           style={{
-            padding: '0.5rem 1.4rem',
-            borderRadius: '10px',
-            border: 'none',
+            padding: "0.5rem 1.4rem",
+            borderRadius: "10px",
+            border: "none",
             background: isActive
-              ? 'var(--border-subtle)'
-              : 'linear-gradient(155deg, color-mix(in srgb, var(--accent) 80%, white 20%), var(--accent))',
-            color: isActive ? 'var(--text-secondary)' : 'var(--text-inverted)',
-            cursor: isActive ? 'default' : 'pointer',
+              ? "var(--border-subtle)"
+              : "linear-gradient(155deg, color-mix(in srgb, var(--accent) 80%, white 20%), var(--accent))",
+            color: isActive ? "var(--text-secondary)" : "var(--text-inverted)",
+            cursor: isActive ? "default" : "pointer",
             fontWeight: 700,
-            fontSize: 'var(--text-sm)',
-            marginLeft: 'auto',
-            boxShadow: isActive ? 'none' : 'var(--shadow-soft)',
+            fontSize: "var(--text-sm)",
+            marginLeft: "auto",
+            boxShadow: isActive ? "none" : "var(--shadow-soft)",
           }}
         >
-          {isActive ? 'Session active' : 'Start Focus'}
+          {isActive ? "Session active" : "Start Focus"}
         </button>
       </div>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         {selectedTask ? (
           <span
             style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--accent)',
-              padding: '0.22rem 0.55rem',
-              borderRadius: '999px',
-              background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)',
+              fontSize: "var(--text-xs)",
+              color: "var(--accent)",
+              padding: "0.22rem 0.55rem",
+              borderRadius: "999px",
+              background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+              border:
+                "1px solid color-mix(in srgb, var(--accent) 18%, transparent)",
             }}
           >
             linked to {selectedTask.title}
@@ -358,11 +399,11 @@ export function FocusPanel({
         ) : (
           <span
             style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-secondary)',
-              padding: '0.22rem 0.55rem',
-              borderRadius: '999px',
-              background: 'var(--surface-2)',
+              fontSize: "var(--text-xs)",
+              color: "var(--text-secondary)",
+              padding: "0.22rem 0.55rem",
+              borderRadius: "999px",
+              background: "var(--surface-2)",
             }}
           >
             no task linked yet
@@ -370,11 +411,11 @@ export function FocusPanel({
         )}
         <span
           style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-secondary)',
-            padding: '0.22rem 0.55rem',
-            borderRadius: '999px',
-            background: 'var(--surface-2)',
+            fontSize: "var(--text-xs)",
+            color: "var(--text-secondary)",
+            padding: "0.22rem 0.55rem",
+            borderRadius: "999px",
+            background: "var(--surface-2)",
           }}
         >
           {selected} minute block

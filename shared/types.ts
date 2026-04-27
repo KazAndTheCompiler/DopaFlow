@@ -5,6 +5,14 @@
 
 // Tasks
 export type TaskId = string;
+export type ProjectId = string;
+
+export interface SubTask {
+  id: string;
+  title: string;
+  completed?: boolean;
+  done?: boolean;
+}
 
 export interface Task {
   id: TaskId;
@@ -19,6 +27,8 @@ export interface Task {
   tags: string[];
   project_id?: string;
   time_logs?: TaskTimeLog[];
+  subtasks?: SubTask[];
+  recurrence_rule?: string;
   created_at: string;
   updated_at: string;
 }
@@ -118,10 +128,16 @@ export interface ReviewCard {
   id: string;
   question: string;
   answer: string;
+  front?: string;  // Frontend alias
+  back?: string;   // Frontend alias
+  deck_id?: string;
   tags: string[];
   difficulty: 'new' | 'learning' | 'review' | 'mastered';
   next_review_date: string;
+  next_review_at?: string;  // Frontend alias
   interval_days: number;
+  interval?: number;  // Frontend alias
+  ease_factor?: number;
   reviews_done?: number;
   created_at: string;
   updated_at: string;
@@ -148,11 +164,12 @@ export interface PeerFeed {
   name: string;
   label?: string;
   url: string;
+  base_url?: string;
   color: string;
   last_sync_at?: string;
-  last_synced_at?: string;
+  last_synced_at?: string | null;
   sync_status: 'ok' | 'error' | 'pending' | 'idle' | 'syncing';
-  last_error?: string;
+  last_error?: string | null;
   enabled: boolean;
 }
 
@@ -206,10 +223,10 @@ export interface Notification {
 // Gamification
 export interface PlayerLevel {
   level: number;
-  xp: number;
+  xp?: number;
   xp_to_next: number;
   total_xp: number;
-  title: string;
+  title?: string;
   progress?: number;
   updated_at?: string;
 }
@@ -274,11 +291,22 @@ export interface PackyVoiceResponse {
 }
 
 // Vault (Obsidian Integration)
+export interface VaultConfig {
+  vault_enabled?: boolean;
+  vault_path?: string;
+  daily_note_folder?: string;
+  tasks_folder?: string;
+}
+
 export interface VaultStatus {
   connected: boolean;
   path?: string;
   last_sync_at?: string;
   file_count?: number;
+  config?: VaultConfig;
+  vault_reachable?: boolean;
+  conflicts?: number;
+  total_indexed?: number;
 }
 
 export interface VaultConflictPreview {
@@ -286,6 +314,10 @@ export interface VaultConflictPreview {
   local_modified: string;
   remote_modified: string;
   preview: string;
+  diff_lines?: string[];
+  current_exists?: boolean;
+  current_body?: string;
+  snapshot_body?: string;
 }
 
 export interface VaultFileRecord {
@@ -293,6 +325,12 @@ export interface VaultFileRecord {
   content_hash: string;
   modified_at: string;
   synced_at?: string;
+  id?: string;
+  file_path?: string;
+  entity_type?: string;
+  entity_id?: string;
+  last_direction?: 'push' | 'pull';
+  last_synced_at?: string;
 }
 
 // App State
@@ -320,90 +358,17 @@ export interface ApiError {
   details?: unknown;
 }
 
-// Extended Journal Entry
-export interface JournalEntry {
-  id: string;
-  date: string;
-  content: string;
-  markdown_body?: string;
-  body?: string;
-  tags: string[];
-  mood?: number;
-  word_count: number;
-  version?: number;
-  locked?: boolean;
-  created_at: string;
-  updated_at: string;
-}
+// Extended Journal Entry (merged with main definition above)
 
-// Extended Habit
-export interface Habit {
-  id: string;
-  name: string;
-  description?: string;
-  frequency: 'daily' | 'weekly' | 'custom';
-  target_freq?: number;
-  target_count: number;
-  current_streak: number;
-  longest_streak: number;
-  today_count?: number;
-  completed_dates: string[];
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-}
+// Extended Habit (merged with main definition above)
 
-// Extended Review Card
-export interface ReviewCard {
-  id: string;
-  question: string;
-  answer: string;
-  tags: string[];
-  difficulty: 'new' | 'learning' | 'review' | 'mastered';
-  next_review_date: string;
-  interval_days: number;
-  reviews_done?: number;
-  created_at: string;
-  updated_at: string;
-}
+// Extended Review Card (merged with main definition above)
 
-// Extended Project
-export interface Project {
-  id: string;
-  name: string;
-  description?: string;
-  color: string;
-  icon?: string;
-  status: 'active' | 'archived' | 'completed';
-  archived?: boolean;
-  task_count: number;
-  completed_count: number;
-  created_at: string;
-  updated_at: string;
-}
+// Extended Project (merged with main definition above)
 
-// Extended Notification
-export interface Notification {
-  id: string;
-  type: 'task_due' | 'habit_reminder' | 'focus_complete' | 'system';
-  level?: 'info' | 'warning' | 'error';
-  title: string;
-  message: string;
-  read: boolean;
-  data?: unknown;
-  created_at: string;
-}
+// Extended Notification (merged with main definition above)
 
-// Extended Alarm
-export interface Alarm {
-  id: string;
-  time: string;
-  at?: string;
-  label?: string;
-  enabled: boolean;
-  repeat_days?: number[];
-  sound?: string;
-}
+// Extended Alarm (merged with main definition above)
 
 // Vault Types
 export interface VaultConfig {
@@ -415,25 +380,34 @@ export interface VaultConfigUpdate {
   path?: string;
   auto_sync?: boolean;
   vault_enabled?: boolean;
+  vault_path?: string;
 }
 
 export interface VaultPushResult {
   pushed: number;
   errors: string[];
+  conflicts?: number;
 }
 
 export interface VaultPullResult {
   pulled: number;
   errors: string[];
+  conflicts?: number;
+  imported?: number;
 }
 
 export interface VaultRollbackResult {
   restored: boolean;
   timestamp: string;
+  message?: string;
 }
 
 export interface TaskImportPreview {
   tasks: TaskImportCandidate[];
+  importable?: TaskImportCandidate[];
+  total_scanned?: number;
+  known?: TaskImportCandidate[];
+  skipped?: number;
 }
 
 export interface TaskImportCandidate {
@@ -441,6 +415,9 @@ export interface TaskImportCandidate {
   tags: string[];
   priority: Task['priority'];
   selected: boolean;
+  due_str?: string;
+  project_name?: string;
+  file_path?: string;
 }
 
 // Sharing Types
@@ -451,16 +428,21 @@ export interface ShareToken {
   label?: string;
   expires_at?: string;
   created_at: string;
+  last_used_at?: string;
 }
 
 export interface ShareTokenCreated {
   token: string;
   url: string;
+  raw_token?: string;
+  expires_at?: string;
 }
 
 export interface PeerFeedSyncResult {
   status: 'ok' | 'error';
   events_added: number;
+  events_imported?: number;
+  detail?: string;
   errors: string[];
 }
 
@@ -469,11 +451,11 @@ export interface IntegrationsStatus {
   obsidian: boolean;
   calendar: boolean;
   sync_enabled: boolean;
+  gmail_connected?: boolean;
+  webhooks_enabled?: boolean;
+  webhook_retry_wait?: number;
+  webhook_pending?: number;
+  webhook_sent?: number;
 }
 
-// Packy Types
-export interface PackyVoiceResponse {
-  text: string;
-  audio_url?: string;
-  emotion?: 'neutral' | 'excited' | 'calm' | 'urgent';
-}
+// Packy Types (merged with main PackyVoiceResponse definition above)

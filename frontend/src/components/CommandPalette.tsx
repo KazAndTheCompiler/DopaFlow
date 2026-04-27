@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import type { Project } from '@shared/types';
-import { sidebarRoutes, type AppRoute } from '../appRoutes';
-import Button from '../design-system/primitives/Button';
-import Input from '../design-system/primitives/Input';
-import VoiceButton from '../design-system/primitives/VoiceButton';
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import type { Project } from "@shared/types";
+import { sidebarRoutes, type AppRoute } from "../appRoutes";
+import Button from "../design-system/primitives/Button";
+import Input from "../design-system/primitives/Input";
+import VoiceButton from "../design-system/primitives/VoiceButton";
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 
 interface Suggestion {
   label: string;
@@ -28,7 +28,7 @@ export default function CommandPalette({
   onNavigate,
 }: CommandPaletteProps): JSX.Element | null {
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [selectedIdx, setSelectedIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const {
@@ -49,18 +49,20 @@ export default function CommandPalette({
   if (onProjectSelect) {
     const matchedProjects = projects
       .filter(
-        (p) => !p.archived && (!q || p.name.toLowerCase().includes(q) || q.startsWith('project')),
+        (p) =>
+          !p.archived &&
+          (!q || p.name.toLowerCase().includes(q) || q.startsWith("project")),
       )
       .slice(0, 4);
     matchedProjects.forEach((p) => {
       suggestions.push({
         label: `Filter: ${p.name}`,
         hint: `Show only ${p.name} tasks`,
-        icon: p.icon || 'PR',
+        icon: p.icon || "PR",
         action: () => {
           onProjectSelect(p.id);
           setOpen(false);
-          setInput('');
+          setInput("");
         },
       });
     });
@@ -68,7 +70,10 @@ export default function CommandPalette({
 
   // Nav suggestions
   sidebarRoutes
-    .filter((route) => !q || route.label.toLowerCase().includes(q) || route.id.includes(q))
+    .filter(
+      (route) =>
+        !q || route.label.toLowerCase().includes(q) || route.id.includes(q),
+    )
     .slice(0, 5)
     .forEach((route) => {
       suggestions.push({
@@ -77,20 +82,20 @@ export default function CommandPalette({
         action: () => {
           onNavigate?.(route.id);
           setOpen(false);
-          setInput('');
+          setInput("");
         },
       });
     });
 
   // Clear project filter
-  if (onProjectSelect && (!q || 'clear'.includes(q) || 'all'.includes(q))) {
+  if (onProjectSelect && (!q || "clear".includes(q) || "all".includes(q))) {
     suggestions.unshift({
-      label: 'Clear project filter',
-      icon: 'CL',
+      label: "Clear project filter",
+      icon: "CL",
       action: () => {
         onProjectSelect(null);
         setOpen(false);
-        setInput('');
+        setInput("");
       },
     });
   }
@@ -114,13 +119,13 @@ export default function CommandPalette({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setOpen((value) => !value);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
   useEffect(() => {
     if (open && inputRef.current) {
@@ -128,31 +133,36 @@ export default function CommandPalette({
     }
   }, [open]);
   const handleExecute = async (): Promise<void> => {
-    if (visibleSuggestions.length > 0 && !input.startsWith('/')) {
-      visibleSuggestions[Math.min(selectedIdx, visibleSuggestions.length - 1)]?.action();
+    if (visibleSuggestions.length > 0 && !input.startsWith("/")) {
+      visibleSuggestions[
+        Math.min(selectedIdx, visibleSuggestions.length - 1)
+      ]?.action();
       return;
     }
     if (input.trim()) {
       await onExecute(input);
-      setInput('');
+      setInput("");
       setOpen(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       if (visibleSuggestions.length > 0) {
         setSelectedIdx((i) => (i + 1) % visibleSuggestions.length);
       }
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (visibleSuggestions.length > 0) {
-        setSelectedIdx((i) => (i - 1 + visibleSuggestions.length) % visibleSuggestions.length);
+        setSelectedIdx(
+          (i) =>
+            (i - 1 + visibleSuggestions.length) % visibleSuggestions.length,
+        );
       }
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       void handleExecute();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setOpen(false);
     }
   };
@@ -163,15 +173,15 @@ export default function CommandPalette({
     <div
       data-testid="command-palette-overlay"
       style={{
-        position: 'fixed',
+        position: "fixed",
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(8,10,14,0.46)',
-        display: 'flex',
-        alignItems: 'flex-start',
-        paddingTop: '5rem',
+        backgroundColor: "rgba(8,10,14,0.46)",
+        display: "flex",
+        alignItems: "flex-start",
+        paddingTop: "5rem",
         zIndex: 1000,
       }}
       onClick={() => setOpen(false)}
@@ -179,67 +189,74 @@ export default function CommandPalette({
       <div
         data-testid="command-palette"
         style={{
-          width: '90%',
-          maxWidth: '640px',
-          margin: '0 auto',
+          width: "90%",
+          maxWidth: "640px",
+          margin: "0 auto",
           background:
-            'linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, white 6%), var(--surface))',
-          borderRadius: '24px',
-          padding: '1rem',
-          boxShadow: '0 18px 48px rgba(0,0,0,0.24)',
-          border: '1px solid var(--border-subtle)',
+            "linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, white 6%), var(--surface))",
+          borderRadius: "24px",
+          padding: "1rem",
+          boxShadow: "0 18px 48px rgba(0,0,0,0.24)",
+          border: "1px solid var(--border-subtle)",
         }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div style={{ display: 'grid', gap: '0.85rem' }}>
+        <div style={{ display: "grid", gap: "0.85rem" }}>
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: '0.75rem',
-              alignItems: 'flex-start',
-              flexWrap: 'wrap',
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "0.75rem",
+              alignItems: "flex-start",
+              flexWrap: "wrap",
             }}
           >
-            <div style={{ display: 'grid', gap: '0.15rem' }}>
+            <div style={{ display: "grid", gap: "0.15rem" }}>
               <span
                 style={{
-                  fontSize: 'var(--text-xs)',
-                  color: 'var(--accent)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  fontSize: "var(--text-xs)",
+                  color: "var(--accent)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.08em",
                   fontWeight: 800,
                 }}
               >
                 Command palette
               </span>
               <strong
-                style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.35rem)', letterSpacing: '-0.02em' }}
+                style={{
+                  fontSize: "clamp(1.1rem, 1.6vw, 1.35rem)",
+                  letterSpacing: "-0.02em",
+                }}
               >
                 Move fast without leaving the keyboard
               </strong>
             </div>
             <span
               style={{
-                padding: '0.35rem 0.62rem',
-                borderRadius: '999px',
-                background: 'var(--surface-2)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--text-secondary)',
+                padding: "0.35rem 0.62rem",
+                borderRadius: "999px",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border-subtle)",
+                fontSize: "var(--text-xs)",
+                color: "var(--text-secondary)",
                 fontWeight: 700,
               }}
             >
               Ctrl/Cmd + K
             </span>
           </div>
-          <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
+          <div
+            style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}
+          >
             <Input
               ref={inputRef}
               type="text"
               spellCheck={false}
               placeholder={
-                listening ? 'Listening…' : 'Type a command... (add task, focus, list habits)'
+                listening
+                  ? "Listening…"
+                  : "Type a command... (add task, focus, list habits)"
               }
               value={listening ? interim || input : input}
               onChange={(event) => setInput(event.target.value)}
@@ -248,7 +265,7 @@ export default function CommandPalette({
               aria-expanded={visibleSuggestions.length > 0}
               aria-controls="command-palette-listbox"
               aria-activedescendant={activeDescendantId}
-              style={{ flex: 1, fontSize: '1rem' }}
+              style={{ flex: 1, fontSize: "1rem" }}
             />
             <VoiceButton
               listening={listening}
@@ -261,9 +278,9 @@ export default function CommandPalette({
         {sttError ? (
           <div
             style={{
-              marginTop: '0.65rem',
-              color: 'var(--state-error)',
-              fontSize: 'var(--text-sm)',
+              marginTop: "0.65rem",
+              color: "var(--state-error)",
+              fontSize: "var(--text-sm)",
             }}
           >
             {sttError}
@@ -275,11 +292,11 @@ export default function CommandPalette({
             role="listbox"
             aria-activedescendant={activeDescendantId}
             style={{
-              marginTop: '0.85rem',
-              display: 'grid',
-              gap: '0.35rem',
-              maxHeight: '280px',
-              overflowY: 'auto',
+              marginTop: "0.85rem",
+              display: "grid",
+              gap: "0.35rem",
+              maxHeight: "280px",
+              overflowY: "auto",
             }}
           >
             {visibleSuggestions.map((s, i) => (
@@ -290,48 +307,56 @@ export default function CommandPalette({
                 aria-selected={i === selectedIdx}
                 onClick={s.action}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.65rem',
-                  padding: '0.7rem 0.8rem',
-                  borderRadius: '14px',
-                  border: 'none',
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.65rem",
+                  padding: "0.7rem 0.8rem",
+                  borderRadius: "14px",
+                  border: "none",
                   background:
                     i === selectedIdx
-                      ? 'linear-gradient(145deg, color-mix(in srgb, var(--surface) 78%, white 22%), var(--surface))'
-                      : 'transparent',
-                  color: 'var(--text)',
-                  cursor: 'pointer',
-                  fontSize: 'var(--text-sm)',
-                  textAlign: 'left',
-                  transition: 'background 100ms ease, transform 100ms ease',
+                      ? "linear-gradient(145deg, color-mix(in srgb, var(--surface) 78%, white 22%), var(--surface))"
+                      : "transparent",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                  fontSize: "var(--text-sm)",
+                  textAlign: "left",
+                  transition: "background 100ms ease, transform 100ms ease",
                 }}
                 onMouseEnter={() => setSelectedIdx(i)}
               >
                 <span
                   style={{
-                    width: '34px',
-                    height: '34px',
-                    borderRadius: '12px',
-                    textAlign: 'center',
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "12px",
+                    textAlign: "center",
                     flexShrink: 0,
-                    display: 'grid',
-                    placeItems: 'center',
+                    display: "grid",
+                    placeItems: "center",
                     background:
                       i === selectedIdx
-                        ? 'color-mix(in srgb, var(--accent) 14%, var(--surface))'
-                        : 'var(--surface-2)',
-                    color: i === selectedIdx ? 'var(--accent)' : 'var(--text-secondary)',
-                    fontSize: '0.72rem',
+                        ? "color-mix(in srgb, var(--accent) 14%, var(--surface))"
+                        : "var(--surface-2)",
+                    color:
+                      i === selectedIdx
+                        ? "var(--accent)"
+                        : "var(--text-secondary)",
+                    fontSize: "0.72rem",
                     fontWeight: 800,
                   }}
                 >
                   {s.icon}
                 </span>
-                <span style={{ flex: 1, display: 'grid', gap: '0.1rem' }}>
+                <span style={{ flex: 1, display: "grid", gap: "0.1rem" }}>
                   <span style={{ fontWeight: 700 }}>{s.label}</span>
                   {s.hint && (
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                    <span
+                      style={{
+                        fontSize: "var(--text-xs)",
+                        color: "var(--text-muted)",
+                      }}
+                    >
                       {s.hint}
                     </span>
                   )}
@@ -340,11 +365,15 @@ export default function CommandPalette({
             ))}
           </div>
         )}
-        <div style={{ marginTop: '0.85rem', display: 'flex', gap: '0.6rem' }}>
+        <div style={{ marginTop: "0.85rem", display: "flex", gap: "0.6rem" }}>
           <Button onClick={() => void handleExecute()} style={{ flex: 1 }}>
             Run
           </Button>
-          <Button variant="secondary" onClick={() => setOpen(false)} style={{ flex: 1 }}>
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            style={{ flex: 1 }}
+          >
             Cancel
           </Button>
         </div>

@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { JournalEntry } from '../../../../shared/types';
-import VoiceDictation from '../../components/VoiceDictation';
-import VoiceCommandModal from '../../components/VoiceCommandModal';
-import WikiRenderer from './WikiRenderer';
+import type { JournalEntry } from "../../../../shared/types";
+import VoiceDictation from "../../components/VoiceDictation";
+import VoiceCommandModal from "../../components/VoiceCommandModal";
+import WikiRenderer from "./WikiRenderer";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
@@ -18,16 +18,16 @@ interface EditorViewProps {
 
 function tagPills(tags: string[]): JSX.Element {
   return (
-    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
       {tags.map((tag) => (
         <span
           key={tag}
           style={{
-            padding: '0.2rem 0.55rem',
-            borderRadius: '999px',
-            background: 'var(--surface-2)',
-            color: 'var(--text-secondary)',
-            fontSize: 'var(--text-sm)',
+            padding: "0.2rem 0.55rem",
+            borderRadius: "999px",
+            background: "var(--surface-2)",
+            color: "var(--text-secondary)",
+            fontSize: "var(--text-sm)",
           }}
         >
           #{tag}
@@ -45,18 +45,21 @@ export function EditorView({
   onNavigateDate,
   onVoiceExecuted,
 }: EditorViewProps): JSX.Element {
-  const [body, setBody] = useState<string>(entry?.markdown_body ?? '');
-  const [emoji, setEmoji] = useState<string>(entry?.emoji ?? '');
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [body, setBody] = useState<string>(entry?.markdown_body ?? "");
+  const [emoji, setEmoji] = useState<string>(entry?.emoji ?? "");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [preview, setPreview] = useState(false);
   const [wikilinkQuery, setWikilinkQuery] = useState<string | null>(null);
-  const [caretPos, setCaretPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const [caretPos, setCaretPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setBody(entry?.markdown_body ?? '');
-    setEmoji(entry?.emoji ?? '');
-    setStatus('idle');
+    setBody(entry?.markdown_body ?? "");
+    setEmoji(entry?.emoji ?? "");
+    setStatus("idle");
   }, [entry?.id, selectedDate]);
 
   const scheduleAutosave = useCallback(
@@ -65,7 +68,7 @@ export function EditorView({
         clearTimeout(timerRef.current);
       }
       timerRef.current = setTimeout(() => {
-        setStatus('saving');
+        setStatus("saving");
         const tags = (nextBody.match(/#(\w+)/g) ?? []).map((t) => t.slice(1));
         void onSave({
           date: selectedDate,
@@ -73,8 +76,8 @@ export function EditorView({
           emoji: nextEmoji || null,
           tags,
         }).then(() => {
-          setStatus('saved');
-          setTimeout(() => setStatus('idle'), 1500);
+          setStatus("saved");
+          setTimeout(() => setStatus("idle"), 1500);
         });
       }, AUTOSAVE_DELAY_MS);
     },
@@ -84,7 +87,7 @@ export function EditorView({
   const handleBodyChange = (value: string): void => {
     setBody(value);
     scheduleAutosave(value, emoji);
-    setStatus('idle');
+    setStatus("idle");
   };
 
   const tags = (body.match(/#(\w+)/g) ?? []).map((t) => t.slice(1));
@@ -92,7 +95,9 @@ export function EditorView({
     wikilinkQuery !== null
       ? entries
           .filter((journalEntry) => {
-            const preview = journalEntry.markdown_body.slice(0, 40).toLowerCase();
+            const preview = journalEntry.markdown_body
+              .slice(0, 40)
+              .toLowerCase();
             return (
               journalEntry.date.includes(wikilinkQuery) ||
               preview.includes(wikilinkQuery.toLowerCase())
@@ -115,15 +120,15 @@ export function EditorView({
   return (
     <section
       style={{
-        display: 'grid',
-        gap: '0.75rem',
-        padding: '1.25rem',
-        background: 'var(--surface)',
-        borderRadius: '18px',
-        border: '1px solid var(--border-subtle)',
+        display: "grid",
+        gap: "0.75rem",
+        padding: "1.25rem",
+        background: "var(--surface)",
+        borderRadius: "18px",
+        border: "1px solid var(--border-subtle)",
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
         <input
           type="text"
           value={emoji}
@@ -135,53 +140,60 @@ export function EditorView({
             scheduleAutosave(body, e.target.value);
           }}
           style={{
-            width: '2.75rem',
-            fontSize: '1.4rem',
-            textAlign: 'center',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '10px',
-            padding: '0.3rem',
+            width: "2.75rem",
+            fontSize: "1.4rem",
+            textAlign: "center",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "10px",
+            padding: "0.3rem",
           }}
         />
-        <strong style={{ fontSize: 'var(--text-lg)' }}>{selectedDate}</strong>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <strong style={{ fontSize: "var(--text-lg)" }}>{selectedDate}</strong>
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+          }}
+        >
           <span
             style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-secondary)',
-              opacity: status === 'idle' ? 0 : 1,
-              transition: 'opacity 0.3s',
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+              opacity: status === "idle" ? 0 : 1,
+              transition: "opacity 0.3s",
             }}
           >
-            {status === 'saving' ? 'Saving…' : 'Saved'}
+            {status === "saving" ? "Saving…" : "Saved"}
           </span>
           <button
             onClick={() => setPreview((v) => !v)}
             style={{
-              padding: '0.25rem 0.65rem',
-              borderRadius: '7px',
-              border: '1px solid var(--border)',
-              background: preview ? 'var(--accent)' : 'transparent',
-              color: preview ? 'var(--text-inverted)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: 'var(--text-xs)',
+              padding: "0.25rem 0.65rem",
+              borderRadius: "7px",
+              border: "1px solid var(--border)",
+              background: preview ? "var(--accent)" : "transparent",
+              color: preview ? "var(--text-inverted)" : "var(--text-secondary)",
+              cursor: "pointer",
+              fontSize: "var(--text-xs)",
               fontWeight: 600,
             }}
           >
-            {preview ? 'Edit' : 'Preview'}
+            {preview ? "Edit" : "Preview"}
           </button>
         </div>
       </div>
 
       <VoiceDictation
         onTranscript={(text) => {
-          const nextBody = body + (body ? '\n' : '') + text;
+          const nextBody = body + (body ? "\n" : "") + text;
           setBody(nextBody);
           scheduleAutosave(nextBody, emoji);
         }}
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <VoiceCommandModal
           initialCommandWord="journal"
           route="journal"
@@ -192,14 +204,17 @@ export function EditorView({
       {preview ? (
         <div
           style={{
-            minHeight: '280px',
-            padding: '0.75rem',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '10px',
+            minHeight: "280px",
+            padding: "0.75rem",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "10px",
           }}
         >
-          <WikiRenderer body={body} onWikiClick={(date) => onNavigateDate?.(date)} />
+          <WikiRenderer
+            body={body}
+            onWikiClick={(date) => onNavigateDate?.(date)}
+          />
         </div>
       ) : (
         <textarea
@@ -220,22 +235,22 @@ export function EditorView({
             }
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Escape') {
+            if (event.key === "Escape") {
               setWikilinkQuery(null);
             }
           }}
           placeholder={`Write anything about ${selectedDate}. Use [[YYYY-MM-DD]] to link entries.`}
           style={{
-            minHeight: '280px',
-            width: '100%',
-            resize: 'vertical',
-            padding: '0.75rem',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: '10px',
-            fontFamily: 'inherit',
-            fontSize: 'var(--text-base)',
-            color: 'var(--text-primary)',
+            minHeight: "280px",
+            width: "100%",
+            resize: "vertical",
+            padding: "0.75rem",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border-subtle)",
+            borderRadius: "10px",
+            fontFamily: "inherit",
+            fontSize: "var(--text-base)",
+            color: "var(--text-primary)",
             lineHeight: 1.65,
           }}
         />
@@ -244,17 +259,17 @@ export function EditorView({
       {suggestions.length > 0 ? (
         <ul
           style={{
-            position: 'fixed',
+            position: "fixed",
             top: caretPos.top,
             left: caretPos.left,
             zIndex: 300,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '10px',
-            padding: '0.25rem 0',
-            listStyle: 'none',
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: "10px",
+            padding: "0.25rem 0",
+            listStyle: "none",
             margin: 0,
-            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.14)',
+            boxShadow: "0 12px 24px rgba(0, 0, 0, 0.14)",
           }}
         >
           {suggestions.map((suggestion) => (
@@ -262,9 +277,9 @@ export function EditorView({
               key={suggestion.id}
               onClick={() => insertSuggestion(suggestion.date)}
               style={{
-                padding: '0.4rem 0.75rem',
-                cursor: 'pointer',
-                fontSize: 'var(--text-sm)',
+                padding: "0.4rem 0.75rem",
+                cursor: "pointer",
+                fontSize: "var(--text-sm)",
               }}
             >
               {suggestion.date} {suggestion.markdown_body.slice(0, 36)}
@@ -276,7 +291,9 @@ export function EditorView({
       {tags.length > 0 && tagPills(tags)}
 
       {entry && (
-        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+        <span
+          style={{ fontSize: "var(--text-sm)", color: "var(--text-secondary)" }}
+        >
           Version {entry.version} · {entry.id}
         </span>
       )}

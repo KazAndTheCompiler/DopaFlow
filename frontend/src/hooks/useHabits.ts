@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import type { Habit } from '../../../shared/types';
-import { showToast } from '@ds/primitives/Toast';
+import type { Habit } from "../../../shared/types";
+import { showToast } from "@ds/primitives/Toast";
 import {
   checkInHabit,
   createHabit,
@@ -11,8 +11,8 @@ import {
   listHabits,
   unfreezeHabit,
   updateHabit,
-} from '@api/index';
-import { getInvalidationEventName } from './useSSE';
+} from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface UseHabitsResult {
   habits: Habit[];
@@ -25,7 +25,9 @@ export interface UseHabitsResult {
   checkIn: (habitId: string, moodScore?: number) => Promise<void>;
   freeze: (habitId: string, days: number) => Promise<void>;
   unfreeze: (habitId: string) => Promise<void>;
-  getLogs: (habitId: string) => Promise<{ habit_id: string; checkin_date: string }[]>;
+  getLogs: (
+    habitId: string,
+  ) => Promise<{ habit_id: string; checkin_date: string }[]>;
 }
 
 export function useHabits(): UseHabitsResult {
@@ -39,9 +41,9 @@ export function useHabits(): UseHabitsResult {
     try {
       setHabits(await listHabits());
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load habits';
+      const msg = e instanceof Error ? e.message : "Failed to load habits";
       setError(msg);
-      showToast('Could not load habits.', 'error');
+      showToast("Could not load habits.", "error");
     } finally {
       setLoading(false);
     }
@@ -55,8 +57,15 @@ export function useHabits(): UseHabitsResult {
     const handleInvalidate = (): void => {
       void refresh();
     };
-    window.addEventListener(getInvalidationEventName('habits'), handleInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName('habits'), handleInvalidate);
+    window.addEventListener(
+      getInvalidationEventName("habits"),
+      handleInvalidate,
+    );
+    return () =>
+      window.removeEventListener(
+        getInvalidationEventName("habits"),
+        handleInvalidate,
+      );
   }, [refresh]);
 
   const freeze = useCallback(
@@ -95,7 +104,7 @@ export function useHabits(): UseHabitsResult {
         }
         return [...prev, result];
       });
-      showToast('Habit created.', 'success');
+      showToast("Habit created.", "success");
       return result;
     },
     checkIn: async (habitId: string, moodScore?: number) => {
@@ -106,15 +115,15 @@ export function useHabits(): UseHabitsResult {
           ...(moodScore !== undefined ? { moodScore } : {}),
         });
         await refresh();
-        showToast('Habit checked in. ST updated.', 'success');
+        showToast("Habit checked in. ST updated.", "success");
       } catch (e) {
         await refresh();
-        const msg = e instanceof Error ? e.message : '';
+        const msg = e instanceof Error ? e.message : "";
         showToast(
-          msg.includes('500') || msg.includes('IntegrityError')
-            ? 'Habit not found — list refreshed.'
-            : 'Check-in failed.',
-          'error',
+          msg.includes("500") || msg.includes("IntegrityError")
+            ? "Habit not found — list refreshed."
+            : "Check-in failed.",
+          "error",
         );
       }
     },
@@ -125,7 +134,7 @@ export function useHabits(): UseHabitsResult {
     remove: async (habitId: string) => {
       await deleteHabit(habitId);
       setHabits((prev) => prev.filter((h) => h.id !== habitId));
-      showToast('Habit removed.', 'success');
+      showToast("Habit removed.", "success");
     },
     freeze,
     unfreeze,

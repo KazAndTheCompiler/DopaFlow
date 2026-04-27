@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-import type { Notification } from '../../../shared/types';
+import type { Notification } from "../../../shared/types";
 import {
   getUnreadCount,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-} from '@api/index';
+} from "@api/index";
 
 export interface UseNotificationsResult {
   notifications: Notification[];

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { materializeRecurringTasks } from '../api/tasks';
+import { useCallback, useEffect, useState } from "react";
+import { materializeRecurringTasks } from "../api/tasks";
 
 export interface UseAppBootstrapResult {
   initialize: () => Promise<void>;
@@ -15,7 +15,9 @@ export function useAppBootstrap(): UseAppBootstrapResult {
       await materializeRecurringTasks(168);
     } catch (caughtError) {
       const nextError =
-        caughtError instanceof Error ? caughtError : new Error('Failed to bootstrap app');
+        caughtError instanceof Error
+          ? caughtError
+          : new Error("Failed to bootstrap app");
       setError(nextError);
     }
   }, []);

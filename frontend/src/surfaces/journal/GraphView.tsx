@@ -1,6 +1,6 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef } from "react";
 
-import type { JournalGraphData } from '@api/journal';
+import type { JournalGraphData } from "@api/journal";
 
 interface GraphViewProps {
   graph: JournalGraphData;
@@ -16,7 +16,10 @@ function seededPosition(seed: string, max: number, margin: number): number {
   for (let i = 0; i < seed.length; i++) {
     h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;
   }
-  return margin + (((h % (max - margin * 2)) + (max - margin * 2)) % (max - margin * 2));
+  return (
+    margin +
+    (((h % (max - margin * 2)) + (max - margin * 2)) % (max - margin * 2))
+  );
 }
 
 export function GraphView({ graph }: GraphViewProps): JSX.Element {
@@ -38,16 +41,16 @@ export function GraphView({ graph }: GraphViewProps): JSX.Element {
     return (
       <section
         style={{
-          padding: '1.25rem',
-          background: 'var(--surface-2)',
-          borderRadius: '18px',
-          border: '1px solid var(--border-subtle)',
-          color: 'var(--text-secondary)',
-          fontSize: 'var(--text-sm)',
+          padding: "1.25rem",
+          background: "var(--surface-2)",
+          borderRadius: "18px",
+          border: "1px solid var(--border-subtle)",
+          color: "var(--text-secondary)",
+          fontSize: "var(--text-sm)",
         }}
       >
-        Wikilink graph — no links yet. Use <code>[[YYYY-MM-DD]]</code> in any entry to connect
-        dates.
+        Wikilink graph — no links yet. Use <code>[[YYYY-MM-DD]]</code> in any
+        entry to connect dates.
       </section>
     );
   }
@@ -55,17 +58,19 @@ export function GraphView({ graph }: GraphViewProps): JSX.Element {
   return (
     <section
       style={{
-        padding: '1.25rem',
-        background: 'var(--surface-2)',
-        borderRadius: '18px',
-        border: '1px solid var(--border-subtle)',
+        padding: "1.25rem",
+        background: "var(--surface-2)",
+        borderRadius: "18px",
+        border: "1px solid var(--border-subtle)",
       }}
     >
-      <strong style={{ display: 'block', marginBottom: '0.75rem' }}>Wikilink Graph</strong>
+      <strong style={{ display: "block", marginBottom: "0.75rem" }}>
+        Wikilink Graph
+      </strong>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        style={{ width: '100%', height: 'auto', overflow: 'visible' }}
+        style={{ width: "100%", height: "auto", overflow: "visible" }}
         aria-label="Journal wikilink graph"
       >
         {graph.edges.map((edge, i) => {
@@ -95,7 +100,13 @@ export function GraphView({ graph }: GraphViewProps): JSX.Element {
           const r = NODE_R + Math.min(node.entry_count * 2, 8);
           return (
             <g key={node.id}>
-              <circle cx={pos.x} cy={pos.y} r={r} fill="var(--accent)" opacity={0.75} />
+              <circle
+                cx={pos.x}
+                cy={pos.y}
+                r={r}
+                fill="var(--accent)"
+                opacity={0.75}
+              />
               <text
                 x={pos.x}
                 y={pos.y + r + 10}

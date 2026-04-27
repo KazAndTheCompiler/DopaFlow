@@ -1,14 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import { localDateISO, getCommandReply } from './AppShared';
+import { describe, expect, it } from "vitest";
+import { localDateISO, getCommandReply } from "./AppShared";
 
-describe('AppShared', () => {
-  describe('localDateISO', () => {
-    it('returns today date in ISO format (YYYY-MM-DD)', () => {
+describe("AppShared", () => {
+  describe("localDateISO", () => {
+    it("returns today date in ISO format (YYYY-MM-DD)", () => {
       const result = localDateISO();
       expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    it('returns date offset by given days', () => {
+    it("returns date offset by given days", () => {
       const today = new Date();
       const future = new Date(today);
       future.setDate(future.getDate() + 7);
@@ -18,7 +18,7 @@ describe('AppShared', () => {
       expect(result).toBe(expected);
     });
 
-    it('handles negative offset (past dates)', () => {
+    it("handles negative offset (past dates)", () => {
       const today = new Date();
       const past = new Date(today);
       past.setDate(past.getDate() - 3);
@@ -29,25 +29,29 @@ describe('AppShared', () => {
     });
   });
 
-  describe('getCommandReply', () => {
-    it('returns trimmed reply string when present', () => {
-      const result = getCommandReply({ reply: '  Task created successfully!  ' });
-      expect(result).toBe('Task created successfully!');
+  describe("getCommandReply", () => {
+    it("returns trimmed reply string when present", () => {
+      const result = getCommandReply({
+        reply: "  Task created successfully!  ",
+      });
+      expect(result).toBe("Task created successfully!");
     });
 
-    it('returns empty string when reply is null', () => {
+    it("returns empty string when reply is null", () => {
       const result = getCommandReply({ reply: null });
-      expect(result).toBe('');
+      expect(result).toBe("");
     });
 
-    it('returns empty string when reply is undefined', () => {
+    it("returns empty string when reply is undefined", () => {
       const result = getCommandReply({});
-      expect(result).toBe('');
+      expect(result).toBe("");
     });
 
-    it('returns empty string when reply is not a string', () => {
-      const result = getCommandReply({ reply: { text: 'hello' } as unknown as string });
-      expect(result).toBe('');
+    it("returns empty string when reply is not a string", () => {
+      const result = getCommandReply({
+        reply: { text: "hello" } as unknown as string,
+      });
+      expect(result).toBe("");
     });
   });
 });

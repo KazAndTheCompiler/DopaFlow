@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import type { Project } from '@shared/types';
-import { showToast } from '@ds/primitives/Toast';
+import type { Project } from "@shared/types";
+import { showToast } from "@ds/primitives/Toast";
 import {
   createProject,
   deleteProject,
   getProjectTaskCounts,
   listProjects,
   updateProject,
-} from '@api/projects';
-import { getInvalidationEventName } from './useSSE';
+} from "@api/projects";
+import { getInvalidationEventName } from "./useSSE";
 
 export interface UseProjectsResult {
   projects: Project[];
@@ -32,11 +32,14 @@ export function useProjects(): UseProjectsResult {
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
-      const [ps, counts] = await Promise.all([listProjects(), getProjectTaskCounts()]);
+      const [ps, counts] = await Promise.all([
+        listProjects(),
+        getProjectTaskCounts(),
+      ]);
       setProjects(ps);
       setTaskCounts(counts);
     } catch {
-      showToast('Could not load projects.', 'error');
+      showToast("Could not load projects.", "error");
     } finally {
       setLoading(false);
     }
@@ -50,9 +53,15 @@ export function useProjects(): UseProjectsResult {
     const handleTasksInvalidate = (): void => {
       void refresh();
     };
-    window.addEventListener(getInvalidationEventName('tasks'), handleTasksInvalidate);
+    window.addEventListener(
+      getInvalidationEventName("tasks"),
+      handleTasksInvalidate,
+    );
     return () =>
-      window.removeEventListener(getInvalidationEventName('tasks'), handleTasksInvalidate);
+      window.removeEventListener(
+        getInvalidationEventName("tasks"),
+        handleTasksInvalidate,
+      );
   }, [refresh]);
 
   return {
@@ -64,7 +73,7 @@ export function useProjects(): UseProjectsResult {
     create: async (payload) => {
       const p = await createProject(payload);
       await refresh();
-      showToast(`Project "${p.name}" created.`, 'success');
+      showToast(`Project "${p.name}" created.`, "success");
       return p;
     },
     update: async (id, patch) => {

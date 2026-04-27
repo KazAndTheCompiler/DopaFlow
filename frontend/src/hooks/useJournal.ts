@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import type { JournalEntry } from '../../../shared/types';
+import type { JournalEntry } from "../../../shared/types";
 import {
   applyJournalTemplate,
   deleteJournalEntry,
@@ -14,8 +14,8 @@ import {
   listJournalEntries,
   saveJournalEntry,
   triggerJournalBackup,
-} from '@api/index';
-import { getInvalidationEventName } from './useSSE';
+} from "@api/index";
+import { getInvalidationEventName } from "./useSSE";
 
 interface JournalTemplateSummary {
   id: string;
@@ -36,7 +36,9 @@ export interface UseJournalResult {
   remove: (identifier: string) => Promise<void>;
   getBacklinks: (identifier: string) => Promise<string[]>;
   triggerBackup: (date?: string) => Promise<string>;
-  applyTemplate: (templateId: string) => Promise<{ body: string; tags: string[] }>;
+  applyTemplate: (
+    templateId: string,
+  ) => Promise<{ body: string; tags: string[] }>;
   exportToday: () => Promise<{ path: string; entry_count: number }>;
   refreshGraph: () => Promise<void>;
 }
@@ -46,7 +48,10 @@ export function useJournal(): UseJournalResult {
   const [loading, setLoading] = useState<boolean>(true);
   const [backupPath, setBackupPath] = useState<string | null>();
   const [lastBackupAt, setLastBackupAt] = useState<string | null>();
-  const [graph, setGraph] = useState<JournalGraphData>({ nodes: [], edges: [] });
+  const [graph, setGraph] = useState<JournalGraphData>({
+    nodes: [],
+    edges: [],
+  });
   const [templates, setTemplates] = useState<JournalTemplateSummary[]>([]);
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -71,7 +76,12 @@ export function useJournal(): UseJournalResult {
 
   const refreshTemplates = useCallback(async (): Promise<void> => {
     const nextTemplates = await listJournalTemplates();
-    setTemplates(nextTemplates.map((template) => ({ id: template.id, name: template.name })));
+    setTemplates(
+      nextTemplates.map((template) => ({
+        id: template.id,
+        name: template.name,
+      })),
+    );
   }, []);
 
   const applyTemplate = useCallback(
@@ -97,8 +107,15 @@ export function useJournal(): UseJournalResult {
       void refreshGraph();
       void refreshTemplates();
     };
-    window.addEventListener(getInvalidationEventName('journal'), handleInvalidate);
-    return () => window.removeEventListener(getInvalidationEventName('journal'), handleInvalidate);
+    window.addEventListener(
+      getInvalidationEventName("journal"),
+      handleInvalidate,
+    );
+    return () =>
+      window.removeEventListener(
+        getInvalidationEventName("journal"),
+        handleInvalidate,
+      );
   }, [refresh, refreshGraph, refreshTemplates]);
 
   return {

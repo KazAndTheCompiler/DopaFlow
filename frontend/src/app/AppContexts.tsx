@@ -1,20 +1,20 @@
-import { createContext, useContext } from 'react';
-import type { Context, ReactNode } from 'react';
+import { createContext, useContext } from "react";
+import type { Context, ReactNode } from "react";
 
-import type { useAlarms } from '../hooks/useAlarms';
-import type { useCalendar } from '../hooks/useCalendar';
-import type { useFocus } from '../hooks/useFocus';
-import type { useGamification } from '../hooks/useGamification';
-import type { useHabits } from '../hooks/useHabits';
-import type { useInsights } from '../hooks/useInsights';
-import type { useJournal } from '../hooks/useJournal';
-import type { useLayout } from '../hooks/useLayout';
-import type { useNotifications } from '../hooks/useNotifications';
-import type { usePacky } from '../hooks/usePacky';
-import type { useProjects } from '../hooks/useProjects';
-import type { useReview } from '../hooks/useReview';
-import type { useSkin } from '../hooks/useSkin';
-import type { useTasks } from '../hooks/useTasks';
+import type { useAlarms } from "../hooks/useAlarms";
+import type { useCalendar } from "../hooks/useCalendar";
+import type { useFocus } from "../hooks/useFocus";
+import type { useGamification } from "../hooks/useGamification";
+import type { useHabits } from "../hooks/useHabits";
+import type { useInsights } from "../hooks/useInsights";
+import type { useJournal } from "../hooks/useJournal";
+import type { useLayout } from "../hooks/useLayout";
+import type { useNotifications } from "../hooks/useNotifications";
+import type { usePacky } from "../hooks/usePacky";
+import type { useProjects } from "../hooks/useProjects";
+import type { useReview } from "../hooks/useReview";
+import type { useSkin } from "../hooks/useSkin";
+import type { useTasks } from "../hooks/useTasks";
 
 type TasksContextValue = ReturnType<typeof useTasks>;
 type ProjectsContextValue = ReturnType<typeof useProjects>;
@@ -77,10 +77,14 @@ const CalendarContext = createContext<CalendarContextValue | null>(null);
 const AlarmsContext = createContext<AlarmsContextValue | null>(null);
 const PackyContext = createContext<PackyContextValue | null>(null);
 const InsightsContext = createContext<InsightsContextValue | null>(null);
-const NotificationsContext = createContext<NotificationsContextValue | null>(null);
+const NotificationsContext = createContext<NotificationsContextValue | null>(
+  null,
+);
 const SkinContext = createContext<SkinContextValue | null>(null);
 const LayoutContext = createContext<LayoutContextValue | null>(null);
-const GamificationContext = createContext<GamificationContextValue | null>(null);
+const GamificationContext = createContext<GamificationContextValue | null>(
+  null,
+);
 
 function useRequiredContext<T>(context: Context<T | null>, name: string): T {
   const value = useContext(context);
@@ -139,7 +143,9 @@ export function AppProviders({
                           <NotificationsContext.Provider value={notifications}>
                             <SkinContext.Provider value={skin}>
                               <LayoutContext.Provider value={layout}>
-                                <GamificationContext.Provider value={gamification}>
+                                <GamificationContext.Provider
+                                  value={gamification}
+                                >
                                   {children}
                                 </GamificationContext.Provider>
                               </LayoutContext.Provider>
@@ -159,27 +165,31 @@ export function AppProviders({
   );
 }
 
-export const useAppTasks = (): TasksContextValue => useRequiredContext(TasksContext, 'useAppTasks');
+export const useAppTasks = (): TasksContextValue =>
+  useRequiredContext(TasksContext, "useAppTasks");
 export const useAppProjects = (): ProjectsContextValue =>
-  useRequiredContext(ProjectsContext, 'useAppProjects');
+  useRequiredContext(ProjectsContext, "useAppProjects");
 export const useAppHabits = (): HabitsContextValue =>
-  useRequiredContext(HabitsContext, 'useAppHabits');
-export const useAppFocus = (): FocusContextValue => useRequiredContext(FocusContext, 'useAppFocus');
+  useRequiredContext(HabitsContext, "useAppHabits");
+export const useAppFocus = (): FocusContextValue =>
+  useRequiredContext(FocusContext, "useAppFocus");
 export const useAppReview = (): ReviewContextValue =>
-  useRequiredContext(ReviewContext, 'useAppReview');
+  useRequiredContext(ReviewContext, "useAppReview");
 export const useAppJournal = (): JournalContextValue =>
-  useRequiredContext(JournalContext, 'useAppJournal');
+  useRequiredContext(JournalContext, "useAppJournal");
 export const useAppCalendar = (): CalendarContextValue =>
-  useRequiredContext(CalendarContext, 'useAppCalendar');
+  useRequiredContext(CalendarContext, "useAppCalendar");
 export const useAppAlarms = (): AlarmsContextValue =>
-  useRequiredContext(AlarmsContext, 'useAppAlarms');
-export const useAppPacky = (): PackyContextValue => useRequiredContext(PackyContext, 'useAppPacky');
+  useRequiredContext(AlarmsContext, "useAppAlarms");
+export const useAppPacky = (): PackyContextValue =>
+  useRequiredContext(PackyContext, "useAppPacky");
 export const useAppInsights = (): InsightsContextValue =>
-  useRequiredContext(InsightsContext, 'useAppInsights');
+  useRequiredContext(InsightsContext, "useAppInsights");
 export const useAppNotifications = (): NotificationsContextValue =>
-  useRequiredContext(NotificationsContext, 'useAppNotifications');
-export const useAppSkin = (): SkinContextValue => useRequiredContext(SkinContext, 'useAppSkin');
+  useRequiredContext(NotificationsContext, "useAppNotifications");
+export const useAppSkin = (): SkinContextValue =>
+  useRequiredContext(SkinContext, "useAppSkin");
 export const useAppLayout = (): LayoutContextValue =>
-  useRequiredContext(LayoutContext, 'useAppLayout');
+  useRequiredContext(LayoutContext, "useAppLayout");
 export const useAppGamification = (): GamificationContextValue =>
-  useRequiredContext(GamificationContext, 'useAppGamification');
+  useRequiredContext(GamificationContext, "useAppGamification");

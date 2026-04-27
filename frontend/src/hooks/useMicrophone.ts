@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseMicrophoneOptions {
   onStop?: (blob: Blob, mimeType: string) => void | Promise<void>;
@@ -12,7 +12,7 @@ interface UseMicrophoneResult {
 }
 
 function pickMimeType(): string {
-  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
   for (const candidate of candidates) {
     try {
       if (MediaRecorder.isTypeSupported(candidate)) {
@@ -20,33 +20,35 @@ function pickMimeType(): string {
       }
     } catch {}
   }
-  return '';
+  return "";
 }
 
 function mapMicrophoneError(exc: unknown): string {
-  if (exc && typeof exc === 'object' && 'name' in exc) {
-    const name = String((exc as { name?: unknown }).name ?? '');
+  if (exc && typeof exc === "object" && "name" in exc) {
+    const name = String((exc as { name?: unknown }).name ?? "");
     if (
-      name === 'NotAllowedError' ||
-      name === 'PermissionDeniedError' ||
-      name === 'SecurityError'
+      name === "NotAllowedError" ||
+      name === "PermissionDeniedError" ||
+      name === "SecurityError"
     ) {
-      return 'Microphone permission was denied by the browser.';
+      return "Microphone permission was denied by the browser.";
     }
-    if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
-      return 'No microphone was found.';
+    if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+      return "No microphone was found.";
     }
-    if (name === 'NotReadableError') {
-      return 'The microphone is busy or unavailable right now.';
+    if (name === "NotReadableError") {
+      return "The microphone is busy or unavailable right now.";
     }
   }
-  const message = exc instanceof Error ? exc.message : 'Microphone unavailable';
+  const message = exc instanceof Error ? exc.message : "Microphone unavailable";
   return /denied|notallowed|permission/i.test(message)
-    ? 'Microphone permission was denied by the browser.'
+    ? "Microphone permission was denied by the browser."
     : message;
 }
 
-export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophoneResult {
+export function useMicrophone(
+  options: UseMicrophoneOptions = {},
+): UseMicrophoneResult {
   const { onStop } = options;
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +73,11 @@ export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophone
 
   const start = useCallback(async (): Promise<boolean> => {
     setError(null);
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-      setError('Microphone unavailable');
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia
+    ) {
+      setError("Microphone unavailable");
       return false;
     }
     if (isRecording) {
@@ -93,13 +98,13 @@ export function useMicrophone(options: UseMicrophoneOptions = {}): UseMicrophone
         }
       };
       recorder.onerror = () => {
-        setError('The microphone is busy or unavailable right now.');
+        setError("The microphone is busy or unavailable right now.");
         setIsRecording(false);
         recorderRef.current = null;
         stopTracks();
       };
       recorder.onstop = () => {
-        const finalMimeType = recorder.mimeType || 'audio/webm';
+        const finalMimeType = recorder.mimeType || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: finalMimeType });
         recorderRef.current = null;
         chunksRef.current = [];

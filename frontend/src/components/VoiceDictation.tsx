@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import Button from '@ds/primitives/Button';
-import { useMicrophone } from '@hooks/useMicrophone';
-import { apiClient } from '../api/client';
+import { useState } from "react";
+import Button from "@ds/primitives/Button";
+import { useMicrophone } from "@hooks/useMicrophone";
+import { apiClient } from "../api/client";
 
 interface VoiceDictationProps {
   onTranscript: (text: string) => void;
@@ -13,7 +13,8 @@ export function VoiceDictation({
   disabled = false,
 }: VoiceDictationProps): JSX.Element {
   const [error, setError] = useState<string | null>(null);
-  const unavailable = disabled || typeof navigator === 'undefined' || !navigator.mediaDevices;
+  const unavailable =
+    disabled || typeof navigator === "undefined" || !navigator.mediaDevices;
   const {
     isRecording,
     start,
@@ -23,25 +24,29 @@ export function VoiceDictation({
     onStop: async (blob, mimeType) => {
       try {
         if (blob.size < 100) {
-          setError('Recording too short — please hold the button while speaking.');
+          setError(
+            "Recording too short — please hold the button while speaking.",
+          );
           return;
         }
-        const ext = mimeType.includes('mp4') ? '.mp4' : '.webm';
+        const ext = mimeType.includes("mp4") ? ".mp4" : ".webm";
         const form = new FormData();
-        form.append('file', blob, `dictation${ext}`);
-        const lang = navigator.language || 'en-US';
+        form.append("file", blob, `dictation${ext}`);
+        const lang = navigator.language || "en-US";
         const result = await apiClient<{ transcript?: string; error?: string }>(
           `/journal/transcribe?lang=${encodeURIComponent(lang)}`,
-          { method: 'POST', body: form },
+          { method: "POST", body: form },
         );
         const text = result.transcript?.trim();
         if (!text) {
-          setError('No speech detected — try speaking louder or closer to the mic.');
+          setError(
+            "No speech detected — try speaking louder or closer to the mic.",
+          );
           return;
         }
         onTranscript(text);
       } catch (exc) {
-        setError(exc instanceof Error ? exc.message : 'Dictation failed');
+        setError(exc instanceof Error ? exc.message : "Dictation failed");
       }
     },
   });
@@ -56,18 +61,18 @@ export function VoiceDictation({
   };
 
   return (
-    <div style={{ display: 'grid', gap: '0.35rem' }}>
+    <div style={{ display: "grid", gap: "0.35rem" }}>
       <Button
         disabled={unavailable}
-        title={unavailable ? 'Microphone unavailable' : undefined}
+        title={unavailable ? "Microphone unavailable" : undefined}
         onClick={() => void toggle()}
         variant="secondary"
         style={{
-          width: 'fit-content',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.45rem',
-          padding: '0.4rem 0.7rem',
+          width: "fit-content",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.45rem",
+          padding: "0.4rem 0.7rem",
         }}
       >
         {isRecording ? (
@@ -75,16 +80,18 @@ export function VoiceDictation({
             style={{
               width: 8,
               height: 8,
-              borderRadius: '50%',
-              background: 'var(--state-error)',
-              animation: 'pulse 1s infinite',
+              borderRadius: "50%",
+              background: "var(--state-error)",
+              animation: "pulse 1s infinite",
             }}
           />
         ) : null}
-        {isRecording ? 'Stop recording' : 'Dictate'}
+        {isRecording ? "Stop recording" : "Dictate"}
       </Button>
       {error || microphoneError ? (
-        <span style={{ color: 'var(--state-error)', fontSize: 'var(--text-sm)' }}>
+        <span
+          style={{ color: "var(--state-error)", fontSize: "var(--text-sm)" }}
+        >
           {error ?? microphoneError}
         </span>
       ) : null}

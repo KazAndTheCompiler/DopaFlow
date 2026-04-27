@@ -6,6 +6,17 @@ For the full historical session log and detailed rollout notes from `2.0.0` thro
 `2.0.11`, see
 [`docs/CHANGELOG_2.0.0-2.0.11.md`](/home/henry/vscode/build/dopaflow/docs/CHANGELOG_2.0.0-2.0.11.md).
 
+## 2.0.18
+
+- **Frontend TypeScript type fixes complete**: Fixed ~100 TypeScript errors across the frontend codebase to pass CI.
+  - **Task priority type**: Changed from `number` (1-5) to string union `'urgent' | 'high' | 'medium' | 'low'` for better semantic clarity.
+  - **Vault/Conflict ID types**: Standardized Vault file IDs and Calendar sync conflict IDs from `number` to `string` for consistency.
+  - **Shared types extended**: Added missing properties to `PlayerLevel`, `PeerFeed`, `VaultConfig`, `VaultStatus`, `IntegrationsStatus`, `ShareToken`, `Task`, `SubTask`, and related interfaces in `/shared/types.ts`.
+  - **Priority ordering**: Added `priorityOrder` mappings in components for consistent sorting by string priority values.
+  - **API function signatures**: Updated `vault.ts` and `calendar.ts` API clients to use correct ID types.
+- **CI verification**: All checks passing - TypeScript compilation (0 errors), ESLint (0 errors, 23 warnings), Prettier formatting (216 files), Vitest unit tests (131 tests).
+- **Version bump**: 2.0.17 → 2.0.18.
+
 ## 2.0.17
 
 - **Test suite fully green (636 tests)**: Fixed 44 failing tests across tasks, commands, focus, vault_bridge domains.

@@ -1,7 +1,7 @@
-import type { Habit } from '../../../../shared/types';
-import HabitCard from './HabitCard';
-import EmptyState from '@ds/primitives/EmptyState';
-import { SkeletonList } from '@ds/primitives/Skeleton';
+import type { Habit } from "../../../../shared/types";
+import HabitCard from "./HabitCard";
+import EmptyState from "@ds/primitives/EmptyState";
+import { SkeletonList } from "@ds/primitives/Skeleton";
 
 interface HabitsPanelProps {
   habits: Habit[];
@@ -33,13 +33,18 @@ export function HabitsPanel({
   return (
     <div
       style={{
-        display: 'grid',
-        gap: '0.75rem',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        display: "grid",
+        gap: "0.75rem",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
       }}
     >
       {habits.map((habit) => (
-        <HabitCard key={habit.id} habit={habit} onCheckIn={onCheckIn} onRefresh={onRefresh} />
+        <HabitCard
+          key={habit.id}
+          habit={habit}
+          onCheckIn={onCheckIn}
+          onRefresh={onRefresh}
+        />
       ))}
     </div>
   );

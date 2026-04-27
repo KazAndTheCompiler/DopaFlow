@@ -1,38 +1,38 @@
-import { API_BASE_URL } from './client';
+import { API_BASE_URL } from "./client";
 
 function generateCodeVerifier(length = 64): string {
   const array = new Uint8Array(length);
   crypto.getRandomValues(array);
   return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '')
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "")
     .slice(0, length);
 }
 
 async function generateCodeChallenge(verifier: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
+  const digest = await crypto.subtle.digest("SHA-256", data);
   return btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 }
 
 function generateState(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return btoa(String.fromCharCode(...array))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
 }
 
-const TOKEN_KEY = 'dopaflow_access_token';
-const REFRESH_KEY = 'dopaflow_refresh_token';
-const STATE_KEY = 'dopaflow_auth_state';
-const CODE_VERIFIER_KEY = 'dopaflow_code_verifier';
+const TOKEN_KEY = "dopaflow_access_token";
+const REFRESH_KEY = "dopaflow_refresh_token";
+const STATE_KEY = "dopaflow_auth_state";
+const CODE_VERIFIER_KEY = "dopaflow_code_verifier";
 
 export interface AuthTokens {
   accessToken: string;
@@ -49,13 +49,13 @@ export interface User {
 }
 
 function base64urlDecode(str: string): string {
-  const padded = str + '='.repeat((4 - (str.length % 4)) % 4);
-  return atob(padded.replace(/-/g, '+').replace(/_/g, '/'));
+  const padded = str + "=".repeat((4 - (str.length % 4)) % 4);
+  return atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
 }
 
 export function parseJwt(token: string): Record<string, unknown> | null {
   try {
-    const parts = token.split('.');
+    const parts = token.split(".");
     if (parts.length !== 3) {
       return null;
     }
@@ -105,10 +105,10 @@ async function tryRefresh(): Promise<boolean> {
   }
   try {
     const res = await fetch(`${API_BASE_URL}/auth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        grant_type: 'refresh_token',
+        grant_type: "refresh_token",
         refresh_token: refreshToken,
       }),
     });
@@ -140,27 +140,31 @@ function clearTokens(): void {
 export async function loginWithRedirect(
   clientId: string,
   redirectUri: string,
-  scope = 'openid profile email',
+  scope = "openid profile email",
 ): Promise<void> {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
   const state = generateState();
   sessionStorage.setItem(STATE_KEY, state);
   sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
-  sessionStorage.setItem('dopaflow_client_id', clientId);
-  sessionStorage.setItem('dopaflow_redirect_uri', redirectUri);
-  const baseUrl = API_BASE_URL.replace('/api/v2', '');
+  sessionStorage.setItem("dopaflow_client_id", clientId);
+  sessionStorage.setItem("dopaflow_redirect_uri", redirectUri);
+  const baseUrl = API_BASE_URL.replace("/api/v2", "");
   const params = new URLSearchParams({
-    response_type: 'code',
+    response_type: "code",
     client_id: clientId,
     redirect_uri: redirectUri,
     scope,
     state,
     code_challenge: challenge,
-    code_challenge_method: 'S256',
+    code_challenge_method: "S256",
   });
   const authUrl = `${baseUrl}/authorize?${params}`;
-  const popup = window.open(authUrl, 'dopaflow-auth', 'width=600,height=700,left=100,top=100');
+  const popup = window.open(
+    authUrl,
+    "dopaflow-auth",
+    "width=600,height=700,left=100,top=100",
+  );
   if (!popup) {
     window.location.href = authUrl;
   }
@@ -170,26 +174,30 @@ export async function handleCallback(extraParams?: {
   code?: string;
   state?: string;
 }): Promise<boolean> {
-  const code = extraParams?.code ?? new URLSearchParams(window.location.search).get('code');
-  const state = extraParams?.state ?? new URLSearchParams(window.location.search).get('state');
+  const code =
+    extraParams?.code ??
+    new URLSearchParams(window.location.search).get("code");
+  const state =
+    extraParams?.state ??
+    new URLSearchParams(window.location.search).get("state");
   const storedState = sessionStorage.getItem(STATE_KEY);
   const verifier = sessionStorage.getItem(CODE_VERIFIER_KEY);
   if (!code || !state || !verifier || state !== storedState) {
     clearTokens();
     return false;
   }
-  const storedClientId = sessionStorage.getItem('dopaflow_client_id');
-  const storedRedirectUri = sessionStorage.getItem('dopaflow_redirect_uri');
+  const storedClientId = sessionStorage.getItem("dopaflow_client_id");
+  const storedRedirectUri = sessionStorage.getItem("dopaflow_redirect_uri");
   if (!storedClientId || !storedRedirectUri) {
     clearTokens();
     return false;
   }
   try {
     const res = await fetch(`${API_BASE_URL}/auth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        grant_type: 'authorization_code',
+        grant_type: "authorization_code",
         code,
         redirect_uri: storedRedirectUri,
         client_id: storedClientId,
@@ -212,8 +220,8 @@ export async function handleCallback(extraParams?: {
 export function handleDeepLinkUrl(rawUrl: string): void {
   try {
     const parsed = new URL(rawUrl);
-    const code = parsed.searchParams.get('code');
-    const state = parsed.searchParams.get('state');
+    const code = parsed.searchParams.get("code");
+    const state = parsed.searchParams.get("state");
     if (code || state) {
       const params: { code?: string; state?: string } = {};
       if (code) {
@@ -233,17 +241,20 @@ export async function logout(): Promise<void> {
   const accessToken = await getAccessToken();
   if (accessToken) {
     fetch(`${API_BASE_URL}/auth/revoke`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: accessToken, token_hint: 'access_token' }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: accessToken, token_hint: "access_token" }),
     }).catch(() => {});
   }
   const refreshToken = localStorage.getItem(REFRESH_KEY);
   if (refreshToken) {
     fetch(`${API_BASE_URL}/auth/revoke`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: refreshToken, token_hint: 'refresh_token' }),
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: refreshToken,
+        token_hint: "refresh_token",
+      }),
     }).catch(() => {});
   }
   clearTokens();

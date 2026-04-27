@@ -1,82 +1,91 @@
-import type { MomentumScore } from '../../../../shared/types';
+import type { MomentumScore } from "../../../../shared/types";
 
 export interface MomentumCardProps {
   momentum?: MomentumScore | undefined;
   packyLine?: string | undefined;
 }
 
-export function MomentumCard({ momentum, packyLine }: MomentumCardProps): JSX.Element {
+export function MomentumCard({
+  momentum,
+  packyLine,
+}: MomentumCardProps): JSX.Element {
   const score = momentum?.score ?? 0;
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (score / 100) * circumference;
   const delta = momentum?.delta_vs_yesterday ?? 0;
-  const deltaArrow = delta >= 0 ? '↑' : '↓';
+  const deltaArrow = delta >= 0 ? "↑" : "↓";
 
   return (
     <section
       style={{
-        display: 'grid',
-        gridTemplateColumns: '92px 1fr',
-        gap: '1rem',
-        alignItems: 'center',
-        padding: '1rem',
-        borderRadius: '20px',
-        background: 'var(--card-gradient, color-mix(in srgb, var(--surface-2) 92%, transparent))',
-        backdropFilter: 'var(--surface-glass-blur, blur(14px))',
-        border: '1px solid var(--border-subtle)',
-        boxShadow: 'var(--shadow-soft)',
-        position: 'relative',
+        display: "grid",
+        gridTemplateColumns: "92px 1fr",
+        gap: "1rem",
+        alignItems: "center",
+        padding: "1rem",
+        borderRadius: "20px",
+        background:
+          "var(--card-gradient, color-mix(in srgb, var(--surface-2) 92%, transparent))",
+        backdropFilter: "var(--surface-glass-blur, blur(14px))",
+        border: "1px solid var(--border-subtle)",
+        boxShadow: "var(--shadow-soft)",
+        position: "relative",
       }}
     >
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
-          left: '8%',
-          right: '8%',
-          height: '1px',
+          left: "8%",
+          right: "8%",
+          height: "1px",
           background:
-            'linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)',
-          pointerEvents: 'none',
-          borderRadius: '1px',
+            "linear-gradient(90deg, transparent, var(--surface-edge-light, rgba(255,255,255,0.1)), transparent)",
+          pointerEvents: "none",
+          borderRadius: "1px",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          background: 'var(--surface-inner-light)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          background: "var(--surface-inner-light)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          height: '35%',
-          background: 'var(--surface-inner-highlight)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          height: "35%",
+          background: "var(--surface-inner-highlight)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
       <div
         aria-hidden="true"
         style={{
-          position: 'absolute',
+          position: "absolute",
           inset: 0,
-          background: 'var(--surface-specular)',
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
+          background: "var(--surface-specular)",
+          pointerEvents: "none",
+          borderRadius: "inherit",
         }}
       />
-      <svg width="92" height="92" viewBox="0 0 100 100" aria-label={`Momentum ${score}`}>
+      <svg
+        width="92"
+        height="92"
+        viewBox="0 0 100 100"
+        aria-label={`Momentum ${score}`}
+      >
         <circle
           cx="50"
           cy="50"
@@ -101,18 +110,29 @@ export function MomentumCard({ momentum, packyLine }: MomentumCardProps): JSX.El
           x="50"
           y="54"
           textAnchor="middle"
-          style={{ fill: 'var(--text-primary)', fontSize: '1.2rem', fontWeight: 700 }}
+          style={{
+            fill: "var(--text-primary)",
+            fontSize: "1.2rem",
+            fontWeight: 700,
+          }}
         >
           {score}
         </text>
       </svg>
-      <div style={{ display: 'grid', gap: '0.35rem' }}>
-        <strong>Momentum: {momentum?.level ?? 'building'}</strong>
-        <span style={{ color: delta >= 0 ? 'var(--state-completed)' : 'var(--state-overdue)' }}>
+      <div style={{ display: "grid", gap: "0.35rem" }}>
+        <strong>Momentum: {momentum?.level ?? "building"}</strong>
+        <span
+          style={{
+            color:
+              delta >= 0 ? "var(--state-completed)" : "var(--state-overdue)",
+          }}
+        >
           {deltaArrow} {Math.abs(delta)} vs yesterday
         </span>
-        <span style={{ color: 'var(--text-secondary)' }}>
-          {packyLine ?? momentum?.summary ?? 'Packy will summarize your momentum here.'}
+        <span style={{ color: "var(--text-secondary)" }}>
+          {packyLine ??
+            momentum?.summary ??
+            "Packy will summarize your momentum here."}
         </span>
       </div>
     </section>

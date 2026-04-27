@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import type { JournalEntry } from '../../../../shared/types';
+import type { JournalEntry } from "../../../../shared/types";
 
 interface AnalyticsViewProps {
   entries: JournalEntry[];
@@ -26,7 +26,8 @@ export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
     [entries],
   );
 
-  const avgWords = entries.length > 0 ? Math.round(totalWords / entries.length) : 0;
+  const avgWords =
+    entries.length > 0 ? Math.round(totalWords / entries.length) : 0;
 
   const tagCounts = useMemo(() => allTags(entries), [entries]);
   const topTags = useMemo(
@@ -40,43 +41,64 @@ export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
   return (
     <section
       style={{
-        display: 'grid',
-        gap: '1rem',
-        padding: '1.25rem',
-        background: 'var(--surface)',
-        borderRadius: '18px',
-        border: '1px solid var(--border-subtle)',
+        display: "grid",
+        gap: "1rem",
+        padding: "1.25rem",
+        background: "var(--surface)",
+        borderRadius: "18px",
+        border: "1px solid var(--border-subtle)",
       }}
     >
       <strong>Journal Analytics</strong>
 
-      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+      <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
         <div>
           <span
             style={{
-              display: 'block',
-              fontSize: '1.6rem',
+              display: "block",
+              fontSize: "1.6rem",
               fontWeight: 700,
-              color: 'var(--accent)',
+              color: "var(--accent)",
             }}
           >
             {entries.length}
           </span>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <span
+            style={{
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+            }}
+          >
             entries
           </span>
         </div>
         <div>
-          <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 700 }}>
+          <span
+            style={{ display: "block", fontSize: "1.6rem", fontWeight: 700 }}
+          >
             {totalWords.toLocaleString()}
           </span>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <span
+            style={{
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+            }}
+          >
             total words
           </span>
         </div>
         <div>
-          <span style={{ display: 'block', fontSize: '1.6rem', fontWeight: 700 }}>{avgWords}</span>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <span
+            style={{ display: "block", fontSize: "1.6rem", fontWeight: 700 }}
+          >
+            {avgWords}
+          </span>
+          <span
+            style={{
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+            }}
+          >
             avg words/entry
           </span>
         </div>
@@ -86,15 +108,22 @@ export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
         <div>
           <span
             style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-secondary)',
-              display: 'block',
-              marginBottom: '0.4rem',
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+              display: "block",
+              marginBottom: "0.4rem",
             }}
           >
             Word count — last 7 entries
           </span>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '48px' }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-end",
+              gap: "4px",
+              height: "48px",
+            }}
+          >
             {last7.map((entry) => {
               const wc = wordCount(entry.markdown_body);
               const height = Math.max(4, Math.round((wc / maxWords) * 48));
@@ -105,8 +134,8 @@ export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
                   style={{
                     flex: 1,
                     height: `${height}px`,
-                    background: 'var(--accent)',
-                    borderRadius: '3px 3px 0 0',
+                    background: "var(--accent)",
+                    borderRadius: "3px 3px 0 0",
                     opacity: 0.7,
                   }}
                 />
@@ -120,27 +149,28 @@ export function AnalyticsView({ entries }: AnalyticsViewProps): JSX.Element {
         <div>
           <span
             style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--text-secondary)',
-              display: 'block',
-              marginBottom: '0.4rem',
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+              display: "block",
+              marginBottom: "0.4rem",
             }}
           >
             Top tags
           </span>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
             {topTags.map(([tag, count]) => (
               <span
                 key={tag}
                 style={{
-                  padding: '0.2rem 0.6rem',
-                  borderRadius: '999px',
-                  background: 'var(--surface-2)',
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-primary)',
+                  padding: "0.2rem 0.6rem",
+                  borderRadius: "999px",
+                  background: "var(--surface-2)",
+                  fontSize: "var(--text-sm)",
+                  color: "var(--text-primary)",
                 }}
               >
-                #{tag} <span style={{ color: 'var(--text-secondary)' }}>{count}</span>
+                #{tag}{" "}
+                <span style={{ color: "var(--text-secondary)" }}>{count}</span>
               </span>
             ))}
           </div>

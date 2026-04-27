@@ -1,5 +1,5 @@
-import type { Badge } from '../../../../shared/types/gamification';
-import BadgeCard from './BadgeCard';
+import type { Badge } from "../../../../shared/types/gamification";
+import BadgeCard from "./BadgeCard";
 
 export interface BadgeGalleryProps {
   badges: Badge[];
@@ -15,13 +15,17 @@ export function BadgeGallery({ badges }: BadgeGalleryProps): JSX.Element {
   return (
     <section>
       <div
-        style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: '0.5rem' }}
+        style={{
+          fontSize: "var(--text-sm)",
+          fontWeight: 600,
+          marginBottom: "0.5rem",
+        }}
       >{`Achievements · ${earned}/${badges.length}`}</div>
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-          gap: '0.75rem',
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
+          gap: "0.75rem",
         }}
       >
         {sorted.map((badge) => (

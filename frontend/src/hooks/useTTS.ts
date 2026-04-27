@@ -4,7 +4,7 @@
  * Falls back silently if speechSynthesis is unavailable (e.g. some headless browsers).
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from "react";
 
 export interface UseTTSResult {
   speak: (text: string) => void;
@@ -13,7 +13,8 @@ export interface UseTTSResult {
 }
 
 export function useTTS(): UseTTSResult {
-  const supported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  const supported =
+    typeof window !== "undefined" && "speechSynthesis" in window;
   const [speaking, setSpeaking] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 

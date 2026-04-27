@@ -1,16 +1,16 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
-import { handleCallback, handleDeepLinkUrl } from '../../api/auth';
+import { handleCallback, handleDeepLinkUrl } from "../../api/auth";
 
 function extractParamsFromHash(): { code?: string; state?: string } {
   const hash = window.location.hash;
-  if (!hash.includes('?')) {
+  if (!hash.includes("?")) {
     return {};
   }
-  const queryString = hash.slice(hash.indexOf('?') + 1);
+  const queryString = hash.slice(hash.indexOf("?") + 1);
   const params = new URLSearchParams(queryString);
-  const code = params.get('code');
-  const state = params.get('state');
+  const code = params.get("code");
+  const state = params.get("state");
   const result: { code?: string; state?: string } = {};
   if (code) {
     result.code = code;
@@ -33,26 +33,31 @@ export default function AuthCallbackView(): JSX.Element {
       processedRef.current = true;
       void handleCallback(hashParams).then((ok) => {
         if (ok) {
-          window.location.hash = '#/today';
+          window.location.hash = "#/today";
         } else {
-          window.location.hash = '#/today?auth=error';
+          window.location.hash = "#/today?auth=error";
         }
       });
       return;
     }
     const dopaflow = (
       globalThis as {
-        dopaflow?: { on: (channel: string, callback: (payload: unknown) => void) => () => void };
+        dopaflow?: {
+          on: (
+            channel: string,
+            callback: (payload: unknown) => void,
+          ) => () => void;
+        };
       }
     ).dopaflow;
-    const cleanup = dopaflow?.on('deep-link', (rawUrl: unknown) => {
+    const cleanup = dopaflow?.on("deep-link", (rawUrl: unknown) => {
       if (processedRef.current) {
         return;
       }
       processedRef.current = true;
       handleDeepLinkUrl(rawUrl as string);
       void handleCallback().then((ok) => {
-        window.location.hash = ok ? '#/today' : '#/today?auth=error';
+        window.location.hash = ok ? "#/today" : "#/today?auth=error";
       });
     });
     return () => {
@@ -63,14 +68,16 @@ export default function AuthCallbackView(): JSX.Element {
   return (
     <div
       style={{
-        display: 'grid',
-        placeItems: 'center',
-        height: '100vh',
-        gap: '1rem',
-        fontFamily: 'sans-serif',
+        display: "grid",
+        placeItems: "center",
+        height: "100vh",
+        gap: "1rem",
+        fontFamily: "sans-serif",
       }}
     >
-      <div style={{ fontSize: '1.2rem', color: 'var(--text-secondary)' }}>Completing sign in…</div>
+      <div style={{ fontSize: "1.2rem", color: "var(--text-secondary)" }}>
+        Completing sign in…
+      </div>
     </div>
   );
 }

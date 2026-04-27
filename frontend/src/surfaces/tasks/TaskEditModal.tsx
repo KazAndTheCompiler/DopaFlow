@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import Button from '@ds/primitives/Button';
-import Input from '@ds/primitives/Input';
-import Modal from '@ds/primitives/Modal';
-import type { ProjectId, SubTask, Task } from '@shared/types';
-import { askPacky, createAlarm } from '@api/index';
-import { useAppProjects, useAppTasks } from '../../app/AppContexts';
+import Button from "@ds/primitives/Button";
+import Input from "@ds/primitives/Input";
+import Modal from "@ds/primitives/Modal";
+import type { ProjectId, SubTask, Task } from "@shared/types";
+import { askPacky, createAlarm } from "@api/index";
+import { useAppProjects, useAppTasks } from "../../app/AppContexts";
 
 export interface TaskEditModalProps {
   task: Task | null;
@@ -14,26 +14,35 @@ export interface TaskEditModalProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-const STATUSES: Task['status'][] = ['todo', 'in_progress', 'done', 'cancelled'];
-const STATUS_LABELS: Record<Task['status'], string> = {
-  todo: 'To do',
-  in_progress: 'In progress',
-  done: 'Done',
-  cancelled: 'Cancelled',
+const STATUSES: Task["status"][] = [
+  "pending",
+  "todo",
+  "in_progress",
+  "done",
+  "archived",
+  "cancelled",
+];
+const STATUS_LABELS: Record<Task["status"], string> = {
+  pending: "Pending",
+  todo: "To do",
+  in_progress: "In progress",
+  done: "Done",
+  archived: "Archived",
+  cancelled: "Cancelled",
 };
 
 const RECURRENCE_OPTIONS: Array<{ label: string; value: string }> = [
-  { label: 'No repeat', value: '' },
-  { label: 'Daily', value: 'daily' },
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Monthly', value: 'monthly' },
+  { label: "No repeat", value: "" },
+  { label: "Daily", value: "daily" },
+  { label: "Weekly", value: "weekly" },
+  { label: "Monthly", value: "monthly" },
 ];
 
 type TaskEditSnapshot = {
   title: string;
   description: string;
-  priority: number;
-  status: Task['status'];
+  priority: Task["priority"];
+  status: Task["status"];
   dueAt: string;
   tagsRaw: string;
   estimatedMinutes: string;
@@ -55,25 +64,26 @@ export default function TaskEditModal({
   const tasks = useAppTasks();
   const availableProjects = projects.projects;
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState(3);
-  const [status, setStatus] = useState<Task['status']>('todo');
-  const [dueAt, setDueAt] = useState('');
-  const [tagsRaw, setTagsRaw] = useState('');
-  const [estimatedMinutes, setEstimatedMinutes] = useState('');
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<Task["priority"]>("medium");
+  const [status, setStatus] = useState<Task["status"]>("todo");
+  const [dueAt, setDueAt] = useState("");
+  const [tagsRaw, setTagsRaw] = useState("");
+  const [estimatedMinutes, setEstimatedMinutes] = useState("");
   const [subtasks, setSubtasks] = useState<SubTask[]>([]);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [recurrenceRule, setRecurrenceRule] = useState<string>('');
-  const [projectId, setProjectId] = useState<string>('');
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState<string>("");
+  const [projectId, setProjectId] = useState<string>("");
   const [dependencies, setDependencies] = useState<Task[]>([]);
-  const [depSearch, setDepSearch] = useState<string>('');
+  const [depSearch, setDepSearch] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderAt, setReminderAt] = useState<string>('');
-  const [packyHint, setPackyHint] = useState<string>('');
-  const [initialSnapshot, setInitialSnapshot] = useState<TaskEditSnapshot | null>(null);
+  const [reminderAt, setReminderAt] = useState<string>("");
+  const [packyHint, setPackyHint] = useState<string>("");
+  const [initialSnapshot, setInitialSnapshot] =
+    useState<TaskEditSnapshot | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
@@ -90,7 +100,10 @@ export default function TaskEditModal({
           if (!prev) {
             return prev;
           }
-          return { ...prev, dependencies: nextDependencies.map((dep) => dep.id) };
+          return {
+            ...prev,
+            dependencies: nextDependencies.map((dep) => dep.id),
+          };
         });
       })
       .catch(() => setDependencies([]));
@@ -100,13 +113,13 @@ export default function TaskEditModal({
     if (!task) {
       return;
     }
-    setPackyHint('');
+    setPackyHint("");
     void askPacky({
       text: `Task: "${task.title}". One concrete tip to move this forward.`,
-      context: { route: 'tasks' },
+      context: { route: "tasks" },
     })
       .then((r) => setPackyHint(r.reply_text))
-      .catch(() => setPackyHint(''));
+      .catch(() => setPackyHint(""));
   }, [task?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -115,40 +128,40 @@ export default function TaskEditModal({
     }
     const nextSnapshot: TaskEditSnapshot = {
       title: task.title,
-      description: task.description ?? '',
+      description: task.description ?? "",
       priority: task.priority,
       status: task.status,
-      dueAt: task.due_at ? task.due_at.slice(0, 10) : '',
-      tagsRaw: task.tags.join(', '),
+      dueAt: task.due_at ? task.due_at.slice(0, 10) : "",
+      tagsRaw: task.tags.join(", "),
       estimatedMinutes:
         task.estimated_minutes !== null && task.estimated_minutes !== undefined
           ? String(task.estimated_minutes)
-          : '',
+          : "",
       subtasks: task.subtasks ?? [],
-      recurrenceRule: task.recurrence_rule ?? '',
-      projectId: task.project_id ?? '',
+      recurrenceRule: task.recurrence_rule ?? "",
+      projectId: task.project_id ?? "",
       dependencies: [],
       reminderEnabled: false,
       reminderOffset: 0,
     };
     setTitle(task.title);
-    setDescription(task.description ?? '');
+    setDescription(task.description ?? "");
     setPriority(task.priority);
     setStatus(task.status);
-    setDueAt(task.due_at ? task.due_at.slice(0, 10) : '');
-    setTagsRaw(task.tags.join(', '));
+    setDueAt(task.due_at ? task.due_at.slice(0, 10) : "");
+    setTagsRaw(task.tags.join(", "));
     setEstimatedMinutes(
       task.estimated_minutes !== null && task.estimated_minutes !== undefined
         ? String(task.estimated_minutes)
-        : '',
+        : "",
     );
     setSubtasks(task.subtasks ?? []);
-    setRecurrenceRule(task.recurrence_rule ?? '');
-    setProjectId(task.project_id ?? '');
-    setNewSubtaskTitle('');
+    setRecurrenceRule(task.recurrence_rule ?? "");
+    setProjectId(task.project_id ?? "");
+    setNewSubtaskTitle("");
     setConfirmDelete(false);
     setReminderEnabled(false);
-    setReminderAt('');
+    setReminderAt("");
     setInitialSnapshot(nextSnapshot);
     setIsDirty(false);
   }, [task]);
@@ -172,7 +185,9 @@ export default function TaskEditModal({
       reminderEnabled,
       reminderOffset: 0,
     };
-    setIsDirty(JSON.stringify(nextSnapshot) !== JSON.stringify(initialSnapshot));
+    setIsDirty(
+      JSON.stringify(nextSnapshot) !== JSON.stringify(initialSnapshot),
+    );
   }, [
     dependencies,
     description,
@@ -192,7 +207,7 @@ export default function TaskEditModal({
   ]);
 
   const handleRequestClose = useCallback((): void => {
-    if (isDirty && !window.confirm('Discard changes?')) {
+    if (isDirty && !window.confirm("Discard changes?")) {
       return;
     }
     onClose();
@@ -200,14 +215,14 @@ export default function TaskEditModal({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Escape') {
+      if (event.key !== "Escape") {
         return;
       }
       event.preventDefault();
       handleRequestClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleRequestClose]);
 
   if (!task) {
@@ -221,7 +236,7 @@ export default function TaskEditModal({
     setSaving(true);
     try {
       const tags = tagsRaw
-        .split(',')
+        .split(",")
         .map((t) => t.trim())
         .filter(Boolean);
       const patch: Partial<Task> = {
@@ -231,7 +246,9 @@ export default function TaskEditModal({
         status,
         due_at: dueAt || null,
         tags,
-        estimated_minutes: estimatedMinutes ? parseInt(estimatedMinutes, 10) : null,
+        estimated_minutes: estimatedMinutes
+          ? parseInt(estimatedMinutes, 10)
+          : null,
         subtasks,
       };
       if (projectId) {
@@ -245,7 +262,7 @@ export default function TaskEditModal({
         await createAlarm({
           title: title.trim(),
           at: new Date(reminderAt).toISOString(),
-          kind: 'tts',
+          kind: "tts",
           tts_text: `Reminder: ${title.trim()}`,
         });
       }
@@ -270,61 +287,61 @@ export default function TaskEditModal({
   };
 
   const fieldLabel: React.CSSProperties = {
-    fontSize: 'var(--text-sm)',
+    fontSize: "var(--text-sm)",
     fontWeight: 600,
-    color: 'var(--text-secondary)',
-    marginBottom: '0.3rem',
-    display: 'block',
+    color: "var(--text-secondary)",
+    marginBottom: "0.3rem",
+    display: "block",
   };
 
   const textarea: React.CSSProperties = {
-    width: '100%',
-    padding: '0.75rem 0.9rem',
-    borderRadius: '14px',
-    border: '1px solid var(--border)',
-    background: 'var(--surface)',
-    color: 'var(--text)',
-    outline: 'none',
-    resize: 'vertical',
-    minHeight: '80px',
-    fontFamily: 'inherit',
-    fontSize: 'inherit',
-    boxSizing: 'border-box',
+    width: "100%",
+    padding: "0.75rem 0.9rem",
+    borderRadius: "14px",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
+    color: "var(--text)",
+    outline: "none",
+    resize: "vertical",
+    minHeight: "80px",
+    fontFamily: "inherit",
+    fontSize: "inherit",
+    boxSizing: "border-box",
   };
 
   const selectStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '0.75rem 0.9rem',
-    borderRadius: '14px',
-    border: '1px solid var(--border)',
-    background: 'var(--surface)',
-    color: 'var(--text)',
-    outline: 'none',
-    fontFamily: 'inherit',
-    fontSize: 'inherit',
+    width: "100%",
+    padding: "0.75rem 0.9rem",
+    borderRadius: "14px",
+    border: "1px solid var(--border)",
+    background: "var(--surface)",
+    color: "var(--text)",
+    outline: "none",
+    fontFamily: "inherit",
+    fontSize: "inherit",
   };
 
   const sectionCard: React.CSSProperties = {
-    padding: '0.95rem 1rem',
-    borderRadius: '16px',
-    border: '1px solid var(--border-subtle)',
-    background: 'color-mix(in srgb, var(--surface) 80%, white 20%)',
-    display: 'grid',
-    gap: '0.9rem',
+    padding: "0.95rem 1rem",
+    borderRadius: "16px",
+    border: "1px solid var(--border-subtle)",
+    background: "color-mix(in srgb, var(--surface) 80%, white 20%)",
+    display: "grid",
+    gap: "0.9rem",
   };
 
   const sectionTitle: React.CSSProperties = {
-    fontSize: 'var(--text-xs)',
-    color: 'var(--accent)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
+    fontSize: "var(--text-xs)",
+    color: "var(--accent)",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
     fontWeight: 800,
     margin: 0,
   };
 
   return (
     <Modal open={true} title="Edit task" onClose={handleRequestClose}>
-      <div style={{ display: 'grid', gap: '1rem' }}>
+      <div style={{ display: "grid", gap: "1rem" }}>
         <div style={sectionCard}>
           <p style={sectionTitle}>Core</p>
           <label style={fieldLabel}>Title</label>
@@ -332,7 +349,7 @@ export default function TaskEditModal({
             value={title}
             onChange={(e) => setTitle(e.currentTarget.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 void handleSave();
               }
             }}
@@ -349,31 +366,41 @@ export default function TaskEditModal({
 
         <div style={sectionCard}>
           <p style={sectionTitle}>Scheduling</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.75rem",
+            }}
+          >
             <div>
               <label style={fieldLabel}>Priority</label>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                {[1, 2, 3, 4, 5].map((p) => (
+              <div style={{ display: "flex", gap: "0.4rem" }}>
+                {(["urgent", "high", "medium", "low"] as const).map((p) => (
                   <button
                     key={p}
                     onClick={() => setPriority(p)}
                     style={{
                       flex: 1,
-                      padding: '0.5rem 0',
-                      borderRadius: '8px',
-                      border: '1.5px solid',
-                      borderColor: priority === p ? 'var(--accent)' : 'var(--border)',
+                      padding: "0.5rem 0",
+                      borderRadius: "8px",
+                      border: "1.5px solid",
+                      borderColor:
+                        priority === p ? "var(--accent)" : "var(--border)",
                       background:
                         priority === p
-                          ? 'color-mix(in srgb, var(--accent) 12%, transparent)'
-                          : 'transparent',
-                      color: priority === p ? 'var(--accent)' : 'var(--text-secondary)',
-                      cursor: 'pointer',
+                          ? "color-mix(in srgb, var(--accent) 12%, transparent)"
+                          : "transparent",
+                      color:
+                        priority === p
+                          ? "var(--accent)"
+                          : "var(--text-secondary)",
+                      cursor: "pointer",
                       fontWeight: 800,
-                      fontSize: 'var(--text-sm)',
+                      fontSize: "var(--text-sm)",
                     }}
                   >
-                    P{p}
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
                   </button>
                 ))}
               </div>
@@ -383,7 +410,9 @@ export default function TaskEditModal({
               <label style={fieldLabel}>Status</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.currentTarget.value as Task['status'])}
+                onChange={(e) =>
+                  setStatus(e.currentTarget.value as Task["status"])
+                }
                 style={selectStyle}
               >
                 {STATUSES.map((s) => (
@@ -395,10 +424,20 @@ export default function TaskEditModal({
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "0.75rem",
+            }}
+          >
             <div>
               <label style={fieldLabel}>Due date</label>
-              <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.currentTarget.value)} />
+              <Input
+                type="date"
+                value={dueAt}
+                onChange={(e) => setDueAt(e.currentTarget.value)}
+              />
             </div>
             <div>
               <label style={fieldLabel}>Estimated (min)</label>
@@ -434,7 +473,7 @@ export default function TaskEditModal({
                 .filter((p) => !p.archived)
                 .map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.icon ? `${p.icon} ` : ''}
+                    {p.icon ? `${p.icon} ` : ""}
                     {p.name}
                   </option>
                 ))}
@@ -447,21 +486,26 @@ export default function TaskEditModal({
           <label style={fieldLabel}>Blocked by</label>
           {dependencies.length > 0 && (
             <div
-              style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem' }}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.35rem",
+                marginBottom: "0.5rem",
+              }}
             >
               {dependencies.map((dep) => (
                 <span
                   key={dep.id}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    padding: '0.2rem 0.55rem',
-                    borderRadius: '999px',
-                    background: 'var(--surface-2)',
-                    border: '1px solid var(--border)',
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--text-secondary)',
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.3rem",
+                    padding: "0.2rem 0.55rem",
+                    borderRadius: "999px",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    fontSize: "var(--text-xs)",
+                    color: "var(--text-secondary)",
                   }}
                 >
                   {dep.title}
@@ -470,13 +514,17 @@ export default function TaskEditModal({
                     onClick={() =>
                       void tasks
                         .removeDependency(task.id, dep.id)
-                        .then(() => setDependencies((ds) => ds.filter((d) => d.id !== dep.id)))
+                        .then(() =>
+                          setDependencies((ds) =>
+                            ds.filter((d) => d.id !== dep.id),
+                          ),
+                        )
                     }
                     style={{
-                      border: 'none',
-                      background: 'none',
-                      color: 'var(--text-muted)',
-                      cursor: 'pointer',
+                      border: "none",
+                      background: "none",
+                      color: "var(--text-muted)",
+                      cursor: "pointer",
                       padding: 0,
                       lineHeight: 1,
                     }}
@@ -487,7 +535,7 @@ export default function TaskEditModal({
               ))}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <div style={{ display: "flex", gap: "0.4rem" }}>
             <input
               value={depSearch}
               onChange={(e) => setDepSearch(e.currentTarget.value)}
@@ -511,24 +559,26 @@ export default function TaskEditModal({
             <button
               type="button"
               onClick={() => {
-                const match = tasks.tasks.find((t) => t.title === depSearch && t.id !== task?.id);
+                const match = tasks.tasks.find(
+                  (t) => t.title === depSearch && t.id !== task?.id,
+                );
                 if (!match || !task) {
                   return;
                 }
                 void tasks.addDependency(task.id, match.id).then(() => {
                   setDependencies((ds) => [...ds, match]);
-                  setDepSearch('');
+                  setDepSearch("");
                 });
               }}
               style={{
-                padding: '0.65rem 0.8rem',
-                borderRadius: '10px',
-                border: 'none',
-                background: 'var(--accent)',
-                color: 'var(--text-inverted)',
-                cursor: 'pointer',
+                padding: "0.65rem 0.8rem",
+                borderRadius: "10px",
+                border: "none",
+                background: "var(--accent)",
+                color: "var(--text-inverted)",
+                cursor: "pointer",
                 fontWeight: 600,
-                fontSize: 'var(--text-sm)',
+                fontSize: "var(--text-sm)",
               }}
             >
               Add
@@ -539,14 +589,21 @@ export default function TaskEditModal({
         <div style={sectionCard}>
           <p style={sectionTitle}>Automation</p>
           <label style={fieldLabel}>Reminder</label>
-          <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.65rem",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <label
               style={{
-                display: 'flex',
-                gap: '0.4rem',
-                alignItems: 'center',
-                cursor: 'pointer',
-                fontSize: 'var(--text-sm)',
+                display: "flex",
+                gap: "0.4rem",
+                alignItems: "center",
+                cursor: "pointer",
+                fontSize: "var(--text-sm)",
               }}
             >
               <input
@@ -560,13 +617,14 @@ export default function TaskEditModal({
                     const base = dueAt
                       ? new Date(`${dueAt}T09:00`)
                       : new Date(Date.now() + 3_600_000);
-                    const pad = (n: number): string => String(n).padStart(2, '0');
+                    const pad = (n: number): string =>
+                      String(n).padStart(2, "0");
                     setReminderAt(
                       `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`,
                     );
                   }
                 }}
-                style={{ accentColor: 'var(--accent)', cursor: 'pointer' }}
+                style={{ accentColor: "var(--accent)", cursor: "pointer" }}
               />
               Remind me
             </label>
@@ -575,7 +633,7 @@ export default function TaskEditModal({
                 type="datetime-local"
                 value={reminderAt}
                 onChange={(e) => setReminderAt(e.currentTarget.value)}
-                style={{ ...selectStyle, minWidth: '13rem' }}
+                style={{ ...selectStyle, minWidth: "13rem" }}
               />
             )}
           </div>
@@ -600,17 +658,23 @@ export default function TaskEditModal({
           <p style={sectionTitle}>Breakdown</p>
           <label style={fieldLabel}>Subtasks</label>
           {subtasks.length > 0 && (
-            <div style={{ display: 'grid', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div
+              style={{
+                display: "grid",
+                gap: "0.5rem",
+                marginBottom: "0.75rem",
+              }}
+            >
               {subtasks.map((subtask) => (
                 <div
                   key={subtask.id}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.5rem',
-                    borderRadius: '8px',
-                    background: 'var(--surface-2)',
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem",
+                    borderRadius: "8px",
+                    background: "var(--surface-2)",
                   }}
                 >
                   <input
@@ -619,18 +683,22 @@ export default function TaskEditModal({
                     onChange={(e) => {
                       setSubtasks(
                         subtasks.map((st) =>
-                          st.id === subtask.id ? { ...st, done: e.currentTarget.checked } : st,
+                          st.id === subtask.id
+                            ? { ...st, done: e.currentTarget.checked }
+                            : st,
                         ),
                       );
                     }}
-                    style={{ cursor: 'pointer', accentColor: 'var(--accent)' }}
+                    style={{ cursor: "pointer", accentColor: "var(--accent)" }}
                   />
                   <span
                     style={{
                       flex: 1,
-                      textDecoration: subtask.done ? 'line-through' : 'none',
-                      color: subtask.done ? 'var(--text-secondary)' : 'var(--text)',
-                      fontSize: 'var(--text-sm)',
+                      textDecoration: subtask.done ? "line-through" : "none",
+                      color: subtask.done
+                        ? "var(--text-secondary)"
+                        : "var(--text)",
+                      fontSize: "var(--text-sm)",
                     }}
                   >
                     {subtask.title}
@@ -639,16 +707,19 @@ export default function TaskEditModal({
               ))}
             </div>
           )}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
             <Input
               value={newSubtaskTitle}
               onChange={(e) => setNewSubtaskTitle(e.currentTarget.value)}
               placeholder="Add new subtask..."
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                if (e.key === "Enter" && newSubtaskTitle.trim()) {
                   const id = `tsk_${Date.now()}` as const;
-                  setSubtasks([...subtasks, { id, title: newSubtaskTitle.trim(), done: false }]);
-                  setNewSubtaskTitle('');
+                  setSubtasks([
+                    ...subtasks,
+                    { id, title: newSubtaskTitle.trim(), done: false },
+                  ]);
+                  setNewSubtaskTitle("");
                 }
               }}
             />
@@ -657,8 +728,11 @@ export default function TaskEditModal({
               onClick={() => {
                 if (newSubtaskTitle.trim()) {
                   const id = `tsk_${Date.now()}` as const;
-                  setSubtasks([...subtasks, { id, title: newSubtaskTitle.trim(), done: false }]);
-                  setNewSubtaskTitle('');
+                  setSubtasks([
+                    ...subtasks,
+                    { id, title: newSubtaskTitle.trim(), done: false },
+                  ]);
+                  setNewSubtaskTitle("");
                 }
               }}
               disabled={!newSubtaskTitle.trim()}
@@ -671,16 +745,23 @@ export default function TaskEditModal({
         {packyHint && (
           <div
             style={{
-              padding: '0.5rem 0.75rem',
-              borderRadius: '10px',
-              background: 'color-mix(in srgb, var(--accent) 6%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--accent) 18%, transparent)',
-              fontSize: 'var(--text-xs)',
-              color: 'var(--text-secondary)',
+              padding: "0.5rem 0.75rem",
+              borderRadius: "10px",
+              background: "color-mix(in srgb, var(--accent) 6%, transparent)",
+              border:
+                "1px solid color-mix(in srgb, var(--accent) 18%, transparent)",
+              fontSize: "var(--text-xs)",
+              color: "var(--text-secondary)",
               lineHeight: 1.5,
             }}
           >
-            <span style={{ fontWeight: 700, color: 'var(--accent)', marginRight: '0.3rem' }}>
+            <span
+              style={{
+                fontWeight: 700,
+                color: "var(--accent)",
+                marginRight: "0.3rem",
+              }}
+            >
               Tip:
             </span>
             {packyHint}
@@ -689,33 +770,42 @@ export default function TaskEditModal({
 
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '0.5rem',
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "0.5rem",
           }}
         >
           <button
             onClick={() => void handleDelete()}
             disabled={saving}
             style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: confirmDelete ? 'var(--state-overdue)' : 'var(--text-secondary)',
-              fontSize: 'var(--text-sm)',
-              padding: '0.25rem 0',
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              color: confirmDelete
+                ? "var(--state-overdue)"
+                : "var(--text-secondary)",
+              fontSize: "var(--text-sm)",
+              padding: "0.25rem 0",
             }}
           >
-            {confirmDelete ? 'Tap again to confirm delete' : 'Delete task'}
+            {confirmDelete ? "Tap again to confirm delete" : "Delete task"}
           </button>
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button variant="ghost" onClick={handleRequestClose} disabled={saving}>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <Button
+              variant="ghost"
+              onClick={handleRequestClose}
+              disabled={saving}
+            >
               Cancel
             </Button>
-            <Button onClick={() => void handleSave()} disabled={saving || !title.trim()}>
-              {saving ? 'Saving…' : 'Save'}
+            <Button
+              onClick={() => void handleSave()}
+              disabled={saving || !title.trim()}
+            >
+              {saving ? "Saving…" : "Save"}
             </Button>
           </div>
         </div>
