@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  # - "alerts.yml"
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # DopaFlow backend metrics
+  - job_name: 'dopaflow-backend'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/api/v2/health/metrics'
+    scrape_interval: 30s
+
+  # Vector log metrics
+  - job_name: 'vector-logs'
+    static_configs:
+      - targets: ['vector:9598']
+    scrape_interval: 30s
+
+  # Vector internal metrics
+  - job_name: 'vector-internal'
+    static_configs:
+      - targets: ['vector:9599']
+    scrape_interval: 30s
+
+  # Traefik metrics
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8080']
+    scrape_interval: 30s
+
+  # Docker container metrics (via cAdvisor if available)
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']

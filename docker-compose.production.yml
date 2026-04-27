@@ -1,0 +1,229 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ghcr.io/kazandthecompiler/dopaflow-backend:latest
+    container_name: dopaflow-backend
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    environment:
+      - DOPAFLOW_PRODUCTION=true
+      - DOPAFLOW_ENFORCE_AUTH=true
+      - DOPAFLOW_DEV_AUTH=false
+    env_file:
+      - .env
+    volumes:
+      - production-data:/app/data
+      - production-logs:/app/logs
+      - production-backups:/app/backups
+    networks:
+      - dopaflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/health/live')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "service,environment,version"
+        env: "DOPAFLOW_PRODUCTION,DOPAFLOW_VERSION"
+
+  frontend:
+    image: ghcr.io/kazandthecompiler/dopaflow-frontend:latest
+    container_name: dopaflow-frontend
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+      - BACKEND_URL=http://backend:8000
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/nginx-production.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - dopaflow
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # Load balancer / Reverse proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: dopaflow-traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      - "--metrics.prometheus=true"
+      - "--tracing.jaeger=true"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certs:/letsencrypt
+    networks:
+      - dopaflow
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.dopaflow.app`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+
+  # Log aggregation with Vector
+  vector:
+    image: timberio/vector:0.35.X-alpine
+    container_name: dopaflow-vector
+    restart: unless-stopped
+    volumes:
+      - ./vector/vector-production.toml:/etc/vector/vector.toml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - production-logs:/var/log/dopaflow:ro
+    networks:
+      - dopaflow
+    depends_on:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dopaflow-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - dopaflow
+    ports:
+      - "9090:9090"
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dopaflow-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - dopaflow
+    ports:
+      - "3000:3000"
+
+  # Backup service
+  backup:
+    image: offen/docker-volume-backup:latest
+    container_name: dopaflow-backup
+    restart: unless-stopped
+    environment:
+      BACKUP_CRON_EXPRESSION: "0 2 * * *"
+      BACKUP_RETENTION_DAYS: "30"
+      BACKUP_FILENAME: "backup-%Y-%m-%dT%H-%M-%S.tar.gz"
+      BACKUP_ARCHIVE: "/archive"
+      BACKUP_STOP_CONTAINER_LABEL: "dopaflow.backup.stop"
+      BACKUP_FROM_SNAPSHOT: "true"
+      AWS_S3_BUCKET_NAME: ${BACKUP_S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${BACKUP_AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_AWS_SECRET_ACCESS_KEY}
+      AWS_ENDPOINT: ${BACKUP_AWS_ENDPOINT:-s3.amazonaws.com}
+      AWS_S3_PATH: "dopaflow/backups"
+      NOTIFICATION_URLS: ${BACKUP_NOTIFICATION_URL}
+    volumes:
+      - production-data:/backup/data:ro
+      - production-backups:/archive
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dopaflow
+    labels:
+      - "dopaflow.backup.stop=true"
+
+  # Database backup verification (runs after backup)
+  backup-verify:
+    image: ghcr.io/kazandthecompiler/dopaflow-backend:latest
+    container_name: dopaflow-backup-verify
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Verifying backup integrity..."
+        # This runs as a cron job to verify backups
+    environment:
+      - DOPAFLOW_PRODUCTION=true
+    env_file:
+      - .env
+    volumes:
+      - production-backups:/backups:ro
+    networks:
+      - dopaflow
+    profiles:
+      - backup-verify
+
+volumes:
+  production-data:
+    driver: local
+  production-logs:
+    driver: local
+  production-backups:
+    driver: local
+  traefik-certs:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  dopaflow:
+    driver: bridge

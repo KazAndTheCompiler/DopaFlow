@@ -1,0 +1,129 @@
+# Vector configuration for staging environment
+# Collects logs from Docker containers and forwards to centralized logging
+
+# Source: Docker container logs
+[sources.docker_logs]
+type = "docker_logs"
+docker_host = "/var/run/docker.sock"
+include_containers = ["dopaflow-backend-staging", "dopaflow-frontend-staging"]
+
+# Source: File logs from mounted volumes
+[sources.file_logs]
+type = "file"
+include = ["/var/log/dopaflow/*.log"]
+read_from = "beginning"
+
+# Transform: Parse JSON logs
+[transforms.parse_json]
+type = "remap"
+inputs = ["docker_logs", "file_logs"]
+source = '''
+  # Parse JSON if present
+  if is_json(string!(.message)) {
+    parsed = parse_json!(string!(.message))
+    . = merge(., parsed)
+  }
+  
+  # Add environment tag
+  .environment = "staging"
+  
+  # Normalize timestamp
+  if exists(.timestamp) {
+    .timestamp = parse_timestamp!(.timestamp, format: "%Y-%m-%dT%H:%M:%S%z")
+  }
+'''
+
+# Transform: Filter and categorize logs
+[transforms.categorize]
+type = "remap"
+inputs = ["parse_json"]
+source = '''
+  # Extract log level
+  if exists(.level) {
+    .level = downcase(string!(.level))
+  } else if exists(.levelname) {
+    .level = downcase(string!(.levelname))
+  } else {
+    .level = "info"
+  }
+  
+  # Add service name
+  if exists(.container_name) {
+    .service = replace(string!(.container_name), "dopaflow-", "")
+    .service = replace(string!(.service), "-staging", "")
+  }
+  
+  # Calculate severity score
+  if .level == "error" || .level == "critical" {
+    .severity = 5
+  } else if .level == "warning" || .level == "warn" {
+    .severity = 4
+  } else if .level == "info" {
+    .severity = 3
+  } else {
+    .severity = 2
+  }
+'''
+
+# Sink: Console output for debugging (staging only)
+[sinks.console]
+type = "console"
+inputs = ["categorize"]
+encoding.codec = "json"
+
+# Sink: File backup
+[sinks.file_backup]
+type = "file"
+inputs = ["categorize"]
+path = "/var/log/dopaflow/aggregated/%Y/%m/%d/vector-{{ service }}.log"
+encoding.codec = "json"
+
+[sinks.file_backup.buffer]
+type = "disk"
+max_size = 104900000
+when_full = "block"
+
+# Sink: HTTP endpoint for centralized logging (optional)
+# Uncomment and configure if you have a centralized log server
+# [sinks.centralized]
+# type = "http"
+# inputs = ["categorize"]
+# uri = "https://logs.your-company.com/api/v1/logs"
+# encoding.codec = "json"
+# auth.strategy = "bearer"
+# auth.token = "${LOG_API_TOKEN}"
+
+# Sink: Error alerts (filter for errors only)
+[sinks.error_alerts]
+type = "filter"
+inputs = ["categorize"]
+condition = '.severity >= 4'
+
+[sinks.error_alerts.sink]
+type = "console"
+encoding.codec = "json"
+
+# Metrics: Log volume by service
+[transforms.log_metrics]
+type = "log_to_metric"
+inputs = ["categorize"]
+
+[[transforms.log_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "log_lines_total"
+tags.service = "{{ service }}"
+tags.level = "{{ level }}"
+tags.environment = "{{ environment }}"
+
+[[transforms.log_metrics.metrics]]
+type = "gauge"
+field = "severity"
+name = "log_severity"
+tags.service = "{{ service }}"
+
+# Sink: Prometheus metrics endpoint
+[sinks.prometheus]
+type = "prometheus_exporter"
+inputs = ["log_metrics"]
+address = "0.0.0.0:9598"

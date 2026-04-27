@@ -1,0 +1,109 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ghcr.io/kazandthecompiler/dopaflow-backend:staging
+    container_name: dopaflow-backend-staging
+    restart: unless-stopped
+    environment:
+      - DOPAFLOW_PRODUCTION=true
+      - DOPAFLOW_ENFORCE_AUTH=true
+      - DOPAFLOW_DEV_AUTH=false
+    env_file:
+      - .env
+    volumes:
+      - staging-data:/app/data
+      - staging-logs:/app/logs
+      - staging-backups:/app/backups
+    networks:
+      - dopaflow-staging
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/health/live')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        labels: "service,environment"
+        env: "DOPAFLOW_PRODUCTION"
+
+  frontend:
+    image: ghcr.io/kazandthecompiler/dopaflow-frontend:staging
+    container_name: dopaflow-frontend-staging
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+      - BACKEND_URL=http://backend:8000
+    networks:
+      - dopaflow-staging
+    depends_on:
+      backend:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Log aggregation with Vector
+  vector:
+    image: timberio/vector:0.35.X-alpine
+    container_name: dopaflow-vector-staging
+    restart: unless-stopped
+    volumes:
+      - ./vector/vector-staging.toml:/etc/vector/vector.toml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - staging-logs:/var/log/dopaflow:ro
+    networks:
+      - dopaflow-staging
+    depends_on:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backup service
+  backup:
+    image: offen/docker-volume-backup:latest
+    container_name: dopaflow-backup-staging
+    restart: unless-stopped
+    environment:
+      BACKUP_CRON_EXPRESSION: "0 2 * * *"
+      BACKUP_RETENTION_DAYS: "7"
+      BACKUP_FILENAME: "backup-%Y-%m-%dT%H-%M-%S.tar.gz"
+      BACKUP_ARCHIVE: "/archive"
+      BACKUP_STOP_CONTAINER_LABEL: "dopaflow.staging.backup.stop"
+      BACKUP_FROM_SNAPSHOT: "true"
+      AWS_S3_BUCKET_NAME: ${BACKUP_S3_BUCKET:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_AWS_SECRET_ACCESS_KEY:-}
+      AWS_ENDPOINT: ${BACKUP_AWS_ENDPOINT:-s3.amazonaws.com}
+      NOTIFICATION_URLS: ${BACKUP_NOTIFICATION_URL:-}
+    volumes:
+      - staging-data:/backup/data:ro
+      - staging-backups:/archive
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dopaflow-staging
+    labels:
+      - "dopaflow.staging.backup.stop=true"
+
+volumes:
+  staging-data:
+    driver: local
+  staging-logs:
+    driver: local
+  staging-backups:
+    driver: local
+
+networks:
+  dopaflow-staging:
+    driver: bridge

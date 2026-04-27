@@ -1,0 +1,217 @@
+# Vector configuration for production environment
+# High-performance log aggregation with multiple sinks
+
+# Source: Docker container logs
+[sources.docker_logs]
+type = "docker_logs"
+docker_host = "/var/run/docker.sock"
+include_containers = ["dopaflow-backend", "dopaflow-frontend", "dopaflow-traefik"]
+
+# Source: File logs
+[sources.file_logs]
+type = "file"
+include = ["/var/log/dopaflow/*.log"]
+read_from = "beginning"
+
+# Source: Journald (if available)
+[sources.journald]
+type = "journald"
+
+# Transform: Parse and enrich logs
+[transforms.parse_and_enrich]
+type = "remap"
+inputs = ["docker_logs", "file_logs", "journald"]
+source = '''
+  # Parse JSON logs
+  if is_json(string!(.message)) {
+    parsed = parse_json!(string!(.message))
+    . = merge(., parsed)
+  }
+  
+  # Add environment
+  .environment = "production"
+  
+  # Normalize timestamp
+  if exists(.timestamp) {
+    ts = string!(.timestamp)
+    # Try multiple timestamp formats
+    .timestamp = parse_timestamp(ts, format: "%Y-%m-%dT%H:%M:%S%z") ??
+                 parse_timestamp(ts, format: "%Y-%m-%d %H:%M:%S") ??
+                 now()
+  } else {
+    .timestamp = now()
+  }
+  
+  # Extract trace/request IDs if present
+  if exists(.trace_id) {
+    .trace_id = string!(.trace_id)
+  }
+  if exists(.request_id) {
+    .request_id = string!(.request_id)
+  }
+'''
+
+# Transform: Categorize and filter
+[transforms.categorize]
+type = "remap"
+inputs = ["parse_and_enrich"]
+source = '''
+  # Normalize log level
+  if exists(.level) {
+    level = downcase(string!(.level))
+    if level == "debug" { .level = "debug" }
+    else if level == "info" { .level = "info" }
+    else if level == "warning" || level == "warn" { .level = "warning" }
+    else if level == "error" { .level = "error" }
+    else if level == "critical" || level == "fatal" { .level = "critical" }
+    else { .level = "info" }
+  } else if exists(.levelname) {
+    .level = downcase(string!(.levelname))
+  } else {
+    .level = "info"
+  }
+  
+  # Extract service name
+  if exists(.container_name) {
+    name = string!(.container_name)
+    .service = replace(name, "dopaflow-", "")
+    .service = replace(string!(.service), "-production", "")
+    .service = replace(string!(.service), "-[0-9]+", "")
+  } else if exists(.syslog_identifier) {
+    .service = string!(.syslog_identifier)
+  } else {
+    .service = "unknown"
+  }
+  
+  # Add severity score for filtering
+  if .level == "critical" { .severity = 6 }
+  else if .level == "error" { .severity = 5 }
+  else if .level == "warning" { .severity = 4 }
+  else if .level == "info" { .severity = 3 }
+  else if .level == "debug" { .severity = 2 }
+  else { .severity = 1 }
+  
+  # Extract user info if present
+  if exists(.user_id) {
+    .has_user = true
+  } else {
+    .has_user = false
+  }
+'''
+
+# Transform: Sample debug logs (reduce volume)
+[transforms.sample_debug]
+type = "sample"
+inputs = ["categorize"]
+rate = 10
+key_field = "service"
+
+[sinks.console]
+type = "console"
+inputs = ["sample_debug"]
+encoding.codec = "json"
+
+# Sink: Local file backup with rotation
+[sinks.file_backup]
+type = "file"
+inputs = ["categorize"]
+path = "/var/log/dopaflow/aggregated/%Y/%m/%d/%H/vector-{{ service }}-{{ level }}.log"
+encoding.codec = "json"
+
+[sinks.file_backup.buffer]
+type = "disk"
+max_size = 524288000  # 500MB
+when_full = "block"
+
+# Sink: S3 archive (long-term storage)
+[sinks.s3_archive]
+type = "aws_s3"
+inputs = ["categorize"]
+bucket = "${S3_LOG_BUCKET}"
+region = "${AWS_REGION:-us-east-1}"
+endpoint = "${S3_ENDPOINT}"
+key_prefix = "logs/year=%Y/month=%m/day=%d/hour=%H/"
+encoding.codec = "json"
+compression = "gzip"
+
+[sinks.s3_archive.buffer]
+type = "disk"
+max_size = 268435488  # 256MB
+when_full = "block"
+
+[sinks.s3_archive.batch]
+max_size = 10485760   # 10MB
+timeout_secs = 300    # 5 minutes
+
+# Sink: Elasticsearch/OpenSearch (if configured)
+# [sinks.elasticsearch]
+# type = "elasticsearch"
+# inputs = ["categorize"]
+# endpoints = ["${ELASTICSEARCH_URL}"]
+# index = "dopaflow-logs-%Y.%m.%d"
+# auth.strategy = "basic"
+# auth.user = "${ELASTICSEARCH_USER}"
+# auth.password = "${ELASTICSEARCH_PASSWORD}"
+# encoding.codec = "json"
+# bulk.index = "{{ service }}-{{ level }}-%Y.%m.%d"
+
+# Sink: Error alerting (filter for errors and above)
+[transforms.error_filter]
+type = "filter"
+inputs = ["categorize"]
+condition = '.severity >= 5'
+
+[sinks.error_webhook]
+type = "http"
+inputs = ["error_filter"]
+uri = "${ERROR_WEBHOOK_URL}"
+encoding.codec = "json"
+method = "POST"
+
+[sinks.error_webhook.buffer]
+type = "memory"
+max_events = 100
+when_full = "drop_newest"
+
+[sinks.error_webhook.request]
+retry_attempts = 3
+
+# Metrics: Generate metrics from logs
+[transforms.log_metrics]
+type = "log_to_metric"
+inputs = ["categorize"]
+
+[[transforms.log_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "log_lines_total"
+tags.service = "{{ service }}"
+tags.level = "{{ level }}"
+tags.environment = "{{ environment }}"
+
+[[transforms.log_metrics.metrics]]
+type = "counter"
+field = "message"
+name = "log_bytes_total"
+tags.service = "{{ service }}"
+
+[[transforms.log_metrics.metrics]]
+type = "gauge"
+field = "severity"
+name = "log_severity_current"
+tags.service = "{{ service }}"
+
+# Sink: Prometheus metrics
+[sinks.prometheus]
+type = "prometheus_exporter"
+inputs = ["log_metrics"]
+address = "0.0.0.0:9598"
+
+# Health check endpoint
+[sources.vector_metrics]
+type = "internal_metrics"
+
+[sinks.vector_metrics_prometheus]
+type = "prometheus_exporter"
+inputs = ["vector_metrics"]
+address = "0.0.0.0:9599"
