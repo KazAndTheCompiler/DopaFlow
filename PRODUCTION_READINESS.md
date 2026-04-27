@@ -208,10 +208,10 @@ require_ops_secret_in_production()
 4. ✅ Log aggregation set up (Vector + Prometheus + Grafana)
 
 ### Short Term (Post-Launch)
-1. Add rate limiting configuration
-2. Implement request ID tracing
-3. Add database connection pooling
-4. Set up alerting on health checks
+1. ✅ Rate limiting configuration (tiered limits, configurable via env vars)
+2. ✅ Request ID tracing (with correlation, context propagation)
+3. ✅ Database connection pooling (min/max connections, health checks)
+4. ✅ Health check alerting (Slack, PagerDuty, custom webhooks)
 
 ### Long Term
 1. Add distributed tracing

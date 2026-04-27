@@ -12,7 +12,9 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.config import default_backup_dir, get_settings
+from app.core.connection_pool import configure_connection_pool
 from app.core.database import get_db, run_migrations
+from app.core.health_alerts import create_alert_manager_from_env
 from app.core.scheduler import start_scheduler, stop_scheduler
 from app.core.version import APP_VERSION
 from app.domains.alarms.audio_router import router as alarm_audio_router
@@ -54,6 +56,8 @@ from app.logging_config import configure_logging
 from app.middleware.auth import AuthMiddleware
 from app.middleware.cors import build_cors_options
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.rate_limit_config import PRODUCTION_RATE_LIMITS
+from app.middleware.request_id import RequestIdMiddleware
 from app.middleware.request_log import RequestLogMiddleware
 from app.middleware.security import CSP, SecurityHeadersMiddleware
 
@@ -100,12 +104,29 @@ _AUXILIARY_ROUTERS = (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
+    
+    # Initialize connection pool for production
+    if settings.production:
+        configure_connection_pool(settings)
+        logger.info("Database connection pool initialized")
+    
     try:
         with get_db(settings.db_path) as conn:
             conn.execute("PRAGMA user_version").fetchone()
     except Exception:
         logger.critical("Database unreachable at startup")
         raise RuntimeError("Database unreachable at startup") from None
+    
+    # Initialize health alert manager in production
+    alert_manager = None
+    if settings.production:
+        try:
+            alert_manager = create_alert_manager_from_env(settings.db_path)
+            await alert_manager.start()
+            logger.info("Health alert manager started")
+        except Exception as exc:
+            logger.warning(f"Failed to start health alert manager: {exc}")
+    
     backup_task: asyncio.Task[None] | None = None
     if not settings.disable_background_jobs:
         backup_dir = (
@@ -125,6 +146,11 @@ async def lifespan(app: FastAPI):
         start_scheduler(journal_service)
         backup_task = asyncio.create_task(backup_scheduler.start())
     yield
+    
+    # Shutdown: stop alert manager
+    if alert_manager:
+        await alert_manager.stop()
+    
     backup_scheduler.stop()
     if backup_task is not None:
         backup_task.cancel()
@@ -185,10 +211,15 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware, **build_cors_options(settings.extra_cors_origins)
     )
+    # Request ID tracing (must be early to capture all requests)
+    app.add_middleware(RequestIdMiddleware, trust_proxy=True)
+    # Rate limiting with production configuration
     app.add_middleware(
         RateLimitMiddleware,
-        calls_per_minute=120,
+        calls_per_minute=PRODUCTION_RATE_LIMITS.default_limit_per_minute,
         db_path=settings.db_path,
+        default_limit_per_minute=PRODUCTION_RATE_LIMITS.default_limit_per_minute,
+        command_limit_per_minute=PRODUCTION_RATE_LIMITS.command_limit_per_minute,
         packaged=settings.packaged,
     )
     app.add_middleware(AuthMiddleware, settings=settings)
