@@ -21,12 +21,10 @@ export default function HabitsView(): JSX.Element {
     }
     void Promise.all(
       habits.habits.map((h) =>
-        habits
-          .getLogs(h.id)
-          .then((logs) => ({
-            id: h.id,
-            dates: logs.map((l) => l.checkin_date),
-          })),
+        habits.getLogs(h.id).then((logs) => ({
+          id: h.id,
+          dates: logs.map((l) => l.checkin_date),
+        })),
       ),
     ).then((results) => {
       const map: Record<string, string[]> = {};
