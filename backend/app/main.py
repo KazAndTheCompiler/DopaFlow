@@ -19,15 +19,18 @@ from app.core.scheduler import start_scheduler, stop_scheduler
 from app.core.version import APP_VERSION
 from app.domains.alarms.audio_router import router as alarm_audio_router
 from app.domains.alarms.router import router as alarms_router
+from app.domains.apm.router import router as apm_router
 from app.domains.auth.oidc import build_discovery
 from app.domains.auth.router import router as auth_router
 from app.domains.auth.service import AuthService
 from app.domains.boards.router import router as boards_router
 from app.domains.calendar.router import router as calendar_router
 from app.domains.calendar_sharing.router import router as calendar_sharing_router
+from app.domains.chaos.router import router as chaos_router
 from app.domains.commands.router import router as commands_router
 from app.domains.digest.router import router as digest_router
 from app.domains.events.router import router as events_router
+from app.domains.feature_flags.router import router as feature_flags_router
 from app.domains.focus.router import router as focus_router
 from app.domains.gamification.router import router as gamification_router
 from app.domains.goals.router import router as goals_router
@@ -93,8 +96,11 @@ _DOMAIN_ROUTERS = [
 
 _AUXILIARY_ROUTERS = (
     (alarm_audio_router, API_PREFIX),
+    (apm_router, API_PREFIX),
     (auth_router, API_PREFIX),
+    (chaos_router, API_PREFIX),
     (events_router, API_PREFIX),
+    (feature_flags_router, API_PREFIX),
     (meta_router, API_PREFIX),
     (ops_router, API_PREFIX),
     (vault_router, API_PREFIX),

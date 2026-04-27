@@ -214,10 +214,10 @@ require_ops_secret_in_production()
 4. ✅ Health check alerting (Slack, PagerDuty, custom webhooks)
 
 ### Long Term
-1. Add distributed tracing
-2. Implement feature flags
-3. Add APM monitoring
-4. Set up chaos engineering tests
+1. ✅ Distributed tracing (OpenTelemetry + Jaeger/OTLP)
+2. ✅ Feature flags (boolean, percentage, user-list, time-based)
+3. ✅ APM monitoring (custom metrics, system resources, request tracking)
+4. ✅ Chaos engineering tests (latency, error injection, resource pressure)
 
 ---
 
