@@ -151,7 +151,16 @@ export function useCommandExecutor(
         return false;
       }
     },
-    [packy, tasks.refresh, journal.refresh, calendar.refresh, focus.refresh, alarms.refresh, habits.refresh, review.refresh],
+    [
+      packy,
+      tasks.refresh,
+      journal.refresh,
+      calendar.refresh,
+      focus.refresh,
+      alarms.refresh,
+      habits.refresh,
+      review.refresh,
+    ],
   );
 
   return { execute };

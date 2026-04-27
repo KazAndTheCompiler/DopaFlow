@@ -257,31 +257,41 @@ export function VoiceCommandModal({
   // Continuous conversation
   // -----------------------------------------------------------------------
 
-  const scheduleFollowUpRelisten = useCallback((res: PackyVoiceResponse): void => {
-    if (followUpTimeoutRef.current) {
-      clearTimeout(followUpTimeoutRef.current);
-    }
-    // Wait for TTS to finish (~2s per sentence), then re-listen
-    const replyLen = (res.reply_text ?? res.tts_text ?? "").length;
-    const delay = Math.min(Math.max(replyLen * 50, 1500), 5000);
-    followUpTimeoutRef.current = setTimeout(() => {
-      if (continuousMode && sttSupported) {
-        void (async () => {
-          const microphoneReady = await startMicrophone();
-          if (!microphoneReady) {
-            return;
-          }
-          stopMicrophone();
-          reset();
-          setResponse(null);
-          setError(null);
-          setPhase("listening");
-          lastTranscriptRef.current = "";
-          start();
-        })();
+  const scheduleFollowUpRelisten = useCallback(
+    (res: PackyVoiceResponse): void => {
+      if (followUpTimeoutRef.current) {
+        clearTimeout(followUpTimeoutRef.current);
       }
-    }, delay);
-  }, [continuousMode, sttSupported, startMicrophone, stopMicrophone, reset, start]);
+      // Wait for TTS to finish (~2s per sentence), then re-listen
+      const replyLen = (res.reply_text ?? res.tts_text ?? "").length;
+      const delay = Math.min(Math.max(replyLen * 50, 1500), 5000);
+      followUpTimeoutRef.current = setTimeout(() => {
+        if (continuousMode && sttSupported) {
+          void (async () => {
+            const microphoneReady = await startMicrophone();
+            if (!microphoneReady) {
+              return;
+            }
+            stopMicrophone();
+            reset();
+            setResponse(null);
+            setError(null);
+            setPhase("listening");
+            lastTranscriptRef.current = "";
+            start();
+          })();
+        }
+      }, delay);
+    },
+    [
+      continuousMode,
+      sttSupported,
+      startMicrophone,
+      stopMicrophone,
+      reset,
+      start,
+    ],
+  );
 
   // -----------------------------------------------------------------------
   // Process transcript → send to Packy
@@ -320,12 +330,7 @@ export function VoiceCommandModal({
         processingRef.current = false;
       }
     },
-    [
-      speak,
-      continuousMode,
-      route,
-      scheduleFollowUpRelisten,
-    ],
+    [speak, continuousMode, route, scheduleFollowUpRelisten],
   );
 
   // Wire the fallback transcription handler (must be after processTranscript)
